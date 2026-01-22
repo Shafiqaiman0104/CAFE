@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cafe Management System - Login</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .login-container {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .logo {
+            font-size: 2.5rem;
+            color: #764ba2;
+            margin-bottom: 10px;
+        }
+
+        .title {
+            color: #333;
+            margin-bottom: 30px;
+            font-weight: 600;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #764ba2;
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s;
+            margin-top: 10px;
+        }
+
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .error-message {
+            color: #e74c3c;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .role-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+
+        .admin { background: #ff6b6b; color: white; }
+        .cashier { background: #4ecdc4; color: white; }
+        .waiter { background: #45b7d1; color: white; }
+        .kitchen { background: #96ceb4; color: white; }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="logo">☕</div>
+        <h1 class="title">Cafe Management System</h1>
+        
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="staffId">Staff ID</label>
+                <input type="text" id="staffId" placeholder="WAIT01" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" placeholder="••••••" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="role">Role</label>
+                <select id="role" required>
+                    <option value="">Select Role</option>
+                    <option value="admin">Admin</option>
+                    <option value="cashier">Cashier</option>
+                    <option value="waiter">Waiter</option>
+                    <option value="kitchen">Kitchen</option>
+                </select>
+            </div>
+            
+            <button type="submit" class="btn-login">Login to System</button>
+            <div id="errorMessage" class="error-message"></div>
+        </form>
+    </div>
+
+    <script>
+        const APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzL0k_WIERtc6ikY6_RUtOoU6vmWkVqJtZVO1MTzikRLpHM2KKY8FUrTMx1qqtgw6-P/exec';
+
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const staffId = document.getElementById('staffId').value;
+            const password = document.getElementById('password').value;
+            const role = document.getElementById('role').value;
+            
+            const errorMessage = document.getElementById('errorMessage');
+            errorMessage.style.display = 'none';
+            
+            try {
+                const response = await fetch(`${APP_SCRIPT_URL}?action=login&staffId=${staffId}&password=${password}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    if (result.staff.role.toLowerCase() === role.toLowerCase()) {
+                        // Store session
+                        localStorage.setItem('staffId', result.staff.id);
+                        localStorage.setItem('staffName', result.staff.name);
+                        localStorage.setItem('staffRole', result.staff.role);
+                        
+                        // Redirect based on role
+                        switch(role.toLowerCase()) {
+                            case 'admin':
+                                window.location.href = 'admin.html';
+                                break;
+                            case 'cashier':
+                                window.location.href = 'cashier.html';
+                                break;
+                            case 'waiter':
+                                window.location.href = 'waiter.html';
+                                break;
+                            case 'kitchen':
+                                window.location.href = 'kitchen.html';
+                                break;
+                            default:
+                                errorMessage.textContent = 'Invalid role';
+                                errorMessage.style.display = 'block';
+                        }
+                    } else {
+                        errorMessage.textContent = 'Role does not match credentials';
+                        errorMessage.style.display = 'block';
+                    }
+                } else {
+                    errorMessage.textContent = result.message || 'Invalid credentials';
+                    errorMessage.style.display = 'block';
+                }
+            } catch (error) {
+                errorMessage.textContent = 'Network error. Please try again.';
+                errorMessage.style.display = 'block';
+            }
+        });
+        
+        // Auto-focus first input
+        document.getElementById('staffId').focus();
+    </script>
+</body>
+</html>

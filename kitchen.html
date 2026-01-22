@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cafe Management System - Kitchen</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .navbar {
+            background: white;
+            color: #333;
+            padding: 15px 30px;
+            border-radius: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logout-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: transform 0.3s;
+        }
+
+        .logout-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .kitchen-display {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+        }
+
+        .order-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .order-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .order-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .order-id {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .order-table {
+            background: #764ba2;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+
+        .order-time {
+            color: #666;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+
+        .order-items {
+            margin: 20px 0;
+        }
+
+        .order-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #f8f9fa;
+        }
+
+        .order-item:last-child {
+            border-bottom: none;
+        }
+
+        .item-info {
+            flex: 1;
+        }
+
+        .item-name {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 3px;
+        }
+
+        .item-notes {
+            color: #666;
+            font-size: 0.85rem;
+            font-style: italic;
+        }
+
+        .item-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .item-status {
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .pending { 
+            background: #fff3cd; 
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .preparing { 
+            background: #cce5ff; 
+            color: #004085;
+            border: 1px solid #b8daff;
+        }
+        
+        .ready { 
+            background: #d4edda; 
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status-btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .btn-start {
+            background: #2196F3;
+            color: white;
+        }
+
+        .btn-complete {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .status-btn:hover {
+            opacity: 0.9;
+            transform: scale(1.05);
+        }
+
+        .timer {
+            font-family: 'Courier New', monospace;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #764ba2;
+            margin-top: 5px;
+        }
+
+        .empty-state {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 60px 20px;
+            color: white;
+        }
+
+        .empty-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            opacity: 0.7;
+        }
+
+        .empty-text {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .order-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 2px solid #f0f0f0;
+        }
+
+        .prep-time {
+            color: #666;
+            font-weight: 500;
+        }
+
+        .complete-order-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: transform 0.3s;
+        }
+
+        .complete-order-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .urgent-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #ff6b6b;
+            color: white;
+            padding: 3px 10px;
+            border-radius: 10px;
+            font-size: 10px;
+            font-weight: 700;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            justify-content: center;
+        }
+
+        .filter-btn {
+            background: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .filter-btn.active {
+            background: #764ba2;
+            color: white;
+        }
+
+        @media (max-width: 768px) {
+            .kitchen-display {
+                grid-template-columns: 1fr;
+            }
+            
+            .navbar {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="logo">
+            <i class="fas fa-utensils"></i>
+            <span>Kitchen Display System</span>
+        </div>
+        <div class="user-info">
+            <span id="staffName">Welcome Chef</span>
+            <button class="logout-btn" onclick="logout()">
+                <i class="fas fa-sign-out-alt"></i> Logout
+            </button>
+        </div>
+    </nav>
+
+    <!-- Filter Buttons -->
+    <div class="filter-buttons">
+        <button class="filter-btn active" onclick="filterOrders('all')">All Orders</button>
+        <button class="filter-btn" onclick="filterOrders('pending')">Pending</button>
+        <button class="filter-btn" onclick="filterOrders('preparing')">Preparing</button>
+    </div>
+
+    <!-- Kitchen Display -->
+    <div class="kitchen-display" id="kitchenDisplay">
+        <!-- Orders will be loaded here -->
+    </div>
+
+    <script>
+        // App Script URLs
+        const ORDER_ITEMS_API_URL = 'https://script.google.com/macros/s/AKfycbza3y8oJ7Lj5S3AMDXRQUWk-_tf47u1CG9sxi-Ib6fPi11lv2n_s-zj40bY3ZmxXMCDZg/exec';
+        const ORDER_API_URL = 'https://script.google.com/macros/s/AKfycbzwGqmFpoFSyIpaJOs6ccBi-WlPmWYlSgfti8CLnCC6Nz_zao8cer58JJVTFU5xUy65QQ/exec';
+
+        let currentStaff = {
+            id: localStorage.getItem('staffId'),
+            name: localStorage.getItem('staffName'),
+            role: localStorage.getItem('staffRole')
+        };
+
+        let orders = [];
+        let timers = {};
+        let currentFilter = 'all';
+
+        // Check authentication
+        if (!currentStaff.id || currentStaff.role !== 'kitchen') {
+            window.location.href = 'login.html';
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('staffName').textContent = `Welcome, ${currentStaff.name}`;
+            loadKitchenOrders();
+            
+            // Refresh every 30 seconds
+            setInterval(loadKitchenOrders, 30000);
+        });
+
+        async function loadKitchenOrders() {
+            try {
+                const response = await fetch(`${ORDER_ITEMS_API_URL}?action=getKitchenOrders`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    orders = result.data;
+                    renderOrders();
+                }
+            } catch (error) {
+                console.error('Error loading kitchen orders:', error);
+            }
+        }
+
+        function renderOrders() {
+            const kitchenDisplay = document.getElementById('kitchenDisplay');
+            
+            // Group items by order
+            const ordersMap = {};
+            
+            orders.forEach(item => {
+                if (!ordersMap[item['Id Order']]) {
+                    ordersMap[item['Id Order']] = [];
+                }
+                ordersMap[item['Id Order']].push(item);
+            });
+            
+            const filteredOrders = Object.keys(ordersMap).filter(orderId => {
+                if (currentFilter === 'all') return true;
+                
+                const orderItems = ordersMap[orderId];
+                if (currentFilter === 'pending') {
+                    return orderItems.some(item => item.Status === 'pending');
+                } else if (currentFilter === 'preparing') {
+                    return orderItems.some(item => item.Status === 'preparing');
+                }
+                return false;
+            });
+            
+            if (filteredOrders.length === 0) {
+                kitchenDisplay.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div class="empty-text">
+                            ${currentFilter === 'all' ? 
+                                'No orders in the kitchen at the moment' : 
+                                `No ${currentFilter} orders`}
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+            
+            kitchenDisplay.innerHTML = filteredOrders.map(orderId => {
+                const orderItems = ordersMap[orderId];
+                const hasPending = orderItems.some(item => item.Status === 'pending');
+                const isAllReady = orderItems.every(item => item.Status === 'ready');
+                
+                return `
+                    <div class="order-card">
+                        ${hasPending ? '<div class="urgent-badge">NEW</div>' : ''}
+                        
+                        <div class="order-header">
+                            <div>
+                                <div class="order-id">Order ${orderId}</div>
+                                <div class="order-time">${formatTime(orderItems[0]['Created At'])}</div>
+                            </div>
+                            <div class="order-table">Table ${orderItems[0]['Id Order'].substring(6, 9)}</div>
+                        </div>
+                        
+                        <div class="order-items">
+                            ${orderItems.map(item => {
+                                const isUrgent = item.Status === 'pending' && new Date(item['Created At']) < new Date(Date.now() - 10*60000);
+                                
+                                return `
+                                    <div class="order-item" id="item-${item['Id Item']}">
+                                        <div class="item-info">
+                                            <div class="item-name">Item ${item['Id Menu']} × ${item.Quantity}</div>
+                                            ${item.Notes ? `<div class="item-notes">${item.Notes}</div>` : ''}
+                                        </div>
+                                        <div class="item-actions">
+                                            <div class="item-status ${item.Status.toLowerCase()}">
+                                                ${item.Status.toUpperCase()}
+                                            </div>
+                                            ${item.Status === 'pending' ? `
+                                                <button class="status-btn btn-start" onclick="startPreparing('${item['Id Item']}')">
+                                                    <i class="fas fa-play"></i> Start
+                                                </button>
+                                            ` : ''}
+                                            ${item.Status === 'preparing' ? `
+                                                <button class="status-btn btn-complete" onclick="completeItem('${item['Id Item']}')">
+                                                    <i class="fas fa-check"></i> Ready
+                                                </button>
+                                            ` : ''}
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                        
+                        <div class="order-footer">
+                            <div class="prep-time">
+                                Est. Prep: ${calculateTotalPrepTime(orderItems)} min
+                            </div>
+                            ${isAllReady ? `
+                                <button class="complete-order-btn" onclick="completeOrder('${orderId}')">
+                                    <i class="fas fa-paper-plane"></i> Send to Service
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function formatTime(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function calculateTotalPrepTime(orderItems) {
+            return orderItems.reduce((total, item) => {
+                return total + (parseInt(item['Preparation Time']) || 15);
+            }, 0);
+        }
+
+        async function startPreparing(itemId) {
+            if (!confirm('Start preparing this item?')) return;
+            
+            try {
+                const response = await fetch(`${ORDER_ITEMS_API_URL}?action=updateOrderItemStatus&id=${itemId}&status=preparing`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Start timer for this item
+                    startTimer(itemId);
+                    alert('Item status updated to Preparing');
+                    loadKitchenOrders();
+                } else {
+                    alert(result.message || 'Error updating status');
+                }
+            } catch (error) {
+                console.error('Error starting preparation:', error);
+                alert('Error updating status');
+            }
+        }
+
+        async function completeItem(itemId) {
+            if (!confirm('Mark this item as ready?')) return;
+            
+            try {
+                const response = await fetch(`${ORDER_ITEMS_API_URL}?action=updateOrderItemStatus&id=${itemId}&status=ready`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Stop timer
+                    if (timers[itemId]) {
+                        clearInterval(timers[itemId]);
+                        delete timers[itemId];
+                    }
+                    
+                    alert('Item marked as Ready');
+                    loadKitchenOrders();
+                } else {
+                    alert(result.message || 'Error updating status');
+                }
+            } catch (error) {
+                console.error('Error completing item:', error);
+                alert('Error updating status');
+            }
+        }
+
+        async function completeOrder(orderId) {
+            try {
+                // Get order items
+                const itemsResponse = await fetch(`${ORDER_ITEMS_API_URL}?action=getOrderItemsByOrder&orderId=${orderId}`);
+                const itemsResult = await itemsResponse.json();
+                
+                if (itemsResult.success) {
+                    const allReady = itemsResult.data.every(item => item.Status === 'ready');
+                    
+                    if (!allReady) {
+                        alert('Not all items are ready yet!');
+                        return;
+                    }
+                    
+                    if (!confirm('Send this order to service?')) return;
+                    
+                    // Update order status to ready
+                    await fetch(`${ORDER_API_URL}?action=updateOrderStatus&id=${orderId}&status=ready`);
+                    
+                    alert('Order sent to service!');
+                    loadKitchenOrders();
+                }
+            } catch (error) {
+                console.error('Error completing order:', error);
+                alert('Error sending order to service');
+            }
+        }
+
+        function startTimer(itemId) {
+            // Create timer display
+            const itemElement = document.getElementById(`item-${itemId}`);
+            if (!itemElement) return;
+            
+            const timerDisplay = document.createElement('div');
+            timerDisplay.className = 'timer';
+            timerDisplay.id = `timer-${itemId}`;
+            timerDisplay.textContent = '00:00';
+            
+            const infoDiv = itemElement.querySelector('.item-info');
+            infoDiv.appendChild(timerDisplay);
+            
+            // Start timer
+            let seconds = 0;
+            timers[itemId] = setInterval(() => {
+                seconds++;
+                const mins = Math.floor(seconds / 60);
+                const secs = seconds % 60;
+                timerDisplay.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            }, 1000);
+        }
+
+        function filterOrders(filter) {
+            currentFilter = filter;
+            
+            // Update active button
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            renderOrders();
+        }
+
+        function logout() {
+            localStorage.clear();
+            window.location.href = 'login.html';
+        }
+    </script>
+</body>
+</html>

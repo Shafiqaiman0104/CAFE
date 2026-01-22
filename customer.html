@@ -1,0 +1,1247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cafe Menu - Order Online</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f8f9fa;
+        }
+
+        .navbar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .table-info {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 500;
+        }
+
+        .cart-btn {
+            background: white;
+            color: #764ba2;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: transform 0.3s;
+        }
+
+        .cart-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .cart-count {
+            background: #ff6b6b;
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 80px auto 20px;
+            padding: 0 20px;
+        }
+
+        .hero-section {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .hero-title {
+            font-size: 2.5rem;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .hero-subtitle {
+            color: #666;
+            font-size: 1.2rem;
+            margin-bottom: 30px;
+        }
+
+        .category-tabs {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .category-tab {
+            background: white;
+            border: 2px solid #e0e0e0;
+            padding: 10px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+
+        .category-tab:hover, .category-tab.active {
+            background: #764ba2;
+            color: white;
+            border-color: #764ba2;
+        }
+
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+
+        .menu-card {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .menu-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .menu-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+
+        .menu-content {
+            padding: 20px;
+        }
+
+        .menu-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 10px;
+        }
+
+        .menu-name {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .menu-price {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #764ba2;
+        }
+
+        .menu-description {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 15px;
+            line-height: 1.5;
+        }
+
+        .menu-tags {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+
+        .tag {
+            background: #f0f0f0;
+            color: #666;
+            padding: 3px 10px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+        }
+
+        .menu-actions {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .quantity-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .qty-btn {
+            background: #f0f0f0;
+            border: none;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .qty-btn:hover {
+            background: #e0e0e0;
+        }
+
+        .qty-display {
+            font-weight: 600;
+            min-width: 30px;
+            text-align: center;
+        }
+
+        .add-to-cart-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: transform 0.3s;
+        }
+
+        .add-to-cart-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+            border-top: 1px solid #eaeaea;
+            margin-top: 40px;
+        }
+
+        /* Cart Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            justify-content: flex-end;
+            z-index: 1001;
+        }
+
+        .modal-content {
+            background: white;
+            width: 100%;
+            max-width: 400px;
+            height: 100%;
+            padding: 30px;
+            overflow-y: auto;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); }
+            to { transform: translateX(0); }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            color: #333;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #999;
+        }
+
+        .cart-items {
+            margin-bottom: 30px;
+        }
+
+        .cart-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px solid #eaeaea;
+        }
+
+        .cart-item-info {
+            flex: 1;
+        }
+
+        .cart-item-name {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .cart-item-price {
+            color: #764ba2;
+            font-weight: 600;
+        }
+
+        .cart-item-qty {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .cart-total {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 0;
+            border-top: 2px solid #764ba2;
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .checkout-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px;
+            width: 100%;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+
+        .checkout-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .empty-cart {
+            text-align: center;
+            color: #999;
+            padding: 40px 0;
+        }
+
+        .remove-item-btn {
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .menu-grid {
+                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            }
+            
+            .modal-content {
+                max-width: 100%;
+            }
+            
+            .hero-title {
+                font-size: 2rem;
+            }
+        }
+.item-notes {
+    font-size: 0.9rem;
+    resize: vertical;
+    min-height: 40px;
+    max-height: 100px;
+}
+
+.item-notes:focus {
+    outline: none;
+    border-color: #764ba2;
+    box-shadow: 0 0 0 2px rgba(118, 75, 162, 0.1);
+}
+/* Loading Overlay */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.95);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    backdrop-filter: blur(5px);
+}
+
+.loading-content {
+    text-align: center;
+    padding: 30px;
+    border-radius: 15px;
+    background: white;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    position: relative;
+}
+
+.loading-text {
+    font-size: 1.2rem;
+    color: #333;
+    font-weight: 500;
+    margin-top: 10px;
+}
+
+/* Progress Bar */
+.progress-container {
+    width: 200px;
+    height: 4px;
+    background: #e0e0e0;
+    border-radius: 2px;
+    margin: 20px auto;
+    overflow: hidden;
+}
+
+.progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+    border-radius: 2px;
+    width: 0%;
+    animation: progress 2s ease-in-out infinite;
+}
+
+@keyframes progress {
+    0% {
+        width: 0%;
+        transform: translateX(-100%);
+    }
+    50% {
+        width: 100%;
+    }
+    100% {
+        width: 0%;
+        transform: translateX(200%);
+    }
+}
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+<!-- Loading Overlay -->
+<div id="loadingOverlay" class="loading-overlay">
+    <div class="loading-content">
+    <div style="font-size: 50px; color: #764ba2; margin-bottom: 20px;">
+        <i class="fa-solid fa-hourglass-half fa-spin"></i>
+    </div>
+    <div class="progress-container">
+        <div class="progress-bar"></div>
+    </div>
+    <div class="loading-text" id="loadingText">Loading menu...</div>
+</div>
+</div>
+
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="logo">
+            <i class="fas fa-mug-hot"></i>
+            <span>Cafe Delight</span>
+        </div>
+        <div class="table-info" id="tableInfo">
+            Loading table...
+        </div>
+        <button class="cart-btn" onclick="toggleCart()">
+            <i class="fas fa-shopping-cart"></i>
+            <span>Cart</span>
+            <span class="cart-count" id="cartCount">0</span>
+        </button>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container">
+        <!-- Hero Section -->
+        <div class="hero-section">
+            <h1 class="hero-title">Welcome to Cafe Delight</h1>
+            <p class="hero-subtitle">Order delicious food and drinks directly from your table</p>
+        </div>
+
+        <!-- Category Tabs -->
+        <div class="category-tabs" id="categoryTabs">
+            <!-- Categories will be loaded dynamically -->
+        </div>
+
+        <!-- Menu Grid -->
+        <div class="menu-grid" id="menuGrid">
+            <!-- Menu items will be loaded here -->
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>© 2024 Cafe Delight. All rights reserved.</p>
+            <p>Scan QR code to order from your table</p>
+        </div>
+    </div>
+
+    <!-- Cart Modal -->
+    <div id="cartModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Your Order</h3>
+                <button class="close-btn" onclick="toggleCart()">&times;</button>
+            </div>
+            
+            <div class="cart-items" id="cartItems">
+                <!-- Cart items will be loaded here -->
+            </div>
+            
+            <div class="cart-total">
+                <span>Total:</span>
+                <span>RM <span id="cartTotal">0.00</span></span>
+            </div>
+            
+            <button class="checkout-btn" onclick="checkout()">
+                <i class="fa-solid fa-utensils"></i> Place Order
+            </button>
+        </div>
+    </div>
+
+    <!-- Customer Info Modal -->
+    <div id="customerModal" class="modal" style="justify-content: center;">
+        <div class="modal-content" style="max-width: 500px; height: auto; border-radius: 15px;">
+            <div class="modal-header">
+                <h3 class="modal-title">Complete Your Order</h3>
+            </div>
+            <form id="customerForm" onsubmit="submitOrder(event)">
+                <input type="hidden" id="tableId">
+                
+                <div style="margin: 20px 0;">
+                    <label style="display: block; margin-bottom: 8px; color: #555; font-weight: 500;">Name *</label>
+                    <input type="text" id="customerName" style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px;" required>
+                </div>
+                
+                <div style="margin: 20px 0;">
+                    <label style="display: block; margin-bottom: 8px; color: #555; font-weight: 500;">Phone Number *</label>
+                    <input type="tel" id="customerPhone" style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px;" required>
+                </div>
+                
+                <div style="margin: 20px 0;">
+                    <label style="display: block; margin-bottom: 8px; color: #555; font-weight: 500;">Number of People *</label>
+                    <input type="number" id="customerPax" style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px;" min="1" required>
+                </div>
+                
+                <div style="margin: 20px 0;">
+                    <label style="display: block; margin-bottom: 8px; color: #555; font-weight: 500;">Order Type *</label>
+                    <select id="orderType" style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px;" required>
+                        <option value="Dine In">Dine In</option>
+                        <option value="Take Away">Take Away</option>
+                    </select>
+                </div>
+                
+                <div style="margin: 20px 0;">
+                    <label style="display: block; margin-bottom: 8px; color: #555; font-weight: 500;">Special Notes (Optional)</label>
+                    <textarea id="orderNotes" style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px; min-height: 80px;" placeholder="Any special requests ? baby chair etc ?..."></textarea>
+                </div>
+
+<!-- Add this after the special notes textarea in customer.html -->
+<div style="margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+    <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+        <span style="color: #555; font-weight: 500;">Total Preparation Time:</span>
+        <span style="color: #764ba2; font-weight: 600;" id="totalPrepTime">0 mins</span>
+    </div>
+    <div style="font-size: 0.9rem; color: #666;">
+        <i class="fas fa-info-circle"></i> This is an estimate. Actual time may vary.
+    </div>
+</div>
+                
+                <div style="display: flex; gap: 10px; margin-top: 30px;">
+                    <button type="button" onclick="closeCustomerModal()" style="flex: 1; padding: 12px; background: #e0e0e0; border: none; border-radius: 8px; cursor: pointer;">Cancel</button>
+                    <button type="submit" style="flex: 2; padding: 12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;"> <i class="fa-solid fa-receipt"></i> Submit Order</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div id="successModal" class="modal" style="justify-content: center;">
+        <div class="modal-content" style="max-width: 400px; height: auto; text-align: center; border-radius: 15px;">
+            <div style="font-size: 60px; color: #4CAF50; margin: 20px 0;">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <h3 style="color: #333; margin-bottom: 10px;">Order Placed Successfully!</h3>
+            <p style="color: #666; margin-bottom: 30px;">Your order has been received and is being prepared.</p>
+            <p style="color: #666; margin-bottom: 30px; font-weight: 600;" id="orderIdDisplay"></p>
+            <button onclick="closeSuccessModal()" style="padding: 12px 30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">Continue</button>
+        </div>
+    </div>
+
+    <script>
+        // App Script URLs
+        const MENU_API_URL = 'https://script.google.com/macros/s/AKfycbyL3qH9ra_3sNw1nLchIKHrGo31obMaL0cdK4zNTwyiBPORIPYr349katf1ANzWVEmJMw/exec';
+        const ORDER_API_URL = 'https://script.google.com/macros/s/AKfycbzwGqmFpoFSyIpaJOs6ccBi-WlPmWYlSgfti8CLnCC6Nz_zao8cer58JJVTFU5xUy65QQ/exec';
+        const ORDER_ITEMS_API_URL = 'https://script.google.com/macros/s/AKfycbza3y8oJ7Lj5S3AMDXRQUWk-_tf47u1CG9sxi-Ib6fPi11lv2n_s-zj40bY3ZmxXMCDZg/exec';
+        const TABLE_API_URL = 'https://script.google.com/macros/s/AKfycbyKuPETE-5zyGx2d9k5GGOx01mMSnq1Qi7GxZoXzjhd26R5s1CKXG5o08SHk7NTydC5kA/exec'; 
+
+        // Cart state
+        let cart = [];
+        let tableId = null;
+        let tableNumber = null;
+        let categories = [];
+        let menuItems = [];
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+    // Show loading overlay immediately
+    showLoading('Loading menu...');
+    
+    // Get table ID from URL parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    tableId = urlParams.get('table') || 'TABLE0000';
+    tableNumber = tableId.replace('TABLE', '');
+    
+    document.getElementById('tableInfo').textContent = `TABLE ${tableNumber}`;
+    document.getElementById('tableId').value = tableId;
+    
+    loadMenuData();
+    updateCartCount();
+});
+
+        async function loadMenuData() {
+    try {
+        const response = await fetch(`${MENU_API_URL}?action=getAvailableMenu`);
+        const result = await response.json();
+        
+        if (result.success) {
+            menuItems = result.data;
+            
+            // Extract unique categories
+            categories = [...new Set(menuItems.map(item => item.Category))];
+            renderCategories();
+            renderMenuItems(menuItems);
+            
+            // Hide loading overlay after data is loaded
+            setTimeout(() => {
+                hideLoading();
+            }, 500); // Small delay for smooth transition
+        }
+    } catch (error) {
+        console.error('Error loading menu:', error);
+        document.getElementById('loadingText').textContent = 'Failed to load menu';
+        setTimeout(() => {
+            hideLoading();
+        }, 1500);
+        
+        document.getElementById('menuGrid').innerHTML = `
+            <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: #666;">
+                <p>Error loading menu. Please try again later.</p>
+            </div>
+        `;
+    }
+}
+
+        function renderCategories() {
+            const categoryTabs = document.getElementById('categoryTabs');
+            categoryTabs.innerHTML = `
+                <div class="category-tab active" onclick="filterMenu('All')">All</div>
+                ${categories.map(category => `
+                    <div class="category-tab" onclick="filterMenu('${category}')">
+                        ${category}
+                    </div>
+                `).join('')}
+            `;
+        }
+
+        function renderMenuItems(items) {
+            const menuGrid = document.getElementById('menuGrid');
+            
+            if (items.length === 0) {
+                menuGrid.innerHTML = `
+                    <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: #666;">
+                        <p>No menu items available at the moment.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            menuGrid.innerHTML = items.map(item => {
+                const cartItem = cart.find(ci => ci.id === item['Id Menu']);
+                const quantity = cartItem ? cartItem.quantity : 0;
+                
+return `
+    <div class="menu-card">
+        <img src="${item.Image || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&h=200&fit=crop'}" 
+             alt="${item.Name}" 
+             class="menu-image"
+             onerror="this.src='https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&h=200&fit=crop'">
+        <div class="menu-content">
+            <div class="menu-header">
+                <h3 class="menu-name">${item.Name}</h3>
+                <div class="menu-price">RM ${parseFloat(item.Price).toFixed(2)}</div>
+            </div>
+            <p class="menu-description">${item.Description || 'No description available.'}</p>
+            
+            <!-- ADD THIS LINE for preparation time -->
+            <div style="color: #666; font-size: 0.9rem; margin-bottom: 10px;">
+                <i class="fas fa-clock"></i> Est Preparation: ${item['Preparation Time'] || 15} mins
+            </div>
+            
+            ${item.Tags ? `
+                <div class="menu-tags">
+                    ${item.Tags.split(',').map(tag => `
+                        <span class="tag">${tag.trim()}</span>
+                    `).join('')}
+                </div>
+            ` : ''}
+            
+            <div class="menu-actions">
+                <div class="quantity-controls">
+                    <button class="qty-btn" onclick="decreaseQuantity('${item['Id Menu']}')">-</button>
+                    <span class="qty-display" id="qty-${item['Id Menu']}">${quantity}</span>
+                    <button class="qty-btn" onclick="increaseQuantity('${item['Id Menu']}')">+</button>
+                </div>
+                <button class="add-to-cart-btn" onclick="addToCartFromButton('${item['Id Menu']}')">
+                     <i class="fa-solid fa-cart-plus"></i> ${quantity > 0 ? 'Update Cart' : 'Add to Cart'}
+                </button>
+            </div>
+        </div>
+    </div>
+`;
+            }).join('');
+        }
+
+        function filterMenu(category) {
+            // Update active tab
+            document.querySelectorAll('.category-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            if (category === 'All') {
+                renderMenuItems(menuItems);
+            } else {
+                const filteredItems = menuItems.filter(item => item.Category === category);
+                renderMenuItems(filteredItems);
+            }
+        }
+
+function updateCartItemQty(itemId, newQty) {
+    if (newQty < 1) {
+        removeFromCart(itemId);
+        return;
+    }
+    
+    const item = cart.find(c => c.id === itemId);
+    if (item) {
+        // Preserve the notes when updating quantity
+        const currentNotes = item.notes || '';
+        item.quantity = newQty;
+        item.notes = currentNotes;
+        
+        const qtyElement = document.getElementById(`qty-${itemId}`);
+        if (qtyElement) {
+            qtyElement.textContent = newQty;
+        }
+        
+        updateCartDisplay();
+    }
+}
+
+function addToCartFromButton(itemId) {
+    increaseQuantity(itemId);
+}
+
+        // Add a notes property to each cart item
+function addToCart(itemId) {
+    const item = menuItems.find(m => m['Id Menu'] === itemId);
+    if (!item) return;
+    
+    const existingItem = cart.find(c => c.id === itemId);
+    const qtyElement = document.getElementById(`qty-${itemId}`);
+    const currentQty = parseInt(qtyElement.textContent) || 0;
+    
+    if (currentQty > 0) {
+        if (existingItem) {
+            existingItem.quantity = currentQty;
+        } else {
+            cart.push({
+                id: itemId,
+                name: item.Name,
+                price: parseFloat(item.Price),
+                quantity: currentQty,
+                prepTime: parseInt(item['Preparation Time'] || 15),
+                notes: ''  // Add notes property
+            });
+        }
+        updateCartDisplay();
+    } else {
+        cart = cart.filter(c => c.id !== itemId);
+        updateCartDisplay();
+    }
+}
+
+        function increaseQuantity(itemId) {
+    const qtyElement = document.getElementById(`qty-${itemId}`);
+    let currentQty = parseInt(qtyElement.textContent) || 0;
+    currentQty++;
+    qtyElement.textContent = currentQty;
+    
+    const item = menuItems.find(m => m['Id Menu'] === itemId);
+    const existingItem = cart.find(c => c.id === itemId);
+    
+    if (existingItem) {
+        existingItem.quantity = currentQty;
+    } else {
+        cart.push({
+            id: itemId,
+            name: item.Name,
+            price: parseFloat(item.Price),
+            quantity: currentQty,
+            prepTime: parseInt(item['Preparation Time'] || 15),
+            notes: ''  // Add notes property
+        });
+    }
+    
+    updateCartCount();
+}
+
+        function decreaseQuantity(itemId) {
+            const qtyElement = document.getElementById(`qty-${itemId}`);
+            let currentQty = parseInt(qtyElement.textContent) || 0;
+            
+            if (currentQty > 0) {
+                currentQty--;
+                qtyElement.textContent = currentQty;
+                
+                const existingItem = cart.find(c => c.id === itemId);
+                if (existingItem) {
+                    if (currentQty === 0) {
+                        cart = cart.filter(c => c.id !== itemId);
+                    } else {
+                        existingItem.quantity = currentQty;
+                    }
+                }
+                
+                updateCartCount();
+            }
+        }
+
+        function updateCartCount() {
+            const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+            document.getElementById('cartCount').textContent = totalItems;
+        }
+
+        function toggleCart() {
+            const cartModal = document.getElementById('cartModal');
+            cartModal.style.display = cartModal.style.display === 'flex' ? 'none' : 'flex';
+            if (cartModal.style.display === 'flex') {
+                updateCartDisplay();
+            }
+        }
+
+        function updateCartDisplay() {
+    const cartItems = document.getElementById('cartItems');
+    const cartTotal = document.getElementById('cartTotal');
+    
+    updateCartCount();
+    
+    if (cart.length === 0) {
+        cartItems.innerHTML = '<div class="empty-cart">Your cart is empty</div>';
+        cartTotal.textContent = '0.00';
+        return;
+    }
+    
+    let total = 0;
+    let totalPrepTime = 0; // ADD THIS LINE
+    
+    cartItems.innerHTML = cart.map(item => {
+    const itemTotal = item.price * item.quantity;
+    total += itemTotal;
+    totalPrepTime += (item.prepTime || 15) * item.quantity;
+    
+    return `
+        <div class="cart-item">
+            <div class="cart-item-info">
+                <div class="cart-item-name">${item.name}</div>
+                <div class="cart-item-price">RM ${item.price.toFixed(2)}</div>
+            </div>
+            <div class="cart-item-qty">
+                <div style="display: flex; align-items: center; gap: 10px; background: #f8f9fa; padding: 5px 10px; border-radius: 8px;">
+                    <button onclick="updateCartItemQty('${item.id}', ${item.quantity - 1})" 
+                            style="background: none; border: none; font-size: 16px; cursor: pointer; color: #764ba2; width: 25px; height: 25px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                        -
+                    </button>
+                    <span style="font-weight: 600; min-width: 30px; text-align: center;">${item.quantity}</span>
+                    <button onclick="updateCartItemQty('${item.id}', ${item.quantity + 1})" 
+                            style="background: none; border: none; font-size: 16px; cursor: pointer; color: #764ba2; width: 25px; height: 25px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                        +
+                    </button>
+                </div>
+                <div style="font-weight: 600; min-width: 60px; text-align: right;">RM ${itemTotal.toFixed(2)}</div>
+                <button class="remove-item-btn" onclick="removeFromCart('${item.id}')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+<div style="margin-top: 8px;">
+                    <textarea 
+                        class="item-notes" 
+                        data-item-id="${item.id}"
+                        placeholder="Notes for ${item.name} (e.g., spicy, no onions, etc.)"
+                        onchange="updateItemNotes('${item.id}', this.value)"
+                        style="width: 100%; padding: 8px; border: 1px solid #e0e0e0; border-radius: 5px; font-size: 0.9rem; margin-top: 5px;"
+                        rows="2">${item.notes || ''}</textarea>
+                </div>
+    `;
+}).join('');
+    
+    // ADD THIS SECTION to show total preparation time
+    cartItems.innerHTML += `
+        <div style="padding: 15px 0; border-top: 1px solid #eaeaea; margin-top: 10px;">
+            <div style="display: flex; justify-content: space-between; color: #666;">
+                <span><i class="fas fa-clock"></i> Total Est. Preparation Time:</span>
+                <span style="font-weight: 600; color: #333;">${totalPrepTime} mins</span>
+            </div>
+        </div>
+    `;
+    
+    cartTotal.textContent = total.toFixed(2);
+}
+
+function updateItemNotes(itemId, notes) {
+    const item = cart.find(c => c.id === itemId);
+    if (item) {
+        item.notes = notes;
+    }
+}
+
+        function removeFromCart(itemId) {
+    cart = cart.filter(c => c.id !== itemId);
+    
+    const qtyElement = document.getElementById(`qty-${itemId}`);
+    if (qtyElement) {
+        qtyElement.textContent = '0';
+    }
+    
+    // Also clear any notes input if it exists
+    const notesInput = document.querySelector(`.item-notes[data-item-id="${itemId}"]`);
+    if (notesInput) {
+        notesInput.value = '';
+    }
+    
+    updateCartDisplay();
+}
+
+        function checkout() {
+    if (cart.length === 0) {
+        alert('Your cart is empty!');
+        return;
+    }
+    
+    // Disable cart button temporarily
+    const cartBtn = document.querySelector('.cart-btn');
+    const originalText = cartBtn.innerHTML;
+    cartBtn.disabled = true;
+    cartBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+    
+    // Add a small delay for better UX
+    setTimeout(() => {
+        toggleCart(); // Close cart modal
+        showCustomerModal();
+        
+        // Re-enable button
+        cartBtn.disabled = false;
+        cartBtn.innerHTML = originalText;
+    }, 300);
+}
+
+        function updatePrepTimeDisplay() {
+    let totalPrepTime = 0;
+    cart.forEach(item => {
+        const menuItem = menuItems.find(m => m['Id Menu'] === item.id);
+        if (menuItem) {
+            totalPrepTime += parseInt(menuItem['Preparation Time'] || 15) * item.quantity;
+        }
+    });
+    document.getElementById('totalPrepTime').textContent = `${totalPrepTime} mins`;
+}
+
+// Call this function when showing customer modal
+function showCustomerModal() {
+    updatePrepTimeDisplay(); // ADD THIS LINE
+    document.getElementById('customerModal').style.display = 'flex';
+}
+
+        function closeCustomerModal() {
+            document.getElementById('customerModal').style.display = 'none';
+        }
+
+        async function submitOrder(event) {
+    event.preventDefault();
+
+// Disable form and show loading
+    const form = event.target;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalBtnText = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+
+// Also disable all inputs
+    const inputs = form.querySelectorAll('input, textarea, select, button');
+    inputs.forEach(input => {
+        if (input !== submitBtn) input.disabled = true;
+    });
+
+// Show overlay loading
+    showLoading('Submitting your order...');
+
+    // Get form data
+    const customerName = document.getElementById('customerName').value;
+    const customerPhone = document.getElementById('customerPhone').value;
+    const customerPax = document.getElementById('customerPax').value;
+    const orderType = document.getElementById('orderType').value;
+    const orderNotes = document.getElementById('orderNotes').value;
+
+  // In the submitOrder function, in the table check section:
+if (orderType === 'Dine In') {
+    try {
+        const tableCheck = await fetch(`${TABLE_API_URL}?action=getTableById&id=${tableId}`);
+        const tableData = await tableCheck.json();
+        
+        if (tableData.success && tableData.data.Status === 'Occupied') {
+            if (!confirm('This table appears to be occupied. Are you sure you want to place a Dine In order here?\n\nIf someone is already sitting here, please select "Take Away" instead.')) {
+                // User cancelled - re-enable form
+                hideLoading();
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnText;
+                inputs.forEach(input => {
+                    if (input !== submitBtn) input.disabled = false;
+                });
+                return; // User cancelled
+            }
+        }
+    } catch (error) {
+        console.error('Error checking table status:', error);
+    }
+}
+    
+    // Calculate total amount
+    const totalAmount = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+    // Calculate total preparation time
+    const totalPreparationTime = cart.reduce((sum, item) => {
+        const menuItem = menuItems.find(m => m['Id Menu'] === item.id);
+        return sum + (parseInt(menuItem['Preparation Time'] || 15) * item.quantity);
+    }, 0);
+    
+    // Create order
+    const orderData = {
+        idTable: tableId,
+        customerName: customerName,
+        customerPhone: customerPhone,
+        pax: parseInt(customerPax),
+        totalAmount: totalAmount,
+        orderType: orderType,
+        notes: orderNotes,
+        preparationTime: totalPreparationTime
+    };
+    
+    try {
+        // Step 1: Create order
+        const orderResponse = await fetch(`${ORDER_API_URL}?action=createOrder`, {
+            method: 'POST',
+            body: JSON.stringify(orderData)
+        });
+        
+        const orderResult = await orderResponse.json();
+        
+        if (!orderResult.success) {
+            throw new Error(orderResult.message || 'Failed to create order');
+        }
+        
+        const orderId = orderResult.id;
+        
+        // Step 2: Create order items
+        let allItemsSuccess = true;
+        
+        for (const item of cart) {
+            const menuItem = menuItems.find(m => m['Id Menu'] === item.id);
+            
+            // Inside the submitOrder function, modify the orderItemData creation:
+const orderItemData = {
+    idOrder: orderId,
+    idMenu: item.id,
+    quantity: item.quantity,
+    unitPrice: item.price,
+    notes: item.notes || '',  // Use item-specific notes instead of orderNotes
+    preparationTime: (parseInt(menuItem['Preparation Time'] || 15) * item.quantity)
+};
+            
+            try {
+                const itemResponse = await fetch(`${ORDER_ITEMS_API_URL}?action=createOrderItem`, {
+                    method: 'POST',
+                    body: JSON.stringify(orderItemData)
+                });
+                
+                const itemResult = await itemResponse.json();
+                
+                if (!itemResult.success) {
+                    allItemsSuccess = false;
+                    console.error('Failed to create order item:', itemResult.message);
+                }
+            } catch (error) {
+                allItemsSuccess = false;
+                console.error('Error creating order item:', error);
+            }
+        }
+        
+         // Step 3: Update table status to "Occupied" ONLY for Dine In
+        if (allItemsSuccess && orderType === 'Dine In') {
+            try {
+                const tableResponse = await fetch(`${TABLE_API_URL}?action=updateTableStatus&id=${tableId}&status=Occupied`);
+                const tableResult = await tableResponse.json();
+                
+                if (!tableResult.success) {
+                    console.warn('Failed to update table status:', tableResult.message);
+                }
+            } catch (tableError) {
+                console.error('Error updating table status:', tableError);
+            }
+        }
+        
+        if (allItemsSuccess) {
+            hideLoading();
+
+            // Show success message
+            document.getElementById('orderIdDisplay').textContent = `Order ID: ${orderId}`;
+            document.getElementById('successModal').style.display = 'flex';
+            document.getElementById('customerModal').style.display = 'none';
+            
+            // Clear cart
+            cart = [];
+            updateCartCount();
+            updateCartDisplay();
+            
+            // Reset quantity displays
+            menuItems.forEach(item => {
+                const qtyElement = document.getElementById(`qty-${item['Id Menu']}`);
+                if (qtyElement) {
+                    qtyElement.textContent = '0';
+                }
+            });
+            
+            // Reset form
+            document.getElementById('customerForm').reset();
+        } else {
+            hideLoading();
+            alert('Order was created but some items failed. Please contact staff.');
+            closeCustomerModal();
+        }
+        
+    } catch (error) {
+        console.error('Error creating order:', error);
+        hideLoading();
+    
+         // Re-enable form
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalBtnText;
+        inputs.forEach(input => {
+            if (input !== submitBtn) input.disabled = false;
+        });
+
+        alert('Failed to place order. Please try again or call staff for assistance.');
+    }
+}
+
+
+        function closeSuccessModal() {
+            document.getElementById('successModal').style.display = 'none';
+        }
+
+        // Close modals when clicking outside
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal')) {
+                event.target.style.display = 'none';
+            }
+        }
+
+function showLoading(message = 'Loading...') {
+    const overlay = document.getElementById('loadingOverlay');
+    const loadingText = document.getElementById('loadingText');
+    
+    // Disable all interactive elements
+    document.body.style.pointerEvents = 'none';
+    document.body.style.overflow = 'hidden';
+    
+    loadingText.textContent = message;
+    overlay.style.display = 'flex';
+    
+    // Prevent keyboard navigation
+    document.addEventListener('keydown', preventTabNavigation);
+}
+
+function hideLoading() {
+    const overlay = document.getElementById('loadingOverlay');
+    
+    // Re-enable all interactive elements
+    document.body.style.pointerEvents = 'auto';
+    document.body.style.overflow = 'auto';
+    
+    overlay.style.display = 'none';
+    
+    // Re-enable keyboard navigation
+    document.removeEventListener('keydown', preventTabNavigation);
+}
+
+function preventTabNavigation(e) {
+    if (e.key === 'Tab') {
+        e.preventDefault();
+    }
+}
+    </script>
+</body>
+</html>
