@@ -143,7 +143,39 @@
             border-radius: 12px;
             overflow: hidden;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            overflow-x: auto;
         }
+
+#orderTable {
+    min-width: 2000px; /* Ensure table has enough width for all columns */
+}
+
+#orderItemsTable {
+    min-width: 2000px; /* Adjust this based on actual width needed */
+}
+
+#menuTable {
+    min-width: 2000px; /* Adjust this based on actual width needed */
+}
+
+#transactionTable {
+    min-width: 2500px; /* Adjust based on the number of columns */
+}
+
+#orderItemsTable td:last-child {
+    white-space: nowrap; /* Keep buttons on one line */
+    min-width: 120px; /* Ensure enough space for Edit/Delete buttons */
+}
+
+#orderTable td:last-child {
+    white-space: nowrap; /* Keep buttons on one line */
+    min-width: 120px; /* Ensure enough space for Edit/Delete buttons */
+}
+
+#menuTable td:last-child {
+    white-space: nowrap; /* Keep buttons on one line */
+    min-width: 120px; /* Ensure enough space for Edit/Delete buttons */
+}
 
         table {
             width: 100%;
@@ -296,6 +328,16 @@
         .badge-cashier { background: #4ecdc4; color: white; }
         .badge-waiter { background: #45b7d1; color: white; }
         .badge-kitchen { background: #96ceb4; color: white; }
+
+.status.pending { background: #fff3cd; color: #856404; }
+.status.preparing { background: #cce5ff; color: #004085; }
+.status.ready { background: #d1ecf1; color: #0c5460; }
+.status.served { background: #d4edda; color: #155724; }
+.status.paid { background: #d1ecf1; color: #0c5460; }
+.status.cancelled { background: #f8d7da; color: #721c24; }
+.status.refunded { background: #f8d7da; color: #721c24; }
+.status.failed { background: #f5c6cb; color: #721c24; }
+
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
@@ -333,6 +375,10 @@
                 <i class="fas fa-clipboard-list"></i>
                 <span>Orders</span>
             </li>
+<li class="menu-item" onclick="showSection('orderItems')">
+    <i class="fas fa-list-alt"></i>
+    <span>Order Items</span>
+</li>
             <li class="menu-item" onclick="showSection('staff')">
                 <i class="fas fa-users"></i>
                 <span>Staff Management</span>
@@ -430,20 +476,65 @@
                 <h2 class="section-title">All Orders</h2>
             </div>
             <div class="data-table">
-                <table id="orderTable">
+                <!-- Replace the current order table headers with this: -->
+<table id="orderTable">
+    <thead>
+        <tr>
+            <th>Id Order</th>
+            <th>Id Table</th>
+            <th>Customer Name</th>
+            <th>Customer Phone</th>
+            <th>Pax</th>
+            <th>Status</th>
+            <th>Total Amount</th>
+            <th>Id Waiter</th>
+            <th>Preparation Time</th>
+            <th>Created At</th>
+            <th>Update At</th>
+            <th>Served At</th>
+            <th>Paid At</th>
+            <th>Payment Method</th>
+            <th>Order Type</th>
+            <th>Notes</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody id="orderTableBody">
+        <!-- Order data will be loaded here -->
+    </tbody>
+</table>
+            </div>
+        </div>
+
+        <!-- Order Items Section -->
+        <div id="orderItems" class="section">
+            <div class="section-header">
+                <h2 class="section-title">All Order Items</h2>
+            </div>
+            <div class="data-table">
+                <table id="orderItemsTable">
                     <thead>
                         <tr>
-                            <th>Order ID</th>
-                            <th>Table</th>
-                            <th>Customer</th>
+                            <th>Id Item</th>
+                            <th>Id Order</th>
+                            <th>Id Menu</th>
+                            <th>Quantity</th>
+                            <th>Unit Price</th>
+                            <th>Sub Total</th>
                             <th>Status</th>
-                            <th>Total Amount</th>
+                            <th>Notes</th>
+                            <th>Id Waiter</th>
+                            <th>Preparation Time</th>
                             <th>Created At</th>
+                            <th>Served At</th>
+                            <th>Prepared By</th>
+                            <th>Discount</th>
+                            <th>Final Price</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
-                    <tbody id="orderTableBody">
-                        <!-- Order data will be loaded here -->
+                    <tbody id="orderItemsTableBody">
+                        <!-- Order items data will be loaded here -->
                     </tbody>
                 </table>
             </div>
@@ -484,13 +575,27 @@
                 <table id="transactionTable">
                     <thead>
                         <tr>
-                            <th>Transaction ID</th>
-                            <th>Order ID</th>
-                            <th>Customer</th>
-                            <th>Total Amount</th>
-                            <th>Payment Status</th>
-                            <th>Payment Method</th>
-                            <th>Created At</th>
+                            <th>Id Transaction</th>
+                <th>Id Order</th>
+                <th>Id Table</th>
+                <th>Customer Name</th>
+                <th>Customer Phone</th>
+                <th>Subtotal</th>
+                <th>Tax Amount</th>
+                <th>Service Charge</th>
+                <th>Discount Amount</th>
+                <th>Total Amount</th>
+                <th>Payment Status</th>
+                <th>Paid Amount</th>
+                <th>Payment Method</th>
+                <th>Change Amount</th>
+                <th>Transaction Code</th>
+                <th>Receipt Number</th>
+                <th>Id Cashier</th>
+                <th>Created At</th>
+                <th>Notes</th>
+                <th>Refund Reason</th>
+                <th>Refunded At</th>
                         </tr>
                     </thead>
                     <tbody id="transactionTableBody">
@@ -616,6 +721,178 @@
         </div>
     </div>
 
+<!-- Order Modal -->
+<div id="orderModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title" id="orderModalTitle">Edit Order</h3>
+            <button class="close-btn" onclick="closeOrderModal()">&times;</button>
+        </div>
+        <form id="orderForm" onsubmit="saveOrder(event)">
+            <input type="hidden" id="orderId">
+            
+            <div class="form-group">
+                <label for="orderTableId">Table ID *</label>
+                <input type="text" id="orderTableId" class="form-control" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="orderCustomerName">Customer Name *</label>
+                <input type="text" id="orderCustomerName" class="form-control" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="orderCustomerPhone">Customer Phone</label>
+                <input type="tel" id="orderCustomerPhone" class="form-control">
+            </div>
+            
+            <div class="form-group">
+                <label for="orderPax">Pax</label>
+                <input type="number" id="orderPax" class="form-control" min="1" value="1">
+            </div>
+            
+            <div class="form-group">
+                <label for="orderStatus">Status *</label>
+                <select id="orderStatus" class="form-control" required>
+                    <option value="Pending">Pending</option>
+                    <option value="Preparing">Preparing</option>
+                    <option value="Ready">Ready</option>
+                    <option value="Served">Served</option>
+                    <option value="Paid">Paid</option>
+                    <option value="Cancelled">Cancelled</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="orderTotalAmount">Total Amount (RM) *</label>
+                <input type="number" id="orderTotalAmount" class="form-control" step="0.01" min="0" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="orderWaiterId">Waiter ID</label>
+                <input type="text" id="orderWaiterId" class="form-control">
+            </div>
+            
+            <div class="form-group">
+                <label for="orderPreparationTime">Preparation Time (minutes)</label>
+                <input type="number" id="orderPreparationTime" class="form-control" min="0" value="0">
+            </div>
+            
+            <div class="form-group">
+                <label for="orderPaymentMethod">Payment Method</label>
+                <select id="orderPaymentMethod" class="form-control">
+                    <option value="">Select Payment Method</option>
+                    <option value="Cash">Cash</option>
+                    <option value="Credit Card">Credit Card</option>
+                    <option value="Debit Card">Debit Card</option>
+                    <option value="Online Payment">Online Payment</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="orderType">Order Type *</label>
+                <select id="orderType" class="form-control" required>
+                    <option value="Dine In">Dine In</option>
+                    <option value="Take Away">Take Away</option>
+                    <option value="Delivery">Delivery</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="orderNotes">Notes</label>
+                <textarea id="orderNotes" class="form-control" rows="3"></textarea>
+            </div>
+            
+            <button type="submit" class="btn-submit">Save Order</button>
+        </form>
+    </div>
+</div>
+
+<!-- Order Item Modal -->
+<div id="orderItemModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title" id="orderItemModalTitle">Edit Order Item</h3>
+            <button class="close-btn" onclick="closeOrderItemModal()">&times;</button>
+        </div>
+        <form id="orderItemForm" onsubmit="saveOrderItem(event)">
+            <input type="hidden" id="orderItemId">
+            
+            <div class="form-group">
+                <label for="orderItemIdOrder">Order ID *</label>
+                <input type="text" id="orderItemIdOrder" class="form-control" required readonly>
+            </div>
+            
+            <div class="form-group">
+                <label for="orderItemIdMenu">Menu ID *</label>
+                <input type="text" id="orderItemIdMenu" class="form-control" required readonly>
+            </div>
+            
+            <div class="form-group">
+                <label for="orderItemQuantity">Quantity *</label>
+                <input type="number" id="orderItemQuantity" class="form-control" min="1" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="orderItemUnitPrice">Unit Price (RM) *</label>
+                <input type="number" id="orderItemUnitPrice" class="form-control" step="0.01" min="0" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="orderItemStatus">Status *</label>
+                <select id="orderItemStatus" class="form-control" required>
+                    <option value="Pending">Pending</option>
+                    <option value="Preparing">Preparing</option>
+                    <option value="Ready">Ready</option>
+                    <option value="Served">Served</option>
+                    <option value="Cancelled">Cancelled</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="orderItemNotes">Notes</label>
+                <textarea id="orderItemNotes" class="form-control" rows="3"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="orderItemIdWaiter">Waiter ID</label>
+                <input type="text" id="orderItemIdWaiter" class="form-control">
+            </div>
+            
+            <div class="form-group">
+                <label for="orderItemPreparationTime">Preparation Time (minutes)</label>
+                <input type="number" id="orderItemPreparationTime" class="form-control" min="0" value="15">
+            </div>
+            
+            <div class="form-group">
+                <label for="orderItemPreparedBy">Prepared By</label>
+                <input type="text" id="orderItemPreparedBy" class="form-control">
+            </div>
+            
+            <div class="form-group">
+                <label for="orderItemDiscount">Discount (RM)</label>
+                <input type="number" id="orderItemDiscount" class="form-control" step="0.01" min="0" value="0">
+            </div>
+            
+            <div class="form-group">
+                <label>Calculated Fields (Read-only)</label>
+                <div style="background: #f8f9fa; padding: 10px; border-radius: 8px; margin-top: 5px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                        <span>Sub Total:</span>
+                        <span id="orderItemSubTotalDisplay">RM 0.00</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>Final Price:</span>
+                        <span id="orderItemFinalPriceDisplay">RM 0.00</span>
+                    </div>
+                </div>
+            </div>
+            
+            <button type="submit" class="btn-submit">Save Order Item</button>
+        </form>
+    </div>
+</div>
+
     <!-- Staff Modal -->
     <div id="staffModal" class="modal">
         <div class="modal-content">
@@ -659,6 +936,7 @@
         const TABLE_API_URL = 'https://script.google.com/macros/s/AKfycbyKuPETE-5zyGx2d9k5GGOx01mMSnq1Qi7GxZoXzjhd26R5s1CKXG5o08SHk7NTydC5kA/exec';
         const ORDER_API_URL = 'https://script.google.com/macros/s/AKfycbzwGqmFpoFSyIpaJOs6ccBi-WlPmWYlSgfti8CLnCC6Nz_zao8cer58JJVTFU5xUy65QQ/exec';
         const TRANSACTION_API_URL = 'https://script.google.com/macros/s/AKfycbwMktMOPD24gasK7TIh7cACvPtkl21QO_9YxXzR2z9x2mh7aCg-WNARi1K_lSFEwWeYGw/exec';
+        const ORDER_ITEMS_API_URL = 'https://script.google.com/macros/s/AKfycbza3y8oJ7Lj5S3AMDXRQUWk-_tf47u1CG9sxi-Ib6fPi11lv2n_s-zj40bY3ZmxXMCDZg/exec';
 
         let currentStaff = {
             id: localStorage.getItem('staffId'),
@@ -708,6 +986,9 @@
                 case 'orders':
                     loadOrderData();
                     break;
+                case 'orderItems':
+                    loadOrderItemsData();
+                    break;
                 case 'staff':
                     loadStaffData();
                     break;
@@ -722,6 +1003,7 @@
             loadMenuData();
             loadTableData();
             loadOrderData();
+            loadOrderItemsData();
             loadStaffData();
             loadTransactionData();
         }
@@ -845,42 +1127,272 @@
             }
         }
 
-        async function loadOrderData() {
+async function loadOrderData() {
+    try {
+        // Use getAllOrders instead of getOrdersByStatus
+        const response = await fetch(`${ORDER_API_URL}?action=getAllOrders`);
+        const result = await response.json();
+        
+        if (result.success) {
+            const tbody = document.getElementById('orderTableBody');
+            tbody.innerHTML = '';
+            
+            result.data.forEach(order => {
+                // Format dates
+                const formatDate = (dateStr) => {
+                    if (!dateStr) return '-';
+                    const date = new Date(dateStr);
+                    return date.toLocaleString();
+                };
+                
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${order['Id Order']}</td>
+                    <td>${order['Id Table']}</td>
+                    <td>${order['Customer Name']}</td>
+                    <td>${order['Customer Phone']}</td>
+                    <td>${order['Pax']}</td>
+                    <td>
+                        <span class="status ${order.Status.toLowerCase()}">
+                            ${order.Status}
+                        </span>
+                    </td>
+                    <td>RM ${parseFloat(order['Total Amount'] || 0).toFixed(2)}</td>
+                    <td>${order['Id Waiter'] || '-'}</td>
+                    <td>${order['Preparation Time'] || 0} min</td>
+                    <td>${formatDate(order['Created At'])}</td>
+                    <td>${formatDate(order['Update At'])}</td>
+                    <td>${formatDate(order['Served At'])}</td>
+                    <td>${formatDate(order['Paid At'])}</td>
+                    <td>${order['Payment Method'] || '-'}</td>
+                    <td>${order['Order Type'] || 'Dine In'}</td>
+                    <td>${order['Notes'] || '-'}</td>
+                    <td>
+                        <button class="btn-action btn-edit" onclick="editOrder('${order['Id Order']}')">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                        <button class="btn-action btn-delete" onclick="deleteOrder('${order['Id Order']}')">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+    } catch (error) {
+        console.error('Error loading order data:', error);
+    }
+}        
+
+        async function loadOrderItemsData() {
             try {
-                const response = await fetch(`${ORDER_API_URL}?action=getOrdersByStatus&status=Pending`);
+                // We need to get all order items from your Google Apps Script
+                // Note: You need to add a 'getAllOrderItems' action to your Apps Script
+                const response = await fetch(`${ORDER_ITEMS_API_URL}?action=getAllOrderItems`);
                 const result = await response.json();
                 
                 if (result.success) {
-                    const tbody = document.getElementById('orderTableBody');
+                    const tbody = document.getElementById('orderItemsTableBody');
                     tbody.innerHTML = '';
                     
-                    result.data.forEach(order => {
-                        const date = new Date(order['Created At']);
-                        const formattedDate = date.toLocaleString();
+                    result.data.forEach(item => {
+                        // Format dates
+                        const formatDate = (dateStr) => {
+                            if (!dateStr) return '-';
+                            const date = new Date(dateStr);
+                            return date.toLocaleString();
+                        };
                         
                         const row = document.createElement('tr');
                         row.innerHTML = `
-                            <td>${order['Id Order']}</td>
-                            <td>Table ${order['Id Table']}</td>
-                            <td>${order['Customer Name']}</td>
+                            <td>${item['Id Item']}</td>
+                            <td>${item['Id Order']}</td>
+                            <td>${item['Id Menu']}</td>
+                            <td>${item['Quantity']}</td>
+                            <td>RM ${parseFloat(item['Unit Price'] || 0).toFixed(2)}</td>
+                            <td>RM ${parseFloat(item['Sub Total'] || 0).toFixed(2)}</td>
                             <td>
-                                <span class="status ${order.Status}">
-                                    ${order.Status.toUpperCase()}
+                                <span class="status ${item['Status'] ? item['Status'].toLowerCase() : 'pending'}">
+                                    ${item['Status'] || 'Pending'}
                                 </span>
                             </td>
-                            <td>RM ${parseFloat(order['Total Amount']).toFixed(2)}</td>
-                            <td>${formattedDate}</td>
+                            <td>${item['Notes'] || '-'}</td>
+                            <td>${item['Id Waiter'] || '-'}</td>
+                            <td>${item['Preparation Time'] || 0} min</td>
+                            <td>${formatDate(item['Created At'])}</td>
+                            <td>${formatDate(item['Served At'])}</td>
+                            <td>${item['Prepared By'] || '-'}</td>
+                            <td>RM ${parseFloat(item['Discount'] || 0).toFixed(2)}</td>
+                            <td>RM ${parseFloat(item['Final Price'] || 0).toFixed(2)}</td>
                             <td>
-                                <button class="btn-action btn-edit" onclick="viewOrderDetails('${order['Id Order']}')">
-                                    <i class="fas fa-eye"></i> View
+                                <button class="btn-action btn-edit" onclick="editOrderItem('${item['Id Item']}')">
+                                    <i class="fas fa-edit"></i> Edit
+                                </button>
+                                <button class="btn-action btn-delete" onclick="deleteOrderItem('${item['Id Item']}')">
+                                    <i class="fas fa-trash"></i> Delete
                                 </button>
                             </td>
                         `;
                         tbody.appendChild(row);
                     });
+                } else {
+                    console.error('Error loading order items:', result.message);
+                    document.getElementById('orderItemsTableBody').innerHTML = `
+                        <tr><td colspan="16" style="text-align: center; color: #999;">${result.message || 'Error loading order items'}</td></tr>
+                    `;
                 }
             } catch (error) {
-                console.error('Error loading order data:', error);
+                console.error('Error loading order items data:', error);
+                document.getElementById('orderItemsTableBody').innerHTML = `
+                    <tr><td colspan="16" style="text-align: center; color: #999;">Error loading order items: ${error.message}</td></tr>
+                `;
+            }
+        }
+
+                // Order Item Modal Functions
+        function showOrderItemModal(itemId = null) {
+            const modal = document.getElementById('orderItemModal');
+            const title = document.getElementById('orderItemModalTitle');
+            
+            if (itemId) {
+                title.textContent = 'Edit Order Item';
+                document.getElementById('orderItemId').value = itemId;
+                loadOrderItemDataForEdit(itemId);
+            }
+            
+            modal.style.display = 'flex';
+        }
+
+        function closeOrderItemModal() {
+            document.getElementById('orderItemModal').style.display = 'none';
+        }
+
+        async function loadOrderItemDataForEdit(itemId) {
+            try {
+                const response = await fetch(`${ORDER_ITEMS_API_URL}?action=getOrderItemById&id=${itemId}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    const item = result.data;
+                    document.getElementById('orderItemIdOrder').value = item['Id Order'] || '';
+                    document.getElementById('orderItemIdMenu').value = item['Id Menu'] || '';
+                    document.getElementById('orderItemQuantity').value = item['Quantity'] || 1;
+                    document.getElementById('orderItemUnitPrice').value = item['Unit Price'] || 0;
+                    document.getElementById('orderItemStatus').value = item['Status'] || 'Pending';
+                    document.getElementById('orderItemNotes').value = item['Notes'] || '';
+                    document.getElementById('orderItemIdWaiter').value = item['Id Waiter'] || '';
+                    document.getElementById('orderItemPreparationTime').value = item['Preparation Time'] || 15;
+                    document.getElementById('orderItemPreparedBy').value = item['Prepared By'] || '';
+                    document.getElementById('orderItemDiscount').value = item['Discount'] || 0;
+                    
+                    // Display calculated fields
+                    document.getElementById('orderItemSubTotalDisplay').textContent = 
+                        `RM ${parseFloat(item['Sub Total'] || 0).toFixed(2)}`;
+                    document.getElementById('orderItemFinalPriceDisplay').textContent = 
+                        `RM ${parseFloat(item['Final Price'] || 0).toFixed(2)}`;
+                    
+                    // Add event listeners to recalculate when quantity or price changes
+                    document.getElementById('orderItemQuantity').addEventListener('input', calculateOrderItemTotals);
+                    document.getElementById('orderItemUnitPrice').addEventListener('input', calculateOrderItemTotals);
+                    document.getElementById('orderItemDiscount').addEventListener('input', calculateOrderItemTotals);
+                }
+            } catch (error) {
+                console.error('Error loading order item for edit:', error);
+                alert('Error loading order item data');
+            }
+        }
+
+        function calculateOrderItemTotals() {
+            const quantity = parseFloat(document.getElementById('orderItemQuantity').value) || 0;
+            const unitPrice = parseFloat(document.getElementById('orderItemUnitPrice').value) || 0;
+            const discount = parseFloat(document.getElementById('orderItemDiscount').value) || 0;
+            
+            const subtotal = quantity * unitPrice;
+            const finalPrice = subtotal - discount;
+            
+            document.getElementById('orderItemSubTotalDisplay').textContent = 
+                `RM ${subtotal.toFixed(2)}`;
+            document.getElementById('orderItemFinalPriceDisplay').textContent = 
+                `RM ${finalPrice.toFixed(2)}`;
+        }
+
+        async function saveOrderItem(event) {
+            event.preventDefault();
+            
+            const itemId = document.getElementById('orderItemId').value;
+            
+            const itemData = {
+                id: itemId,
+                quantity: parseInt(document.getElementById('orderItemQuantity').value) || 1,
+                unitPrice: parseFloat(document.getElementById('orderItemUnitPrice').value) || 0,
+                status: document.getElementById('orderItemStatus').value,
+                notes: document.getElementById('orderItemNotes').value,
+                idWaiter: document.getElementById('orderItemIdWaiter').value,
+                preparationTime: parseInt(document.getElementById('orderItemPreparationTime').value) || 15,
+                preparedBy: document.getElementById('orderItemPreparedBy').value,
+                discount: parseFloat(document.getElementById('orderItemDiscount').value) || 0
+            };
+            
+            try {
+                const response = await fetch(`${ORDER_ITEMS_API_URL}?action=updateOrderItem`, {
+                    method: 'POST',
+                    body: JSON.stringify(itemData)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('Order item updated successfully!');
+                    closeOrderItemModal();
+                    loadOrderItemsData();
+                } else {
+                    alert(result.message || 'Error updating order item');
+                }
+            } catch (error) {
+                console.error('Error updating order item:', error);
+                alert('Error updating order item');
+            }
+        }
+
+        async function editOrderItem(itemId) {
+            showOrderItemModal(itemId);
+        }
+
+        async function deleteOrderItem(itemId) {
+            // Check if the order item has been served or prepared
+            try {
+                const response = await fetch(`${ORDER_ITEMS_API_URL}?action=getOrderItemById&id=${itemId}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    const item = result.data;
+                    const status = item['Status'];
+                    
+                    // Prevent deletion of served items
+                    if (status === 'Served') {
+                        alert(`Cannot delete order item with status "${status}". You can only delete pending, preparing, ready, or cancelled items.`);
+                        return;
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking order item status:', error);
+            }
+            
+            if (confirm('Are you sure you want to delete this order item? This action cannot be undone.')) {
+                try {
+                    const response = await fetch(`${ORDER_ITEMS_API_URL}?action=deleteOrderItem&id=${itemId}`);
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        alert('Order item deleted successfully!');
+                        loadOrderItemsData();
+                    } else {
+                        alert(result.message || 'Error deleting order item');
+                    }
+                } catch (error) {
+                    console.error('Error deleting order item:', error);
+                    alert('Error deleting order item');
+                }
             }
         }
 
@@ -919,39 +1431,95 @@
         }
 
         async function loadTransactionData() {
-            try {
-                const response = await fetch(`${TRANSACTION_API_URL}?action=getDailyTransactions`);
-                const result = await response.json();
+    try {
+        // Change from getDailyTransactions to getAllTransactions
+        const response = await fetch(`${TRANSACTION_API_URL}?action=getAllTransactions`);
+        const result = await response.json();
+        
+        if (result.success) {
+            const tbody = document.getElementById('transactionTableBody');
+            tbody.innerHTML = '';
+            
+            // Sort transactions by date (newest first)
+            result.data.sort((a, b) => {
+                const dateA = new Date(a['Created At']);
+                const dateB = new Date(b['Created At']);
+                return dateB - dateA; // Descending order
+            });
+            
+            result.data.forEach(transaction => {
+                // Format dates
+                const formatDate = (dateStr) => {
+                    if (!dateStr) return '-';
+                    try {
+                        const date = new Date(dateStr);
+                        return date.toLocaleString();
+                    } catch (e) {
+                        return dateStr || '-';
+                    }
+                };
                 
-                if (result.success) {
-                    const tbody = document.getElementById('transactionTableBody');
-                    tbody.innerHTML = '';
-                    
-                    result.data.forEach(transaction => {
-                        const date = new Date(transaction['Created At']);
-                        const formattedDate = date.toLocaleString();
-                        
-                        const row = document.createElement('tr');
-                        row.innerHTML = `
-                            <td>${transaction['Id Transaction']}</td>
-                            <td>${transaction['Id Order']}</td>
-                            <td>${transaction['Customer Name']}</td>
-                            <td>RM ${parseFloat(transaction['Total Amount']).toFixed(2)}</td>
-                            <td>
-                                <span class="status ${transaction['Payment Status'].toLowerCase()}">
-                                    ${transaction['Payment Status'].toUpperCase()}
-                                </span>
-                            </td>
-                            <td>${transaction['Payment Method']}</td>
-                            <td>${formattedDate}</td>
-                        `;
-                        tbody.appendChild(row);
-                    });
-                }
-            } catch (error) {
-                console.error('Error loading transaction data:', error);
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${transaction['Id Transaction'] || '-'}</td>
+                    <td>${transaction['Id Order'] || '-'}</td>
+                    <td>${transaction['Id Table'] || '-'}</td>
+                    <td>${transaction['Customer Name'] || '-'}</td>
+                    <td>${transaction['Customer Phone'] || '-'}</td>
+                    <td>RM ${parseFloat(transaction['Subtotal'] || 0).toFixed(2)}</td>
+                    <td>RM ${parseFloat(transaction['Tax Amount'] || 0).toFixed(2)}</td>
+                    <td>RM ${parseFloat(transaction['Service Charge'] || 0).toFixed(2)}</td>
+                    <td>RM ${parseFloat(transaction['Discount Amount'] || 0).toFixed(2)}</td>
+                    <td>RM ${parseFloat(transaction['Total Amount'] || 0).toFixed(2)}</td>
+                    <td>
+                        <span class="status ${(transaction['Payment Status'] || '').toLowerCase()}">
+                            ${transaction['Payment Status'] || '-'}
+                        </span>
+                    </td>
+                    <td>RM ${parseFloat(transaction['Paid Amount'] || 0).toFixed(2)}</td>
+                    <td>${transaction['Payment Method'] || '-'}</td>
+                    <td>RM ${parseFloat(transaction['Change Amount'] || 0).toFixed(2)}</td>
+                    <td>${transaction['Transaction Code'] || '-'}</td>
+                    <td>${transaction['Receipt Number'] || '-'}</td>
+                    <td>${transaction['Id Cashier'] || '-'}</td>
+                    <td>${formatDate(transaction['Created At'])}</td>
+                    <td>${transaction['Notes'] || '-'}</td>
+                    <td>${transaction['Refund Reason'] || '-'}</td>
+                    <td>${formatDate(transaction['Refunded At'])}</td>
+                `;
+                tbody.appendChild(row);
+            });
+            
+            // Update the message when no transactions found
+            if (result.data.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="21" style="text-align: center; padding: 40px; color: #999;">
+                            No transactions found
+                        </td>
+                    </tr>
+                `;
             }
+        } else {
+            document.getElementById('transactionTableBody').innerHTML = `
+                <tr>
+                    <td colspan="21" style="text-align: center; padding: 40px; color: #999;">
+                        Error loading transactions: ${result.message}
+                    </td>
+                </tr>
+            `;
         }
+    } catch (error) {
+        console.error('Error loading transaction data:', error);
+        document.getElementById('transactionTableBody').innerHTML = `
+            <tr>
+                <td colspan="21" style="text-align: center; padding: 40px; color: #999;">
+                    Error loading transactions: ${error.message}
+                </td>
+            </tr>
+        `;
+    }
+}
 
         // Menu Modal Functions
         function showMenuModal(menuId = null) {
@@ -1282,10 +1850,133 @@
             }
         }
 
-        function viewOrderDetails(orderId) {
-            alert(`Viewing order details for: ${orderId}`);
-            // You can implement a detailed view modal here
+// Order Modal Functions
+function showOrderModal(orderId = null) {
+    const modal = document.getElementById('orderModal');
+    const title = document.getElementById('orderModalTitle');
+    
+    if (orderId) {
+        title.textContent = 'Edit Order';
+        document.getElementById('orderId').value = orderId;
+        loadOrderDataForEdit(orderId);
+    }
+    
+    modal.style.display = 'flex';
+}
+
+function closeOrderModal() {
+    document.getElementById('orderModal').style.display = 'none';
+}
+
+async function loadOrderDataForEdit(orderId) {
+    try {
+        const response = await fetch(`${ORDER_API_URL}?action=getOrderById&id=${orderId}`);
+        const result = await response.json();
+        
+        if (result.success) {
+            const order = result.data;
+            document.getElementById('orderTableId').value = order['Id Table'] || '';
+            document.getElementById('orderCustomerName').value = order['Customer Name'] || '';
+            document.getElementById('orderCustomerPhone').value = order['Customer Phone'] || '';
+            document.getElementById('orderPax').value = order['Pax'] || 1;
+            document.getElementById('orderStatus').value = order['Status'] || 'Pending';
+            document.getElementById('orderTotalAmount').value = order['Total Amount'] || 0;
+            document.getElementById('orderWaiterId').value = order['Id Waiter'] || '';
+            document.getElementById('orderPreparationTime').value = order['Preparation Time'] || 0;
+            document.getElementById('orderPaymentMethod').value = order['Payment Method'] || '';
+            document.getElementById('orderType').value = order['Order Type'] || 'Dine In';
+            document.getElementById('orderNotes').value = order['Notes'] || '';
         }
+    } catch (error) {
+        console.error('Error loading order for edit:', error);
+        alert('Error loading order data');
+    }
+}
+
+async function saveOrder(event) {
+    event.preventDefault();
+    
+    const orderId = document.getElementById('orderId').value;
+    
+    const orderData = {
+        id: orderId,
+        idTable: document.getElementById('orderTableId').value,
+        customerName: document.getElementById('orderCustomerName').value,
+        customerPhone: document.getElementById('orderCustomerPhone').value,
+        pax: parseInt(document.getElementById('orderPax').value) || 1,
+        status: document.getElementById('orderStatus').value,
+        totalAmount: parseFloat(document.getElementById('orderTotalAmount').value) || 0,
+        idWaiter: document.getElementById('orderWaiterId').value,
+        preparationTime: parseInt(document.getElementById('orderPreparationTime').value) || 0,
+        paymentMethod: document.getElementById('orderPaymentMethod').value,
+        orderType: document.getElementById('orderType').value,
+        notes: document.getElementById('orderNotes').value
+    };
+    
+    try {
+        const response = await fetch(`${ORDER_API_URL}?action=updateOrder`, {
+            method: 'POST',
+            body: JSON.stringify(orderData)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('Order updated successfully!');
+            closeOrderModal();
+            loadOrderData();
+            loadDashboardData();
+        } else {
+            alert(result.message || 'Error updating order');
+        }
+    } catch (error) {
+        console.error('Error updating order:', error);
+        alert('Error updating order');
+    }
+}
+
+async function editOrder(orderId) {
+    showOrderModal(orderId);
+}
+
+async function deleteOrder(orderId) {
+    // Check if the order has been paid or served
+    try {
+        const response = await fetch(`${ORDER_API_URL}?action=getOrderById&id=${orderId}`);
+        const result = await response.json();
+        
+        if (result.success) {
+            const order = result.data;
+            const status = order['Status'];
+            
+            // Prevent deletion of paid or served orders
+            if (status === 'Paid' || status === 'Served') {
+                alert(`Cannot delete order with status "${status}". You can only delete pending, preparing, or ready orders.`);
+                return;
+            }
+        }
+    } catch (error) {
+        console.error('Error checking order status:', error);
+    }
+    
+    if (confirm('Are you sure you want to delete this order? This action cannot be undone.')) {
+        try {
+            const response = await fetch(`${ORDER_API_URL}?action=deleteOrder&id=${orderId}`);
+            const result = await response.json();
+            
+            if (result.success) {
+                alert('Order deleted successfully!');
+                loadOrderData();
+                loadDashboardData(); // Refresh dashboard stats
+            } else {
+                alert(result.message || 'Error deleting order');
+            }
+        } catch (error) {
+            console.error('Error deleting order:', error);
+            alert('Error deleting order');
+        }
+    }
+}
 
         function logout() {
             localStorage.clear();
