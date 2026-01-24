@@ -413,6 +413,114 @@
     z-index: 10;
     border-radius: 12px;
 }
+/* QR Print Modal Styles */
+#qrPrintModal {
+    z-index: 1001; /* Higher than other modals */
+}
+
+#qrPrintModal .modal-content {
+    width: 90%;
+    max-width: 600px;
+    max-height: 90vh;
+}
+
+#qrPrintModal .modal-body {
+    padding: 20px 0;
+}
+
+.qr-preview-container {
+    position: relative;
+    width: 400px;
+    height: 400px;
+    margin: 0 auto;
+    border: 1px solid #eee;
+    background: white;
+}
+
+.qr-background {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 1;
+}
+
+.qr-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 2;
+    background: white;
+    padding: 10px;
+    border-radius: 8px;
+}
+
+.qr-overlay img {
+    width: 150px;
+    height: 150px;
+}
+
+.qr-print-actions {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+}
+
+.qr-print-actions button {
+    padding: 10px 25px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#printQrBtn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+#closeQrModalBtn {
+    background: #e0e0e0;
+    color: #555;
+}
+
+/* Print styles */
+@media print {
+    body * {
+        visibility: hidden;
+    }
+    
+    .qr-preview-container, 
+    .qr-preview-container * {
+        visibility: visible;
+    }
+    
+    .qr-preview-container {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        border: none;
+    }
+    
+    .qr-print-actions {
+        display: none !important;
+    }
+}
+.btn-print-qr {
+    background: #45b7d1;
+    color: white;
+}
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
@@ -1113,6 +1221,32 @@
     </div>
 </div>
 
+<!-- QR Print Modal -->
+<div id="qrPrintModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title">Print QR Code</h3>
+            <button class="close-btn" onclick="closeQrPrintModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="qr-preview-container">
+                <img id="qrBackgroundImage" class="qr-background" src="qrImage.png" alt="Table Template">
+                <div class="qr-overlay">
+                    <img id="qrCodeImage" src="" alt="QR Code">
+                </div>
+            </div>
+            <div class="qr-print-actions">
+                <button id="printQrBtn" onclick="printQrCode()">
+                    <i class="fas fa-print"></i> Print QR Code
+                </button>
+                <button id="closeQrModalBtn" onclick="closeQrPrintModal()">
+                    <i class="fas fa-times"></i> Close
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
     <script>
         // App Script URLs
         const STAFF_API_URL = 'https://script.google.com/macros/s/AKfycbzL0k_WIERtc6ikY6_RUtOoU6vmWkVqJtZVO1MTzikRLpHM2KKY8FUrTMx1qqtgw6-P/exec';
@@ -1328,6 +1462,10 @@
                                 <button class="btn-action btn-delete" onclick="deleteTable('${table['Id Table']}')">
                                     <i class="fas fa-trash"></i> Delete
                                 </button>
+ <button class="btn-action" style="background: #45b7d1; color: white;" 
+            onclick="printTableQR('${table['Id Table']}', '${table.Table}', '${table['Qr Code Url']}')">
+        <i class="fas fa-qrcode"></i> Print QR
+    </button>
                             </td>
                         `;
                         tbody.appendChild(row);
@@ -2484,6 +2622,39 @@ async function deleteTransaction(transactionId) {
                 event.target.style.display = 'none';
             }
         }
+
+// QR Print Functions
+function printTableQR(tableId, tableNumber, qrUrl) {
+    if (!qrUrl) {
+        alert('This table does not have a QR Code URL assigned.');
+        return;
+    }
+    
+    // Generate QR code using the URL
+    const qrCodeImg = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrUrl)}`;
+    
+    // Set the QR code image
+    document.getElementById('qrCodeImage').src = qrCodeImg;
+    
+    // Set alt text
+    document.getElementById('qrCodeImage').alt = `QR Code for Table ${tableNumber}`;
+    
+    // Open the modal
+    document.getElementById('qrPrintModal').style.display = 'flex';
+    
+    // Store table info for reference
+    document.getElementById('qrPrintModal').dataset.tableId = tableId;
+    document.getElementById('qrPrintModal').dataset.tableNumber = tableNumber;
+}
+
+function closeQrPrintModal() {
+    document.getElementById('qrPrintModal').style.display = 'none';
+    document.getElementById('qrCodeImage').src = '';
+}
+
+function printQrCode() {
+    window.print();
+}
     </script>
 </body>
 </html>
