@@ -1245,7 +1245,6 @@
     
     // Show loading
     if (loadingEl) loadingEl.style.display = 'flex';
-    tbody.innerHTML = `<tr><td colspan="7" class="loading-row">Loading...</td></tr>`;
 
             try {
                 const response = await fetch(`${MENU_API_URL}?action=getAllMenu`);
@@ -1296,7 +1295,6 @@
     
     // Show loading
     if (loadingEl) loadingEl.style.display = 'flex';
-    tbody.innerHTML = `<tr><td colspan="7" class="loading-row">Loading...</td></tr>`;
 
             try {
                 const response = await fetch(`${TABLE_API_URL}?action=getAllTables`);
@@ -1351,7 +1349,6 @@ async function loadOrderData() {
     
     // Show loading
     if (loadingEl) loadingEl.style.display = 'flex';
-    tbody.innerHTML = `<tr><td colspan="17" class="loading-row">Loading...</td></tr>`;
 
     try {
         // Use getAllOrders instead of getOrdersByStatus
@@ -1420,7 +1417,6 @@ async function loadOrderData() {
     
     // Show loading
     if (loadingEl) loadingEl.style.display = 'flex';
-    tbody.innerHTML = `<tr><td colspan="16" class="loading-row">Loading...</td></tr>`;
 
             try {
                 // We need to get all order items from your Google Apps Script
@@ -1662,7 +1658,6 @@ async function loadOrderData() {
     
     // Show loading
     if (loadingEl) loadingEl.style.display = 'flex';
-    tbody.innerHTML = `<tr><td colspan="5" class="loading-row">Loading...</td></tr>`;
 
             try {
                 const response = await fetch(`${STAFF_API_URL}?action=getAllStaff`);
@@ -1708,7 +1703,6 @@ async function loadOrderData() {
     
     // Show loading
     if (loadingEl) loadingEl.style.display = 'flex';
-    tbody.innerHTML = `<tr><td colspan="22" class="loading-row">Loading...</td></tr>`;
 
     try {
         // Change from getDailyTransactions to getAllTransactions
