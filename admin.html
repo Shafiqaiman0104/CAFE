@@ -177,6 +177,11 @@
     min-width: 120px; /* Ensure enough space for Edit/Delete buttons */
 }
 
+#transactionTable td:last-child {
+    white-space: nowrap; /* Keep buttons on one line */
+    min-width: 120px; /* Ensure enough space for Edit/Delete buttons */
+}
+
         table {
             width: 100%;
             border-collapse: collapse;
@@ -338,6 +343,76 @@
 .status.refunded { background: #f8d7da; color: #721c24; }
 .status.failed { background: #f5c6cb; color: #721c24; }
 
+
+/* Add this to your existing CSS */
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+}
+
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #764ba2;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+.loading-text {
+    margin-top: 10px;
+    color: #764ba2;
+    font-weight: 500;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.table-container {
+    position: relative;
+    min-height: 200px;
+}
+
+.loading-row {
+    text-align: center;
+    padding: 40px !important;
+    color: #666;
+}
+
+.loading-row td {
+    padding: 40px !important;
+}
+
+/* Modal loading */
+.modal-content {
+    position: relative;
+}
+
+.modal-loading {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.9);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 10;
+    border-radius: 12px;
+}
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
@@ -400,7 +475,7 @@
             
             <div class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px;">
                 <div style="background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
-                    <h3 style="color: #764ba2; margin-bottom: 10px;">Total Orders Today</h3>
+                    <h3 style="color: #764ba2; margin-bottom: 10px;">Total Paid Orders</h3>
                     <p id="totalOrders" style="font-size: 2rem; font-weight: bold;">0</p>
                 </div>
                 <div style="background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
@@ -408,7 +483,7 @@
                     <p id="activeTables" style="font-size: 2rem; font-weight: bold;">0</p>
                 </div>
                 <div style="background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
-                    <h3 style="color: #764ba2; margin-bottom: 10px;">Total Revenue</h3>
+                    <h3 style="color: #764ba2; margin-bottom: 10px;">Total Revenue (All Paid)</h3>
                     <p id="totalRevenue" style="font-size: 2rem; font-weight: bold;">RM 0</p>
                 </div>
             </div>
@@ -422,7 +497,11 @@
                     <i class="fas fa-plus"></i> Add New Menu
                 </button>
             </div>
-            <div class="data-table">
+            <div class="data-table table-container">
+    <div class="loading-overlay" id="menuLoading" style="display: none;">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading menu data...</div>
+    </div>
                 <table id="menuTable">
                     <thead>
                         <tr>
@@ -450,7 +529,11 @@
                     <i class="fas fa-plus"></i> Add New Table
                 </button>
             </div>
-            <div class="data-table">
+            <div class="data-table table-container">
+    <div class="loading-overlay" id="tableLoading" style="display: none;">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading table data...</div>
+    </div>
                 <table id="tableTable">
                     <thead>
                         <tr>
@@ -475,7 +558,11 @@
             <div class="section-header">
                 <h2 class="section-title">All Orders</h2>
             </div>
-            <div class="data-table">
+            <div class="data-table table-container">
+    <div class="loading-overlay" id="orderLoading" style="display: none;">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading order data...</div>
+    </div>
                 <!-- Replace the current order table headers with this: -->
 <table id="orderTable">
     <thead>
@@ -511,7 +598,11 @@
             <div class="section-header">
                 <h2 class="section-title">All Order Items</h2>
             </div>
-            <div class="data-table">
+            <div class="data-table table-container">
+    <div class="loading-overlay" id="orderItemsLoading" style="display: none;">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading order items data...</div>
+    </div>
                 <table id="orderItemsTable">
                     <thead>
                         <tr>
@@ -548,7 +639,11 @@
                     <i class="fas fa-plus"></i> Add New Staff
                 </button>
             </div>
-            <div class="data-table">
+            <div class="data-table table-container">
+    <div class="loading-overlay" id="staffLoading" style="display: none;">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading staff data...</div>
+    </div>
                 <table id="staffTable">
                     <thead>
                         <tr>
@@ -571,7 +666,11 @@
             <div class="section-header">
                 <h2 class="section-title">Transactions</h2>
             </div>
-            <div class="data-table">
+            <div class="data-table table-container">
+    <div class="loading-overlay" id="transactionLoading" style="display: none;">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading transaction data...</div>
+    </div>
                 <table id="transactionTable">
                     <thead>
                         <tr>
@@ -596,6 +695,7 @@
                 <th>Notes</th>
                 <th>Refund Reason</th>
                 <th>Refunded At</th>
+                <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody id="transactionTableBody">
@@ -609,6 +709,10 @@
     <!-- Menu Modal -->
     <div id="menuModal" class="modal">
         <div class="modal-content">
+              <div class="modal-loading" id="menuModalLoading" style="display: none;">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading data...</div>
+    </div>
             <div class="modal-header">
                 <h3 class="modal-title" id="menuModalTitle">Add New Menu</h3>
                 <button class="close-btn" onclick="closeMenuModal()">&times;</button>
@@ -674,6 +778,10 @@
     <!-- Table Modal -->
     <div id="tableModal" class="modal">
         <div class="modal-content">
+            <div class="modal-loading" id="tableModalLoading" style="display: none;">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading data...</div>
+    </div>
             <div class="modal-header">
                 <h3 class="modal-title" id="tableModalTitle">Add New Table</h3>
                 <button class="close-btn" onclick="closeTableModal()">&times;</button>
@@ -724,6 +832,10 @@
 <!-- Order Modal -->
 <div id="orderModal" class="modal">
     <div class="modal-content">
+<div class="modal-loading" id="orderModalLoading" style="display: none;">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading data...</div>
+    </div>
         <div class="modal-header">
             <h3 class="modal-title" id="orderModalTitle">Edit Order</h3>
             <button class="close-btn" onclick="closeOrderModal()">&times;</button>
@@ -811,6 +923,10 @@
 <!-- Order Item Modal -->
 <div id="orderItemModal" class="modal">
     <div class="modal-content">
+<div class="modal-loading" id="orderItemsModalLoading" style="display: none;">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading data...</div>
+    </div>
         <div class="modal-header">
             <h3 class="modal-title" id="orderItemModalTitle">Edit Order Item</h3>
             <button class="close-btn" onclick="closeOrderItemModal()">&times;</button>
@@ -896,6 +1012,10 @@
     <!-- Staff Modal -->
     <div id="staffModal" class="modal">
         <div class="modal-content">
+<div class="modal-loading" id="staffModalLoading" style="display: none;">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading data...</div>
+    </div>
             <div class="modal-header">
                 <h3 class="modal-title" id="staffModalTitle">Add New Staff</h3>
                 <button class="close-btn" onclick="closeStaffModal()">&times;</button>
@@ -928,6 +1048,70 @@
             </form>
         </div>
     </div>
+
+<!-- Transaction Modal -->
+<div id="transactionModal" class="modal">
+    <div class="modal-content">
+<div class="modal-loading" id="transactionModalLoading" style="display: none;">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading data...</div>
+    </div>
+        <div class="modal-header">
+            <h3 class="modal-title" id="transactionModalTitle">Edit Transaction</h3>
+            <button class="close-btn" onclick="closeTransactionModal()">&times;</button>
+        </div>
+        <form id="transactionForm" onsubmit="saveTransaction(event)">
+            <input type="hidden" id="transactionId">
+            
+            <div class="form-group">
+                <label for="transactionCustomerName">Customer Name</label>
+                <input type="text" id="transactionCustomerName" class="form-control">
+            </div>
+            
+            <div class="form-group">
+                <label for="transactionCustomerPhone">Customer Phone</label>
+                <input type="tel" id="transactionCustomerPhone" class="form-control">
+            </div>
+            
+            <div class="form-group">
+                <label for="transactionTotalAmount">Total Amount (RM)</label>
+                <input type="number" id="transactionTotalAmount" class="form-control" step="0.01" min="0">
+            </div>
+            
+            <div class="form-group">
+                <label for="transactionPaymentStatus">Payment Status</label>
+                <select id="transactionPaymentStatus" class="form-control">
+                    <option value="Pending">Pending</option>
+                    <option value="Paid">Paid</option>
+                    <option value="Refunded">Refunded</option>
+                    <option value="Failed">Failed</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="transactionPaidAmount">Paid Amount (RM)</label>
+                <input type="number" id="transactionPaidAmount" class="form-control" step="0.01" min="0">
+            </div>
+            
+            <div class="form-group">
+                <label for="transactionPaymentMethod">Payment Method</label>
+                <select id="transactionPaymentMethod" class="form-control">
+                    <option value="Cash">Cash</option>
+                    <option value="Credit Card">Credit Card</option>
+                    <option value="Debit Card">Debit Card</option>
+                    <option value="Online Payment">Online Payment</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="transactionNotes">Notes</label>
+                <textarea id="transactionNotes" class="form-control" rows="3"></textarea>
+            </div>
+            
+            <button type="submit" class="btn-submit">Save Transaction</button>
+        </form>
+    </div>
+</div>
 
     <script>
         // App Script URLs
@@ -1009,43 +1193,60 @@
         }
 
         async function loadDashboardData() {
-            try {
-                // Load orders data
-                const ordersRes = await fetch(`${ORDER_API_URL}?action=getActiveOrders`);
-                const ordersData = await ordersRes.json();
-                
-                // Load tables data
-                const tablesRes = await fetch(`${TABLE_API_URL}?action=getAllTables`);
-                const tablesData = await tablesRes.json();
-                
-                // Load transactions for today
-                const today = new Date().toISOString().split('T')[0];
-                const transRes = await fetch(`${TRANSACTION_API_URL}?action=getDailyTransactions&date=${today}`);
-                const transData = await transRes.json();
-                
-                if (ordersData.success) {
-                    document.getElementById('totalOrders').textContent = ordersData.data.length;
-                }
-                
-                if (tablesData.success) {
-                    const occupiedTables = tablesData.data.filter(table => 
-                        table.Status === 'Occupied'
-                    ).length;
-                    document.getElementById('activeTables').textContent = occupiedTables;
-                }
-                
-                if (transData.success) {
-                    const totalRevenue = transData.data.reduce((sum, trans) => {
-                        return sum + (parseFloat(trans['Total Amount']) || 0);
-                    }, 0);
-                    document.getElementById('totalRevenue').textContent = `RM ${totalRevenue.toFixed(2)}`;
-                }
-            } catch (error) {
-                console.error('Error loading dashboard data:', error);
-            }
+    try {
+        // Load orders data - get ALL orders instead of just active ones
+        const ordersRes = await fetch(`${ORDER_API_URL}?action=getAllOrders`);
+        const ordersData = await ordersRes.json();
+        
+        // Load tables data
+        const tablesRes = await fetch(`${TABLE_API_URL}?action=getAllTables`);
+        const tablesData = await tablesRes.json();
+        
+        // Load ALL transactions (not just today)
+        const transRes = await fetch(`${TRANSACTION_API_URL}?action=getAllTransactions`);
+        const transData = await transRes.json();
+        
+        if (ordersData.success) {
+            // Count orders with status = 'Paid'
+            const paidOrders = ordersData.data.filter(order => 
+                order.Status === 'Paid'
+            ).length;
+            document.getElementById('totalOrders').textContent = paidOrders;
         }
+        
+        if (tablesData.success) {
+            const occupiedTables = tablesData.data.filter(table => 
+                table.Status === 'Occupied'
+            ).length;
+            document.getElementById('activeTables').textContent = occupiedTables;
+        }
+        
+        if (transData.success) {
+            // Filter transactions where Payment Status = 'Paid'
+            const paidTransactions = transData.data.filter(trans => 
+                trans['Payment Status'] === 'Paid'
+            );
+            
+            // Calculate total revenue from paid transactions
+            const totalRevenue = paidTransactions.reduce((sum, trans) => {
+                return sum + (parseFloat(trans['Total Amount']) || 0);
+            }, 0);
+            document.getElementById('totalRevenue').textContent = `RM ${totalRevenue.toFixed(2)}`;
+        }
+    } catch (error) {
+        console.error('Error loading dashboard data:', error);
+    }
+}
 
         async function loadMenuData() {
+
+  const loadingEl = document.getElementById('menuLoading');
+    const tbody = document.getElementById('menuTableBody');
+    
+    // Show loading
+    if (loadingEl) loadingEl.style.display = 'flex';
+    tbody.innerHTML = `<tr><td colspan="7" class="loading-row">Loading...</td></tr>`;
+
             try {
                 const response = await fetch(`${MENU_API_URL}?action=getAllMenu`);
                 const result = await response.json();
@@ -1081,10 +1282,22 @@
                 }
             } catch (error) {
                 console.error('Error loading menu data:', error);
-            }
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: #e74c3c;">Error loading data</td></tr>`;
+            } finally {
+        // Hide loading
+        if (loadingEl) loadingEl.style.display = 'none';
+    }
         }
 
         async function loadTableData() {
+
+    const loadingEl = document.getElementById('tableLoading');
+    const tbody = document.getElementById('tableTableBody');
+    
+    // Show loading
+    if (loadingEl) loadingEl.style.display = 'flex';
+    tbody.innerHTML = `<tr><td colspan="7" class="loading-row">Loading...</td></tr>`;
+
             try {
                 const response = await fetch(`${TABLE_API_URL}?action=getAllTables`);
                 const result = await response.json();
@@ -1124,10 +1337,22 @@
                 }
             } catch (error) {
                 console.error('Error loading table data:', error);
-            }
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: #e74c3c;">Error loading data</td></tr>`;
+            } finally {
+        // Hide loading
+        if (loadingEl) loadingEl.style.display = 'none';
+    }
         }
 
 async function loadOrderData() {
+
+  const loadingEl = document.getElementById('orderLoading');
+    const tbody = document.getElementById('orderTableBody');
+    
+    // Show loading
+    if (loadingEl) loadingEl.style.display = 'flex';
+    tbody.innerHTML = `<tr><td colspan="17" class="loading-row">Loading...</td></tr>`;
+
     try {
         // Use getAllOrders instead of getOrdersByStatus
         const response = await fetch(`${ORDER_API_URL}?action=getAllOrders`);
@@ -1181,10 +1406,22 @@ async function loadOrderData() {
         }
     } catch (error) {
         console.error('Error loading order data:', error);
+        tbody.innerHTML = `<tr><td colspan="17" style="text-align: center; color: #e74c3c;">Error loading data</td></tr>`;
+    } finally {
+        // Hide loading
+        if (loadingEl) loadingEl.style.display = 'none';
     }
 }        
 
         async function loadOrderItemsData() {
+
+ const loadingEl = document.getElementById('orderItemsLoading');
+    const tbody = document.getElementById('orderItemsTableBody');
+    
+    // Show loading
+    if (loadingEl) loadingEl.style.display = 'flex';
+    tbody.innerHTML = `<tr><td colspan="16" class="loading-row">Loading...</td></tr>`;
+
             try {
                 // We need to get all order items from your Google Apps Script
                 // Note: You need to add a 'getAllOrderItems' action to your Apps Script
@@ -1246,28 +1483,47 @@ async function loadOrderData() {
                 document.getElementById('orderItemsTableBody').innerHTML = `
                     <tr><td colspan="16" style="text-align: center; color: #999;">Error loading order items: ${error.message}</td></tr>
                 `;
-            }
+            } finally {
+        // Hide loading
+        if (loadingEl) loadingEl.style.display = 'none';
+    }
         }
 
-                // Order Item Modal Functions
         function showOrderItemModal(itemId = null) {
-            const modal = document.getElementById('orderItemModal');
-            const title = document.getElementById('orderItemModalTitle');
-            
-            if (itemId) {
-                title.textContent = 'Edit Order Item';
-                document.getElementById('orderItemId').value = itemId;
-                loadOrderItemDataForEdit(itemId);
-            }
-            
-            modal.style.display = 'flex';
-        }
+    const modal = document.getElementById('orderItemModal');
+    const title = document.getElementById('orderItemModalTitle');
+    
+    // Clear form first
+    document.getElementById('orderItemForm').reset();
+    
+    if (itemId) {
+        title.textContent = 'Edit Order Item';
+        document.getElementById('orderItemId').value = itemId;
+        loadOrderItemDataForEdit(itemId);
+    } else {
+        title.textContent = 'Add New Order Item';
+        document.getElementById('orderItemId').value = '';
+        // Ensure loading is hidden for new items
+        const loadingEl = document.getElementById('orderItemsModalLoading');
+        if (loadingEl) loadingEl.style.display = 'none';
+    }
+    
+    modal.style.display = 'flex';
+}
 
         function closeOrderItemModal() {
             document.getElementById('orderItemModal').style.display = 'none';
+ const loadingEl = document.getElementById('orderItemsModalLoading');
+    if (loadingEl) loadingEl.style.display = 'none';
         }
 
         async function loadOrderItemDataForEdit(itemId) {
+
+    const loadingEl = document.getElementById('orderItemsModalLoading');
+    
+    // Show loading
+    if (loadingEl) loadingEl.style.display = 'flex';
+
             try {
                 const response = await fetch(`${ORDER_ITEMS_API_URL}?action=getOrderItemById&id=${itemId}`);
                 const result = await response.json();
@@ -1299,7 +1555,10 @@ async function loadOrderData() {
             } catch (error) {
                 console.error('Error loading order item for edit:', error);
                 alert('Error loading order item data');
-            }
+            } finally {
+        // Hide loading
+        if (loadingEl) loadingEl.style.display = 'none';
+    }
         }
 
         function calculateOrderItemTotals() {
@@ -1397,6 +1656,14 @@ async function loadOrderData() {
         }
 
         async function loadStaffData() {
+
+    const loadingEl = document.getElementById('staffLoading');
+    const tbody = document.getElementById('staffTableBody');
+    
+    // Show loading
+    if (loadingEl) loadingEl.style.display = 'flex';
+    tbody.innerHTML = `<tr><td colspan="5" class="loading-row">Loading...</td></tr>`;
+
             try {
                 const response = await fetch(`${STAFF_API_URL}?action=getAllStaff`);
                 const result = await response.json();
@@ -1427,10 +1694,22 @@ async function loadOrderData() {
                 }
             } catch (error) {
                 console.error('Error loading staff data:', error);
-            }
+                 tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #e74c3c;">Error loading data</td></tr>`;
+            } finally {
+        // Hide loading
+        if (loadingEl) loadingEl.style.display = 'none';
+    }
         }
 
         async function loadTransactionData() {
+
+   const loadingEl = document.getElementById('transactionLoading');
+    const tbody = document.getElementById('transactionTableBody');
+    
+    // Show loading
+    if (loadingEl) loadingEl.style.display = 'flex';
+    tbody.innerHTML = `<tr><td colspan="22" class="loading-row">Loading...</td></tr>`;
+
     try {
         // Change from getDailyTransactions to getAllTransactions
         const response = await fetch(`${TRANSACTION_API_URL}?action=getAllTransactions`);
@@ -1460,33 +1739,41 @@ async function loadOrderData() {
                 };
                 
                 const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${transaction['Id Transaction'] || '-'}</td>
-                    <td>${transaction['Id Order'] || '-'}</td>
-                    <td>${transaction['Id Table'] || '-'}</td>
-                    <td>${transaction['Customer Name'] || '-'}</td>
-                    <td>${transaction['Customer Phone'] || '-'}</td>
-                    <td>RM ${parseFloat(transaction['Subtotal'] || 0).toFixed(2)}</td>
-                    <td>RM ${parseFloat(transaction['Tax Amount'] || 0).toFixed(2)}</td>
-                    <td>RM ${parseFloat(transaction['Service Charge'] || 0).toFixed(2)}</td>
-                    <td>RM ${parseFloat(transaction['Discount Amount'] || 0).toFixed(2)}</td>
-                    <td>RM ${parseFloat(transaction['Total Amount'] || 0).toFixed(2)}</td>
-                    <td>
-                        <span class="status ${(transaction['Payment Status'] || '').toLowerCase()}">
-                            ${transaction['Payment Status'] || '-'}
-                        </span>
-                    </td>
-                    <td>RM ${parseFloat(transaction['Paid Amount'] || 0).toFixed(2)}</td>
-                    <td>${transaction['Payment Method'] || '-'}</td>
-                    <td>RM ${parseFloat(transaction['Change Amount'] || 0).toFixed(2)}</td>
-                    <td>${transaction['Transaction Code'] || '-'}</td>
-                    <td>${transaction['Receipt Number'] || '-'}</td>
-                    <td>${transaction['Id Cashier'] || '-'}</td>
-                    <td>${formatDate(transaction['Created At'])}</td>
-                    <td>${transaction['Notes'] || '-'}</td>
-                    <td>${transaction['Refund Reason'] || '-'}</td>
-                    <td>${formatDate(transaction['Refunded At'])}</td>
-                `;
+row.innerHTML = `
+    <td>${transaction['Id Transaction'] || '-'}</td>
+    <td>${transaction['Id Order'] || '-'}</td>
+    <td>${transaction['Id Table'] || '-'}</td>
+    <td>${transaction['Customer Name'] || '-'}</td>
+    <td>${transaction['Customer Phone'] || '-'}</td>
+    <td>RM ${parseFloat(transaction['Subtotal'] || 0).toFixed(2)}</td>
+    <td>RM ${parseFloat(transaction['Tax Amount'] || 0).toFixed(2)}</td>
+    <td>RM ${parseFloat(transaction['Service Charge'] || 0).toFixed(2)}</td>
+    <td>RM ${parseFloat(transaction['Discount Amount'] || 0).toFixed(2)}</td>
+    <td>RM ${parseFloat(transaction['Total Amount'] || 0).toFixed(2)}</td>
+    <td>
+        <span class="status ${(transaction['Payment Status'] || '').toLowerCase()}">
+            ${transaction['Payment Status'] || '-'}
+        </span>
+    </td>
+    <td>RM ${parseFloat(transaction['Paid Amount'] || 0).toFixed(2)}</td>
+    <td>${transaction['Payment Method'] || '-'}</td>
+    <td>RM ${parseFloat(transaction['Change Amount'] || 0).toFixed(2)}</td>
+    <td>${transaction['Transaction Code'] || '-'}</td>
+    <td>${transaction['Receipt Number'] || '-'}</td>
+    <td>${transaction['Id Cashier'] || '-'}</td>
+    <td>${formatDate(transaction['Created At'])}</td>
+    <td>${transaction['Notes'] || '-'}</td>
+    <td>${transaction['Refund Reason'] || '-'}</td>
+    <td>${formatDate(transaction['Refunded At'])}</td>
+    <td>
+        <button class="btn-action btn-edit" onclick="editTransaction('${transaction['Id Transaction']}')">
+            <i class="fas fa-edit"></i> Edit
+        </button>
+        <button class="btn-action btn-delete" onclick="deleteTransaction('${transaction['Id Transaction']}')">
+            <i class="fas fa-trash"></i> Delete
+        </button>
+    </td>
+`;
                 tbody.appendChild(row);
             });
             
@@ -1494,7 +1781,7 @@ async function loadOrderData() {
             if (result.data.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="21" style="text-align: center; padding: 40px; color: #999;">
+                        <td colspan="22" style="text-align: center; padding: 40px; color: #999;">
                             No transactions found
                         </td>
                     </tr>
@@ -1503,7 +1790,7 @@ async function loadOrderData() {
         } else {
             document.getElementById('transactionTableBody').innerHTML = `
                 <tr>
-                    <td colspan="21" style="text-align: center; padding: 40px; color: #999;">
+                    <td colspan="22" style="text-align: center; padding: 40px; color: #999;">
                         Error loading transactions: ${result.message}
                     </td>
                 </tr>
@@ -1513,37 +1800,53 @@ async function loadOrderData() {
         console.error('Error loading transaction data:', error);
         document.getElementById('transactionTableBody').innerHTML = `
             <tr>
-                <td colspan="21" style="text-align: center; padding: 40px; color: #999;">
+                <td colspan="22" style="text-align: center; padding: 40px; color: #999;">
                     Error loading transactions: ${error.message}
                 </td>
             </tr>
         `;
+    } finally {
+        // Hide loading
+        if (loadingEl) loadingEl.style.display = 'none';
     }
 }
 
         // Menu Modal Functions
         function showMenuModal(menuId = null) {
-            const modal = document.getElementById('menuModal');
-            const title = document.getElementById('menuModalTitle');
-            
-            if (menuId) {
-                title.textContent = 'Edit Menu';
-                document.getElementById('menuId').value = menuId;
-                loadMenuDataForEdit(menuId);
-            } else {
-                title.textContent = 'Add New Menu';
-                document.getElementById('menuForm').reset();
-                document.getElementById('menuId').value = '';
-            }
-            
-            modal.style.display = 'flex';
-        }
+    const modal = document.getElementById('menuModal');
+    const title = document.getElementById('menuModalTitle');
+    
+    // Clear form first
+    document.getElementById('menuForm').reset();
+    
+    if (menuId) {
+        title.textContent = 'Edit Menu';
+        document.getElementById('menuId').value = menuId;
+        loadMenuDataForEdit(menuId);
+    } else {
+        title.textContent = 'Add New Menu';
+        document.getElementById('menuId').value = '';
+        // Ensure loading is hidden for new items
+        const loadingEl = document.getElementById('menuModalLoading');
+        if (loadingEl) loadingEl.style.display = 'none';
+    }
+    
+    modal.style.display = 'flex';
+}
 
         function closeMenuModal() {
             document.getElementById('menuModal').style.display = 'none';
+             const loadingEl = document.getElementById('menuModalLoading');
+    if (loadingEl) loadingEl.style.display = 'none';
         }
 
         async function loadMenuDataForEdit(menuId) {
+
+const loadingEl = document.getElementById('menuModalLoading');
+    
+    // Show loading
+    if (loadingEl) loadingEl.style.display = 'flex';
+
             try {
                 const response = await fetch(`${MENU_API_URL}?action=getMenuById&id=${menuId}`);
                 const result = await response.json();
@@ -1562,7 +1865,10 @@ async function loadOrderData() {
             } catch (error) {
                 console.error('Error loading menu for edit:', error);
                 alert('Error loading menu data');
-            }
+            } finally {
+        // Hide loading
+        if (loadingEl) loadingEl.style.display = 'none';
+    }
         }
 
         async function saveMenu(event) {
@@ -1638,6 +1944,9 @@ async function loadOrderData() {
         function showTableModal(tableId = null) {
             const modal = document.getElementById('tableModal');
             const title = document.getElementById('tableModalTitle');
+
+ // Clear form first
+    document.getElementById('tableForm').reset();
             
             if (tableId) {
                 title.textContent = 'Edit Table';
@@ -1647,6 +1956,10 @@ async function loadOrderData() {
                 title.textContent = 'Add New Table';
                 document.getElementById('tableForm').reset();
                 document.getElementById('tableId').value = '';
+
+                // Ensure loading is hidden for new items
+        const loadingEl = document.getElementById('tableModalLoading');
+        if (loadingEl) loadingEl.style.display = 'none';
             }
             
             modal.style.display = 'flex';
@@ -1654,9 +1967,17 @@ async function loadOrderData() {
 
         function closeTableModal() {
             document.getElementById('tableModal').style.display = 'none';
+ const loadingEl = document.getElementById('tableModalLoading');
+    if (loadingEl) loadingEl.style.display = 'none';
         }
 
         async function loadTableDataForEdit(tableId) {
+
+ const loadingEl = document.getElementById('tableModalLoading');
+    
+    // Show loading
+    if (loadingEl) loadingEl.style.display = 'flex';
+
             try {
                 const response = await fetch(`${TABLE_API_URL}?action=getTableById&id=${tableId}`);
                 const result = await response.json();
@@ -1672,7 +1993,10 @@ async function loadOrderData() {
             } catch (error) {
                 console.error('Error loading table for edit:', error);
                 alert('Error loading table data');
-            }
+            } finally {
+        // Hide loading
+        if (loadingEl) loadingEl.style.display = 'none';
+    }
         }
 
         async function saveTable(event) {
@@ -1746,6 +2070,9 @@ async function loadOrderData() {
         function showStaffModal(staffId = null) {
             const modal = document.getElementById('staffModal');
             const title = document.getElementById('staffModalTitle');
+
+    // Clear form first
+    document.getElementById('staffForm').reset();
             
             if (staffId) {
                 title.textContent = 'Edit Staff';
@@ -1755,6 +2082,9 @@ async function loadOrderData() {
                 title.textContent = 'Add New Staff';
                 document.getElementById('staffForm').reset();
                 document.getElementById('staffModalId').value = '';
+        // Ensure loading is hidden for new items
+        const loadingEl = document.getElementById('staffModalLoading');
+        if (loadingEl) loadingEl.style.display = 'none';
             }
             
             modal.style.display = 'flex';
@@ -1762,9 +2092,17 @@ async function loadOrderData() {
 
         function closeStaffModal() {
             document.getElementById('staffModal').style.display = 'none';
+ const loadingEl = document.getElementById('staffModalLoading');
+    if (loadingEl) loadingEl.style.display = 'none';
         }
 
         async function loadStaffDataForEdit(staffId) {
+
+ const loadingEl = document.getElementById('staffModalLoading');
+    
+    // Show loading
+    if (loadingEl) loadingEl.style.display = 'flex';
+
             try {
                 const response = await fetch(`${STAFF_API_URL}?action=getStaffById&id=${staffId}`);
                 const result = await response.json();
@@ -1778,7 +2116,10 @@ async function loadOrderData() {
             } catch (error) {
                 console.error('Error loading staff for edit:', error);
                 alert('Error loading staff data');
-            }
+            } finally {
+        // Hide loading
+        if (loadingEl) loadingEl.style.display = 'none';
+    }
         }
 
         async function saveStaff(event) {
@@ -1850,15 +2191,23 @@ async function loadOrderData() {
             }
         }
 
-// Order Modal Functions
 function showOrderModal(orderId = null) {
     const modal = document.getElementById('orderModal');
     const title = document.getElementById('orderModalTitle');
+    
+    // Clear form first
+    document.getElementById('orderForm').reset();
     
     if (orderId) {
         title.textContent = 'Edit Order';
         document.getElementById('orderId').value = orderId;
         loadOrderDataForEdit(orderId);
+    } else {
+        title.textContent = 'Add New Order';
+        document.getElementById('orderId').value = '';
+        // Ensure loading is hidden for new items
+        const loadingEl = document.getElementById('orderModalLoading');
+        if (loadingEl) loadingEl.style.display = 'none';
     }
     
     modal.style.display = 'flex';
@@ -1866,9 +2215,17 @@ function showOrderModal(orderId = null) {
 
 function closeOrderModal() {
     document.getElementById('orderModal').style.display = 'none';
+ const loadingEl = document.getElementById('orderModalLoading');
+    if (loadingEl) loadingEl.style.display = 'none';
 }
 
 async function loadOrderDataForEdit(orderId) {
+
+    const loadingEl = document.getElementById('orderModalLoading');
+    
+    // Show loading
+    if (loadingEl) loadingEl.style.display = 'flex';
+
     try {
         const response = await fetch(`${ORDER_API_URL}?action=getOrderById&id=${orderId}`);
         const result = await response.json();
@@ -1890,6 +2247,9 @@ async function loadOrderDataForEdit(orderId) {
     } catch (error) {
         console.error('Error loading order for edit:', error);
         alert('Error loading order data');
+    } finally {
+        // Hide loading
+        if (loadingEl) loadingEl.style.display = 'none';
     }
 }
 
@@ -1974,6 +2334,147 @@ async function deleteOrder(orderId) {
         } catch (error) {
             console.error('Error deleting order:', error);
             alert('Error deleting order');
+        }
+    }
+}
+
+function showTransactionModal(transactionId = null) {
+    const modal = document.getElementById('transactionModal');
+    const title = document.getElementById('transactionModalTitle');
+    
+    // Clear form first
+    document.getElementById('transactionForm').reset();
+    
+    if (transactionId) {
+        title.textContent = 'Edit Transaction';
+        document.getElementById('transactionId').value = transactionId;
+        loadTransactionDataForEdit(transactionId);
+    } else {
+        title.textContent = 'Add New Transaction';
+        document.getElementById('transactionId').value = '';
+        // Ensure loading is hidden for new items
+        const loadingEl = document.getElementById('transactionModalLoading');
+        if (loadingEl) loadingEl.style.display = 'none';
+    }
+    
+    modal.style.display = 'flex';
+}
+
+function closeTransactionModal() {
+    document.getElementById('transactionModal').style.display = 'none';
+ const loadingEl = document.getElementById('transactionModalLoading');
+    if (loadingEl) loadingEl.style.display = 'none';
+}
+
+async function loadTransactionDataForEdit(transactionId) {
+
+ const loadingEl = document.getElementById('transactionModalLoading');
+    
+    // Show loading
+    if (loadingEl) loadingEl.style.display = 'flex';
+
+    try {
+        const response = await fetch(`${TRANSACTION_API_URL}?action=getTransactionById&id=${transactionId}`);
+        const result = await response.json();
+        
+        if (result.success) {
+            const transaction = result.data;
+            document.getElementById('transactionCustomerName').value = transaction['Customer Name'] || '';
+            document.getElementById('transactionCustomerPhone').value = transaction['Customer Phone'] || '';
+            document.getElementById('transactionTotalAmount').value = transaction['Total Amount'] || 0;
+            document.getElementById('transactionPaymentStatus').value = transaction['Payment Status'] || 'Pending';
+            document.getElementById('transactionPaidAmount').value = transaction['Paid Amount'] || 0;
+            document.getElementById('transactionPaymentMethod').value = transaction['Payment Method'] || 'Cash';
+            document.getElementById('transactionNotes').value = transaction['Notes'] || '';
+        }
+    } catch (error) {
+        console.error('Error loading transaction for edit:', error);
+        alert('Error loading transaction data');
+    } finally {
+        // Hide loading
+        if (loadingEl) loadingEl.style.display = 'none';
+    }
+}
+
+async function saveTransaction(event) {
+    event.preventDefault();
+    
+    const transactionId = document.getElementById('transactionId').value;
+    
+    const transactionData = {
+        id: transactionId,
+        customerName: document.getElementById('transactionCustomerName').value,
+        customerPhone: document.getElementById('transactionCustomerPhone').value,
+        totalAmount: parseFloat(document.getElementById('transactionTotalAmount').value) || 0,
+        paymentStatus: document.getElementById('transactionPaymentStatus').value,
+        paidAmount: parseFloat(document.getElementById('transactionPaidAmount').value) || 0,
+        paymentMethod: document.getElementById('transactionPaymentMethod').value,
+        notes: document.getElementById('transactionNotes').value
+    };
+    
+    try {
+        const response = await fetch(`${TRANSACTION_API_URL}?action=updateTransaction`, {
+            method: 'POST',
+            body: JSON.stringify(transactionData)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('Transaction updated successfully!');
+            closeTransactionModal();
+            loadTransactionData();
+            loadDashboardData();
+        } else {
+            alert(result.message || 'Error updating transaction');
+        }
+    } catch (error) {
+        console.error('Error updating transaction:', error);
+        alert('Error updating transaction');
+    }
+}
+
+async function editTransaction(transactionId) {
+    showTransactionModal(transactionId);
+}
+
+async function deleteTransaction(transactionId) {
+    // First, check if transaction exists and get its status
+    try {
+        const response = await fetch(`${TRANSACTION_API_URL}?action=getTransactionById&id=${transactionId}`);
+        const result = await response.json();
+        
+        if (result.success) {
+            const transaction = result.data;
+            const status = transaction['Payment Status'];
+            
+            // Prevent deletion of paid transactions if needed (optional)
+            if (status === 'Paid') {
+                if (!confirm('This transaction has been paid. Are you sure you want to delete it?')) {
+                    return;
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Error checking transaction status:', error);
+    }
+    
+    if (confirm('Are you sure you want to delete this transaction? This action cannot be undone.')) {
+        try {
+            // Note: You need to add a 'deleteTransaction' action to your Apps Script
+            const response = await fetch(`${TRANSACTION_API_URL}?action=deleteTransaction&id=${transactionId}`);
+            const result = await response.json();
+            
+            if (result.success) {
+                alert('Transaction deleted successfully!');
+                loadTransactionData();
+                loadDashboardData();
+            } else {
+                alert(result.message || 'Error deleting transaction');
+            }
+        } catch (error) {
+            console.error('Error deleting transaction:', error);
+            alert('Error deleting transaction');
         }
     }
 }
