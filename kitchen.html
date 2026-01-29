@@ -227,13 +227,12 @@
         }
 
         .order-footer {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 20px;
-            padding-top: 15px;
-            border-top: 2px solid #f0f0f0;
-        }
+    display: flex;
+    align-items: center;
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 2px solid #f0f0f0;
+}
 
         .prep-time {
             color: #666;
@@ -300,11 +299,18 @@
             .kitchen-display {
                 grid-template-columns: 1fr;
             }
+
+ .search-container {
+        order: 3;
+        margin: 15px 0 0 0;
+        max-width: 100%;
+    }
             
             .navbar {
                 flex-direction: column;
                 gap: 15px;
                 text-align: center;
+                align-items: stretch;
             }
         }
 
@@ -350,6 +356,122 @@
     color: #721c24;
     border-color: #f5c6cb;
 }
+
+/* Add these styles near your existing .prep-time style */
+.order-status-control {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: 15px;
+}
+
+.prep-time {
+    color: #666;
+    font-weight: 500;
+}
+
+.order-status-dropdown {
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    background: white;
+    min-width: 120px;
+    text-align: left;
+    position: relative;
+}
+
+.order-status-dropdown:hover {
+    border-color: #764ba2;
+}
+
+.order-status-dropdown.pending { 
+    background: #fff3cd; 
+    color: #856404;
+    border-color: #ffeaa7;
+}
+
+.order-status-dropdown.preparing { 
+    background: #cce5ff; 
+    color: #004085;
+    border-color: #b8daff;
+}
+
+.order-status-dropdown.ready { 
+    background: #d4edda; 
+    color: #155724;
+    border-color: #c3e6cb;
+}
+
+.order-status-dropdown.served { 
+    background: #d1ecf1; 
+    color: #0c5460;
+    border-color: #bee5eb;
+}
+
+.order-status-dropdown.cancelled { 
+    background: #f8d7da; 
+    color: #721c24;
+    border-color: #f5c6cb;
+}
+
+.order-status-dropdown.change-status { 
+    background: #ffffff; 
+    color: #333;
+    border-color: #ddd;
+    font-weight: 600;
+}
+
+/* Add this near your other navbar or header styles */
+.search-container {
+    position: relative;
+    flex: 1;
+    max-width: 500px;
+    margin: 0 20px;
+}
+
+.search-bar {
+    width: 100%;
+    padding: 10px 40px 10px 15px;
+    border: 2px solid #e0e0e0;
+    border-radius: 25px;
+    font-size: 14px;
+    transition: all 0.3s;
+    background: white;
+}
+
+.search-bar:focus {
+    outline: none;
+    border-color: #764ba2;
+    box-shadow: 0 0 0 3px rgba(118, 75, 162, 0.1);
+}
+
+.search-icon {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #764ba2;
+}
+
+.clear-search {
+    position: absolute;
+    right: 40px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #999;
+    cursor: pointer;
+    display: none;
+}
+
+.clear-search:hover {
+    color: #ff6b6b;
+}
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
@@ -360,6 +482,20 @@
             <i class="fas fa-utensils"></i>
             <span>Kitchen Display System</span>
         </div>
+<!-- Add this inside the navbar, after the logo div -->
+<div class="search-container">
+    <input type="text" 
+           class="search-bar" 
+           id="globalSearch" 
+           placeholder="Search orders by order ID, table number, or menu item..."
+           onkeyup="handleSearch(event)">
+    <button class="clear-search" id="clearSearch" onclick="clearSearch()">
+        <i class="fas fa-times"></i>
+    </button>
+    <div class="search-icon">
+        <i class="fas fa-search"></i>
+    </div>
+</div>
         <div class="user-info">
             <span id="staffName">Welcome Chef</span>
             <button class="logout-btn" onclick="logout()">
@@ -397,6 +533,8 @@
         let currentFilter = 'all';
         let elapsedTimes = {}; // Store elapsed seconds for each item
         let startTimes = {}; // Store when each timer started
+
+let searchQuery = '';
 
 let menuData = {}; // To store menu ID to name mapping
 
@@ -460,7 +598,8 @@ function renderOrders() {
         ordersMap[item['Id Order']].push(item);
     });
     
-    const filteredOrders = Object.keys(ordersMap).filter(orderId => {
+    // First filter by current status filter
+    let filteredOrders = Object.keys(ordersMap).filter(orderId => {
         if (currentFilter === 'all') return true;
         
         const orderItems = ordersMap[orderId];
@@ -472,21 +611,38 @@ function renderOrders() {
         return false;
     });
     
-    if (filteredOrders.length === 0) {
-        kitchenDisplay.innerHTML = `
-            <div class="empty-state">
-                <div class="empty-icon">
-                    <i class="fas fa-check-circle"></i>
-                </div>
-                <div class="empty-text">
-                    ${currentFilter === 'all' ? 
+    // Then apply search filter if there's a search query
+    if (searchQuery) {
+        filteredOrders = filteredOrders.filter(orderId => {
+            const orderItems = ordersMap[orderId];
+            const orderIdStr = orderId.toLowerCase();
+            const tableNumber = (orderItems[0].TableNumber || 'unknown').toString().toLowerCase();
+            const menuItems = orderItems.map(item => getMenuName(item['Id Menu']).toLowerCase());
+            
+            return orderIdStr.includes(searchQuery) ||
+                   tableNumber.includes(searchQuery) ||
+                   menuItems.some(item => item.includes(searchQuery));
+        });
+    }
+    
+    // Replace the current empty state check in renderOrders() with this:
+if (filteredOrders.length === 0) {
+    kitchenDisplay.innerHTML = `
+        <div class="empty-state">
+            <div class="empty-icon">
+                <i class="fas fa-${searchQuery ? 'search' : 'check-circle'}"></i>
+            </div>
+            <div class="empty-text">
+                ${searchQuery ? 
+                    `No orders found for "${searchQuery}"` : 
+                    currentFilter === 'all' ? 
                         'No orders in the kitchen at the moment' : 
                         `No ${currentFilter} orders`}
-                </div>
             </div>
-        `;
-        return;
-    }
+        </div>
+    `;
+    return;
+}
     
     kitchenDisplay.innerHTML = filteredOrders.map(orderId => {
         const orderItems = ordersMap[orderId];
@@ -533,11 +689,24 @@ function renderOrders() {
                 </div>
                 
                 <div class="order-footer">
-                    <div class="prep-time">
-                        Est. Prep: ${calculateTotalPrepTime(orderItems)} min
-                    </div>
-                    
-                </div>
+    <div class="order-status-control">
+        <div class="prep-time">
+            Est. Prep: ${calculateTotalPrepTime(orderItems)} min
+        </div>
+        <div style="margin-left: auto;">
+           <select class="order-status-dropdown ${getDominantStatus(orderItems) === 'CHANGE STATUS' ? 'change-status' : getDominantStatus(orderItems).toLowerCase()}" 
+        onchange="updateAllOrderStatus('${orderId}', this.value)"
+        data-current-status="${getDominantStatus(orderItems)}">
+    <option value="" ${getDominantStatus(orderItems) === 'CHANGE STATUS' ? 'selected' : ''} disabled>CHANGE STATUS</option>
+    <option value="Pending" ${getDominantStatus(orderItems) === 'Pending' ? 'selected' : ''}>PENDING</option>
+    <option value="Preparing" ${getDominantStatus(orderItems) === 'Preparing' ? 'selected' : ''}>PREPARING</option>
+    <option value="Ready" ${getDominantStatus(orderItems) === 'Ready' ? 'selected' : ''}>READY</option>
+    <option value="Served" ${getDominantStatus(orderItems) === 'Served' ? 'selected' : ''}>SERVED</option>
+    <option value="Cancelled" ${getDominantStatus(orderItems) === 'Cancelled' ? 'selected' : ''}>CANCELLED</option>
+</select>
+        </div>
+    </div>
+</div>
             </div>
         `;
     }).join('');
@@ -707,6 +876,109 @@ async function fetchOrderTableData(orderId) {
         return 'Unknown';
     }
 }
+
+function getDominantStatus(orderItems) {
+    // Check if all items have the same status
+    const firstStatus = orderItems[0].Status;
+    const allSameStatus = orderItems.every(item => item.Status === firstStatus);
+    
+    // If all items have the same status, return that status (in title case)
+    // Otherwise return "CHANGE STATUS"
+    return allSameStatus ? firstStatus : "CHANGE STATUS";
+}
+
+async function updateAllOrderStatus(orderId, newStatus) {
+ // Don't proceed if "CHANGE STATUS" is selected (empty value)
+    if (!newStatus) {
+        return;
+    }
+
+    if (!confirm(`Update ALL items in Order ${orderId} to "${newStatus}"?`)) {
+        // Reset dropdown to current dominant status
+        const orderItems = orders.filter(item => item['Id Order'] === orderId);
+        const dropdown = document.querySelector(`[onchange*="${orderId}"]`);
+        if (dropdown) {
+            dropdown.value = getDominantStatus(orderItems);
+        }
+        return;
+    }
+    
+    try {
+        // Get all items for this order
+        const orderItems = orders.filter(item => item['Id Order'] === orderId);
+        
+        // Update each item individually
+        const updatePromises = orderItems.map(item => {
+            const itemId = item['Id Item'];
+            
+            // Handle timer logic
+            if (newStatus === 'Preparing') { // Changed from 'PREPARING'
+                elapsedTimes[itemId] = 0;
+                startTimes[itemId] = Date.now();
+                startTimer(itemId);
+            } else if (['Ready', 'Served', 'Cancelled', 'Pending'].includes(newStatus)) { // Changed from uppercase
+                if (timers[itemId]) {
+                    clearInterval(timers[itemId]);
+                    delete timers[itemId];
+                    delete elapsedTimes[itemId];
+                    delete startTimes[itemId];
+                }
+            }
+            
+            // Update via API - newStatus is already in title case
+            const encodedStatus = encodeURIComponent(newStatus);
+            const encodedStaffId = encodeURIComponent(currentStaff.id);
+            return fetch(`${ORDER_ITEMS_API_URL}?action=updateOrderItem&id=${itemId}&status=${encodedStatus}&preparedBy=${encodedStaffId}`);
+        });
+        
+        // Wait for all updates to complete
+        await Promise.all(updatePromises);
+        
+        // Update local orders array
+        orders.forEach(item => {
+            if (item['Id Order'] === orderId) {
+                item.Status = newStatus;
+            }
+        });
+        
+        alert(`All items in Order ${orderId} updated to ${newStatus}`);
+        
+        // Update the dropdown's data-current-status attribute
+        const dropdown = document.querySelector(`[onchange*="${orderId}"]`);
+        if (dropdown) {
+            dropdown.setAttribute('data-current-status', newStatus);
+        }
+        
+        renderOrders(); // Re-render to reflect changes
+        
+    } catch (error) {
+        console.error('Error updating all order statuses:', error);
+        alert('Error updating statuses');
+    }
+}
+
+function handleSearch(event) {
+    searchQuery = event.target.value.toLowerCase().trim();
+    const clearBtn = document.getElementById('clearSearch');
+    
+    // Show/hide clear button
+    if (searchQuery) {
+        clearBtn.style.display = 'block';
+    } else {
+        clearBtn.style.display = 'none';
+    }
+    
+    // Perform search - call renderOrders() instead
+    renderOrders();  // Changed from filterBySearch()
+}
+
+function clearSearch() {
+    document.getElementById('globalSearch').value = '';
+    searchQuery = '';
+    document.getElementById('clearSearch').style.display = 'none';
+    renderOrders();  // Changed from filterBySearch()
+}
+
     </script>
 </body>
 </html>
