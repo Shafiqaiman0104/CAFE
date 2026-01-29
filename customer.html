@@ -470,6 +470,106 @@
         transform: translateX(200%);
     }
 }
+
+/* Add this to your CSS section */
+#addOnModal .modal-content {
+    animation: slideInDown 0.3s ease-out;
+}
+
+@keyframes slideInDown {
+    from { transform: translateY(-20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.addon-item {
+    margin-left: 20px;
+    border-left: 3px solid #764ba2;
+    padding-left: 10px;
+    background: #f8f9fa;
+    border-radius: 0 8px 8px 0;
+}
+
+/* Edit notes button */
+.edit-notes-btn {
+    background: #009dd9;
+    color: white;
+    border: none;
+    width: 25px;
+    height: 25px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    margin-left: 5px;
+}
+
+/* Notes popup modal */
+.notes-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    justify-content: center;
+    align-items: center;
+    z-index: 1002;
+}
+
+.notes-modal-content {
+    background: white;
+    width: 90%;
+    max-width: 400px;
+    padding: 25px;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.notes-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.notes-modal-title {
+    font-size: 1.2rem;
+    color: #333;
+    font-weight: 600;
+}
+
+.close-notes-btn {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #999;
+}
+
+/* Notes display in cart */
+.item-notes-display {
+    font-size: 0.85rem;
+    color: #666;
+    font-style: italic;
+    margin-top: 5px;
+    padding-left: 5px;
+    border-left: 2px solid #764ba2;
+}
+
+/* Search Bar Styles */
+#globalSearch {
+    transition: all 0.3s;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+#globalSearch:focus {
+    outline: none;
+    border-color: #764ba2;
+    box-shadow: 0 2px 12px rgba(118, 75, 162, 0.2);
+}
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
@@ -509,6 +609,20 @@
         <div class="hero-section">
             <h1 class="hero-title">Welcome to Cafe Delight</h1>
             <p class="hero-subtitle">Order delicious food and drinks directly from your table</p>
+
+<!-- ADD THIS SEARCH BAR -->
+            <div style="max-width: 500px; margin: 0 auto;">
+                <div style="position: relative;">
+                    <input type="text" 
+                           id="globalSearch" 
+                           placeholder="Search menu items..." 
+                           style="width: 100%; padding: 12px 45px 12px 20px; border: 2px solid #e0e0e0; border-radius: 25px; font-size: 1rem;"
+                           onkeyup="searchMenuItems()">
+                    <i class="fas fa-search" 
+                       style="position: absolute; right: 20px; top: 50%; transform: translateY(-50%); color: #764ba2;"></i>
+                </div>
+            </div>
+
         </div>
 
         <!-- Category Tabs -->
@@ -620,6 +734,26 @@
         </div>
     </div>
 
+<!-- Notes Popup Modal -->
+<div id="notesModal" class="notes-modal">
+    <div class="notes-modal-content">
+        <div class="notes-modal-header">
+            <h3 class="notes-modal-title" id="notesModalTitle">Edit Notes</h3>
+            <button class="close-notes-btn" onclick="closeNotesModal()">&times;</button>
+        </div>
+        <div style="margin-bottom: 20px;">
+            <textarea 
+                id="notesTextarea" 
+                style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; min-height: 100px; font-size: 0.95rem;"
+                placeholder="Add special instructions (e.g., less spicy, no onions, extra sauce, etc.)"></textarea>
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <button onclick="closeNotesModal()" style="flex: 1; padding: 12px; background: #e0e0e0; border: none; border-radius: 8px; cursor: pointer; font-weight: 500;">Cancel</button>
+            <button onclick="saveNotes()" style="flex: 2; padding: 12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">Save Notes</button>
+        </div>
+    </div>
+</div>
+
     <script>
         // App Script URLs
         const MENU_API_URL = 'https://script.google.com/macros/s/AKfycbyL3qH9ra_3sNw1nLchIKHrGo31obMaL0cdK4zNTwyiBPORIPYr349katf1ANzWVEmJMw/exec';
@@ -663,6 +797,9 @@
             categories = [...new Set(menuItems.map(item => item.Category))];
             renderCategories();
             renderMenuItems(menuItems);
+
+ // ADD THIS LINE to initialize search
+            currentCategory = 'All';
             
             // Hide loading overlay after data is loaded
             setTimeout(() => {
@@ -754,20 +891,46 @@ return `
             }).join('');
         }
 
-        function filterMenu(category) {
-            // Update active tab
-            document.querySelectorAll('.category-tab').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            event.target.classList.add('active');
-            
-            if (category === 'All') {
-                renderMenuItems(menuItems);
-            } else {
-                const filteredItems = menuItems.filter(item => item.Category === category);
-                renderMenuItems(filteredItems);
-            }
-        }
+let currentCategory = 'All';
+let searchTerm = '';
+
+function filterMenu(category) {
+    currentCategory = category;
+    searchTerm = document.getElementById('globalSearch').value.trim();
+    
+    // Update active tab
+    document.querySelectorAll('.category-tab').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    event.target.classList.add('active');
+    
+    applyFilters();
+}
+
+function searchMenuItems() {
+    searchTerm = document.getElementById('globalSearch').value.trim().toLowerCase();
+    applyFilters();
+}
+
+function applyFilters() {
+    let filteredItems = menuItems;
+    
+    // Apply category filter
+    if (currentCategory !== 'All') {
+        filteredItems = filteredItems.filter(item => item.Category === currentCategory);
+    }
+    
+    // Apply search filter
+    if (searchTerm) {
+        filteredItems = filteredItems.filter(item => {
+            return item.Name.toLowerCase().includes(searchTerm) ||
+                   item.Description.toLowerCase().includes(searchTerm) ||
+                   (item.Tags && item.Tags.toLowerCase().includes(searchTerm));
+        });
+    }
+    
+    renderMenuItems(filteredItems);
+}
 
 function updateCartItemQty(itemId, newQty) {
     if (newQty < 1) {
@@ -775,30 +938,102 @@ function updateCartItemQty(itemId, newQty) {
         return;
     }
     
-    const item = cart.find(c => c.id === itemId);
-    if (item) {
-        // Preserve the notes when updating quantity
-        const currentNotes = item.notes || '';
-        item.quantity = newQty;
-        item.notes = currentNotes;
+    // Check if this is a unique add-on ID
+    const isUniqueAddOnId = itemId.includes('_');
+    
+    let targetItem;
+    
+    if (isUniqueAddOnId) {
+    // It's a unique add-on ID (could be standalone or attached)
+    targetItem = cart.find(c => c.uniqueId === itemId);
+    
+    if (targetItem) {
+        const oldQty = targetItem.quantity;
+        targetItem.quantity = newQty;
         
-        const qtyElement = document.getElementById(`qty-${itemId}`);
+        // Update the main add-on quantity display
+        const mainItemId = itemId.split('_')[0];
+        const addOnsForThisItem = cart.filter(c => c.id === mainItemId);
+        const totalQty = addOnsForThisItem.reduce((sum, item) => sum + item.quantity, 0);
+        
+        const qtyElement = document.getElementById(`qty-${mainItemId}`);
         if (qtyElement) {
-            qtyElement.textContent = newQty;
+            qtyElement.textContent = totalQty;
         }
+    }
+} else {
+        // It's a regular item ID
+        targetItem = cart.find(c => c.id === itemId);
         
+        if (targetItem) {
+            // Preserve the notes when updating quantity
+            const currentNotes = targetItem.notes || '';
+            targetItem.quantity = newQty;
+            targetItem.notes = currentNotes;
+            
+            const qtyElement = document.getElementById(`qty-${itemId}`);
+            if (qtyElement) {
+                qtyElement.textContent = newQty;
+            }
+        }
+    }
+    
+    if (targetItem) {
         updateCartDisplay();
     }
 }
 
 function addToCartFromButton(itemId) {
-    increaseQuantity(itemId);
+    const item = menuItems.find(m => m['Id Menu'] === itemId);
+    if (!item) return;
+    
+    // Check if it's Add On
+    if (item.Category === 'Add On') {
+        // For Add On items, just show the dropdown (similar to + button)
+        handleAddOnIncrease(itemId);
+    } else {
+        // Existing logic for non-Add On items
+        increaseQuantity(itemId);
+    }
 }
 
-        // Add a notes property to each cart item
+function handleAddOnItem(itemId) {
+    const qtyElement = document.getElementById(`qty-${itemId}`);
+    let currentQty = parseInt(qtyElement.textContent) || 0;
+    
+    // If quantity is 0, set it to 1 (for new items)
+    if (currentQty === 0) {
+        currentQty = 1;
+        qtyElement.textContent = currentQty;
+    }
+    
+    // Always show dropdown for Add On items
+    if (!showAddOnDropdown(itemId)) {
+        // If user cancels or no main dishes, revert quantity
+        const existingItem = cart.find(c => c.id === itemId);
+        if (!existingItem && currentQty === 1) {
+            qtyElement.textContent = '0';
+        }
+    }
+}
+
 function addToCart(itemId) {
     const item = menuItems.find(m => m['Id Menu'] === itemId);
     if (!item) return;
+    
+    // Check if it's Add On
+    if (item.Category === 'Add On') {
+        // For Add On items, we need to show dropdown first
+        const qtyElement = document.getElementById(`qty-${itemId}`);
+        const currentQty = parseInt(qtyElement.textContent) || 0;
+        
+        if (currentQty > 0) {
+            if (!showAddOnDropdown(itemId)) {
+                return;
+            }
+        }
+        return; // Don't proceed with normal add to cart for Add On
+    }
     
     const existingItem = cart.find(c => c.id === itemId);
     const qtyElement = document.getElementById(`qty-${itemId}`);
@@ -824,13 +1059,22 @@ function addToCart(itemId) {
     }
 }
 
-        function increaseQuantity(itemId) {
+     function increaseQuantity(itemId) {
+    const item = menuItems.find(m => m['Id Menu'] === itemId);
+    
+    // Check if it's an Add On item
+    if (item && item.Category === 'Add On') {
+        // For Add On items, we need to handle them differently
+        handleAddOnIncrease(itemId);
+        return;
+    }
+    
+    // Existing logic for non-Add On items
     const qtyElement = document.getElementById(`qty-${itemId}`);
     let currentQty = parseInt(qtyElement.textContent) || 0;
     currentQty++;
     qtyElement.textContent = currentQty;
     
-    const item = menuItems.find(m => m['Id Menu'] === itemId);
     const existingItem = cart.find(c => c.id === itemId);
     
     if (existingItem) {
@@ -842,33 +1086,93 @@ function addToCart(itemId) {
             price: parseFloat(item.Price),
             quantity: currentQty,
             prepTime: parseInt(item['Preparation Time'] || 15),
-            notes: ''  // Add notes property
+            notes: ''
         });
     }
     
     updateCartCount();
+    updateCartDisplay();
 }
 
-        function decreaseQuantity(itemId) {
-            const qtyElement = document.getElementById(`qty-${itemId}`);
-            let currentQty = parseInt(qtyElement.textContent) || 0;
+
+function handleAddOnIncrease(itemId) {
+    const qtyElement = document.getElementById(`qty-${itemId}`);
+    const currentQty = parseInt(qtyElement.textContent) || 0;
+    
+    // Don't increase the quantity yet - wait for user to select a dish
+    // Just show the dropdown
+    showAddOnDropdown(itemId);
+}
+
+function decreaseQuantity(itemId) {
+    const qtyElement = document.getElementById(`qty-${itemId}`);
+    let currentQty = parseInt(qtyElement.textContent) || 0;
+    
+    if (currentQty > 0) {
+        currentQty--;
+        qtyElement.textContent = currentQty;
+        
+        // Check if it's an Add On item
+        const isAddOn = isAddOnCategory(itemId);
+        
+        if (isAddOn) {
+            // For Add On items, we need to find the correct instance to decrease
+            const allAddOnsOfType = cart.filter(c => c.id === itemId);
             
-            if (currentQty > 0) {
-                currentQty--;
-                qtyElement.textContent = currentQty;
+            if (allAddOnsOfType.length > 0) {
+                // Separate standalone and attached add-ons
+                const standaloneAddOns = allAddOnsOfType.filter(a => !a.mainDishId);
+                const attachedAddOns = allAddOnsOfType.filter(a => a.mainDishId);
                 
-                const existingItem = cart.find(c => c.id === itemId);
-                if (existingItem) {
-                    if (currentQty === 0) {
-                        cart = cart.filter(c => c.id !== itemId);
-                    } else {
-                        existingItem.quantity = currentQty;
-                    }
+                let addOnToDecrease = null;
+                
+                // Priority: decrease standalone add-ons first, then attached
+                if (standaloneAddOns.length > 0) {
+                    addOnToDecrease = standaloneAddOns[standaloneAddOns.length - 1];
+                } else if (attachedAddOns.length > 0) {
+                    addOnToDecrease = attachedAddOns[attachedAddOns.length - 1];
                 }
                 
-                updateCartCount();
+                if (addOnToDecrease) {
+                    addOnToDecrease.quantity--;
+                    
+                    if (addOnToDecrease.quantity === 0) {
+                        // Remove this specific add-on if quantity reaches 0
+                        if (addOnToDecrease.uniqueId) {
+                            cart = cart.filter(c => c.uniqueId !== addOnToDecrease.uniqueId);
+                        } else {
+                            cart = cart.filter(c => c !== addOnToDecrease);
+                        }
+                    }
+                    
+                    // Recalculate total quantity for this add-on type
+                    const remainingAddOns = cart.filter(c => c.id === itemId);
+                    const totalQty = remainingAddOns.reduce((sum, item) => sum + item.quantity, 0);
+                    
+                    // Update display
+                    qtyElement.textContent = totalQty;
+                    
+                    if (totalQty === 0) {
+                        qtyElement.textContent = '0';
+                    }
+                }
+            }
+        } else {
+            // For regular (non-Add On) items
+            const existingItem = cart.find(c => c.id === itemId);
+            if (existingItem) {
+                if (currentQty === 0) {
+                    cart = cart.filter(c => c.id !== itemId);
+                } else {
+                    existingItem.quantity = currentQty;
+                }
             }
         }
+        
+        updateCartCount();
+        updateCartDisplay();
+    }
+}
 
         function updateCartCount() {
             const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
@@ -883,7 +1187,17 @@ function addToCart(itemId) {
             }
         }
 
-        function updateCartDisplay() {
+        
+
+function updateItemNotes(itemId, notes) {
+    const item = cart.find(c => c.id === itemId);
+    if (item) {
+        // Update notes for both regular items AND standalone add-ons
+        item.notes = notes;
+    }
+}
+
+function updateCartDisplay() {
     const cartItems = document.getElementById('cartItems');
     const cartTotal = document.getElementById('cartTotal');
     
@@ -896,51 +1210,155 @@ function addToCart(itemId) {
     }
     
     let total = 0;
-    let totalPrepTime = 0; // ADD THIS LINE
+    let totalPrepTime = 0;
     
-    cartItems.innerHTML = cart.map(item => {
-    const itemTotal = item.price * item.quantity;
-    total += itemTotal;
-    totalPrepTime += (item.prepTime || 15) * item.quantity;
+    // Group items by main dish (for add-ons)
+    const mainDishItems = cart.filter(item => {
+        const menuItem = menuItems.find(m => m['Id Menu'] === item.id);
+        return menuItem && menuItem.Category !== 'Add On';
+    });
     
-    return `
-        <div class="cart-item">
-            <div class="cart-item-info">
-                <div class="cart-item-name">${item.name}</div>
-                <div class="cart-item-price">RM ${item.price.toFixed(2)}</div>
-            </div>
-            <div class="cart-item-qty">
-                <div style="display: flex; align-items: center; gap: 10px; background: #f8f9fa; padding: 5px 10px; border-radius: 8px;">
-                    <button onclick="updateCartItemQty('${item.id}', ${item.quantity - 1})" 
-                            style="background: none; border: none; font-size: 16px; cursor: pointer; color: #764ba2; width: 25px; height: 25px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                        -
+    let cartHTML = '';
+    
+    // Display each main dish with its add-ons
+    mainDishItems.forEach(mainDish => {
+        const isAddOn = isAddOnCategory(mainDish.id);
+        if (isAddOn) return; // Skip if it's an add-on
+        
+        const mainDishTotal = mainDish.price * mainDish.quantity;
+        total += mainDishTotal;
+        totalPrepTime += (mainDish.prepTime || 15) * mainDish.quantity;
+        
+                // Main dish HTML
+        cartHTML += `
+            <div class="cart-item">
+                <div class="cart-item-info">
+                    <div class="cart-item-name">${mainDish.name}</div>
+                    <div class="cart-item-price">RM ${mainDish.price.toFixed(2)}</div>
+                    ${mainDish.notes ? `<div class="item-notes-display">${mainDish.notes}</div>` : ''}
+                </div>
+                <div class="cart-item-qty">
+                    <div style="display: flex; align-items: center; gap: 10px; background: #f8f9fa; padding: 5px 10px; border-radius: 8px;">
+                        <button onclick="updateCartItemQty('${mainDish.id}', ${Math.max(0, mainDish.quantity - 1)})" 
+                                style="background: none; border: none; font-size: 16px; cursor: pointer; color: #764ba2; width: 25px; height: 25px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                            -
+                        </button>
+                        <span style="font-weight: 600; min-width: 30px; text-align: center;">${mainDish.quantity}</span>
+                        <button onclick="updateCartItemQty('${mainDish.id}', ${mainDish.quantity + 1})" 
+                                style="background: none; border: none; font-size: 16px; cursor: pointer; color: #764ba2; width: 25px; height: 25px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                            +
+                        </button>
+                    </div>
+                    <div style="font-weight: 600; min-width: 60px; text-align: right;">RM ${mainDishTotal.toFixed(2)}</div>
+                    <button class="edit-notes-btn" onclick="openNotesModal('${mainDish.id}', '${mainDish.name.replace(/'/g, "\\'")}')">
+                        <i class="fa-solid fa-pen-to-square"></i>
                     </button>
-                    <span style="font-weight: 600; min-width: 30px; text-align: center;">${item.quantity}</span>
-                    <button onclick="updateCartItemQty('${item.id}', ${item.quantity + 1})" 
-                            style="background: none; border: none; font-size: 16px; cursor: pointer; color: #764ba2; width: 25px; height: 25px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                        +
+                    <button class="remove-item-btn" onclick="removeFromCart('${mainDish.id}')">
+                        <i class="fas fa-times"></i>
                     </button>
                 </div>
-                <div style="font-weight: 600; min-width: 60px; text-align: right;">RM ${itemTotal.toFixed(2)}</div>
-                <button class="remove-item-btn" onclick="removeFromCart('${item.id}')">
-                    <i class="fas fa-times"></i>
+            </div>
+        `;
+        
+        
+        // Find add-ons for this main dish
+        const addOnsForThisDish = cart.filter(item => {
+            const isAddOn = isAddOnCategory(item.id);
+            return isAddOn && item.mainDishId === mainDish.id;
+        });
+        
+        // Display add-ons for this main dish
+        addOnsForThisDish.forEach(addOn => {
+            const addOnTotal = addOn.price * addOn.quantity;
+            total += addOnTotal;
+            totalPrepTime += (addOn.prepTime || 15) * addOn.quantity;
+            
+            cartHTML += `
+    <div class="cart-item" style="margin-left: 20px; border-left: 3px solid #764ba2; padding-left: 10px;">
+        <div class="cart-item-info">
+            <div class="cart-item-name">${addOn.name}</div>
+            <div style="font-size: 0.85rem; color: #764ba2; margin-top: 5px; font-style: italic;">
+                <i class="fas fa-plus-circle"></i> Add on to ${mainDish.name}
+            </div>
+            <div class="cart-item-price">RM ${addOn.price.toFixed(2)}</div>
+        </div>
+        <div class="cart-item-qty">
+            <div style="display: flex; align-items: center; gap: 10px; background: #f8f9fa; padding: 5px 10px; border-radius: 8px;">
+                <button onclick="updateCartItemQty('${addOn.uniqueId || addOn.id}', ${addOn.quantity - 1})" 
+                        style="background: none; border: none; font-size: 16px; cursor: pointer; color: #764ba2; width: 25px; height: 25px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                    -
+                </button>
+                <span style="font-weight: 600; min-width: 30px; text-align: center;">${addOn.quantity}</span>
+                <button onclick="updateCartItemQty('${addOn.uniqueId || addOn.id}', ${addOn.quantity + 1})" 
+                        style="background: none; border: none; font-size: 16px; cursor: pointer; color: #764ba2; width: 25px; height: 25px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                    +
                 </button>
             </div>
+            <div style="font-weight: 600; min-width: 60px; text-align: right;">RM ${addOnTotal.toFixed(2)}</div>
+            <button class="remove-item-btn" onclick="removeFromCart('${addOn.uniqueId || addOn.id}')">
+                <i class="fas fa-times"></i>
+            </button>
         </div>
-<div style="margin-top: 8px;">
-                    <textarea 
-                        class="item-notes" 
-                        data-item-id="${item.id}"
-                        placeholder="Notes for ${item.name} (e.g., spicy, no onions, etc.)"
-                        onchange="updateItemNotes('${item.id}', this.value)"
-                        style="width: 100%; padding: 8px; border: 1px solid #e0e0e0; border-radius: 5px; font-size: 0.9rem; margin-top: 5px;"
-                        rows="2">${item.notes || ''}</textarea>
-                </div>
-    `;
-}).join('');
+    </div>
+`;
+        });
+    });
     
-    // ADD THIS SECTION to show total preparation time
-    cartItems.innerHTML += `
+       // Display standalone Add Ons (items without mainDishId)
+    const standaloneAddOns = cart.filter(item => {
+        const menuItem = menuItems.find(m => m['Id Menu'] === item.id);
+        const isAddOn = menuItem && menuItem.Category === 'Add On';
+        return isAddOn && !item.mainDishId; // Standalone add-ons have no mainDishId
+    });
+    
+    if (standaloneAddOns.length > 0) {
+        standaloneAddOns.forEach(addOn => {
+            const addOnTotal = addOn.price * addOn.quantity;
+            total += addOnTotal;
+            totalPrepTime += (addOn.prepTime || 15) * addOn.quantity;
+            
+            cartHTML += `
+                <div class="cart-item">
+                    <div class="cart-item-info">
+                        <div class="cart-item-name">${addOn.name}</div>
+                        
+                        <div class="cart-item-price">RM ${addOn.price.toFixed(2)}</div>
+                    </div>
+                    <div class="cart-item-qty">
+                        <div style="display: flex; align-items: center; gap: 10px; background: #f8f9fa; padding: 5px 10px; border-radius: 8px;">
+                           <button onclick="updateCartItemQty('${addOn.uniqueId || addOn.id}', ${Math.max(0, addOn.quantity - 1)})"
+                                    style="background: none; border: none; font-size: 16px; cursor: pointer; color: #764ba2; width: 25px; height: 25px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                -
+                            </button>
+                            <span style="font-weight: 600; min-width: 30px; text-align: center;">${addOn.quantity}</span>
+                          <button onclick="updateCartItemQty('${addOn.uniqueId || addOn.id}', ${addOn.quantity + 1})"
+                                    style="background: none; border: none; font-size: 16px; cursor: pointer; color: #764ba2; width: 25px; height: 25px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                +
+                            </button>
+                        </div>
+                        <div style="font-weight: 600; min-width: 60px; text-align: right;">RM ${addOnTotal.toFixed(2)}</div>
+                        <button class="remove-item-btn" onclick="removeFromCart('${addOn.uniqueId || addOn.id}')">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    
+                </div>
+<div style="margin-top: 8px;">
+                        <textarea 
+                            class="item-notes" 
+                            data-item-id="${addOn.id}"
+                            placeholder="Notes for ${addOn.name} (e.g., sunny side up, extra pepper, etc.)"
+                            onchange="updateItemNotes('${addOn.id}', this.value)"
+                            style="width: 100%; padding: 8px; border: 1px solid #e0e0e0; border-radius: 5px; font-size: 0.9rem; margin-top: 5px;"
+                            rows="2" disabled hidden>${addOn.notes || ''}</textarea>
+                    </div>
+            `;
+        });
+    }
+    
+    
+    // Add total preparation time
+    cartHTML += `
         <div style="padding: 15px 0; border-top: 1px solid #eaeaea; margin-top: 10px;">
             <div style="display: flex; justify-content: space-between; color: #666;">
                 <span><i class="fas fa-clock"></i> Total Est. Preparation Time:</span>
@@ -949,22 +1367,43 @@ function addToCart(itemId) {
         </div>
     `;
     
+    cartItems.innerHTML = cartHTML;
     cartTotal.textContent = total.toFixed(2);
 }
 
-function updateItemNotes(itemId, notes) {
-    const item = cart.find(c => c.id === itemId);
-    if (item) {
-        item.notes = notes;
-    }
-}
-
-        function removeFromCart(itemId) {
-    cart = cart.filter(c => c.id !== itemId);
+function removeFromCart(itemId) {
+    // If removing a main dish, also remove its add-ons
+    const isMainDish = !isAddOnCategory(itemId);
     
-    const qtyElement = document.getElementById(`qty-${itemId}`);
-    if (qtyElement) {
-        qtyElement.textContent = '0';
+    if (isMainDish) {
+        // Remove all add-ons attached to this main dish
+        cart = cart.filter(c => !(isAddOnCategory(c.id) && c.mainDishId === itemId));
+    }
+    
+    // Check if itemId might be a uniqueId for an add-on
+    const isUniqueAddOnId = itemId.includes('_');
+    
+    if (isUniqueAddOnId) {
+        // It's a unique add-on ID, find and remove that specific item
+        cart = cart.filter(c => c.uniqueId !== itemId);
+        
+        // Update the main add-on quantity display
+        const mainItemId = itemId.split('_')[0];
+        const addOnsForThisItem = cart.filter(c => c.id === mainItemId);
+        const totalQty = addOnsForThisItem.reduce((sum, item) => sum + item.quantity, 0);
+        
+        const qtyElement = document.getElementById(`qty-${mainItemId}`);
+        if (qtyElement) {
+            qtyElement.textContent = totalQty;
+        }
+    } else {
+        // Remove the item itself
+        cart = cart.filter(c => c.id !== itemId);
+        
+        const qtyElement = document.getElementById(`qty-${itemId}`);
+        if (qtyElement) {
+            qtyElement.textContent = '0';
+        }
     }
     
     // Also clear any notes input if it exists
@@ -974,7 +1413,7 @@ function updateItemNotes(itemId, notes) {
     }
     
     updateCartDisplay();
-}
+}        
 
         function checkout() {
     if (cart.length === 0) {
@@ -1242,6 +1681,233 @@ function preventTabNavigation(e) {
         e.preventDefault();
     }
 }
+
+// Add this function after line ~650 (after updateItemNotes function)
+function isAddOnCategory(itemId) {
+    const menuItem = menuItems.find(m => m['Id Menu'] === itemId);
+    return menuItem && menuItem.Category === 'Add On';
+}
+
+// Add this function to show dropdown for Add On items
+function showAddOnDropdown(itemId) {
+    // Get all main course items currently in cart (excluding Add On items)
+    const mainCourseItems = cart.filter(item => {
+        const menuItem = menuItems.find(m => m['Id Menu'] === item.id);
+        return menuItem && menuItem.Category !== 'Add On';
+    });
+
+    // Create dropdown HTML
+    let dropdownHTML = `
+        <div id="addOnModal" class="modal" style="justify-content: center; align-items: center;">
+            <div class="modal-content" style="max-width: 400px; height: auto; border-radius: 15px;">
+                <div class="modal-header">
+                    <h3 class="modal-title">Select Option</h3>
+                    <button class="close-btn" onclick="closeAddOnModal()">&times;</button>
+                </div>
+                <div style="padding: 20px;">
+                    <p style="margin-bottom: 15px; color: #666;">How would you like to add this item?</p>
+                    <div id="mainDishOptions" style="margin-bottom: 20px;">
+    `;
+
+    // Option 1: Add as standalone item (no main dish)
+    dropdownHTML += `
+        <div style="margin-bottom: 10px; padding: 10px; border: 1px solid #e0e0e0; border-radius: 8px; cursor: pointer;" 
+             onclick="addAsStandaloneAddOn('${itemId}')">
+            <div style="font-weight: 500;">Add as Basic Order</div>
+            <div style="font-size: 0.9rem; color: #666;">Add item without main dish</div>
+        </div>
+    `;
+
+    // Only show main dish options if there are main dishes in cart
+    if (mainCourseItems.length > 0) {
+        dropdownHTML += `<p style="margin: 15px 0 10px 0; color: #666; font-weight: 500;">Add to existing main dish:</p>`;
+        
+        mainCourseItems.forEach(item => {
+            dropdownHTML += `
+                <div style="margin-bottom: 10px; padding: 10px; border: 1px solid #e0e0e0; border-radius: 8px; cursor: pointer;" 
+                     onclick="selectMainDish('${itemId}', '${item.id}', '${item.name.replace(/'/g, "\\'")}')">
+                    <div style="font-weight: 500;">${item.name}</div>
+                    <div style="font-size: 0.9rem; color: #666;">Qty: ${item.quantity}</div>
+                </div>
+            `;
+        });
+    }
+
+    dropdownHTML += `
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <button onclick="closeAddOnModal()" style="flex: 1; padding: 10px; background: #e0e0e0; border: none; border-radius: 8px; cursor: pointer;">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Add modal to body
+    const modalDiv = document.createElement('div');
+    modalDiv.innerHTML = dropdownHTML;
+    document.body.appendChild(modalDiv);
+
+    // Show modal
+    document.getElementById('addOnModal').style.display = 'flex';
+    return true;
+}
+
+function closeAddOnModal() {
+    const modal = document.getElementById('addOnModal');
+    if (modal) {
+        modal.style.display = 'none';
+        setTimeout(() => {
+            modal.remove();
+        }, 300);
+    }
+}
+
+function selectMainDish(addOnId, mainDishId, mainDishName) {
+    const addOnItem = menuItems.find(m => m['Id Menu'] === addOnId);
+    if (!addOnItem) return;
+
+    // Create a unique ID for this add-on + main dish combination
+    const uniqueAddOnId = `${addOnId}_${mainDishId}`;
+    
+    // Get current quantity from display - this is the TOTAL of all add-ons of this type
+    const qtyElement = document.getElementById(`qty-${addOnId}`);
+    let totalQty = parseInt(qtyElement.textContent) || 0;
+    
+    // Check if we already have this add-on for this specific main dish
+    const existingItem = cart.find(c => 
+        c.id === addOnId && 
+        c.mainDishId === mainDishId
+    );
+    
+    if (existingItem) {
+        // Update existing item: increase its quantity by 1
+        existingItem.quantity += 1;
+        existingItem.notes = `Add on to ${mainDishName}`;
+        
+        // Update the total quantity display
+        totalQty += 1;
+        qtyElement.textContent = totalQty;
+    } else {
+        // Add new item to cart with quantity 1
+        cart.push({
+            id: addOnId,
+            uniqueId: uniqueAddOnId,
+            name: addOnItem.Name,
+            price: parseFloat(addOnItem.Price),
+            quantity: 1, // Always start with 1 for new add-on
+            prepTime: parseInt(addOnItem['Preparation Time'] || 15),
+            notes: `Add on to ${mainDishName}`,
+            mainDishId: mainDishId
+        });
+        
+        // Update the total quantity display
+        totalQty += 1;
+        qtyElement.textContent = totalQty;
+    }
+    
+    // Update cart count and display
+    updateCartCount();
+    updateCartDisplay();
+    closeAddOnModal();
+}
+
+function addAsStandaloneAddOn(addOnId) {
+    const addOnItem = menuItems.find(m => m['Id Menu'] === addOnId);
+    if (!addOnItem) return;
+
+    // Get current quantity from display
+    const qtyElement = document.getElementById(`qty-${addOnId}`);
+    let currentQty = parseInt(qtyElement.textContent) || 0;
+    
+    // Create a UNIQUE ID for standalone add-ons
+    const uniqueStandaloneId = `${addOnId}_standalone_${Date.now()}`;
+    
+    // Check if standalone add-on already exists in cart
+    const existingItem = cart.find(c => 
+        c.id === addOnId && 
+        !c.mainDishId // Look for items without mainDishId (standalone)
+    );
+    
+    if (existingItem) {
+        // Update existing standalone item
+        existingItem.quantity += 1;
+        // Allow user to add notes (they'll be able to edit in cart)
+        if (!existingItem.notes) {
+            existingItem.notes = "Basic order - no main dish";
+        }
+        
+        currentQty += 1;
+        qtyElement.textContent = currentQty;
+    } else {
+        // Add new standalone item to cart with UNIQUE ID
+        cart.push({
+            id: addOnId,
+            uniqueId: uniqueStandaloneId, // Use unique ID for standalone
+            name: addOnItem.Name,
+            price: parseFloat(addOnItem.Price),
+            quantity: 1,
+            prepTime: parseInt(addOnItem['Preparation Time'] || 15),
+            notes: "Basic order - no main dish"
+            // Note: no mainDishId property = standalone add-on
+        });
+        
+        currentQty += 1;
+        qtyElement.textContent = currentQty;
+    }
+    
+    // Update cart count and display
+    updateCartCount();
+    updateCartDisplay();
+    closeAddOnModal();
+}
+
+let currentEditingItemId = null;
+let currentEditingItemName = null;
+
+function openNotesModal(itemId, itemName) {
+    currentEditingItemId = itemId;
+    currentEditingItemName = itemName;
+    
+    // Find the item in cart
+    const item = cart.find(c => c.id === itemId);
+    
+    // Set modal title and textarea
+    document.getElementById('notesModalTitle').textContent = `Notes for ${itemName}`;
+    document.getElementById('notesTextarea').value = item ? (item.notes || '') : '';
+    
+    // Show modal
+    document.getElementById('notesModal').style.display = 'flex';
+}
+
+function closeNotesModal() {
+    document.getElementById('notesModal').style.display = 'none';
+    currentEditingItemId = null;
+    currentEditingItemName = null;
+}
+
+function saveNotes() {
+    if (!currentEditingItemId) return;
+    
+    const notes = document.getElementById('notesTextarea').value.trim();
+    const item = cart.find(c => c.id === currentEditingItemId);
+    
+    if (item) {
+        item.notes = notes;
+        updateCartDisplay();
+    }
+    
+    closeNotesModal();
+}
+
+// Close notes modal when clicking outside
+document.addEventListener('click', function(event) {
+    const notesModal = document.getElementById('notesModal');
+    if (event.target === notesModal) {
+        closeNotesModal();
+    }
+});
+
     </script>
 </body>
 </html>
