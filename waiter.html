@@ -269,6 +269,10 @@
             background: #2196F3;
             color: white;
         }
+
+.served { background: #d1ecf1; color: #0c5460; }
+.cancelled { background: #f5c6cb; color: #721c24; }
+
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
@@ -373,8 +377,8 @@
                         <div class="table-header">
                             <div class="table-number">Table ${table.Table}</div>
                             <div class="table-status ${table.Status.toLowerCase()}">
-                                ${table.Status.toUpperCase()}
-                            </div>
+    ${table.Status.charAt(0).toUpperCase() + table.Status.slice(1).toLowerCase()}
+</div>
                         </div>
                         
                         <div class="table-info">
@@ -393,8 +397,8 @@
                                                 Order ${order['Id Order']}
                                             </div>
                                             <div class="order-item-status ${order.Status.toLowerCase()}">
-                                                ${order.Status.toUpperCase()}${readyItems}
-                                            </div>
+    ${order.Status.charAt(0).toUpperCase() + order.Status.slice(1).toLowerCase()}${readyItems}
+</div>
                                         </div>
                                     `;
                                 }).join('')}
@@ -406,14 +410,17 @@
                                 <i class="fas fa-eye"></i> View
                             </button>
                             
-                            ${hasActiveOrders ? `
-                                <button class="btn-action btn-serve" onclick="serveTable('${table['Id Table']}')">
-                                    <i class="fas fa-truck"></i> Serve
-                                </button>
-                                <button class="btn-action btn-bill" onclick="generateBill('${table['Id Table']}')">
-                                    <i class="fas fa-file-invoice-dollar"></i> Bill
-                                </button>
-                            ` : ''}
+                            ${hasActiveOrders && tableOrders.some(order => order.Status.toLowerCase() === 'pending') ? `
+    <button class="btn-action btn-serve" onclick="serveTable('${table['Id Table']}')">
+        <i class="fas fa-truck"></i> Serve
+    </button>
+` : ''}
+
+${hasActiveOrders ? `
+    <button class="btn-action btn-bill" onclick="generateBill('${table['Id Table']}')">
+        <i class="fas fa-file-invoice-dollar"></i> Bill
+    </button>
+` : ''}
                         </div>
                     </div>
                 `;
@@ -431,8 +438,8 @@
                 
                 if (result.success) {
                     const activeOrders = result.data.filter(order => 
-                        ['pending', 'preparing', 'ready'].includes(order.Status.toLowerCase())
-                    );
+    ['pending', 'preparing', 'ready', 'served', 'cancelled'].includes(order.Status.toLowerCase())
+);
                     
                     document.getElementById('modalTableNumber').textContent = table.Table;
                     
@@ -452,15 +459,15 @@
                             const itemsResult = await itemsResponse.json();
                             
                             const orderItems = itemsResult.success ? itemsResult.data : [];
-                            const readyItems = orderItems.filter(item => item.Status === 'ready');
+                            const readyItems = orderItems.filter(item => item.Status.toLowerCase() === 'ready');
                             
                             ordersHTML += `
                                 <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
                                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                                         <div style="font-weight: 600; color: #333;">Order ${order['Id Order']}</div>
-                                        <div class="order-item-status ${order.Status.toLowerCase()}">
-                                            ${order.Status.toUpperCase()}
-                                        </div>
+                                       <div class="order-item-status ${order.Status.toLowerCase()}">
+    ${order.Status.charAt(0).toUpperCase() + order.Status.slice(1).toLowerCase()}
+</div>
                                     </div>
                                     
                                     <div style="margin: 10px 0;">
@@ -470,7 +477,7 @@
                                                     Item ${item['Id Menu']} × ${item.Quantity}
                                                 </div>
                                                 <div class="order-item-status ${item.Status.toLowerCase()}">
-                                                    ${item.Status.toUpperCase()}
+                                                   ${item.Status.charAt(0).toUpperCase() + item.Status.slice(1).toLowerCase()}
                                                 </div>
                                             </div>
                                         `).join('')}
@@ -480,7 +487,7 @@
                                         <button onclick="serveOrder('${order['Id Order']}')" 
                                                 class="btn-action btn-serve" 
                                                 style="flex: 1; padding: 8px;"
-                                                ${readyItems.length === 0 ? 'disabled' : ''}>
+                                                ${order.Status.toLowerCase() !== 'pending' ? 'disabled' : ''}>
                                             <i class="fas fa-check"></i> Mark as Served
                                         </button>
                                     </div>
@@ -499,73 +506,81 @@
             }
         }
 
-        async function serveOrder(orderId) {
-            if (!confirm('Mark this order as served?')) return;
+       async function serveOrder(orderId) {
+    if (!confirm('Mark this order as served?')) return;
+    
+    try {
+        // Update order status
+        await fetch(`${ORDER_API_URL}?action=updateOrderStatus&id=${orderId}&status=Served`);
+        
+        // Update all order items status to served WITH waiter ID
+        const itemsResponse = await fetch(`${ORDER_ITEMS_API_URL}?action=getOrderItemsByOrder&orderId=${orderId}`);
+        const itemsResult = await itemsResponse.json();
+        
+        if (itemsResult.success) {
+            // Get current waiter ID
+            const waiterId = localStorage.getItem('staffId');
             
-            try {
-                // Update order status
-                await fetch(`${ORDER_API_URL}?action=updateOrderStatus&id=${orderId}&status=served`);
+            for (const item of itemsResult.data) {
+                // Use GET request with parameters
+                await fetch(`${ORDER_ITEMS_API_URL}?action=updateOrderItem&id=${item['Id Item']}&status=Served&idWaiter=${waiterId}`);
+            }
+        }
+        
+        alert('Order marked as served');
+        closeOrderModal();
+        loadTables();
+    } catch (error) {
+        console.error('Error serving order:', error);
+        alert('Error serving order');
+    }
+}
+
+      async function serveTable(tableId) {
+    try {
+        // Get active orders for this table
+        const response = await fetch(`${ORDER_API_URL}?action=getOrdersByTable&tableId=${tableId}`);
+        const result = await response.json();
+        
+        if (result.success) {
+            const pendingOrders = result.data.filter(order => 
+                order.Status.toLowerCase() === 'pending'
+            );
+            
+            if (pendingOrders.length === 0) {
+                alert('No pending orders for this table');
+                return;
+            }
+            
+            if (!confirm(`Serve ${pendingOrders.length} pending order(s) to Table ${tableId}?`)) return;
+            
+            // Get current waiter ID
+            const waiterId = localStorage.getItem('staffId');
+            
+            // Serve all pending orders
+            for (const order of pendingOrders) {
+                await fetch(`${ORDER_API_URL}?action=updateOrderStatus&id=${order['Id Order']}&status=Served`);
                 
-                // Update all order items status to served
-                const itemsResponse = await fetch(`${ORDER_ITEMS_API_URL}?action=getOrderItemsByOrder&orderId=${orderId}`);
+                // Update order items
+                const itemsResponse = await fetch(`${ORDER_ITEMS_API_URL}?action=getOrderItemsByOrder&orderId=${order['Id Order']}`);
                 const itemsResult = await itemsResponse.json();
                 
                 if (itemsResult.success) {
                     for (const item of itemsResult.data) {
-                        await fetch(`${ORDER_ITEMS_API_URL}?action=updateOrderItemStatus&id=${item['Id Item']}&status=served`);
+                        // Use GET request with parameters
+                        await fetch(`${ORDER_ITEMS_API_URL}?action=updateOrderItem&id=${item['Id Item']}&status=Served&idWaiter=${waiterId}`);
                     }
                 }
-                
-                alert('Order marked as served');
-                closeOrderModal();
-                loadTables();
-            } catch (error) {
-                console.error('Error serving order:', error);
-                alert('Error serving order');
             }
+            
+            alert('Orders served successfully');
+            loadTables();
         }
-
-        async function serveTable(tableId) {
-            try {
-                // Get active orders for this table
-                const response = await fetch(`${ORDER_API_URL}?action=getOrdersByTable&tableId=${tableId}`);
-                const result = await response.json();
-                
-                if (result.success) {
-                    const readyOrders = result.data.filter(order => 
-                        order.Status.toLowerCase() === 'ready'
-                    );
-                    
-                    if (readyOrders.length === 0) {
-                        alert('No ready orders for this table');
-                        return;
-                    }
-                    
-                    if (!confirm(`Serve ${readyOrders.length} ready order(s) to Table ${tableId}?`)) return;
-                    
-                    // Serve all ready orders
-                    for (const order of readyOrders) {
-                        await fetch(`${ORDER_API_URL}?action=updateOrderStatus&id=${order['Id Order']}&status=served`);
-                        
-                        // Update order items
-                        const itemsResponse = await fetch(`${ORDER_ITEMS_API_URL}?action=getOrderItemsByOrder&orderId=${order['Id Order']}`);
-                        const itemsResult = await itemsResponse.json();
-                        
-                        if (itemsResult.success) {
-                            for (const item of itemsResult.data) {
-                                await fetch(`${ORDER_ITEMS_API_URL}?action=updateOrderItemStatus&id=${item['Id Item']}&status=served`);
-                            }
-                        }
-                    }
-                    
-                    alert('Orders served successfully');
-                    loadTables();
-                }
-            } catch (error) {
-                console.error('Error serving table:', error);
-                alert('Error serving table');
-            }
-        }
+    } catch (error) {
+        console.error('Error serving table:', error);
+        alert('Error serving table');
+    }
+}
 
         function generateBill(tableId) {
             // Redirect to cashier page or generate bill here
