@@ -136,6 +136,14 @@
             font-weight: 500;
         }
 
+.order-item-notes {
+    font-style: italic;
+    color: #666;
+    font-size: 0.9rem;
+    margin-top: 2px;
+    margin-left: 10px;
+}
+
         .order-item-status {
             padding: 2px 8px;
             border-radius: 10px;
@@ -314,11 +322,111 @@
         </div>
     </div>
 
+<!-- Edit Notes Modal -->
+<div id="editNotesModal" class="modal">
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
+            <h3 class="modal-title">Edit Notes</h3>
+            <button class="close-btn" onclick="closeEditNotesModal()">&times;</button>
+        </div>
+        <div style="padding: 20px 0;">
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 5px; font-weight: 500;">Item:</label>
+                <div id="editNotesItemName" style="padding: 8px; background: #f5f5f5; border-radius: 4px;"></div>
+            </div>
+            <div style="margin-bottom: 15px;">
+                <label for="editNotesText" style="display: block; margin-bottom: 5px; font-weight: 500;">Notes:</label>
+                <textarea id="editNotesText" rows="4" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-family: inherit;"></textarea>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button onclick="saveNotes()" class="btn-action" style="background: #4CAF50; color: white; flex: 2;">
+                    <i class="fas fa-save"></i> Save Notes
+                </button>
+                <button onclick="closeEditNotesModal()" class="btn-action" style="background: #999; color: white; flex: 1;">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Item Options Modal -->
+<div id="editItemOptionsModal" class="modal">
+    <div class="modal-content" style="max-width: 400px;">
+        <div class="modal-header">
+            <h3 class="modal-title">Edit Item</h3>
+            <button class="close-btn" onclick="closeEditItemOptionsModal()">&times;</button>
+        </div>
+        <div style="padding: 20px 0;">
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 10px; font-weight: 500;">Item:</label>
+                <div id="editItemOptionsItemName" style="padding: 8px; background: #f5f5f5; border-radius: 4px;"></div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 15px;">
+                <button onclick="openEditNotesFromOptions()" class="btn-action" style="background: #2196F3; color: white; padding: 12px;">
+                    <i class="fas fa-edit"></i> Edit Notes
+                </button>
+                <button onclick="openEditQuantityFromOptions()" class="btn-action" style="background: #4CAF50; color: white; padding: 12px;">
+                    <i class="fas fa-sort-numeric-up-alt"></i> Edit Quantity
+                </button>
+                <button onclick="closeEditItemOptionsModal()" class="btn-action" style="background: #999; color: white; padding: 12px;">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Quantity Modal -->
+<div id="editQuantityModal" class="modal">
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
+            <h3 class="modal-title">Edit Quantity</h3>
+            <button class="close-btn" onclick="closeEditQuantityModal()">&times;</button>
+        </div>
+        <div style="padding: 20px 0;">
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 5px; font-weight: 500;">Item:</label>
+                <div id="editQuantityItemName" style="padding: 8px; background: #f5f5f5; border-radius: 4px;"></div>
+            </div>
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 5px; font-weight: 500;">Quantity:</label>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <button onclick="decrementQuantity()" class="btn-action" style="background: #2196F3; color: white; width: 40px; height: 40px; font-size: 1.2rem; padding: 0;">
+                        <i class="fas fa-minus"></i>
+                    </button>
+                    <span id="editQuantityDisplay" style="flex: 1; text-align: center; font-size: 1.2rem; font-weight: 600; padding: 8px; background: #f5f5f5; border-radius: 4px;">1</span>
+                    <button onclick="incrementQuantity()" class="btn-action" style="background: #2196F3; color: white; width: 40px; height: 40px; font-size: 1.2rem; padding: 0;">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button onclick="saveQuantity()" class="btn-action" style="background: #4CAF50; color: white; flex: 2;">
+                    <i class="fas fa-save"></i> Save Quantity
+                </button>
+                <button onclick="closeEditQuantityModal()" class="btn-action" style="background: #999; color: white; flex: 1;">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
     <script>
         // App Script URLs
         const TABLE_API_URL = 'https://script.google.com/macros/s/AKfycbyKuPETE-5zyGx2d9k5GGOx01mMSnq1Qi7GxZoXzjhd26R5s1CKXG5o08SHk7NTydC5kA/exec';
         const ORDER_API_URL = 'https://script.google.com/macros/s/AKfycbzwGqmFpoFSyIpaJOs6ccBi-WlPmWYlSgfti8CLnCC6Nz_zao8cer58JJVTFU5xUy65QQ/exec';
         const ORDER_ITEMS_API_URL = 'https://script.google.com/macros/s/AKfycbza3y8oJ7Lj5S3AMDXRQUWk-_tf47u1CG9sxi-Ib6fPi11lv2n_s-zj40bY3ZmxXMCDZg/exec';
+const MENU_API_URL = 'https://script.google.com/macros/s/AKfycbyL3qH9ra_3sNw1nLchIKHrGo31obMaL0cdK4zNTwyiBPORIPYr349katf1ANzWVEmJMw/exec';
+
+let menuCache = null;
+
+let currentEditingItem = {
+    id: null,
+    orderId: null,
+    menuName: null
+};
 
         let currentStaff = {
             id: localStorage.getItem('staffId'),
@@ -364,6 +472,28 @@
                 console.error('Error loading data:', error);
             }
         }
+
+// Add function to load menu data
+async function loadMenuData() {
+    if (menuCache) return menuCache;
+    
+    try {
+        const response = await fetch(`${MENU_API_URL}?action=getAllMenu`);
+        const result = await response.json();
+        
+        if (result.success) {
+            // Create a map of menu ID to menu name
+            menuCache = {};
+            result.data.forEach(menu => {
+                menuCache[menu['Id Menu']] = menu['Name'];
+            });
+            return menuCache;
+        }
+    } catch (error) {
+        console.error('Error loading menu data:', error);
+        return {};
+    }
+}
 
         function renderTables() {
             const tablesGrid = document.getElementById('tablesGrid');
@@ -427,84 +557,422 @@ ${hasActiveOrders ? `
             }).join('');
         }
 
-        async function viewTableOrders(tableId) {
-            try {
-                const table = tables.find(t => t['Id Table'] === tableId);
-                if (!table) return;
+       async function viewTableOrders(tableId) {
+    try {
+        const table = tables.find(t => t['Id Table'] === tableId);
+        if (!table) return;
+        
+        // Load menu data first
+        const menuMap = await loadMenuData();
+        
+        // Load orders for this table
+        const response = await fetch(`${ORDER_API_URL}?action=getOrdersByTable&tableId=${tableId}`);
+        const result = await response.json();
+        
+        if (result.success) {
+            const activeOrders = result.data.filter(order => 
+                ['pending', 'preparing', 'ready', 'served', 'cancelled'].includes(order.Status.toLowerCase())
+            );
+            
+            document.getElementById('modalTableNumber').textContent = table.Table;
+            
+            if (activeOrders.length === 0) {
+                document.getElementById('modalOrderDetails').innerHTML = `
+                    <div style="text-align: center; padding: 40px 0; color: #666;">
+                        <i class="fas fa-clipboard-list" style="font-size: 3rem; margin-bottom: 20px;"></i>
+                        <p>No active orders for this table</p>
+                    </div>
+                `;
+            } else {
+                let ordersHTML = '';
                 
-                // Load orders for this table
-                const response = await fetch(`${ORDER_API_URL}?action=getOrdersByTable&tableId=${tableId}`);
-                const result = await response.json();
-                
-                if (result.success) {
-                    const activeOrders = result.data.filter(order => 
-    ['pending', 'preparing', 'ready', 'served', 'cancelled'].includes(order.Status.toLowerCase())
-);
+                for (const order of activeOrders) {
+                    // Load order items
+                    const itemsResponse = await fetch(`${ORDER_ITEMS_API_URL}?action=getOrderItemsByOrder&orderId=${order['Id Order']}`);
+                    const itemsResult = await itemsResponse.json();
                     
-                    document.getElementById('modalTableNumber').textContent = table.Table;
+                    const orderItems = itemsResult.success ? itemsResult.data : [];
+                    const readyItems = orderItems.filter(item => item.Status.toLowerCase() === 'ready');
                     
-                    if (activeOrders.length === 0) {
-                        document.getElementById('modalOrderDetails').innerHTML = `
-                            <div style="text-align: center; padding: 40px 0; color: #666;">
-                                <i class="fas fa-clipboard-list" style="font-size: 3rem; margin-bottom: 20px;"></i>
-                                <p>No active orders for this table</p>
+                    ordersHTML += `
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                <div style="font-weight: 600; color: #333;">Order ${order['Id Order']}</div>
+                                <div class="order-item-status ${order.Status.toLowerCase()}">
+                                    ${order.Status.charAt(0).toUpperCase() + order.Status.slice(1).toLowerCase()}
+                                </div>
                             </div>
-                        `;
-                    } else {
-                        let ordersHTML = '';
-                        
-                        for (const order of activeOrders) {
-                            // Load order items
-                            const itemsResponse = await fetch(`${ORDER_ITEMS_API_URL}?action=getOrderItemsByOrder&orderId=${order['Id Order']}`);
-                            const itemsResult = await itemsResponse.json();
                             
-                            const orderItems = itemsResult.success ? itemsResult.data : [];
-                            const readyItems = orderItems.filter(item => item.Status.toLowerCase() === 'ready');
-                            
-                            ordersHTML += `
-                                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                                        <div style="font-weight: 600; color: #333;">Order ${order['Id Order']}</div>
-                                       <div class="order-item-status ${order.Status.toLowerCase()}">
-    ${order.Status.charAt(0).toUpperCase() + order.Status.slice(1).toLowerCase()}
-</div>
-                                    </div>
-                                    
-                                    <div style="margin: 10px 0;">
-                                        ${orderItems.map(item => `
-                                            <div class="order-item">
+                            <div style="margin: 10px 0;">
+                                ${orderItems.map(item => {
+                                    const menuName = menuMap[item['Id Menu']] || `Item ${item['Id Menu']}`;
+                                    return `
+                                        <div class="order-item" style="flex-direction: column; align-items: flex-start;">
+                                            <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 5px;">
                                                 <div class="order-item-name">
-                                                    Item ${item['Id Menu']} × ${item.Quantity}
+                                                    ${menuName} × ${item.Quantity}
                                                 </div>
                                                 <div class="order-item-status ${item.Status.toLowerCase()}">
-                                                   ${item.Status.charAt(0).toUpperCase() + item.Status.slice(1).toLowerCase()}
+                                                    ${item.Status.charAt(0).toUpperCase() + item.Status.slice(1).toLowerCase()}
                                                 </div>
                                             </div>
-                                        `).join('')}
-                                    </div>
-                                    
-                                    <div style="display: flex; gap: 10px; margin-top: 10px;">
-                                        <button onclick="serveOrder('${order['Id Order']}')" 
-                                                class="btn-action btn-serve" 
-                                                style="flex: 1; padding: 8px;"
-                                                ${order.Status.toLowerCase() !== 'pending' ? 'disabled' : ''}>
-                                            <i class="fas fa-check"></i> Mark as Served
-                                        </button>
-                                    </div>
-                                </div>
-                            `;
+                                            ${item.Notes ? `<div style="font-style: italic; color: #666; font-size: 0.9rem; margin-left: 10px; margin-bottom: 5px;">${item.Notes}</div>` : ''}
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                            
+                            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                                <button onclick="toggleEditMenu('edit-menu-${order['Id Order']}')" 
+                                        class="btn-action" 
+                                        style="flex: 1; padding: 8px; background: #FF9800; color: white;">
+                                    <i class="fas fa-edit"></i> Edit
+                                </button>
+                                <button onclick="serveOrder('${order['Id Order']}')" 
+                                        class="btn-action btn-serve" 
+                                        style="flex: 1; padding: 8px;"
+                                        ${order.Status.toLowerCase() !== 'pending' ? 'disabled' : ''}>
+                                    <i class="fas fa-check"></i> Mark as Served
+                                </button>
+                            </div>
+                            
+                            <!-- Edit Menu (hidden by default) -->
+                            <div id="edit-menu-${order['Id Order']}" style="display: none; margin-top: 15px; padding: 15px; background: white; border-radius: 8px; border: 1px solid #e0e0e0;">
+                                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+    ${order.Status.toLowerCase() === 'cancelled' ? 
+        `<button onclick="uncancelOrder('${order['Id Order']}')" 
+                class="btn-action" 
+                style="flex: 1; padding: 8px; background: #4CAF50; color: white;">
+            <i class="fas fa-undo"></i> Uncancel Order
+        </button>` :
+        `<button onclick="cancelOrder('${order['Id Order']}')" 
+                class="btn-action" 
+                style="flex: 1; padding: 8px; background: #f44336; color: white;">
+            <i class="fas fa-ban"></i> Cancel Order
+        </button>`
+    }
+    <button onclick="addOrderToTable('${tableId}')" 
+            class="btn-action" 
+            style="flex: 1; padding: 8px; background: #4CAF50; color: white;">
+        <i class="fas fa-plus"></i> Add Order
+    </button>
+</div>
+                                
+                                <div style="margin-top: 10px;">
+    <h4 style="margin-bottom: 10px; color: #333;">Items:</h4>
+    ${orderItems.map(item => {
+        const menuName = menuMap[item['Id Menu']] || `Item ${item['Id Menu']}`;
+        const isCancelled = item.Status.toLowerCase() === 'cancelled';
+        return `
+            <div style="display: flex; flex-direction: column; padding: 8px; border-bottom: 1px solid #f0f0f0;">
+                <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                    <span style="font-weight: 500;">${menuName} × ${item.Quantity}</span>
+                    <div style="display: flex; gap: 5px;">
+                        <button onclick="showEditItemPopup('${item['Id Item']}', '${order['Id Order']}', '${menuName.replace(/'/g, "\\'")}', ${item.Quantity}, '${item.Notes ? item.Notes.replace(/'/g, "\\'") : ''}')" 
+                            class="btn-action" 
+                            style="padding: 5px 10px; background: #FF9800; color: white; font-size: 0.9rem;">
+                            <i class="fas fa-edit"></i> Edit Item
+                        </button>
+                        ${isCancelled ? 
+                            `<button onclick="uncancelOrderItem('${item['Id Item']}', '${order['Id Order']}')" 
+                                    class="btn-action" 
+                                    style="padding: 5px 10px; background: #4CAF50; color: white; font-size: 0.9rem;">
+                                <i class="fas fa-undo"></i> Uncancel Item
+                            </button>` :
+                            `<button onclick="cancelOrderItem('${item['Id Item']}', '${order['Id Order']}')" 
+                                    class="btn-action" 
+                                    style="padding: 5px 10px; background: #ff9800; color: white; font-size: 0.9rem;">
+                                <i class="fas fa-times-circle"></i> Cancel Item
+                            </button>`
                         }
-                        
-                        document.getElementById('modalOrderDetails').innerHTML = ordersHTML;
-                    }
-                    
-                    document.getElementById('orderModal').style.display = 'flex';
+                    </div>
+                </div>
+                ${item.Notes ? `<div style="font-style: italic; color: #666; font-size: 0.9rem; margin-top: 5px; margin-left: 10px;">${item.Notes}</div>` : ''}
+                <div class="order-item-status ${item.Status.toLowerCase()}" style="margin-top: 5px; width: fit-content;">
+                    ${item.Status.charAt(0).toUpperCase() + item.Status.slice(1).toLowerCase()}
+                </div>
+            </div>
+        `;
+    }).join('')}
+</div>
+                            </div>
+                        </div>
+                    `;
                 }
-            } catch (error) {
-                console.error('Error loading order details:', error);
-                alert('Error loading order details');
+                
+                document.getElementById('modalOrderDetails').innerHTML = ordersHTML;
+            }
+            
+            document.getElementById('orderModal').style.display = 'flex';
+        }
+    } catch (error) {
+        console.error('Error loading order details:', error);
+        alert('Error loading order details');
+    }
+}
+
+// Add these functions after loadMenuData() and before serveOrder()
+
+async function cancelOrderItem(itemId, orderId) {
+    if (!confirm('Are you sure you want to cancel this item?')) return;
+    
+    try {
+        const response = await fetch(`${ORDER_ITEMS_API_URL}?action=updateOrderItem`, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                id: itemId,
+                status: 'Cancelled',
+                finalPrice: 0  // Set Final Price to 0 when cancelled
+            })
+        });
+        
+        alert('Item cancelled successfully');
+        // Refresh the order details
+        const tableId = document.getElementById('modalTableNumber').textContent;
+        const table = tables.find(t => t.Table == tableId);
+        if (table) {
+            viewTableOrders(table['Id Table']);
+        }
+    } catch (error) {
+        console.error('Error cancelling item:', error);
+        alert('Error cancelling item');
+    }
+}
+
+async function uncancelOrderItem(itemId, orderId) {
+    if (!confirm('Are you sure you want to change this item from Cancelled to Pending?')) return;
+    
+    try {
+        // First get the current item data to calculate the correct Final Price
+        const itemResponse = await fetch(`${ORDER_ITEMS_API_URL}?action=getOrderItemById&id=${itemId}`);
+        const itemResult = await itemResponse.json();
+        
+        if (itemResult.success) {
+            const item = itemResult.data;
+            // Calculate Final Price = Sub Total - Discount
+            const subtotal = item['Sub Total'];
+            const discount = item['Discount'] || 0;
+            const finalPrice = subtotal - discount;
+            
+            const response = await fetch(`${ORDER_ITEMS_API_URL}?action=updateOrderItem`, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    id: itemId,
+                    status: 'Pending',
+                    finalPrice: finalPrice  // Recalculate Final Price
+                })
+            });
+            
+            alert('Item status changed to Pending successfully');
+            // Refresh the order details
+            const tableId = document.getElementById('modalTableNumber').textContent;
+            const table = tables.find(t => t.Table == tableId);
+            if (table) {
+                viewTableOrders(table['Id Table']);
             }
         }
+    } catch (error) {
+        console.error('Error changing item status:', error);
+        alert('Error changing item status');
+    }
+}
+
+function editNotes(itemId, orderId, menuName, currentNotes) {
+    currentEditingItem = {
+        id: itemId,
+        orderId: orderId,
+        menuName: menuName
+    };
+    
+    document.getElementById('editNotesItemName').textContent = menuName;
+    document.getElementById('editNotesText').value = currentNotes || '';
+    document.getElementById('editNotesModal').style.display = 'flex';
+}
+
+async function saveNotes() {
+    if (!currentEditingItem.id) return;
+    
+    const newNotes = document.getElementById('editNotesText').value.trim();
+    
+    // Get the save button
+    const saveButton = document.querySelector('#editNotesModal .btn-action[style*="background: #4CAF50"]');
+    const originalText = saveButton.innerHTML;
+    
+    try {
+        // Show loading state
+        saveButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+        saveButton.disabled = true;
+        
+        // Update the notes in the database
+        const response = await fetch(`${ORDER_ITEMS_API_URL}?action=updateOrderItem&id=${currentEditingItem.id}&notes=${encodeURIComponent(newNotes)}`);
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('Notes updated successfully');
+            closeEditNotesModal();
+            
+            // Refresh the order details
+            const tableId = document.getElementById('modalTableNumber').textContent;
+            const table = tables.find(t => t.Table == tableId);
+            if (table) {
+                viewTableOrders(table['Id Table']);
+            }
+        } else {
+            alert('Error updating notes: ' + (result.message || 'Unknown error'));
+        }
+    } catch (error) {
+        console.error('Error updating notes:', error);
+        alert('Error updating notes: ' + error.message);
+    } finally {
+        // Reset button state
+        saveButton.innerHTML = originalText;
+        saveButton.disabled = false;
+    }
+}
+
+function closeEditNotesModal() {
+    document.getElementById('editNotesModal').style.display = 'none';
+    currentEditingItem = {
+        id: null,
+        orderId: null,
+        menuName: null
+    };
+    document.getElementById('editNotesText').value = '';
+}
+
+// Close modal when clicking outside
+window.onclick = function(event) {
+    const editModal = document.getElementById('editNotesModal');
+    if (event.target === editModal) {
+        closeEditNotesModal();
+    }
+}
+
+// Add this function after the cancelOrderItem function
+function toggleEditMenu(menuId) {
+    const menu = document.getElementById(menuId);
+    if (menu) {
+        menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+    }
+}
+
+// Add this function after the toggleEditMenu function
+function addOrderToTable(tableId) {
+    // This will be implemented later
+    alert('Add Order functionality will be implemented soon');
+    // You can replace this with actual implementation later
+}
+
+async function cancelOrder(orderId) {
+    if (!confirm('Are you sure you want to cancel this entire order? This will also cancel all items in this order.')) return;
+    
+    try {
+        // First, get all items in this order
+        const itemsResponse = await fetch(`${ORDER_ITEMS_API_URL}?action=getOrderItemsByOrder&orderId=${orderId}`);
+        const itemsResult = await itemsResponse.json();
+        
+        if (itemsResult.success) {
+            // Cancel each item in the order and set Final Price to 0
+            for (const item of itemsResult.data) {
+                // Only cancel items that are not already cancelled
+                if (item.Status.toLowerCase() !== 'cancelled') {
+                    await fetch(`${ORDER_ITEMS_API_URL}?action=updateOrderItem`, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            id: item['Id Item'],
+                            status: 'Cancelled',
+                            finalPrice: 0  // Set Final Price to 0 when cancelled
+                        })
+                    });
+                }
+            }
+        }
+        
+        // Then cancel the order itself
+        const response = await fetch(`${ORDER_API_URL}?action=updateOrderStatus&id=${orderId}&status=Cancelled`);
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('Order and all items cancelled successfully');
+            closeOrderModal();
+            loadTables();
+        } else {
+            alert('Error cancelling order');
+        }
+    } catch (error) {
+        console.error('Error cancelling order:', error);
+        alert('Error cancelling order');
+    }
+}
+
+async function uncancelOrder(orderId) {
+    if (!confirm('Are you sure you want to change this order from Cancelled to Pending? This will also change all items in this order to Pending.')) return;
+    
+    try {
+        // First, get all items in this order
+        const itemsResponse = await fetch(`${ORDER_ITEMS_API_URL}?action=getOrderItemsByOrder&orderId=${orderId}`);
+        const itemsResult = await itemsResponse.json();
+        
+        if (itemsResult.success) {
+            // Change each item in the order to Pending and recalculate Final Price
+            for (const item of itemsResult.data) {
+                // Only change items that are cancelled
+                if (item.Status.toLowerCase() === 'cancelled') {
+                    // Calculate Final Price = Sub Total - Discount
+                    const finalPrice = item['Sub Total'] - (item['Discount'] || 0);
+                    
+                    await fetch(`${ORDER_ITEMS_API_URL}?action=updateOrderItem`, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            id: item['Id Item'],
+                            status: 'Pending',
+                            finalPrice: finalPrice  // Recalculate Final Price
+                        })
+                    });
+                }
+            }
+        }
+        
+        // Then change the order itself to Pending
+        const response = await fetch(`${ORDER_API_URL}?action=updateOrderStatus&id=${orderId}&status=Pending`);
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('Order and all items changed to Pending successfully');
+            
+            // Refresh the current view
+            const tableId = document.getElementById('modalTableNumber').textContent;
+            const table = tables.find(t => t.Table == tableId);
+            if (table) {
+                viewTableOrders(table['Id Table']);
+            }
+            
+            // Also refresh the tables view
+            loadTables();
+        } else {
+            alert('Error changing order status');
+        }
+    } catch (error) {
+        console.error('Error changing order status:', error);
+        alert('Error changing order status');
+    }
+}
 
        async function serveOrder(orderId) {
     if (!confirm('Mark this order as served?')) return;
@@ -596,6 +1064,144 @@ ${hasActiveOrders ? `
             localStorage.clear();
             window.location.href = 'login.html';
         }
+
+// Edit Item Options Functions
+let currentEditItemData = {
+    id: null,
+    orderId: null,
+    menuName: null,
+    quantity: 1,
+    notes: ''
+};
+
+function showEditItemPopup(itemId, orderId, menuName, quantity, notes) {
+    currentEditItemData = {
+        id: itemId,
+        orderId: orderId,
+        menuName: menuName,
+        quantity: quantity,
+        notes: notes
+    };
+    
+    document.getElementById('editItemOptionsItemName').textContent = menuName;
+    document.getElementById('editItemOptionsModal').style.display = 'flex';
+}
+
+function closeEditItemOptionsModal() {
+    document.getElementById('editItemOptionsModal').style.display = 'none';
+}
+
+function openEditNotesFromOptions() {
+    closeEditItemOptionsModal();
+    // Open the edit notes modal with current item data
+    document.getElementById('editNotesItemName').textContent = currentEditItemData.menuName;
+    document.getElementById('editNotesText').value = currentEditItemData.notes || '';
+    currentEditingItem = {
+        id: currentEditItemData.id,
+        orderId: currentEditItemData.orderId,
+        menuName: currentEditItemData.menuName
+    };
+    document.getElementById('editNotesModal').style.display = 'flex';
+}
+
+function openEditQuantityFromOptions() {
+    closeEditItemOptionsModal();
+    // Open the edit quantity modal
+    document.getElementById('editQuantityItemName').textContent = currentEditItemData.menuName;
+    document.getElementById('editQuantityDisplay').textContent = currentEditItemData.quantity;
+    document.getElementById('editQuantityModal').style.display = 'flex';
+}
+
+function closeEditQuantityModal() {
+    document.getElementById('editQuantityModal').style.display = 'none';
+}
+
+// Add these functions before saveQuantity()
+function incrementQuantity() {
+    const display = document.getElementById('editQuantityDisplay');
+    let currentValue = parseInt(display.textContent);
+    if (currentValue < 99) {
+        display.textContent = currentValue + 1;
+    }
+}
+
+function decrementQuantity() {
+    const display = document.getElementById('editQuantityDisplay');
+    let currentValue = parseInt(display.textContent);
+    if (currentValue > 1) {
+        display.textContent = currentValue - 1;
+    }
+}
+
+async function saveQuantity() {
+    if (!currentEditItemData.id) return;
+    
+    const newQuantity = parseInt(document.getElementById('editQuantityDisplay').textContent);
+    
+    if (isNaN(newQuantity) || newQuantity < 1) {
+        alert('Please enter a valid quantity (minimum 1)');
+        return;
+    }
+    
+    // Get the save button
+    const saveButton = document.querySelector('#editQuantityModal .btn-action[style*="background: #4CAF50"]');
+    const originalText = saveButton.innerHTML;
+    
+    try {
+        // Show loading state
+        saveButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+        saveButton.disabled = true;
+        
+        // Update the quantity in the database
+        const response = await fetch(`${ORDER_ITEMS_API_URL}?action=updateOrderItem`, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                id: currentEditItemData.id,
+                quantity: newQuantity
+            })
+        });
+        
+        // Since we're using no-cors, we'll assume it worked and refresh
+        alert('Quantity updated successfully');
+        closeEditQuantityModal();
+        
+        // Refresh the order details
+        const tableId = document.getElementById('modalTableNumber').textContent;
+        const table = tables.find(t => t.Table == tableId);
+        if (table) {
+            viewTableOrders(table['Id Table']);
+        }
+    } catch (error) {
+        console.error('Error updating quantity:', error);
+        alert('Error updating quantity: ' + error.message);
+    } finally {
+        // Reset button state
+        saveButton.innerHTML = originalText;
+        saveButton.disabled = false;
+    }
+}
+
+// Update window.onclick to include new modals
+const originalOnclick = window.onclick;
+window.onclick = function(event) {
+    const editModal = document.getElementById('editNotesModal');
+    const editOptionsModal = document.getElementById('editItemOptionsModal');
+    const editQuantityModal = document.getElementById('editQuantityModal');
+    
+    if (event.target === editModal) {
+        closeEditNotesModal();
+    }
+    if (event.target === editOptionsModal) {
+        closeEditItemOptionsModal();
+    }
+    if (event.target === editQuantityModal) {
+        closeEditQuantityModal();
+    }
+}
     </script>
 </body>
 </html>
