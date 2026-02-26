@@ -791,7 +791,11 @@
         const result = await response.json();
         
         if (result.success) {
-            menuItems = result.data;
+            // FILTER OUT ITEMS WITH ID STARTING WITH "CUSTOM"
+            menuItems = result.data.filter(item => {
+                // Check if the ID Menu starts with "CUSTOM" (case insensitive)
+                return !item['Id Menu'] || !item['Id Menu'].toUpperCase().startsWith('CUSTOM');
+            });
             
             // Extract unique categories
             categories = [...new Set(menuItems.map(item => item.Category))];
