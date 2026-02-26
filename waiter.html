@@ -1279,13 +1279,16 @@ function showWaiterOrderModalWithType(tableId, orderType) {
                     </div>
                     
                     <div style="display: flex; gap: 10px;">
-                        <button onclick="placeWaiterOrder()" class="btn-action" style="flex: 2; padding: 12px; background: #4CAF50; color: white;">
-                            <i class="fa-solid fa-utensils"></i> Place Order
-                        </button>
-                        <button onclick="clearWaiterCart()" class="btn-action" style="flex: 1; padding: 12px; background: #f44336; color: white;">
-                            <i class="fas fa-trash"></i> Clear Cart
-                        </button>
-                    </div>
+    <button onclick="placeWaiterOrder()" class="btn-action" style="flex: 2; padding: 12px; background: #4CAF50; color: white;">
+        <i class="fa-solid fa-utensils"></i> Place Order
+    </button>
+    <button onclick="showCustomOrderForm('${tableId}', '${orderType}')" class="btn-action" style="flex: 1; padding: 12px; background: #FF9800; color: white;">
+        <i class="fas fa-plus-circle"></i> Custom Order
+    </button>
+    <button onclick="clearWaiterCart()" class="btn-action" style="flex: 1; padding: 12px; background: #f44336; color: white;">
+        <i class="fas fa-trash"></i> Clear Cart
+    </button>
+</div>
                 </div>
             </div>
         </div>
@@ -1293,6 +1296,153 @@ function showWaiterOrderModalWithType(tableId, orderType) {
     
     document.body.insertAdjacentHTML('beforeend', modalHTML);
     updateWaiterCartDisplay();
+}
+
+function showCustomOrderForm(tableId, orderType) {
+    // Close any existing modals
+    const existingModal = document.getElementById('customOrderModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // Generate custom ID
+    const timestamp = Date.now();
+    const customId = `CUSTOM${timestamp}`;
+    
+    // Create modal HTML
+    const modalHTML = `
+        <div id="customOrderModal" class="modal" style="justify-content: center; align-items: center; display: flex;">
+            <div class="modal-content" style="max-width: 500px;">
+                <div class="modal-header">
+                    <h3 class="modal-title">Add Custom Menu Item</h3>
+                    <button class="close-btn" onclick="closeCustomOrderModal()">&times;</button>
+                </div>
+                
+                <div style="padding: 20px 0;">
+                    <form id="customOrderForm" onsubmit="submitCustomOrder(event, '${tableId}', '${orderType}')">
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: block; margin-bottom: 5px; font-weight: 500;">ID Menu:</label>
+                            <input type="text" id="customId" value="${customId}" readonly 
+                                   style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; background: #f5f5f5;">
+                        </div>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: block; margin-bottom: 5px; font-weight: 500;">Name *</label>
+                            <input type="text" id="customName" required 
+                                   style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                        </div>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: block; margin-bottom: 5px; font-weight: 500;">Price (RM) *</label>
+                            <input type="number" id="customPrice" step="0.01" min="0" required 
+                                   style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                        </div>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: block; margin-bottom: 5px; font-weight: 500;">Category:</label>
+                            <input type="text" id="customCategory" value="CUSTOM" readonly 
+                                   style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; background: #f5f5f5;">
+                        </div>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: block; margin-bottom: 5px; font-weight: 500;">Preparation Time (minutes) *</label>
+                            <input type="number" id="customPrepTime" min="1" value="15" required 
+                                   style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                        </div>
+                        
+                        <div style="display: flex; gap: 10px; margin-top: 20px;">
+                            <button type="submit" class="btn-action" style="flex: 2; padding: 12px; background: #4CAF50; color: white;">
+                                <i class="fas fa-save"></i> Submit Custom Menu
+                            </button>
+                            <button type="button" onclick="closeCustomOrderModal()" class="btn-action" style="flex: 1; padding: 12px; background: #999; color: white;">
+                                <i class="fas fa-times"></i> Cancel
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
+
+function closeCustomOrderModal() {
+    const modal = document.getElementById('customOrderModal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+async function submitCustomOrder(event, tableId, orderType) {
+    event.preventDefault();
+    
+    const name = document.getElementById('customName').value;
+    const price = parseFloat(document.getElementById('customPrice').value);
+    const prepTime = parseInt(document.getElementById('customPrepTime').value);
+    const customId = document.getElementById('customId').value; // Get the custom ID from the form
+    
+    // Prepare data for API
+    const menuData = {
+        id: customId, // Add the custom ID here
+        name: name,
+        description: 'Custom menu item',
+        price: price,
+        category: 'CUSTOM',
+        preparationTime: prepTime,
+        tags: 'custom',
+        image: ''
+    };
+    
+    try {
+        // Show loading state on button
+        const submitBtn = event.target.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+        submitBtn.disabled = true;
+        
+        // Submit to database using no-cors mode
+        await fetch(`${MENU_API_URL}?action=createMenu`, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(menuData)
+        });
+        
+        // Since we're using no-cors, we can't read the response
+        // Show success message and proceed
+        alert('Custom menu item added successfully! Refreshing menu...');
+        
+        // Clear menu cache to force reload
+        menuCache = null;
+        menuItems = [];
+        
+        // Wait a moment for the database to update
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Refresh menu data
+        await loadMenuData();
+        await loadWaiterMenuData();
+        
+        // Close custom order modal
+        closeCustomOrderModal();
+        
+        // Reopen the waiter order modal with refreshed menu
+        showWaiterOrderModalWithType(tableId, orderType);
+        
+    } catch (error) {
+        console.error('Error adding custom menu:', error);
+        alert('Error adding custom menu: ' + error.message);
+    } finally {
+        // Reset button state
+        const submitBtn = event.target.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.innerHTML = '<i class="fas fa-save"></i> Submit Custom Menu';
+            submitBtn.disabled = false;
+        }
+    }
 }
 
 function getCategoryIcon(category) {
