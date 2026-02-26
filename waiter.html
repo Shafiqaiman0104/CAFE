@@ -1110,14 +1110,6 @@ function closeEditNotesModal() {
     document.getElementById('editNotesText').value = '';
 }
 
-// Close modal when clicking outside
-window.onclick = function(event) {
-    const editModal = document.getElementById('editNotesModal');
-    if (event.target === editModal) {
-        closeEditNotesModal();
-    }
-}
-
 // Add this function after the cancelOrderItem function
 function toggleEditMenu(menuId) {
     const menu = document.getElementById(menuId);
@@ -1575,6 +1567,14 @@ function increaseWaiterQuantity(itemId) {
     const item = menuItems.find(m => m['Id Menu'] === itemId);
     if (!item) return;
     
+    // Check if it's an Add On item
+    if (item.Category === 'Add On') {
+        // For Add On items, show dropdown
+        showWaiterAddOnDropdown(itemId, currentTableId, currentOrderType);
+        return;
+    }
+    
+    // Existing logic for non-Add On items
     const qtyElement = document.getElementById(`waiter-qty-${itemId}`);
     let currentQty = parseInt(qtyElement.textContent) || 0;
     currentQty++;
@@ -1606,13 +1606,52 @@ function decreaseWaiterQuantity(itemId) {
         currentQty--;
         qtyElement.textContent = currentQty;
         
-        const existingItem = currentWaiterCart.find(c => c.id === itemId);
+        // Check if it's an Add On item
+        const isAddOn = isWaiterAddOnCategory(itemId);
         
-        if (existingItem) {
-            if (currentQty === 0) {
-                currentWaiterCart = currentWaiterCart.filter(c => c.id !== itemId);
-            } else {
-                existingItem.quantity = currentQty;
+        if (isAddOn) {
+            // For Add On items, we need to find the correct instance to decrease
+            const allAddOnsOfType = currentWaiterCart.filter(c => c.id === itemId);
+            
+            if (allAddOnsOfType.length > 0) {
+                // Separate standalone and attached add-ons
+                const standaloneAddOns = allAddOnsOfType.filter(a => !a.mainDishId);
+                const attachedAddOns = allAddOnsOfType.filter(a => a.mainDishId);
+                
+                let addOnToDecrease = null;
+                
+                // Priority: decrease standalone add-ons first, then attached
+                if (standaloneAddOns.length > 0) {
+                    addOnToDecrease = standaloneAddOns[standaloneAddOns.length - 1];
+                } else if (attachedAddOns.length > 0) {
+                    addOnToDecrease = attachedAddOns[attachedAddOns.length - 1];
+                }
+                
+                if (addOnToDecrease) {
+                    addOnToDecrease.quantity--;
+                    
+                    if (addOnToDecrease.quantity === 0) {
+                        // Remove this specific add-on if quantity reaches 0
+                        currentWaiterCart = currentWaiterCart.filter(c => c !== addOnToDecrease);
+                    }
+                    
+                    // Recalculate total quantity for this add-on type
+                    const remainingAddOns = currentWaiterCart.filter(c => c.id === itemId);
+                    const totalQty = remainingAddOns.reduce((sum, item) => sum + item.quantity, 0);
+                    
+                    // Update display
+                    qtyElement.textContent = totalQty;
+                }
+            }
+        } else {
+            // For regular (non-Add On) items
+            const existingItem = currentWaiterCart.find(c => c.id === itemId);
+            if (existingItem) {
+                if (currentQty === 0) {
+                    currentWaiterCart = currentWaiterCart.filter(c => c.id !== itemId);
+                } else {
+                    existingItem.quantity = currentQty;
+                }
             }
         }
         
@@ -1664,22 +1703,80 @@ function updateWaiterCartDisplay() {
     let total = 0;
     let cartHTML = '';
     
-    currentWaiterCart.forEach(item => {
-        const itemTotal = item.price * item.quantity;
+    // Group items: main dishes first, then their add-ons
+    const mainDishes = currentWaiterCart.filter(item => {
+        const menuItem = menuItems.find(m => m['Id Menu'] === item.id);
+        return menuItem && menuItem.Category !== 'Add On';
+    });
+    
+    // Display main dishes with their add-ons
+    mainDishes.forEach(mainDish => {
+        const itemTotal = mainDish.price * mainDish.quantity;
         total += itemTotal;
         
         cartHTML += `
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #f0f0f0;">
-                <div>
-                    <div style="font-weight: 500;">${item.name}</div>
-                    <div style="font-size: 0.9rem; color: #666;">RM ${item.price.toFixed(2)} × ${item.quantity}</div>
-                    <input type="text" 
-                           placeholder="Notes for this item..." 
-                           value="${item.notes || ''}"
-                           onchange="updateWaiterItemNotes('${item.id}', this.value)"
-                           style="width: 100%; margin-top: 5px; padding: 5px; border: 1px solid #e0e0e0; border-radius: 4px; font-size: 0.85rem;">
+            <div style="background: #f8f9fa; padding: 10px; border-radius: 8px; margin-bottom: 10px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div style="font-weight: 600;">${mainDish.name}</div>
+                        <div style="font-size: 0.9rem; color: #666;">RM ${mainDish.price.toFixed(2)} × ${mainDish.quantity}</div>
+                    </div>
+                    <div style="font-weight: 600;">RM ${itemTotal.toFixed(2)}</div>
                 </div>
-                <div style="font-weight: 600;">RM ${itemTotal.toFixed(2)}</div>
+                
+                <!-- Add-ons for this main dish -->
+                ${currentWaiterCart.filter(addon => addon.mainDishId === mainDish.id).map(addon => {
+                    const addonTotal = addon.price * addon.quantity;
+                    total += addonTotal;
+                    return `
+                        <div style="margin-left: 20px; margin-top: 5px; padding: 5px; border-left: 3px solid #764ba2; background: white; border-radius: 4px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <div style="font-weight: 500; font-size: 0.9rem;">${addon.name}</div>
+                                    <div style="font-size: 0.8rem; color: #764ba2; font-style: italic;">
+                                        <i class="fas fa-plus-circle"></i> Add on to ${mainDish.name}
+                                    </div>
+                                    <div style="font-size: 0.8rem; color: #666;">RM ${addon.price.toFixed(2)} × ${addon.quantity}</div>
+                                </div>
+                                <div style="font-weight: 600;">RM ${addonTotal.toFixed(2)}</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
+                
+                <input type="text" 
+                       placeholder="Notes for ${mainDish.name}..." 
+                       value="${mainDish.notes || ''}"
+                       onchange="updateWaiterItemNotes('${mainDish.id}', this.value)"
+                       style="width: 100%; margin-top: 8px; padding: 5px; border: 1px solid #e0e0e0; border-radius: 4px; font-size: 0.85rem;">
+            </div>
+        `;
+    });
+    
+    // Display standalone Add Ons (items without mainDishId) - HIDDEN NOTES FIELD
+    const standaloneAddOns = currentWaiterCart.filter(item => {
+        const menuItem = menuItems.find(m => m['Id Menu'] === item.id);
+        return menuItem && menuItem.Category === 'Add On' && !item.mainDishId;
+    });
+    
+    standaloneAddOns.forEach(addon => {
+        const addonTotal = addon.price * addon.quantity;
+        total += addonTotal;
+        
+        cartHTML += `
+            <div style="background: #fff3e0; padding: 10px; border-radius: 8px; margin-bottom: 10px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div style="font-weight: 600;">${addon.name}</div>
+                        <div style="font-size: 0.8rem; color: #666;">Basic order - no main dish</div>
+                        <div style="font-size: 0.9rem; color: #666;">RM ${addon.price.toFixed(2)} × ${addon.quantity}</div>
+                    </div>
+                    <div style="font-weight: 600;">RM ${addonTotal.toFixed(2)}</div>
+                </div>
+                <!-- Hidden input field - still sends data to database but not visible/editable by user -->
+                <input type="hidden" 
+                       value="${addon.notes || 'Basic order - no main dish'}"
+                       data-item-id="${addon.id}">
             </div>
         `;
     });
@@ -2134,12 +2231,173 @@ async function saveQuantity() {
     }
 }
 
+// Add this function to check if an item is Add On
+function isWaiterAddOnCategory(itemId) {
+    const menuItem = menuItems.find(m => m['Id Menu'] === itemId);
+    return menuItem && menuItem.Category === 'Add On';
+}
+
+// Add this function to show Add On dropdown for waiter
+function showWaiterAddOnDropdown(itemId, tableId, orderType) {
+    // Get all main course items currently in waiter cart (excluding Add On items)
+    const mainCourseItems = currentWaiterCart.filter(item => {
+        const menuItem = menuItems.find(m => m['Id Menu'] === item.id);
+        return menuItem && menuItem.Category !== 'Add On';
+    });
+
+    // Create dropdown HTML with proper escaping
+    let dropdownHTML = `
+        <div id="waiterAddOnModal" class="modal" style="justify-content: center; align-items: center; display: flex;">
+            <div class="modal-content" style="max-width: 400px; height: auto; border-radius: 15px;">
+                <div class="modal-header">
+                    <h3 class="modal-title">Select Option</h3>
+                    <button class="close-btn" onclick="closeWaiterAddOnModal()">&times;</button>
+                </div>
+                <div style="padding: 20px;">
+                    <p style="margin-bottom: 15px; color: #666;">How would you like to add this item?</p>
+                    <div id="waiterMainDishOptions" style="margin-bottom: 20px;">
+                        
+                        <div style="margin-bottom: 10px; padding: 10px; border: 1px solid #e0e0e0; border-radius: 8px; cursor: pointer;" 
+                             onclick="addAsWaiterStandaloneAddOn('` + itemId + `', '` + tableId + `', '` + orderType + `')">
+                            <div style="font-weight: 500;">Add as Basic Order</div>
+                            <div style="font-size: 0.9rem; color: #666;">Add item without main dish</div>
+                        </div>
+    `;
+
+    // Only show main dish options if there are main dishes in cart
+    if (mainCourseItems.length > 0) {
+        dropdownHTML += `<p style="margin: 15px 0 10px 0; color: #666; font-weight: 500;">Add to existing main dish:</p>`;
+        
+        mainCourseItems.forEach(item => {
+            let safeName = item.name.replace(/'/g, "\\'");
+            dropdownHTML += `
+                <div style="margin-bottom: 10px; padding: 10px; border: 1px solid #e0e0e0; border-radius: 8px; cursor: pointer;" 
+                     onclick="selectWaiterMainDish('` + itemId + `', '` + item.id + `', '` + safeName + `', '` + tableId + `', '` + orderType + `')">
+                    <div style="font-weight: 500;">${item.name}</div>
+                    <div style="font-size: 0.9rem; color: #666;">Qty: ${item.quantity}</div>
+                </div>
+            `;
+        });
+    }
+
+    dropdownHTML += `
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <button onclick="closeWaiterAddOnModal()" style="flex: 1; padding: 10px; background: #e0e0e0; border: none; border-radius: 8px; cursor: pointer;">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Remove existing modal if any
+    const existingModal = document.getElementById('waiterAddOnModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+
+    // Add modal to body
+    document.body.insertAdjacentHTML('beforeend', dropdownHTML);
+}
+
+function closeWaiterAddOnModal() {
+    const modal = document.getElementById('waiterAddOnModal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+function selectWaiterMainDish(addOnId, mainDishId, mainDishName, tableId, orderType) {
+    const addOnItem = menuItems.find(m => m['Id Menu'] === addOnId);
+    if (!addOnItem) return;
+
+    // Get current quantity from display
+    const qtyElement = document.getElementById(`waiter-qty-${addOnId}`);
+    let totalQty = parseInt(qtyElement.textContent) || 0;
+    
+    // Check if we already have this add-on for this specific main dish
+    const existingItem = currentWaiterCart.find(c => 
+        c.id === addOnId && 
+        c.mainDishId === mainDishId
+    );
+    
+    if (existingItem) {
+        // Update existing item: increase its quantity by 1
+        existingItem.quantity += 1;
+        existingItem.notes = `Add on to ${mainDishName}`;
+        
+        // Update the total quantity display
+        totalQty += 1;
+        qtyElement.textContent = totalQty;
+    } else {
+        // Add new item to cart with quantity 1
+        currentWaiterCart.push({
+            id: addOnId,
+            name: addOnItem.Name,
+            price: parseFloat(addOnItem.Price),
+            quantity: 1,
+            prepTime: parseInt(addOnItem['Preparation Time'] || 15),
+            notes: `Add on to ${mainDishName}`,
+            mainDishId: mainDishId
+        });
+        
+        // Update the total quantity display
+        totalQty += 1;
+        qtyElement.textContent = totalQty;
+    }
+    
+    // Update cart display
+    updateWaiterCartDisplay();
+    closeWaiterAddOnModal();
+}
+
+function addAsWaiterStandaloneAddOn(addOnId, tableId, orderType) {
+    const addOnItem = menuItems.find(m => m['Id Menu'] === addOnId);
+    if (!addOnItem) return;
+
+    // Get current quantity from display
+    const qtyElement = document.getElementById(`waiter-qty-${addOnId}`);
+    let currentQty = parseInt(qtyElement.textContent) || 0;
+    
+    // Check if standalone add-on already exists in cart
+    const existingItem = currentWaiterCart.find(c => 
+        c.id === addOnId && 
+        !c.mainDishId // Look for items without mainDishId (standalone)
+    );
+    
+    if (existingItem) {
+        // Update existing standalone item
+        existingItem.quantity += 1;
+        existingItem.notes = "Basic order - no main dish";
+        currentQty += 1;
+        qtyElement.textContent = currentQty;
+    } else {
+        // Add new standalone item to cart
+        currentWaiterCart.push({
+            id: addOnId,
+            name: addOnItem.Name,
+            price: parseFloat(addOnItem.Price),
+            quantity: 1,
+            prepTime: parseInt(addOnItem['Preparation Time'] || 15),
+            notes: "Basic order - no main dish"
+            // Note: no mainDishId property = standalone add-on
+        });
+        
+        currentQty += 1;
+        qtyElement.textContent = currentQty;
+    }
+    
+    // Update cart display
+    updateWaiterCartDisplay();
+    closeWaiterAddOnModal();
+}
+
 // Update window.onclick to include new modals
-const originalOnclick = window.onclick;
 window.onclick = function(event) {
     const editModal = document.getElementById('editNotesModal');
     const editOptionsModal = document.getElementById('editItemOptionsModal');
     const editQuantityModal = document.getElementById('editQuantityModal');
+    const addOnModal = document.getElementById('waiterAddOnModal');
     
     if (event.target === editModal) {
         closeEditNotesModal();
@@ -2149,6 +2407,9 @@ window.onclick = function(event) {
     }
     if (event.target === editQuantityModal) {
         closeEditQuantityModal();
+    }
+    if (event.target === addOnModal) {
+        closeWaiterAddOnModal();
     }
 }
     </script>
