@@ -30,19 +30,65 @@
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
 
-        .logo {
-            font-size: 1.5rem;
+        .nav-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .language-switch {
+            display: flex;
+            gap: 5px;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 5px;
+            border-radius: 25px;
+        }
+
+        .lang-btn {
+            background: transparent;
+            border: none;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+        }
+
+        .lang-btn.active {
+            background: white;
+            color: #764ba2;
+        }
+
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .waiter-btn {
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 20px;
+            cursor: pointer;
             font-weight: 600;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
+            transition: transform 0.3s, background 0.3s;
+            box-shadow: 0 4px 10px rgba(255, 107, 107, 0.3);
         }
 
-        .table-info {
-            background: rgba(255, 255, 255, 0.2);
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-weight: 500;
+        .waiter-btn:hover {
+            background: #ff5252;
+            transform: translateY(-2px);
+        }
+
+        .waiter-btn i {
+            font-size: 1.1rem;
         }
 
         .cart-btn {
@@ -82,23 +128,86 @@
         }
 
         .hero-section {
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            background: linear-gradient(135deg, rgb(105 0 255 / 14%) 0%, rgb(255 255 255 / 15%) 100%);
             border-radius: 20px;
             padding: 40px;
-            text-align: center;
             margin-bottom: 40px;
+        }
+
+        .hero-content {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 40px;
+            flex-wrap: wrap;
+        }
+
+        .restaurant-image-container {
+            flex-shrink: 0;
+        }
+
+        .restaurant-circle {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background: white;
+            padding: 5px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .restaurant-circle img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .divider {
+            width: 3px;
+            height: 120px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 3px;
+        }
+
+        .hero-text {
+            text-align: left;
+            flex: 1;
+            min-width: 100px;
         }
 
         .hero-title {
             font-size: 2.5rem;
             color: #333;
-            margin-bottom: 10px;
+        }
+
+        .table-info-badge {
+            background: #ffffff;
+            color: #764ba2;
+            padding: 10px 25px;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e0e0e0;
+            margin-top: 10px;
+        }
+
+        .table-info-badge i {
+            font-size: 1.2rem;
+            color: #764ba2;
         }
 
         .hero-subtitle {
             color: #666;
             font-size: 1.2rem;
             margin-bottom: 30px;
+            text-align: center;
         }
 
         .category-tabs {
@@ -657,6 +766,15 @@
         font-size: 0.8rem;
         padding: 3px 10px;
     }
+    
+    .restaurant-circle {
+        width: 150px;
+        height: 150px;
+    }
+    
+    .divider {
+        height: 120px;
+    }
 }
 
 /* Mobile adjustments */
@@ -666,8 +784,13 @@
         margin-bottom: 20px;
     }
     
+    .hero-content {
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+    
     .hero-title {
-        font-size: 1.8rem;
+        font-size: 1.5rem;
     }
     
     .hero-subtitle {
@@ -687,6 +810,42 @@
 .select-btn-container {
         bottom: 8px;
         right: 8px;
+    }
+    
+    .table-info-badge {
+        padding: 8px 20px;
+        font-size: 0.8rem;
+    }
+    
+    .table-info-badge i {
+        font-size: 0.8rem;
+    }
+    
+    .navbar {
+        padding: 10px 15px;
+    }
+    
+    .waiter-btn {
+        padding: 6px 12px;
+        font-size: 0.8rem;
+    }
+    
+    .waiter-btn i {
+        font-size: 0.9rem;
+    }
+    
+    .cart-btn {
+        padding: 6px 12px;
+        font-size: 0.8rem;
+    }
+    
+    .restaurant-circle {
+        width: 100px;
+        height: 100px;
+    }
+    
+    .divider {
+        height: 80px;
     }
 }
 
@@ -1130,33 +1289,62 @@
 
 <!-- Navbar -->
 <nav class="navbar">
-    <div class="table-info" id="tableInfo">
-        Loading table...
+    <div class="nav-left">
+        <div class="language-switch">
+            <button class="lang-btn active" onclick="switchLanguage('en')" id="langEn">EN</button>
+            <button class="lang-btn" onclick="switchLanguage('bm')" id="langBm">BM</button>
+        </div>
     </div>
-    <button class="cart-btn" onclick="toggleCart()">
-        <i class="fas fa-shopping-cart"></i>
-        <span>Cart</span>
-        <span class="cart-count" id="cartCount">0</span>
-    </button>
+    <div class="nav-right">
+        <button class="waiter-btn" onclick="openWaiterModal()">
+            <i class="fa-solid fa-bell"></i>
+            <span class="waiter-text" data-en="Call Waiter" data-bm="Panggil Pelayan">Call Waiter</span>
+        </button>
+        <button class="cart-btn" onclick="toggleCart()">
+            <i class="fas fa-shopping-cart"></i>
+            <span class="cart-text" data-en="Cart" data-bm="Troli">Cart</span>
+            <span class="cart-count" id="cartCount">0</span>
+        </button>
+    </div>
 </nav>
 
     <!-- Main Content -->
     <div class="container">
         <!-- Hero Section -->
 <div class="hero-section">
-    <h1 class="hero-title">Welcome to Cafe Delight</h1>
-    <p class="hero-subtitle">Select a menu item to customize your order</p>
+    <div class="hero-content">
+        <!-- Restaurant Photo in Circle Frame - Left Side -->
+        <div class="restaurant-image-container">
+            <div class="restaurant-circle">
+                <img src="https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=200&h=200&fit=crop" alt="Restaurant" id="restaurantImage">
+            </div>
+        </div>
+        
+        <!-- Purple Divider -->
+        <div class="divider"></div>
+        
+        <!-- Welcome Text and Table Number - Right Side -->
+        <div class="hero-text">
+            <h1 class="hero-title" data-en="Welcome to Cafe Delight" data-bm="Selamat Datang ke Cafe Delight">Welcome to Cafe Delight</h1>
+            <div class="table-info-badge" id="tableInfo">
+                <i class="fa-solid fa-chair"></i>
+                <span data-en="Table" data-bm="Meja">Table</span> <span id="tableNumberDisplay">Loading...</span>
+            </div>
+        </div>
+    </div>
+    
+    <p class="hero-subtitle" data-en="Select a menu item to customize your order" data-bm="Pilih item menu untuk tempah">Select a menu item to customize your order</p>
     
     <!-- Order Type Switch -->
     <div class="order-type-switch">
         <div class="switch-container">
             <div class="switch-option dine-in active" onclick="setOrderType('Dine In')">
                 <i class="fa-solid fa-utensils"></i>
-                <span>Dine In</span>
+                <span data-en="Dine In" data-bm="Makan di Sini">Dine In</span>
             </div>
             <div class="switch-option takeaway" onclick="setOrderType('Take Away')">
                 <i class="fa-solid fa-bag-shopping"></i>
-                <span>Take Away</span>
+                <span data-en="Take Away" data-bm="Bungkus">Take Away</span>
             </div>
             <div class="switch-slider" id="switchSlider"></div>
         </div>
@@ -1166,7 +1354,7 @@
 <!-- Category Section -->
 <div class="category-section">
     <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
-        <h2 style="color: #333; font-size: 1.5rem;">Our Menu</h2>
+        <h2 style="color: #333; font-size: 1.5rem;" data-en="Our Menu" data-bm="Menu Kami">Our Menu</h2>
         <div class="search-icon" id="searchIcon">
             <i class="fa-solid fa-magnifying-glass"></i>
         </div>
@@ -1187,8 +1375,8 @@
 
         <!-- Footer -->
         <div class="footer">
-            <p>© 2024 Cafe Delight. All rights reserved.</p>
-            <p>Scan QR code to order from your table</p>
+            <p data-en="© 2024 Cafe Delight. All rights reserved." data-bm="© 2024 Cafe Delight. Hak cipta terpelihara.">© 2024 Cafe Delight. All rights reserved.</p>
+            <p data-en="Scan QR code to order from your table" data-bm="Imbas kod QR untuk tempah dari meja anda">Scan QR code to order from your table</p>
         </div>
     </div>
 
@@ -1196,7 +1384,7 @@
     <div id="cartModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3 class="modal-title">Your Cart</h3>
+                <h3 class="modal-title" data-en="Your Cart" data-bm="Troli Anda">Your Cart</h3>
                 <button class="close-btn" onclick="toggleCart()">&times;</button>
             </div>
             
@@ -1205,12 +1393,12 @@
             </div>
             
             <div class="cart-total">
-                <span>Total:</span>
+                <span data-en="Total:" data-bm="Jumlah:">Total:</span>
                 <span>RM <span id="cartTotal">0.00</span></span>
             </div>
             
             <button class="primary-btn" onclick="proceedToCheckout()">
-                <i class="fa-solid fa-utensils"></i> Proceed to Checkout
+                <i class="fa-solid fa-utensils"></i> <span data-en="Proceed to Checkout" data-bm="Teruskan ke Pembayaran">Proceed to Checkout</span>
             </button>
         </div>
     </div>
@@ -1219,7 +1407,7 @@
     <div id="variantModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3 class="modal-title" id="variantModalTitle">Select Variant</h3>
+                <h3 class="modal-title" id="variantModalTitle" data-en="Select Variant" data-bm="Pilih Varian">Select Variant</h3>
                 <button class="close-btn" onclick="closeVariantModal()">&times;</button>
             </div>
             
@@ -1228,8 +1416,8 @@
             </div>
             
             <div class="action-buttons">
-                <button class="secondary-btn" onclick="closeVariantModal()">Cancel</button>
-                <button class="primary-btn" onclick="proceedToAddOns()" id="proceedToAddOnsBtn" disabled>Next: Add-ons</button>
+                <button class="secondary-btn" onclick="closeVariantModal()" data-en="Cancel" data-bm="Batal">Cancel</button>
+                <button class="primary-btn" onclick="proceedToAddOns()" id="proceedToAddOnsBtn" disabled data-en="Next: Add-ons" data-bm="Seterusnya: Tambahan">Next: Add-ons</button>
             </div>
         </div>
     </div>
@@ -1238,12 +1426,12 @@
     <div id="addOnModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3 class="modal-title" id="addOnModalTitle">Customize Your Order</h3>
+                <h3 class="modal-title" id="addOnModalTitle" data-en="Customize Your Order" data-bm="Sesuaikan Pesanan Anda">Customize Your Order</h3>
                 <button class="close-btn" onclick="closeAddOnModal()">&times;</button>
             </div>
             
             <div style="margin: 20px 0;">
-                <h4 style="margin-bottom: 10px;">Selected Item:</h4>
+                <h4 style="margin-bottom: 10px;" data-en="Selected Item:" data-bm="Item Dipilih:">Selected Item:</h4>
                 <div id="selectedItemInfo" style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
                     <!-- Selected item info will be displayed here -->
                 </div>
@@ -1254,8 +1442,8 @@
             </div>
             
             <div class="action-buttons">
-                <button class="secondary-btn" onclick="goBackToVariants()">Back</button>
-                <button class="primary-btn" onclick="addToCart()">Add to Cart</button>
+                <button class="secondary-btn" onclick="goBackToVariants()" data-en="Back" data-bm="Kembali">Back</button>
+                <button class="primary-btn" onclick="addToCart()" data-en="Add to Cart" data-bm="Tambah ke Troli">Add to Cart</button>
             </div>
         </div>
     </div>
@@ -1264,7 +1452,7 @@
 <div id="customerModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
-            <h3 class="modal-title">Complete Your Order</h3>
+            <h3 class="modal-title" data-en="Complete Your Order" data-bm="Lengkapkan Pesanan Anda">Complete Your Order</h3>
         </div>
         
         <form id="customerForm" onsubmit="submitOrder(event)">
@@ -1273,21 +1461,21 @@
             <!-- Table Number Display -->
             <div style="margin: 20px 0; text-align: center;">
                 <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px; border-radius: 10px; font-size: 1.2rem; font-weight: 600;">
-                    <i class="fa-solid fa-chair"></i> Table Number: <span id="modalTableNumber">Loading...</span>
+                    <i class="fa-solid fa-chair"></i> <span data-en="Table Number:" data-bm="Nombor Meja:">Table Number:</span> <span id="modalTableNumber">Loading...</span>
                 </div>
             </div>
             
             <!-- Dine In / Take Away Switch (Matches the hero section style) -->
             <div style="margin: 25px 0;">
-                <label style="display: block; margin-bottom: 10px; color: #555; font-weight: 500;">Order Type</label>
+                <label style="display: block; margin-bottom: 10px; color: #555; font-weight: 500;" data-en="Order Type" data-bm="Jenis Pesanan">Order Type</label>
                 <div class="switch-container" style="width: 100%;">
                     <div class="switch-option dine-in active" onclick="setModalOrderType('Dine In')">
                         <i class="fa-solid fa-utensils"></i>
-                        <span>Dine In</span>
+                        <span data-en="Dine In" data-bm="Makan di Sini">Dine In</span>
                     </div>
                     <div class="switch-option takeaway" onclick="setModalOrderType('Take Away')">
                         <i class="fa-solid fa-bag-shopping"></i>
-                        <span>Take Away</span>
+                        <span data-en="Take Away" data-bm="Bungkus">Take Away</span>
                     </div>
                     <div class="switch-slider" id="modalSwitchSlider"></div>
                 </div>
@@ -1296,7 +1484,7 @@
             
             <!-- Cart Summary -->
             <div style="margin: 20px 0; border: 2px solid #eaeaea; border-radius: 10px; padding: 15px; max-height: 300px; overflow-y: auto;">
-                <h4 style="margin-bottom: 15px; color: #333;">Your Order:</h4>
+                <h4 style="margin-bottom: 15px; color: #333;" data-en="Your Order:" data-bm="Pesanan Anda:">Your Order:</h4>
                 <div id="modalCartItems">
                     <!-- Cart items will be loaded here dynamically -->
                 </div>
@@ -1305,22 +1493,22 @@
             <!-- Total Price and Estimated Time -->
             <div style="margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 10px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <span style="font-size: 1.1rem; color: #555;">Total:</span>
+                    <span style="font-size: 1.1rem; color: #555;" data-en="Total:" data-bm="Jumlah:">Total:</span>
                     <span style="font-size: 1.3rem; font-weight: 700; color: #764ba2;">RM <span id="modalTotalPrice">0.00</span></span>
                 </div>
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <span style="font-size: 1rem; color: #555;">
-                        <i class="fa-solid fa-clock"></i> Estimated Preparation Time:
+                        <i class="fa-solid fa-clock"></i> <span data-en="Estimated Preparation Time:" data-bm="Anggaran Masa Penyediaan:">Estimated Preparation Time:</span>
                     </span>
                     <span style="font-size: 1.1rem; font-weight: 600; color: #667eea;">
-                        <span id="modalTotalTime">0</span> mins
+                        <span id="modalTotalTime">0</span> <span data-en="mins" data-bm="minit">mins</span>
                     </span>
                 </div>
             </div>
             
             <div class="action-buttons">
-                <button type="button" class="secondary-btn" onclick="closeCustomerModal()">Cancel</button>
-                <button type="submit" class="primary-btn">Submit Order</button>
+                <button type="button" class="secondary-btn" onclick="closeCustomerModal()" data-en="Cancel" data-bm="Batal">Cancel</button>
+                <button type="submit" class="primary-btn" data-en="Submit Order" data-bm="Hantar Pesanan">Submit Order</button>
             </div>
         </form>
     </div>
@@ -1332,10 +1520,10 @@
             <div style="font-size: 60px; color: #4CAF50; margin: 20px 0;">
                 <i class="fas fa-check-circle"></i>
             </div>
-            <h3 style="color: #333; margin-bottom: 10px;">Order Placed Successfully!</h3>
-            <p style="color: #666; margin-bottom: 30px;">Your order has been received and is being prepared.</p>
+            <h3 style="color: #333; margin-bottom: 10px;" data-en="Order Placed Successfully!" data-bm="Pesanan Berjaya Dihantar!">Order Placed Successfully!</h3>
+            <p style="color: #666; margin-bottom: 30px;" data-en="Your order has been received and is being prepared." data-bm="Pesanan anda telah diterima dan sedang disediakan.">Your order has been received and is being prepared.</p>
             <p style="color: #666; margin-bottom: 30px; font-weight: 600;" id="orderIdDisplay"></p>
-            <button onclick="closeSuccessModal()" class="primary-btn" style="width: 100%;">Continue</button>
+            <button onclick="closeSuccessModal()" class="primary-btn" style="width: 100%;" data-en="Continue" data-bm="Teruskan">Continue</button>
         </div>
     </div>
 
@@ -1343,7 +1531,7 @@
 <div id="receiptModal" class="modal">
     <div class="modal-content" style="max-width: 600px;">
         <div class="modal-header">
-            <h3 class="modal-title">🧾 Order Receipt</h3>
+            <h3 class="modal-title">🧾 <span data-en="Order Receipt" data-bm="Resit Pesanan">Order Receipt</span></h3>
             <button class="close-btn" onclick="closeReceiptModal()">&times;</button>
         </div>
         
@@ -1351,8 +1539,8 @@
             <div style="font-size: 60px; color: #4CAF50; margin: 10px 0;">
                 <i class="fas fa-check-circle"></i>
             </div>
-            <h2 style="color: #333; margin-bottom: 5px;">Thank You!</h2>
-            <p style="color: #666;">Your order has been received</p>
+            <h2 style="color: #333; margin-bottom: 5px;" data-en="Thank You!" data-bm="Terima Kasih!">Thank You!</h2>
+            <p style="color: #666;" data-en="Your order has been received" data-bm="Pesanan anda telah diterima">Your order has been received</p>
         </div>
         
         <div id="receiptContent" style="background: #f8f9fa; border-radius: 10px; padding: 20px; margin-bottom: 20px;">
@@ -1361,10 +1549,10 @@
         
         <div style="display: flex; gap: 10px;">
             <button onclick="printReceipt()" class="secondary-btn" style="flex: 1;">
-                <i class="fa-solid fa-print"></i> Print
+                <i class="fa-solid fa-print"></i> <span data-en="Print" data-bm="Cetak">Print</span>
             </button>
             <button onclick="goBackToMenu()" class="primary-btn" style="flex: 2;">
-                <i class="fa-solid fa-arrow-left"></i> Back to Menu
+                <i class="fa-solid fa-arrow-left"></i> <span data-en="Back to Menu" data-bm="Kembali ke Menu">Back to Menu</span>
             </button>
         </div>
     </div>
@@ -1374,16 +1562,18 @@
 <div id="notesModal" class="notes-modal">
     <div class="notes-modal-content">
         <div class="notes-modal-header">
-            <h3 class="notes-modal-title" id="notesModalTitle">Add Notes</h3>
+            <h3 class="notes-modal-title" id="notesModalTitle" data-en="Add Notes" data-bm="Tambah Nota">Add Notes</h3>
             <button class="close-notes-btn" onclick="closeNotesModal()">&times;</button>
         </div>
         <textarea 
             id="notesTextarea" 
             class="notes-textarea"
-            placeholder="Add special instructions (e.g., less spicy, no onions, extra sauce, etc.)"></textarea>
+            placeholder="Add special instructions (e.g., less spicy, no onions, extra sauce, etc.)"
+            data-en-placeholder="Add special instructions (e.g., less spicy, no onions, extra sauce, etc.)"
+            data-bm-placeholder="Tambah arahan khas (cth: kurang pedas, tanpa bawang, sos tambahan, dll.)"></textarea>
         <div style="display: flex; gap: 10px;">
-            <button onclick="closeNotesModal()" class="secondary-btn" style="flex: 1;">Cancel</button>
-            <button onclick="saveNotes()" class="primary-btn" style="flex: 2;">Save Notes</button>
+            <button onclick="closeNotesModal()" class="secondary-btn" style="flex: 1;" data-en="Cancel" data-bm="Batal">Cancel</button>
+            <button onclick="saveNotes()" class="primary-btn" style="flex: 2;" data-en="Save Notes" data-bm="Simpan Nota">Save Notes</button>
         </div>
     </div>
 </div>
@@ -1393,12 +1583,70 @@
     <div class="search-modal-content">
         <div class="search-input-container">
             <i class="fa-solid fa-magnifying-glass"></i>
-            <input type="text" id="searchInput" placeholder="Search menu items..." autocomplete="off">
+            <input type="text" id="searchInput" placeholder="Search menu items..." data-en-placeholder="Search menu items..." data-bm-placeholder="Cari item menu..." autocomplete="off">
             <button onclick="closeSearchModal()" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #999;">&times;</button>
         </div>
         <div class="search-results" id="searchResults">
             <!-- Search results will appear here -->
-            <div style="text-align: center; color: #666; padding: 20px;">Start typing to search...</div>
+            <div style="text-align: center; color: #666; padding: 20px;" data-en="Start typing to search..." data-bm="Mula menaip untuk mencari...">Start typing to search...</div>
+        </div>
+    </div>
+</div>
+
+<!-- Waiter Call Modal -->
+<div id="waiterModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title" data-en="Call Waiter" data-bm="Panggil Pelayan">Call Waiter</h3>
+            <button class="close-btn" onclick="closeWaiterModal()">&times;</button>
+        </div>
+        
+        <div style="margin: 20px 0; text-align: center;">
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 10px; border-radius: 10px; font-size: 1.1rem; font-weight: 600; margin-bottom: 20px;">
+                <i class="fa-solid fa-chair"></i> <span data-en="Table" data-bm="Meja">Table</span> <span id="waiterTableNumber">Loading...</span>
+            </div>
+        </div>
+        
+        <div style="margin: 20px 0;">
+            <label style="display: block; margin-bottom: 10px; color: #555; font-weight: 500;" data-en="Reason:" data-bm="Sebab:">Reason:</label>
+            
+            <div style="margin-bottom: 15px;">
+                <div style="margin-bottom: 10px;">
+                    <label style="display: flex; align-items: center; gap: 10px; padding: 10px; border: 2px solid #e0e0e0; border-radius: 10px; cursor: pointer; transition: all 0.3s;" onclick="selectWaiterReason('custom')" id="reason-custom">
+                        <input type="radio" name="waiterReason" value="custom" style="width: 18px; height: 18px; cursor: pointer;">
+                        <span data-en="Want custom order?" data-bm="Mahu tempah khas?">Want custom order?</span>
+                    </label>
+                </div>
+                
+                <div style="margin-bottom: 10px;">
+                    <label style="display: flex; align-items: center; gap: 10px; padding: 10px; border: 2px solid #e0e0e0; border-radius: 10px; cursor: pointer; transition: all 0.3s;" onclick="selectWaiterReason('help')" id="reason-help">
+                        <input type="radio" name="waiterReason" value="help" style="width: 18px; height: 18px; cursor: pointer;">
+                        <span data-en="Don't know how to order using system?" data-bm="Tak tahu cara tempah guna sistem?">Don't know how to order using system?</span>
+                    </label>
+                </div>
+                
+                <div style="margin-bottom: 10px;">
+                    <label style="display: flex; align-items: center; gap: 10px; padding: 10px; border: 2px solid #e0e0e0; border-radius: 10px; cursor: pointer; transition: all 0.3s;" onclick="selectWaiterReason('others')" id="reason-others">
+                        <input type="radio" name="waiterReason" value="others" style="width: 18px; height: 18px; cursor: pointer;">
+                        <span data-en="Others" data-bm="Lain-lain">Others</span>
+                    </label>
+                </div>
+            </div>
+            
+            <div id="otherReasonContainer" style="display: none; margin-top: 15px;">
+                <textarea 
+                    id="otherReasonText" 
+                    class="notes-textarea" 
+                    style="min-height: 80px;"
+                    placeholder="Please specify..."
+                    data-en-placeholder="Please specify..."
+                    data-bm-placeholder="Sila nyatakan..."></textarea>
+            </div>
+        </div>
+        
+        <div class="action-buttons">
+            <button class="secondary-btn" onclick="closeWaiterModal()" data-en="Cancel" data-bm="Batal">Cancel</button>
+            <button class="primary-btn" onclick="submitWaiterCall()" id="submitWaiterBtn" disabled data-en="Call Waiter" data-bm="Panggil Pelayan">Call Waiter</button>
         </div>
     </div>
 </div>
@@ -1431,6 +1679,12 @@
         let variants = [];
         let addOns = [];
 
+        // Language state
+        let currentLanguage = 'en'; // Default to English
+
+        // Waiter call state
+        let selectedWaiterReason = null;
+
 // Store current order data for receipt
 let currentOrderData = null;
 
@@ -1452,11 +1706,16 @@ document.addEventListener('DOMContentLoaded', function() {
     tableId = urlParams.get('table') || 'TABLE0000';
     tableNumber = tableId.replace('TABLE', '');
     
-    document.getElementById('tableInfo').textContent = `TABLE ${tableNumber}`;
+    // Update table info in both navbar and hero section
+    document.getElementById('tableNumberDisplay').textContent = tableNumber;
+    document.getElementById('modalTableNumber').textContent = tableNumber;
     document.getElementById('tableId').value = tableId;
     
     loadMenuData();
     loadAddOns();
+    
+    // Set default language
+    switchLanguage('en');
 });
 
         // Loading functions
@@ -1467,6 +1726,49 @@ document.addEventListener('DOMContentLoaded', function() {
 
         function hideLoading() {
             document.getElementById('loadingOverlay').style.display = 'none';
+        }
+
+        // Language switching functions
+        function switchLanguage(lang) {
+            currentLanguage = lang;
+            
+            // Update active state of language buttons
+            document.getElementById('langEn').classList.toggle('active', lang === 'en');
+            document.getElementById('langBm').classList.toggle('active', lang === 'bm');
+            
+            // Update all elements with data attributes
+            document.querySelectorAll('[data-en]').forEach(element => {
+                if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
+                    // Handle input placeholders
+                    if (lang === 'bm' && element.dataset.bmPlaceholder) {
+                        element.placeholder = element.dataset.bmPlaceholder;
+                    } else if (lang === 'en' && element.dataset.enPlaceholder) {
+                        element.placeholder = element.dataset.enPlaceholder;
+                    }
+                } else {
+                    // Handle regular text elements
+                    if (lang === 'bm' && element.dataset.bm) {
+                        element.textContent = element.dataset.bm;
+                    } else if (lang === 'en' && element.dataset.en) {
+                        element.textContent = element.dataset.en;
+                    }
+                }
+            });
+            
+            // Update loading text
+            const loadingText = document.getElementById('loadingText');
+            if (lang === 'bm') {
+                loadingText.textContent = 'Memuatkan...';
+            } else {
+                loadingText.textContent = 'Loading...';
+            }
+            
+            // Refresh menu display to update counters with new language
+            if (menuItems.length > 0) {
+                renderMenuItems(menuItems);
+            }
+            
+            console.log('Language switched to:', lang);
         }
 
         // Load menu items
@@ -1547,6 +1849,139 @@ function setModalOrderType(type) {
     setOrderType(type);
 }
 
+// Waiter call functions
+function openWaiterModal() {
+    document.getElementById('waiterTableNumber').textContent = tableNumber;
+    document.getElementById('waiterModal').style.display = 'flex';
+    
+    // Reset selection
+    selectedWaiterReason = null;
+    document.querySelectorAll('[id^="reason-"]').forEach(el => {
+        el.style.background = '';
+        el.style.borderColor = '#e0e0e0';
+    });
+    document.querySelectorAll('input[name="waiterReason"]').forEach(radio => {
+        radio.checked = false;
+    });
+    document.getElementById('otherReasonContainer').style.display = 'none';
+    document.getElementById('otherReasonText').value = '';
+    document.getElementById('submitWaiterBtn').disabled = true;
+}
+
+function closeWaiterModal() {
+    document.getElementById('waiterModal').style.display = 'none';
+}
+
+function selectWaiterReason(reason) {
+    selectedWaiterReason = reason;
+    
+    // Update UI
+    document.querySelectorAll('[id^="reason-"]').forEach(el => {
+        el.style.background = '';
+        el.style.borderColor = '#e0e0e0';
+    });
+    
+    document.getElementById(`reason-${reason}`).style.background = '#f0e6ff';
+    document.getElementById(`reason-${reason}`).style.borderColor = '#764ba2';
+    
+    // Check the radio button
+    document.querySelector(`input[name="waiterReason"][value="${reason}"]`).checked = true;
+    
+    // Show/hide other reason textarea
+    if (reason === 'others') {
+        document.getElementById('otherReasonContainer').style.display = 'block';
+        // Enable submit button only if other reason has text
+        document.getElementById('submitWaiterBtn').disabled = true;
+    } else {
+        document.getElementById('otherReasonContainer').style.display = 'none';
+        document.getElementById('submitWaiterBtn').disabled = false;
+    }
+}
+
+// Add input listener for other reason textarea
+document.addEventListener('DOMContentLoaded', function() {
+    const otherReasonText = document.getElementById('otherReasonText');
+    if (otherReasonText) {
+        otherReasonText.addEventListener('input', function() {
+            if (selectedWaiterReason === 'others') {
+                document.getElementById('submitWaiterBtn').disabled = this.value.trim() === '';
+            }
+        });
+    }
+});
+
+function submitWaiterCall() {
+    if (!selectedWaiterReason) {
+        const msg = currentLanguage === 'bm' ? 'Sila pilih sebab' : 'Please select a reason';
+        alert(msg);
+        return;
+    }
+    
+    // Get reason text
+    let reasonText = '';
+    if (selectedWaiterReason === 'custom') {
+        reasonText = currentLanguage === 'bm' ? 'Mahu tempah khas' : 'Want custom order';
+    } else if (selectedWaiterReason === 'help') {
+        reasonText = currentLanguage === 'bm' ? 'Tak tahu cara tempah guna sistem' : "Don't know how to order using system";
+    } else if (selectedWaiterReason === 'others') {
+        const otherText = document.getElementById('otherReasonText').value.trim();
+        if (!otherText) {
+            const msg = currentLanguage === 'bm' ? 'Sila nyatakan sebab' : 'Please specify the reason';
+            alert(msg);
+            return;
+        }
+        reasonText = otherText;
+    }
+    
+    const tableNum = tableNumber || 'unknown';
+    
+    // Show loading
+    showLoading(currentLanguage === 'bm' ? 'Memanggil pelayan...' : 'Calling waiter...');
+    
+    // TODO: Connect to notification database that will connect with cashier/waiter system
+    // This is where you'll add your API call to notify the waiter
+    // Example API call structure:
+    /*
+    const waiterCallData = {
+        tableId: tableId,
+        tableNumber: tableNumber,
+        reason: selectedWaiterReason,
+        reasonText: reasonText,
+        timestamp: new Date().toISOString()
+    };
+    
+    // Call your API endpoint
+    fetch('YOUR_WAITER_API_URL', {
+        method: 'POST',
+        body: JSON.stringify(waiterCallData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        hideLoading();
+        showSuccessMessage();
+    })
+    .catch(error => {
+        hideLoading();
+        showErrorMessage();
+    });
+    */
+    
+    // Simulate API call for demo
+    setTimeout(() => {
+        hideLoading();
+        
+        // Show success message
+        const successMsg = currentLanguage === 'bm' ? 
+            `✅ Pelayan telah dipanggil untuk Meja ${tableNum}. Sebab: ${reasonText}\n\nSila tunggu sebentar.` : 
+            `✅ Waiter has been called for Table ${tableNum}. Reason: ${reasonText}\n\nPlease wait a moment.`;
+        
+        alert(successMsg);
+        console.log(`Waiter called for table: ${tableNum}, reason: ${reasonText}`);
+        
+        closeWaiterModal();
+    }, 1000);
+}
+
 // Handle sticky search icon
 function handleStickySearch() {
     const searchIcon = document.getElementById('searchIcon');
@@ -1570,6 +2005,13 @@ function openSearchModal() {
     document.getElementById('searchInput').focus();
     document.getElementById('searchInput').value = '';
     document.getElementById('searchResults').innerHTML = '<div style="text-align: center; color: #666; padding: 20px;">Start typing to search...</div>';
+    // Update placeholder based on current language
+    const searchInput = document.getElementById('searchInput');
+    if (currentLanguage === 'bm' && searchInput.dataset.bmPlaceholder) {
+        searchInput.placeholder = searchInput.dataset.bmPlaceholder;
+    } else if (currentLanguage === 'en' && searchInput.dataset.enPlaceholder) {
+        searchInput.placeholder = searchInput.dataset.enPlaceholder;
+    }
 }
 
 function closeSearchModal() {
@@ -1581,7 +2023,8 @@ function performSearch() {
     const searchResults = document.getElementById('searchResults');
     
     if (searchTerm === '') {
-        searchResults.innerHTML = '<div style="text-align: center; color: #666; padding: 20px;">Start typing to search...</div>';
+        const message = currentLanguage === 'bm' ? 'Mula menaip untuk mencari...' : 'Start typing to search...';
+        searchResults.innerHTML = `<div style="text-align: center; color: #666; padding: 20px;">${message}</div>`;
         return;
     }
     
@@ -1592,7 +2035,8 @@ function performSearch() {
     );
     
     if (filteredItems.length === 0) {
-        searchResults.innerHTML = '<div style="text-align: center; color: #666; padding: 20px;">No items found</div>';
+        const noItemsMsg = currentLanguage === 'bm' ? 'Tiada item dijumpai' : 'No items found';
+        searchResults.innerHTML = `<div style="text-align: center; color: #666; padding: 20px;">${noItemsMsg}</div>`;
         return;
     }
     
@@ -1656,8 +2100,9 @@ function selectMenuItemFromSearch(menuId) {
         // Render category tabs
         function renderCategories() {
             const categoryTabs = document.getElementById('categoryTabs');
+            const allText = currentLanguage === 'bm' ? 'Semua' : 'All';
             categoryTabs.innerHTML = `
-                <div class="category-tab active" onclick="filterMenu('All')">All</div>
+                <div class="category-tab active" onclick="filterMenu('All')">${allText}</div>
                 ${categories.map(category => `
                     <div class="category-tab" onclick="filterMenu('${category}')">
                         ${category}
@@ -1671,9 +2116,10 @@ function renderMenuItems(items) {
     const menuGrid = document.getElementById('menuGrid');
     
     if (items.length === 0) {
+        const noItemsMsg = currentLanguage === 'bm' ? 'Tiada item menu buat masa ini.' : 'No menu items available at the moment.';
         menuGrid.innerHTML = `
             <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: #666;">
-                <p>No menu items available at the moment.</p>
+                <p>${noItemsMsg}</p>
             </div>
         `;
         return;
@@ -1696,10 +2142,10 @@ const itemCount = cart
                         <h3 class="menu-name">${item.Name}</h3>
                         <div class="menu-price">RM ${parseFloat(item.Price).toFixed(2)}</div>
                     </div>
-                    <p class="menu-description">${item.Description || 'No description available.'}</p>
+                    <p class="menu-description">${item.Description || (currentLanguage === 'bm' ? 'Tiada penerangan.' : 'No description available.')}</p>
                     
                     <div style="color: #666; font-size: 0.9rem; margin-bottom: 10px;">
-                        <i class="fas fa-clock"></i> Est: ${item['Preparation Time'] || 15} mins
+                        <i class="fas fa-clock"></i> ${currentLanguage === 'bm' ? 'Anggaran:' : 'Est:'} ${item['Preparation Time'] || 15} ${currentLanguage === 'bm' ? 'minit' : 'mins'}
                     </div>
                     
                     ${item.Tags ? `
@@ -1713,7 +2159,7 @@ const itemCount = cart
                     <!-- Select Button with Counter - Positioned at bottom right -->
                     <div class="select-btn-container">
                         <button class="select-btn" onclick="event.stopPropagation(); selectMenuItem('${item['Id Menu']}')">
-                            <i class="fa-solid fa-cart-plus"></i> Select
+                            <i class="fa-solid fa-cart-plus"></i> ${currentLanguage === 'bm' ? 'Pilih' : 'Select'}
                         </button>
                         ${itemCount > 0 ? `<span class="select-counter">${itemCount}</span>` : ''}
                     </div>
@@ -1772,7 +2218,8 @@ const itemCount = cart
 
         // Show variant modal
         function showVariantModal(menuItem, variants) {
-            document.getElementById('variantModalTitle').textContent = `Select Variant for ${menuItem.Name}`;
+            const titleText = currentLanguage === 'bm' ? `Pilih Varian untuk ${menuItem.Name}` : `Select Variant for ${menuItem.Name}`;
+            document.getElementById('variantModalTitle').textContent = titleText;
             
             const variantList = document.getElementById('variantList');
             variantList.innerHTML = variants.map(variant => `
@@ -1816,7 +2263,8 @@ const itemCount = cart
         // Proceed to add-ons from variants
         function proceedToAddOns() {
             if (!selectedVariant && variants.length > 0) {
-                alert('Please select a variant');
+                const alertMsg = currentLanguage === 'bm' ? 'Sila pilih varian' : 'Please select a variant';
+                alert(alertMsg);
                 return;
             }
             
@@ -1835,7 +2283,8 @@ const itemCount = cart
 
        // Show add-on modal
 function showAddOnModal(menuItem, variant) {
-    document.getElementById('addOnModalTitle').textContent = `Customize ${menuItem.Name}`;
+    const titleText = currentLanguage === 'bm' ? `Sesuaikan ${menuItem.Name}` : `Customize ${menuItem.Name}`;
+    document.getElementById('addOnModalTitle').textContent = titleText;
     
     // Show selected item info
     const selectedItemInfo = document.getElementById('selectedItemInfo');
@@ -1846,7 +2295,7 @@ function showAddOnModal(menuItem, variant) {
         <div style="display: flex; justify-content: space-between;">
             <div>
                 <strong>${menuItem.Name}</strong>
-                ${variant ? `<div style="color: #666;">Variant: ${variant.Name} (+RM ${variantPrice.toFixed(2)})</div>` : ''}
+                ${variant ? `<div style="color: #666;">${currentLanguage === 'bm' ? 'Varian:' : 'Variant:'} ${variant.Name} (+RM ${variantPrice.toFixed(2)})</div>` : ''}
             </div>
             <div style="color: #764ba2; font-weight: 600;">
                 RM ${(basePrice + variantPrice).toFixed(2)}
@@ -1855,15 +2304,19 @@ function showAddOnModal(menuItem, variant) {
     `;
     
     // Add Notes Field
+    const notesPlaceholder = currentLanguage === 'bm' ? 
+        'cth: kurang pedas, tanpa bawang, sos tambahan, dll.' : 
+        'e.g., less spicy, no onions, extra sauce, etc.';
+    
     const notesHTML = `
         <div style="margin: 20px 0;">
             <label style="display: block; margin-bottom: 8px; color: #555; font-weight: 500;">
-                <i class="fa-solid fa-pen"></i> Special Instructions (Optional)
+                <i class="fa-solid fa-pen"></i> ${currentLanguage === 'bm' ? 'Arahan Khas (Pilihan)' : 'Special Instructions (Optional)'}
             </label>
             <textarea 
                 id="itemNotes" 
                 style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; min-height: 80px; font-family: inherit; resize: vertical;"
-                placeholder="e.g., less spicy, no onions, extra sauce, etc."></textarea>
+                placeholder="${notesPlaceholder}"></textarea>
         </div>
     `;
     
@@ -1879,7 +2332,7 @@ function showAddOnModal(menuItem, variant) {
     
     const addOnsHTML = addOnCategories.map(cat => `
         <div style="margin: 20px 0;">
-            <h4 style="margin-bottom: 10px; color: #333;">Add On:</h4>
+            <h4 style="margin-bottom: 10px; color: #333;">${currentLanguage === 'bm' ? 'Tambah:' : 'Add On:'}</h4>
             <div class="addon-grid">
                 ${availableAddOns.filter(a => a.Category === cat).map(addon => `
                     <div class="addon-item" onclick="toggleAddOn('${addon['Id Add On']}')" id="addon-${addon['Id Add On']}">
@@ -1894,7 +2347,7 @@ function showAddOnModal(menuItem, variant) {
     `).join('');
     
     // Combine all HTML
-    document.getElementById('addOnsByCategory').innerHTML = notesHTML + (addOnsHTML || '<p style="color: #666;">No add-ons available for this category</p>');
+    document.getElementById('addOnsByCategory').innerHTML = notesHTML + (addOnsHTML || `<p style="color: #666;">${currentLanguage === 'bm' ? 'Tiada tambahan untuk kategori ini' : 'No add-ons available for this category'}</p>`);
     
     // Reset selected add-ons
     selectedAddOns = [];
@@ -1982,7 +2435,8 @@ function addToCart() {
     closeAddOnModal();
     
     // Show success message
-    alert('Item added to cart!');
+    const successMsg = currentLanguage === 'bm' ? 'Item ditambah ke troli!' : 'Item added to cart!';
+    alert(successMsg);
 }
 
         // Update cart count
@@ -2008,7 +2462,8 @@ function updateCartDisplay() {
     const cartTotal = document.getElementById('cartTotal');
     
     if (cart.length === 0) {
-        cartItems.innerHTML = '<div class="empty-cart">Your cart is empty</div>';
+        const emptyCartMsg = currentLanguage === 'bm' ? 'Troli anda kosong' : 'Your cart is empty';
+        cartItems.innerHTML = `<div class="empty-cart">${emptyCartMsg}</div>`;
         cartTotal.textContent = '0.00';
         return;
     }
@@ -2028,8 +2483,9 @@ function updateCartDisplay() {
         
         // Add variant info if exists
         if (item.variant) {
+            const variantText = currentLanguage === 'bm' ? 'Varian:' : 'Variant:';
             cartHTML += `
-                    <div class="cart-item-variant">Variant: ${item.variant.name} (+RM ${item.variant.price.toFixed(2)})</div>
+                    <div class="cart-item-variant">${variantText} ${item.variant.name} (+RM ${item.variant.price.toFixed(2)})</div>
             `;
         }
         
@@ -2061,7 +2517,7 @@ function updateCartDisplay() {
                         <span class="qty-display">${item.quantity}</span>
                         <button class="qty-btn" onclick="updateCartItemQuantity(${index}, ${item.quantity + 1})">+</button>
                     </div>
-                    <button class="edit-notes-btn" onclick="openNotesModal(${index})" title="Edit notes">
+                    <button class="edit-notes-btn" onclick="openNotesModal(${index})" title="${currentLanguage === 'bm' ? 'Edit nota' : 'Edit notes'}">
                         <i class="fa-solid fa-pen-to-square"></i>
                     </button>
                     <button class="remove-item-btn" onclick="removeFromCart(${index})">
@@ -2083,7 +2539,8 @@ function openNotesModal(index) {
     currentEditingCartIndex = index;
     const item = cart[index];
     
-    document.getElementById('notesModalTitle').textContent = `Notes for ${item.name}`;
+    const titleText = currentLanguage === 'bm' ? `Nota untuk ${item.name}` : `Notes for ${item.name}`;
+    document.getElementById('notesModalTitle').textContent = titleText;
     document.getElementById('notesTextarea').value = item.notes || '';
     document.getElementById('notesModal').style.display = 'flex';
 }
@@ -2107,11 +2564,16 @@ function saveNotes() {
 document.addEventListener('click', function(event) {
     const notesModal = document.getElementById('notesModal');
     const searchModal = document.getElementById('searchModal');
+    const waiterModal = document.getElementById('waiterModal');
+    
     if (event.target === notesModal) {
         closeNotesModal();
     }
-     if (event.target === searchModal) {
+    if (event.target === searchModal) {
         closeSearchModal();
+    }
+    if (event.target === waiterModal) {
+        closeWaiterModal();
     }
 });
 
@@ -2151,7 +2613,8 @@ function removeFromCart(index) {
         // Proceed to checkout
         function proceedToCheckout() {
             if (cart.length === 0) {
-                alert('Your cart is empty!');
+                const alertMsg = currentLanguage === 'bm' ? 'Troli anda kosong!' : 'Your cart is empty!';
+                alert(alertMsg);
                 return;
             }
             
@@ -2180,7 +2643,8 @@ function updateModalCartDisplay() {
     const modalTotalTime = document.getElementById('modalTotalTime');
     
     if (cart.length === 0) {
-        modalCartItems.innerHTML = '<div style="text-align: center; color: #666; padding: 20px;">Your cart is empty</div>';
+        const emptyCartMsg = currentLanguage === 'bm' ? 'Troli anda kosong' : 'Your cart is empty';
+        modalCartItems.innerHTML = `<div style="text-align: center; color: #666; padding: 20px;">${emptyCartMsg}</div>`;
         modalTotalPrice.textContent = '0.00';
         modalTotalTime.textContent = '0';
         return;
@@ -2204,27 +2668,30 @@ function updateModalCartDisplay() {
         
         // Add variant info if exists
         if (item.variant) {
+            const variantText = currentLanguage === 'bm' ? 'Varian:' : 'Variant:';
             itemsHTML += `
                         <div style="font-size: 0.85rem; color: #666; margin-left: 10px;">
-                            Variant: ${item.variant.name}
+                            ${variantText} ${item.variant.name}
                         </div>
             `;
         }
         
         // Add add-ons info if exists - THIS WAS MISSING
         if (item.addOns && item.addOns.length > 0) {
+            const addOnText = currentLanguage === 'bm' ? 'Tambah:' : 'Add On:';
             itemsHTML += `
                         <div style="font-size: 0.85rem; color: #764ba2; margin-left: 10px;">
-                            Add On: ${item.addOns.map(a => a.name).join(', ')}
+                            ${addOnText} ${item.addOns.map(a => a.name).join(', ')}
                         </div>
             `;
         }
         
         // Add notes if exists
         if (item.notes && item.notes.trim() !== '') {
+            const noteText = currentLanguage === 'bm' ? 'Nota:' : 'Note:';
             itemsHTML += `
                         <div style="font-size: 0.85rem; color: #666; font-style: italic; margin-left: 10px;">
-                            Note: ${item.notes}
+                            ${noteText} ${item.notes}
                         </div>
             `;
         }
@@ -2271,7 +2738,10 @@ function updateModalCartDisplay() {
                     const tableData = await tableCheck.json();
                     
                     if (tableData.success && tableData.data.Status === 'Occupied') {
-                        if (!confirm('This table appears to be occupied. Continue with Dine In order?')) {
+                        const confirmMsg = currentLanguage === 'bm' ? 
+                            'Meja ini kelihatan telah digunakan. Teruskan dengan pesanan Makan di Sini?' : 
+                            'This table appears to be occupied. Continue with Dine In order?';
+                        if (!confirm(confirmMsg)) {
                             hideLoading();
                             return;
                         }
@@ -2310,18 +2780,21 @@ for (const item of cart) {
     let itemNotes = '';
     
     if (item.variant) {
-        itemNotes += `Variant: ${item.variant.name}`;
+        const variantText = currentLanguage === 'bm' ? 'Varian:' : 'Variant:';
+        itemNotes += `${variantText} ${item.variant.name}`;
     }
     
     if (item.addOns && item.addOns.length > 0) {
         if (itemNotes) itemNotes += ' | ';
-        itemNotes += `Add-ons: ${item.addOns.map(a => a.name).join(', ')}`;
+        const addOnText = currentLanguage === 'bm' ? 'Tambahan:' : 'Add-ons:';
+        itemNotes += `${addOnText} ${item.addOns.map(a => a.name).join(', ')}`;
     }
     
     // Add custom notes if they exist
     if (item.notes && item.notes.trim() !== '') {
         if (itemNotes) itemNotes += ' | ';
-        itemNotes += `Notes: ${item.notes}`;
+        const noteText = currentLanguage === 'bm' ? 'Nota:' : 'Notes:';
+        itemNotes += `${noteText} ${item.notes}`;
     }
     
     const orderItemData = {
@@ -2368,7 +2841,8 @@ showReceiptModal(orderId, orderData, orderCartItems);
             } catch (error) {
                 console.error('Error creating order:', error);
                 hideLoading();
-                alert('Failed to place order. Please try again.');
+                const errorMsg = currentLanguage === 'bm' ? 'Gagal menghantar pesanan. Sila cuba lagi.' : 'Failed to place order. Please try again.';
+                alert(errorMsg);
             }
         }
 
@@ -2400,15 +2874,18 @@ function showReceiptModal(orderId, orderData, cartItems) {
         `;
         
         if (item.variant) {
-            itemsHTML += `<div class="receipt-item-variant">${item.variant.name} (+RM ${item.variant.price.toFixed(2)})</div>`;
+            const variantText = currentLanguage === 'bm' ? 'Varian:' : 'Variant:';
+            itemsHTML += `<div class="receipt-item-variant">${variantText} ${item.variant.name} (+RM ${item.variant.price.toFixed(2)})</div>`;
         }
         
         if (item.addOns && item.addOns.length > 0) {
-            itemsHTML += `<div class="receipt-item-addons">Add On: ${item.addOns.map(a => a.name).join(', ')}</div>`;
+            const addOnText = currentLanguage === 'bm' ? 'Tambahan:' : 'Add On:';
+            itemsHTML += `<div class="receipt-item-addons">${addOnText} ${item.addOns.map(a => a.name).join(', ')}</div>`;
         }
         
         if (item.notes && item.notes.trim() !== '') {
-            itemsHTML += `<div class="receipt-item-notes">Note: ${item.notes}</div>`;
+            const noteText = currentLanguage === 'bm' ? 'Nota:' : 'Note:';
+            itemsHTML += `<div class="receipt-item-notes">${noteText} ${item.notes}</div>`;
         }
         
         itemsHTML += `
@@ -2418,6 +2895,14 @@ function showReceiptModal(orderId, orderData, cartItems) {
         `;
     });
     
+    const orderIdText = currentLanguage === 'bm' ? 'ID Pesanan' : 'Order ID';
+    const tableText = currentLanguage === 'bm' ? 'Meja' : 'Table';
+    const orderTypeText = currentLanguage === 'bm' ? 'Jenis Pesanan' : 'Order Type';
+    const estTimeText = currentLanguage === 'bm' ? 'Anggaran Masa' : 'Est. Time';
+    const totalText = currentLanguage === 'bm' ? 'Jumlah' : 'Total Amount';
+    const thanksText = currentLanguage === 'bm' ? 'Terima kasih kerana membuat tempahan dengan kami!' : 'Thank you for ordering with us!';
+    const showReceiptText = currentLanguage === 'bm' ? 'Sila tunjukkan resit ini kepada juruwang' : 'Please show this receipt to the cashier';
+    
     receiptContent.innerHTML = `
         <div class="receipt-header">
             <h2>Cafe Delight</h2>
@@ -2426,20 +2911,20 @@ function showReceiptModal(orderId, orderData, cartItems) {
         
         <div class="receipt-info">
             <div class="receipt-info-item">
-                <strong>Order ID</strong>
+                <strong>${orderIdText}</strong>
                 <span>${orderId}</span>
             </div>
             <div class="receipt-info-item">
-                <strong>Table</strong>
+                <strong>${tableText}</strong>
                 <span>TABLE ${tableNumber}</span>
             </div>
             <div class="receipt-info-item">
-                <strong>Order Type</strong>
+                <strong>${orderTypeText}</strong>
                 <span>${orderData.orderType}</span>
             </div>
             <div class="receipt-info-item">
-                <strong>Est. Time</strong>
-                <span>${orderData.preparationTime} mins</span>
+                <strong>${estTimeText}</strong>
+                <span>${orderData.preparationTime} ${currentLanguage === 'bm' ? 'minit' : 'mins'}</span>
             </div>
         </div>
         
@@ -2448,13 +2933,13 @@ function showReceiptModal(orderId, orderData, cartItems) {
         </div>
         
         <div class="receipt-total">
-            <span>Total Amount</span>
+            <span>${totalText}</span>
             <span>RM ${totalAmount.toFixed(2)}</span>
         </div>
         
         <div class="receipt-footer">
-            <p>Thank you for ordering with us!</p>
-            <p style="font-size: 0.8rem; margin-top: 5px;">Please show this receipt to the cashier</p>
+            <p>${thanksText}</p>
+            <p style="font-size: 0.8rem; margin-top: 5px;">${showReceiptText}</p>
         </div>
     `;
     
@@ -2485,6 +2970,15 @@ function goBackToMenu() {
 // Print receipt
 function printReceipt() {
     if (!currentOrderData) return;
+    
+    const orderIdText = currentLanguage === 'bm' ? 'ID Pesanan' : 'Order ID';
+    const tableText = currentLanguage === 'bm' ? 'Meja' : 'Table';
+    const orderTypeText = currentLanguage === 'bm' ? 'Jenis Pesanan' : 'Order Type';
+    const estTimeText = currentLanguage === 'bm' ? 'Anggaran Masa' : 'Est. Time';
+    const totalText = currentLanguage === 'bm' ? 'Jumlah' : 'Total Amount';
+    const thanksText = currentLanguage === 'bm' ? 'Terima kasih kerana membuat tempahan dengan kami!' : 'Thank you for ordering with us!';
+    const showReceiptText = currentLanguage === 'bm' ? 'Sila tunjukkan resit ini kepada juruwang' : 'Please show this receipt to the cashier';
+    const minsText = currentLanguage === 'bm' ? 'minit' : 'mins';
     
     const printWindow = window.open('', '_blank');
     printWindow.document.write(`
@@ -2519,33 +3013,37 @@ function printReceipt() {
             
             <div class="info">
                 <div class="info-item">
-                    <strong>Order ID</strong>
+                    <strong>${orderIdText}</strong>
                     <span>${currentOrderData.orderId}</span>
                 </div>
                 <div class="info-item">
-                    <strong>Table</strong>
+                    <strong>${tableText}</strong>
                     <span>TABLE ${tableNumber}</span>
                 </div>
                 <div class="info-item">
-                    <strong>Order Type</strong>
+                    <strong>${orderTypeText}</strong>
                     <span>${currentOrderData.orderData.orderType}</span>
                 </div>
                 <div class="info-item">
-                    <strong>Est. Time</strong>
-                    <span>${currentOrderData.orderData.preparationTime} mins</span>
+                    <strong>${estTimeText}</strong>
+                    <span>${currentOrderData.orderData.preparationTime} ${minsText}</span>
                 </div>
             </div>
             
             <div class="items">
                 ${currentOrderData.cartItems.map(item => {
                     const itemTotal = item.totalPrice * item.quantity;
+                    const variantText = currentLanguage === 'bm' ? 'Varian:' : 'Variant:';
+                    const addOnText = currentLanguage === 'bm' ? 'Tambahan:' : 'Add On:';
+                    const noteText = currentLanguage === 'bm' ? 'Nota:' : 'Note:';
+                    
                     return `
                         <div class="item">
                             <div class="item-details">
                                 <span class="item-name">${item.quantity}x ${item.name}</span>
-                                ${item.variant ? `<div class="item-variant">${item.variant.name} (+RM ${item.variant.price.toFixed(2)})</div>` : ''}
-                                ${item.addOns && item.addOns.length > 0 ? `<div class="item-addons">Add On: ${item.addOns.map(a => a.name).join(', ')}</div>` : ''}
-                                ${item.notes ? `<div class="item-notes">Note: ${item.notes}</div>` : ''}
+                                ${item.variant ? `<div class="item-variant">${variantText} ${item.variant.name} (+RM ${item.variant.price.toFixed(2)})</div>` : ''}
+                                ${item.addOns && item.addOns.length > 0 ? `<div class="item-addons">${addOnText} ${item.addOns.map(a => a.name).join(', ')}</div>` : ''}
+                                ${item.notes ? `<div class="item-notes">${noteText} ${item.notes}</div>` : ''}
                             </div>
                             <div class="item-price">RM ${itemTotal.toFixed(2)}</div>
                         </div>
@@ -2554,13 +3052,13 @@ function printReceipt() {
             </div>
             
             <div class="total">
-                <span>Total Amount</span>
+                <span>${totalText}</span>
                 <span>RM ${currentOrderData.cartItems.reduce((sum, item) => sum + (item.totalPrice * item.quantity), 0).toFixed(2)}</span>
             </div>
             
             <div class="footer">
-                <p>Thank you for ordering with us!</p>
-                <p style="font-size: 0.8rem;">Please show this receipt to the cashier</p>
+                <p>${thanksText}</p>
+                <p style="font-size: 0.8rem;">${showReceiptText}</p>
             </div>
         </body>
         </html>
@@ -2584,10 +3082,11 @@ function printReceipt() {
         // Error display
         function showError(message) {
             const menuGrid = document.getElementById('menuGrid');
+            const retryText = currentLanguage === 'bm' ? 'Cuba lagi' : 'Retry';
             menuGrid.innerHTML = `
                 <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: #666;">
                     <p style="color: #ff6b6b;">${message}</p>
-                    <button onclick="location.reload()" style="margin-top: 20px; padding: 10px 20px; background: #764ba2; color: white; border: none; border-radius: 5px; cursor: pointer;">Retry</button>
+                    <button onclick="location.reload()" style="margin-top: 20px; padding: 10px 20px; background: #764ba2; color: white; border: none; border-radius: 5px; cursor: pointer;">${retryText}</button>
                 </div>
             `;
         }
