@@ -1273,6 +1273,108 @@
     color: #888;
     font-size: 0.9rem;
 }
+
+/* Fixed Bottom Cart Bar */
+.bottom-cart-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 12px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 1000;
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.15);
+    cursor: pointer;
+    transition: transform 0.3s ease;
+}
+
+.bottom-cart-bar:hover {
+    transform: translateY(-2px);
+}
+
+.bottom-cart-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.bottom-cart-icon {
+    font-size: 1.6rem;
+}
+
+.bottom-cart-text-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+}
+
+.bottom-cart-title {
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+.bottom-cart-powered {
+    font-size: 0.65rem;
+    opacity: 0.8;
+}
+
+.bottom-cart-right {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 10px 18px;
+    border-radius: 30px;
+    font-weight: 700;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.bottom-cart-right i {
+    font-size: 1rem;
+}
+
+/* Add padding to bottom of container to prevent content from being hidden behind fixed bar */
+.container {
+    padding-bottom: 70px;
+}
+
+/* Mobile adjustment */
+@media (max-width: 767px) {
+    .bottom-cart-bar {
+        padding: 10px 16px;
+    }
+    
+    .bottom-cart-icon {
+        font-size: 1.3rem;
+    }
+    
+    .bottom-cart-title {
+        font-size: 0.85rem;
+    }
+    
+    .bottom-cart-powered {
+        font-size: 0.55rem;
+    }
+    
+    .bottom-cart-right {
+        padding: 8px 14px;
+        font-size: 1rem;
+    }
+    
+    .bottom-cart-right i {
+        font-size: 0.8rem;
+    }
+    
+    .container {
+        padding-bottom: 60px;
+    }
+}
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
@@ -1648,6 +1750,24 @@
             <button class="secondary-btn" onclick="closeWaiterModal()" data-en="Cancel" data-bm="Batal">Cancel</button>
             <button class="primary-btn" onclick="submitWaiterCall()" id="submitWaiterBtn" disabled data-en="Call Waiter" data-bm="Panggil Pelayan">Call Waiter</button>
         </div>
+    </div>
+</div>
+
+<!-- Fixed Bottom Cart Bar -->
+<div class="bottom-cart-bar" onclick="toggleCart()">
+    <div class="bottom-cart-left">
+        <i class="fa-solid fa-cart-shopping bottom-cart-icon"></i>
+        <div class="bottom-cart-text-wrapper">
+            <span class="bottom-cart-title" data-en="Your Cart" data-bm="Troli Anda">Your Cart</span>
+            <div class="bottom-cart-powered">
+                <span>Powered by VentureRush Tech</span>
+            </div>
+        </div>
+    </div>
+    <div class="bottom-cart-right">
+        <span data-en="Total : RM" data-bm="Jumlah : RM">Total : RM</span>
+        <span id="bottomCartTotal">0.00</span>
+        <i class="fa-solid fa-chevron-right"></i>
     </div>
 </div>
 
@@ -2443,6 +2563,7 @@ function addToCart() {
         function updateCartCount() {
             const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
             document.getElementById('cartCount').textContent = totalItems;
+            updateBottomCartTotal();
         }
 
         // Toggle cart modal
@@ -2530,6 +2651,15 @@ function updateCartDisplay() {
     
     cartItems.innerHTML = cartHTML;
     cartTotal.textContent = total.toFixed(2);
+}
+
+// Update bottom cart total display
+function updateBottomCartTotal() {
+    const bottomCartTotal = document.getElementById('bottomCartTotal');
+    if (bottomCartTotal) {
+        const total = cart.reduce((sum, item) => sum + (item.totalPrice * item.quantity), 0);
+        bottomCartTotal.textContent = total.toFixed(2);
+    }
 }
 
 // Notes Modal Functions
