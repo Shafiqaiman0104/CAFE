@@ -1777,7 +1777,7 @@
         const VARIANT_API_URL = 'https://script.google.com/macros/s/AKfycbwQxx0JLOTPGmpp9zj6DwAojB0e7ix2ZXcfjuO70NarLrnDOKc4NpdOjog2wAFPZKOjyQ/exec';
         const ADDON_API_URL = 'https://script.google.com/macros/s/AKfycbzz6y1BvK1nc93MmEQOmz0ZAswthg6tilaJ2prLSGkqLo1ezKfmA3gN84rgEutsGokv/exec';
         const ORDER_API_URL = 'https://script.google.com/macros/s/AKfycbzwGqmFpoFSyIpaJOs6ccBi-WlPmWYlSgfti8CLnCC6Nz_zao8cer58JJVTFU5xUy65QQ/exec';
-        const ORDER_ITEMS_API_URL = 'https://script.google.com/macros/s/AKfycbza3y8oJ7Lj5S3AMDXRQUWk-_tf47u1CG9sxi-Ib6fPi11lv2n_s-zj40bY3ZmxXMCDZg/exec';
+        const ORDER_ITEMS_API_URL = 'https://script.google.com/macros/s/AKfycby1WHd4YjXGHFZ4b0AKhjUeses608seEMON64q3Pd2DeCL_wVwPgytIjhinfv9y3UzqVQ/exec';
         const TABLE_API_URL = 'https://script.google.com/macros/s/AKfycbyKuPETE-5zyGx2d9k5GGOx01mMSnq1Qi7GxZoXzjhd26R5s1CKXG5o08SHk7NTydC5kA/exec';
 
         // Global state
@@ -2498,14 +2498,14 @@ function showAddOnModal(menuItem, variant) {
 function addToCart() {
     if (!selectedMenuItem) return;
     
-    // Get notes from textarea
+    // Get notes from textarea (ONLY custom notes, no variant/add-on info)
     const notes = document.getElementById('itemNotes') ? document.getElementById('itemNotes').value.trim() : '';
     
     // Calculate base price
     const basePrice = parseFloat(selectedMenuItem.Price);
     const variantPrice = selectedVariant ? parseFloat(selectedVariant.Price) : 0;
     
-    // Calculate add-ons total
+    // Calculate add-ons total with IDs
     const selectedAddOnDetails = selectedAddOns.map(id => {
         const addon = addOns.find(a => a['Id Add On'] === id);
         return {
@@ -2520,7 +2520,7 @@ function addToCart() {
     // Calculate total price
     const totalPrice = basePrice + variantPrice + addOnsTotal;
     
-    // Create cart item with variant information and notes
+    // Create cart item with variant information and add-on IDs
     const cartItem = {
         id: selectedMenuItem['Id Menu'],
         name: selectedMenuItem.Name,
@@ -2534,7 +2534,7 @@ function addToCart() {
         totalPrice: totalPrice,
         quantity: 1,
         prepTime: parseInt(selectedMenuItem['Preparation Time'] || 15),
-        notes: notes  // Add notes to cart item
+        notes: notes  // Only custom notes
     };
     
     // Log to debug
@@ -2577,7 +2577,7 @@ function addToCart() {
             }
         }
 
-        // Update cart display
+// Update cart display
 function updateCartDisplay() {
     const cartItems = document.getElementById('cartItems');
     const cartTotal = document.getElementById('cartTotal');
@@ -2612,6 +2612,7 @@ function updateCartDisplay() {
         
         // Add add-ons info if exists
         if (item.addOns && item.addOns.length > 0) {
+            const addOnText = currentLanguage === 'bm' ? 'Tambahan:' : 'Add-ons:';
             item.addOns.forEach(addon => {
                 cartHTML += `
                     <div class="cart-item-addons">• ${addon.name} (+RM ${addon.price.toFixed(2)})</div>
@@ -2619,7 +2620,7 @@ function updateCartDisplay() {
             });
         }
         
-        // Add notes display if exists
+        // Add notes display if exists (only custom notes)
         if (item.notes && item.notes.trim() !== '') {
             cartHTML += `
                 <div class="item-notes-display">
@@ -2904,35 +2905,27 @@ function updateModalCartDisplay() {
                 
                 const orderId = orderResult.id;
                 
-                // Create order items with variants, add-ons, and notes
+// Create order items with variants, add-ons, and separate totals
 for (const item of cart) {
-    // Create item notes including variant, add-ons, and custom notes info
-    let itemNotes = '';
-    
-    if (item.variant) {
-        const variantText = currentLanguage === 'bm' ? 'Varian:' : 'Variant:';
-        itemNotes += `${variantText} ${item.variant.name}`;
-    }
-    
-    if (item.addOns && item.addOns.length > 0) {
-        if (itemNotes) itemNotes += ' | ';
-        const addOnText = currentLanguage === 'bm' ? 'Tambahan:' : 'Add-ons:';
-        itemNotes += `${addOnText} ${item.addOns.map(a => a.name).join(', ')}`;
-    }
-    
-    // Add custom notes if they exist
-    if (item.notes && item.notes.trim() !== '') {
-        if (itemNotes) itemNotes += ' | ';
-        const noteText = currentLanguage === 'bm' ? 'Nota:' : 'Notes:';
-        itemNotes += `${noteText} ${item.notes}`;
-    }
+    // Calculate totals
+    const totalMenu = item.basePrice * item.quantity;
+    const totalVariant = item.variant ? (item.variant.price * item.quantity) : 0;
+    const totalAddOn = item.addOns ? item.addOns.reduce((sum, addon) => sum + (addon.price * item.quantity), 0) : 0;
+
+     // Calculate unit price (price per single item including variant and add-ons)
+    const unitPrice = item.totalPrice; // This is basePrice + variantPrice + addOnsTotal
     
     const orderItemData = {
         idOrder: orderId,
         idMenu: item.id,
+        idVariant: item.variant ? item.variant.id : '',
+        idAddOn: item.addOns ? item.addOns.map(a => a.id).join(',') : '',
+        totalMenu: totalMenu,
+        totalVariant: totalVariant,
+        totalAddOn: totalAddOn,
         quantity: item.quantity,
-        unitPrice: item.basePrice,
-        notes: itemNotes,  // This now includes custom notes
+        unitPrice: unitPrice,
+        notes: item.notes || '',  // Only custom notes, no variant/add-on info
         preparationTime: item.prepTime * item.quantity
     };
     
@@ -3013,6 +3006,7 @@ function showReceiptModal(orderId, orderData, cartItems) {
             itemsHTML += `<div class="receipt-item-addons">${addOnText} ${item.addOns.map(a => a.name).join(', ')}</div>`;
         }
         
+        // Only show custom notes (no variant/add-on info)
         if (item.notes && item.notes.trim() !== '') {
             const noteText = currentLanguage === 'bm' ? 'Nota:' : 'Note:';
             itemsHTML += `<div class="receipt-item-notes">${noteText} ${item.notes}</div>`;
