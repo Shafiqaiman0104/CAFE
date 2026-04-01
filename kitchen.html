@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>Cafe Management System - Kitchen</title>
     <style>
         * {
@@ -28,6 +28,8 @@
             align-items: center;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
             margin-bottom: 30px;
+            flex-wrap: wrap;
+            gap: 15px;
         }
 
         .logo {
@@ -42,6 +44,7 @@
             display: flex;
             align-items: center;
             gap: 15px;
+            flex-wrap: wrap;
         }
 
         .logout-btn {
@@ -59,6 +62,134 @@
             transform: translateY(-2px);
         }
 
+        /* Printer Settings Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 15px;
+        }
+        .modal-header h3 {
+            color: #764ba2;
+        }
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #999;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+        .form-group input, .form-group textarea, .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-family: inherit;
+        }
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        .printer-btns {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .printer-config-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 500;
+            margin-right: 10px;
+        }
+        .toggle-switch {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .toggle-switch input {
+            width: 50px;
+            height: 24px;
+            appearance: none;
+            background: #ccc;
+            border-radius: 24px;
+            position: relative;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        .toggle-switch input:checked {
+            background: #28a745;
+        }
+        .toggle-switch input::before {
+            content: '';
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            position: absolute;
+            top: 2px;
+            left: 3px;
+            transition: 0.3s;
+        }
+        .toggle-switch input:checked::before {
+            left: 27px;
+        }
         .kitchen-display {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
@@ -87,6 +218,8 @@
             margin-bottom: 20px;
             padding-bottom: 15px;
             border-bottom: 2px solid #f0f0f0;
+            flex-wrap: wrap;
+            gap: 10px;
         }
 
         .order-id {
@@ -147,59 +280,6 @@
             gap: 10px;
         }
 
-        .item-status {
-            padding: 4px 12px;
-            border-radius: 15px;
-            font-size: 11px;
-            font-weight: 700;
-        }
-
-        .pending { 
-            background: #fff3cd; 
-            color: #856404;
-            border: 1px solid #ffeaa7;
-        }
-        
-        .preparing { 
-            background: #cce5ff; 
-            color: #004085;
-            border: 1px solid #b8daff;
-        }
-        
-        .ready { 
-            background: #d4edda; 
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-
-        .status-btn {
-            padding: 6px 12px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 12px;
-            font-weight: 600;
-            transition: all 0.3s;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .btn-start {
-            background: #2196F3;
-            color: white;
-        }
-
-        .btn-complete {
-            background: #4CAF50;
-            color: white;
-        }
-
-        .status-btn:hover {
-            opacity: 0.9;
-            transform: scale(1.05);
-        }
-
         .timer {
             font-family: 'Courier New', monospace;
             font-size: 1.1rem;
@@ -227,31 +307,18 @@
         }
 
         .order-footer {
-    display: flex;
-    align-items: center;
-    margin-top: 20px;
-    padding-top: 15px;
-    border-top: 2px solid #f0f0f0;
-}
+            display: flex;
+            align-items: center;
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 2px solid #f0f0f0;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
 
         .prep-time {
             color: #666;
             font-weight: 500;
-        }
-
-        .complete-order-btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 10px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: transform 0.3s;
-        }
-
-        .complete-order-btn:hover {
-            transform: translateY(-2px);
         }
 
         .urgent-badge {
@@ -278,6 +345,7 @@
             gap: 10px;
             margin-bottom: 20px;
             justify-content: center;
+            flex-wrap: wrap;
         }
 
         .filter-btn {
@@ -295,690 +363,1165 @@
             color: white;
         }
 
-        @media (max-width: 768px) {
-            .kitchen-display {
-                grid-template-columns: 1fr;
-            }
-
- .search-container {
-        order: 3;
-        margin: 15px 0 0 0;
-        max-width: 100%;
-    }
-            
-            .navbar {
-                flex-direction: column;
-                gap: 15px;
-                text-align: center;
-                align-items: stretch;
-            }
+        .search-container {
+            position: relative;
+            flex: 1;
+            max-width: 500px;
+            margin: 0 20px;
         }
 
-/* Add this to your CSS */
-.status-select {
-    padding: 4px 8px;
-    border-radius: 8px;
-    border: 1px solid #ddd;
-    font-size: 11px;
-    font-weight: 600;
-    cursor: pointer;
-    background: white;
-    min-width: 100px;
-    text-align: center;
-}
+        .search-bar {
+            width: 100%;
+            padding: 10px 40px 10px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 25px;
+            font-size: 14px;
+            transition: all 0.3s;
+            background: white;
+        }
 
-.status-select.pending { 
-    background: #fff3cd; 
-    color: #856404;
-    border-color: #ffeaa7;
-}
+        .search-bar:focus {
+            outline: none;
+            border-color: #764ba2;
+            box-shadow: 0 0 0 3px rgba(118, 75, 162, 0.1);
+        }
 
-.status-select.preparing { 
-    background: #cce5ff; 
-    color: #004085;
-    border-color: #b8daff;
-}
+        .search-icon {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #764ba2;
+        }
 
-.status-select.ready { 
-    background: #d4edda; 
-    color: #155724;
-    border-color: #c3e6cb;
-}
+        .clear-search {
+            position: absolute;
+            right: 40px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: #999;
+            cursor: pointer;
+            display: none;
+        }
 
-.status-select.served { 
-    background: #d1ecf1; 
-    color: #0c5460;
-    border-color: #bee5eb;
-}
+        .clear-search:hover {
+            color: #ff6b6b;
+        }
 
-.status-select.cancelled { 
-    background: #f8d7da; 
-    color: #721c24;
-    border-color: #f5c6cb;
-}
+        .status-select {
+            padding: 4px 8px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            background: white;
+            min-width: 100px;
+            text-align: center;
+        }
 
-/* Add these styles near your existing .prep-time style */
-.order-status-control {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-    gap: 15px;
-}
+        .status-select.pending { background: #fff3cd; color: #856404; border-color: #ffeaa7; }
+        .status-select.preparing { background: #cce5ff; color: #004085; border-color: #b8daff; }
+        .status-select.ready { background: #d4edda; color: #155724; border-color: #c3e6cb; }
+        .status-select.served { background: #d1ecf1; color: #0c5460; border-color: #bee5eb; }
+        .status-select.cancelled { background: #f8d7da; color: #721c24; border-color: #f5c6cb; }
 
-.prep-time {
-    color: #666;
-    font-weight: 500;
-}
+        .order-status-control {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
 
-.order-status-dropdown {
-    padding: 6px 12px;
-    border-radius: 8px;
-    border: 1px solid #ddd;
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    background: white;
-    min-width: 120px;
-    text-align: left;
-    position: relative;
-}
+        .order-status-dropdown {
+            padding: 6px 12px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            background: white;
+            min-width: 120px;
+        }
 
-.order-status-dropdown:hover {
-    border-color: #764ba2;
-}
+        .manual-print-btn {
+            background: #17a2b8;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s;
+        }
+        .manual-print-btn:hover {
+            background: #138496;
+            transform: scale(1.02);
+        }
+        .order-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-left: auto;
+        }
 
-.order-status-dropdown.pending { 
-    background: #fff3cd; 
-    color: #856404;
-    border-color: #ffeaa7;
-}
-
-.order-status-dropdown.preparing { 
-    background: #cce5ff; 
-    color: #004085;
-    border-color: #b8daff;
-}
-
-.order-status-dropdown.ready { 
-    background: #d4edda; 
-    color: #155724;
-    border-color: #c3e6cb;
-}
-
-.order-status-dropdown.served { 
-    background: #d1ecf1; 
-    color: #0c5460;
-    border-color: #bee5eb;
-}
-
-.order-status-dropdown.cancelled { 
-    background: #f8d7da; 
-    color: #721c24;
-    border-color: #f5c6cb;
-}
-
-.order-status-dropdown.change-status { 
-    background: #ffffff; 
-    color: #333;
-    border-color: #ddd;
-    font-weight: 600;
-}
-
-/* Add this near your other navbar or header styles */
-.search-container {
-    position: relative;
-    flex: 1;
-    max-width: 500px;
-    margin: 0 20px;
-}
-
-.search-bar {
-    width: 100%;
-    padding: 10px 40px 10px 15px;
-    border: 2px solid #e0e0e0;
-    border-radius: 25px;
-    font-size: 14px;
-    transition: all 0.3s;
-    background: white;
-}
-
-.search-bar:focus {
-    outline: none;
-    border-color: #764ba2;
-    box-shadow: 0 0 0 3px rgba(118, 75, 162, 0.1);
-}
-
-.search-icon {
-    position: absolute;
-    right: 15px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #764ba2;
-}
-
-.clear-search {
-    position: absolute;
-    right: 40px;
-    top: 50%;
-    transform: translateY(-50%);
-    background: none;
-    border: none;
-    color: #999;
-    cursor: pointer;
-    display: none;
-}
-
-.clear-search:hover {
-    color: #ff6b6b;
-}
+        @media (max-width: 768px) {
+            .kitchen-display { grid-template-columns: 1fr; }
+            .navbar { flex-direction: column; align-items: stretch; }
+            .search-container { max-width: 100%; margin: 0; }
+            .user-info { justify-content: space-between; }
+            .order-header { flex-direction: column; }
+            .order-footer { flex-direction: column; align-items: stretch; }
+            .order-status-control { flex-direction: column; align-items: stretch; }
+        }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
-    <!-- Navbar -->
     <nav class="navbar">
         <div class="logo">
             <i class="fas fa-utensils"></i>
             <span>Kitchen Display System</span>
         </div>
-<!-- Add this inside the navbar, after the logo div -->
-<div class="search-container">
-    <input type="text" 
-           class="search-bar" 
-           id="globalSearch" 
-           placeholder="Search orders by order ID, table number, or menu item..."
-           onkeyup="handleSearch(event)">
-    <button class="clear-search" id="clearSearch" onclick="clearSearch()">
-        <i class="fas fa-times"></i>
-    </button>
-    <div class="search-icon">
-        <i class="fas fa-search"></i>
-    </div>
-</div>
+        <div class="search-container">
+            <input type="text" class="search-bar" id="globalSearch" placeholder="Search orders..." onkeyup="handleSearch(event)">
+            <button class="clear-search" id="clearSearch" onclick="clearSearch()"><i class="fas fa-times"></i></button>
+            <div class="search-icon"><i class="fas fa-search"></i></div>
+        </div>
         <div class="user-info">
+            <button class="printer-config-btn" onclick="openPrinterModal()"><i class="fas fa-print"></i> Printer Setup</button>
             <span id="staffName">Welcome Chef</span>
-            <button class="logout-btn" onclick="logout()">
-                <i class="fas fa-sign-out-alt"></i> Logout
-            </button>
+            <button class="logout-btn" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
         </div>
     </nav>
 
-    <!-- Filter Buttons -->
     <div class="filter-buttons">
         <button class="filter-btn active" onclick="filterOrders('all')">All Orders</button>
         <button class="filter-btn" onclick="filterOrders('pending')">Pending</button>
         <button class="filter-btn" onclick="filterOrders('preparing')">Preparing</button>
     </div>
 
-    <!-- Kitchen Display -->
-    <div class="kitchen-display" id="kitchenDisplay">
-        <!-- Orders will be loaded here -->
+    <div class="kitchen-display" id="kitchenDisplay"></div>
+
+    <!-- Printer Settings Modal -->
+    <div id="printerModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-print"></i> Bluetooth Printer Settings</h3>
+                <button class="close-modal" onclick="closePrinterModal()">&times;</button>
+            </div>
+            <div class="form-group">
+                <label>Bluetooth Device Name</label>
+                <input type="text" id="bluetoothDeviceName" placeholder="e.g., Thermal Printer, JK-5802P">
+                <small>Enter the exact Bluetooth device name</small>
+            </div>
+            <div class="printer-btns">
+                <button class="btn-primary" onclick="connectBluetoothPrinter()"><i class="fab fa-bluetooth-b"></i> Connect Printer</button>
+                <button class="btn-secondary" onclick="testPrint()">Test Print</button>
+            </div>
+                        <div class="form-group">
+                <div class="toggle-switch">
+                    <span>Auto Print New Orders:</span>
+                    <input type="checkbox" id="autoPrintToggle">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label>Receipt Header Font Size</label>
+                <select id="headerFontSize">
+                    <option value="small">Small</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="big">Big</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>Receipt Header</label>
+                <textarea id="printerHeader" rows="2">========== ORDER ==========
+Cafe Delight
+Date: {date}
+Time: {time}
+==========================</textarea>
+            </div>
+            
+            <div class="form-group">
+                <label>Receipt Body Font Size</label>
+                <select id="bodyFontSize">
+                    <option value="small">Small</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="big">Big</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>Receipt Body Settings</label>
+                <div style="margin-bottom: 10px;">
+                    <label style="font-weight: normal; font-size: 12px;">Menu Name Padding (characters):</label>
+                    <input type="number" id="menuPadding" value="20" min="5" max="50" style="width: 100px; margin-left: 10px;">
+                </div>
+                <div>
+                    <label style="font-weight: normal; font-size: 12px;">Checkbox Style:</label>
+                    <select id="checkboxStyle" style="width: 150px; margin-left: 10px;">
+                        <option value="[     ]">[     ] (5 spaces)</option>
+                        <option value="[   ]">[   ] (3 spaces)</option>
+                        <option value="[  ]">[  ] (2 spaces)</option>
+                        <option value="[ ]">[ ] (1 space)</option>
+                        <option value="[X]">[X] (filled)</option>
+                    </select>
+                </div>
+                <small style="display: block; margin-top: 8px;">Adjust how the menu item and checkbox appear</small>
+            </div>
+            
+            <div class="form-group">
+                <label>Receipt Footer Font Size</label>
+                <select id="footerFontSize">
+                    <option value="small">Small</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="big">Big</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>Receipt Footer</label>
+                <textarea id="printerFooter" rows="2">================================
+Thank you!
+Kitchen Staff</textarea>
+            </div>
+            
+            <div class="form-group">
+                <label>Paper Size</label>
+                <select id="paperSize">
+                    <option value="58mm">58mm (Standard Thermal)</option>
+                    <option value="80mm">80mm</option>
+                </select>
+            </div>
+            
+            <button class="btn-primary" onclick="savePrinterSettings()">Save Settings</button>
+            <p id="printerStatusMsg" style="margin-top:15px; font-size:12px;"></p>
+        </div>
     </div>
 
     <script>
-        // App Script URLs
-        const ORDER_ITEMS_API_URL = 'https://script.google.com/macros/s/AKfycbza3y8oJ7Lj5S3AMDXRQUWk-_tf47u1CG9sxi-Ib6fPi11lv2n_s-zj40bY3ZmxXMCDZg/exec';
-        const ORDER_API_URL = 'https://script.google.com/macros/s/AKfycbzwGqmFpoFSyIpaJOs6ccBi-WlPmWYlSgfti8CLnCC6Nz_zao8cer58JJVTFU5xUy65QQ/exec';
-        const MENU_API_URL = 'https://script.google.com/macros/s/AKfycbyL3qH9ra_3sNw1nLchIKHrGo31obMaL0cdK4zNTwyiBPORIPYr349katf1ANzWVEmJMw/exec';
-
-        let currentStaff = {
-            id: localStorage.getItem('staffId'),
-            name: localStorage.getItem('staffName'),
-            role: localStorage.getItem('staffRole')
+        // ==================== PRINTER MANAGEMENT WITH PERSISTENT CONNECTION ====================
+                let printerConfig = {
+            deviceName: '',
+            header: '',
+            footer: '',
+            paperSize: '58mm',
+            fontSize: 12,
+            connected: false,
+            bluetoothDevice: null,
+            autoPrint: true,
+            deviceId: null,
+            headerFontSize: 'medium',
+            bodyFontSize: 'medium',
+            footerFontSize: 'medium',
+            menuPadding: 20,
+            checkboxStyle: '[     ]'
         };
-
-        let orders = [];
-        let timers = {};
-        let currentFilter = 'all';
-        let elapsedTimes = {}; // Store elapsed seconds for each item
-        let startTimes = {}; // Store when each timer started
-
-let searchQuery = '';
-
-let menuData = {}; // To store menu ID to name mapping
-
-        // Check authentication
-        if (!currentStaff.id || currentStaff.role !== 'kitchen') {
-            window.location.href = 'login.html';
-        }
-
-        // Initialize
-        document.addEventListener('DOMContentLoaded', function() {
-            document.getElementById('staffName').textContent = `Welcome, ${currentStaff.name}`;
-            loadMenuData();
-            loadKitchenOrders();
-            
-            // Refresh every 30 seconds
-            setInterval(loadKitchenOrders, 30000);
-        });
-
-        async function loadKitchenOrders() {
-    try {
-        const response = await fetch(`${ORDER_ITEMS_API_URL}?action=getKitchenOrders`);
-        const result = await response.json();
         
-        if (result.success) {
-            orders = result.data;
-            
-            // Fetch table data for each unique order
-            const orderIds = [...new Set(orders.map(item => item['Id Order']))];
-            const tablePromises = orderIds.map(orderId => fetchOrderTableData(orderId));
-            const tableNumbers = await Promise.all(tablePromises);
-            
-            // Create a map of orderId to table number
-            const orderTableMap = {};
-            orderIds.forEach((orderId, index) => {
-                orderTableMap[orderId] = tableNumbers[index];
-            });
-            
-            // Add table number to each order item
-            orders.forEach(item => {
-                item.TableNumber = orderTableMap[item['Id Order']];
-            });
-            
-            renderOrders();
+        let currentBluetoothServer = null;
+        let currentBluetoothCharacteristic = null;
+
+                function loadPrinterSettings() {
+            const saved = localStorage.getItem('kitchenPrinterConfig');
+            if (saved) {
+                printerConfig = JSON.parse(saved);
+                document.getElementById('printerHeader').value = printerConfig.header;
+                document.getElementById('printerFooter').value = printerConfig.footer;
+                document.getElementById('paperSize').value = printerConfig.paperSize;
+                document.getElementById('bluetoothDeviceName').value = printerConfig.deviceName || '';
+                document.getElementById('autoPrintToggle').checked = printerConfig.autoPrint !== false;
+                document.getElementById('headerFontSize').value = printerConfig.headerFontSize || 'medium';
+                document.getElementById('bodyFontSize').value = printerConfig.bodyFontSize || 'medium';
+                document.getElementById('footerFontSize').value = printerConfig.footerFontSize || 'medium';
+                document.getElementById('menuPadding').value = printerConfig.menuPadding || 20;
+                document.getElementById('checkboxStyle').value = printerConfig.checkboxStyle || '[     ]';
+            } else {
+                const defaultHeader = "========== ORDER ==========\nCafe Delight\nDate: {date}\nTime: {time}\n==========================\n";
+                const defaultFooter = "================================\nThank you!\nKitchen Staff";
+                document.getElementById('printerHeader').value = defaultHeader;
+                document.getElementById('printerFooter').value = defaultFooter;
+                printerConfig.header = defaultHeader;
+                printerConfig.footer = defaultFooter;
+                printerConfig.paperSize = '58mm';
+                printerConfig.fontSize = 12;
+                printerConfig.autoPrint = true;
+                printerConfig.headerFontSize = 'medium';
+                printerConfig.bodyFontSize = 'medium';
+                printerConfig.footerFontSize = 'medium';
+                printerConfig.menuPadding = 20;
+                printerConfig.checkboxStyle = '[     ]';
+                document.getElementById('autoPrintToggle').checked = true;
+                document.getElementById('headerFontSize').value = 'medium';
+                document.getElementById('bodyFontSize').value = 'medium';
+                document.getElementById('footerFontSize').value = 'medium';
+                document.getElementById('menuPadding').value = 20;
+                document.getElementById('checkboxStyle').value = '[     ]';
+            }
         }
+
+                function savePrinterSettings() {
+            printerConfig.header = document.getElementById('printerHeader').value;
+            printerConfig.footer = document.getElementById('printerFooter').value;
+            printerConfig.paperSize = document.getElementById('paperSize').value;
+            printerConfig.deviceName = document.getElementById('bluetoothDeviceName').value;
+            printerConfig.autoPrint = document.getElementById('autoPrintToggle').checked;
+            printerConfig.headerFontSize = document.getElementById('headerFontSize').value;
+            printerConfig.bodyFontSize = document.getElementById('bodyFontSize').value;
+            printerConfig.footerFontSize = document.getElementById('footerFontSize').value;
+            printerConfig.menuPadding = parseInt(document.getElementById('menuPadding').value);
+            printerConfig.checkboxStyle = document.getElementById('checkboxStyle').value;
+            localStorage.setItem('kitchenPrinterConfig', JSON.stringify(printerConfig));
+            alert('Printer settings saved!');
+        }
+
+        function openPrinterModal() {
+            loadPrinterSettings();
+            document.getElementById('printerModal').style.display = 'flex';
+            updatePrinterStatusDisplay();
+        }
+        function closePrinterModal() { document.getElementById('printerModal').style.display = 'none'; }
+        
+        function updatePrinterStatusDisplay() {
+            const statusMsg = document.getElementById('printerStatusMsg');
+            if (printerConfig.connected && printerConfig.bluetoothDevice) {
+                statusMsg.innerHTML = '<span style="color:green;">✅ Connected to: ' + (printerConfig.bluetoothDevice.name || printerConfig.deviceName) + '</span>';
+            } else {
+                statusMsg.innerHTML = '<span style="color:orange;">⚠️ Not connected. Click "Connect Printer" to pair.</span>';
+            }
+        }
+
+        async function connectBluetoothPrinter() {
+            const deviceName = document.getElementById('bluetoothDeviceName').value;
+            if (!deviceName) {
+                alert('Please enter Bluetooth device name first');
+                return;
+            }
+            
+            if (!navigator.bluetooth) {
+                alert('Web Bluetooth is not supported. Please use Chrome on Android or Edge.');
+                document.getElementById('printerStatusMsg').innerHTML = '<span style="color:red;">❌ Browser does not support Web Bluetooth</span>';
+                return;
+            }
+            
+            try {
+                const device = await navigator.bluetooth.requestDevice({
+                    acceptAllDevices: false,
+                    filters: [{ name: deviceName }],
+                    optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb']
+                });
+                
+                printerConfig.bluetoothDevice = device;
+                printerConfig.deviceName = device.name;
+                document.getElementById('bluetoothDeviceName').value = device.name;
+                
+                const server = await device.gatt.connect();
+                currentBluetoothServer = server;
+                
+                const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
+                let characteristic;
+                try {
+                    characteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
+                } catch(e) {
+                    characteristic = await service.getCharacteristic('00002af0-0000-1000-8000-00805f9b34fb');
+                }
+                currentBluetoothCharacteristic = characteristic;
+                printerConfig.connected = true;
+                
+                updatePrinterStatusDisplay();
+                savePrinterSettings();
+                alert('Printer connected successfully!');
+            } catch (error) {
+                console.error('Bluetooth connection error:', error);
+                document.getElementById('printerStatusMsg').innerHTML = '<span style="color:red;">❌ Connection failed: ' + error.message + '</span>';
+                printerConfig.connected = false;
+                currentBluetoothCharacteristic = null;
+                currentBluetoothServer = null;
+            }
+        }
+        
+        async function ensureConnection() {
+            if (currentBluetoothCharacteristic && printerConfig.connected) {
+                return true;
+            }
+            
+            if (printerConfig.deviceName && printerConfig.bluetoothDevice) {
+                try {
+                    const server = await printerConfig.bluetoothDevice.gatt.connect();
+                    currentBluetoothServer = server;
+                    const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
+                    let characteristic;
+                    try {
+                        characteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
+                    } catch(e) {
+                        characteristic = await service.getCharacteristic('00002af0-0000-1000-8000-00805f9b34fb');
+                    }
+                    currentBluetoothCharacteristic = characteristic;
+                    printerConfig.connected = true;
+                    updatePrinterStatusDisplay();
+                    return true;
+                } catch(e) {
+                    printerConfig.connected = false;
+                    return false;
+                }
+            }
+            return false;
+        }
+        
+async function printViaBluetooth(textContent) {
+    if (!await ensureConnection()) {
+        return false;
+    }
+    
+    try {
+        const ESC = '\x1B';
+        
+        // Initialize printer and clear buffer
+        const initPrinter = ESC + '@';  // Initialize printer
+        
+        // Send initialization first with response
+        const initData = new TextEncoder().encode(initPrinter);
+        await currentBluetoothCharacteristic.writeValueWithResponse(initData);
+        await new Promise(r => setTimeout(r, 200));
+        
+        // Send content in very small chunks for mobile
+        const encoder = new TextEncoder();
+        const data = encoder.encode(textContent);
+        
+        // Use smaller chunks for mobile (120 bytes)
+        const chunkSize = 120;
+        
+        for (let i = 0; i < data.length; i += chunkSize) {
+            const chunk = data.slice(i, Math.min(i + chunkSize, data.length));
+            // Use writeValueWithResponse to ensure data is received
+            await currentBluetoothCharacteristic.writeValueWithResponse(chunk);
+            // Delay between chunks for mobile
+            await new Promise(r => setTimeout(r, 150));
+        }
+        
+        // Send final initialization to flush buffer (no extra line feeds)
+        const finalInit = new TextEncoder().encode(ESC + '@');
+        await currentBluetoothCharacteristic.writeValueWithResponse(finalInit);
+        
+        // Final delay to ensure all data is processed
+        await new Promise(r => setTimeout(r, 1000));
+        
+        return true;
     } catch (error) {
-        console.error('Error loading kitchen orders:', error);
+        console.error('Print error:', error);
+        printerConfig.connected = false;
+        currentBluetoothCharacteristic = null;
+        return false;
     }
 }
 
-        // Update renderOrders to restore timers for items in 'Preparing' status
-function renderOrders() {
-    const kitchenDisplay = document.getElementById('kitchenDisplay');
+function addPrinterCommands(content) {
+    // Simple line feeds - no cut commands since your printer doesn't support it
+    // Add many line feeds to push paper out completely
+    const lineFeeds = '\n\n\n';  // 3 line feeds
     
-    // Group items by order
-    const ordersMap = {};
+    return content + lineFeeds;
+}
+        
+       function printToFallback(content) {
+    const fontSize = 8; // Force to 8px for receipt printing
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+        <html><head><title>Kitchen Order Print</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>body { font-family: monospace; white-space: pre; margin: 20px; font-size: ${fontSize}px; font-weight: normal; }</style>
+        </head><body><pre style="font-weight: normal;">${content}</pre>
+        <script>window.print();setTimeout(()=>window.close(),1500);<\/script>
+        </body></html>
+    `);
+    printWindow.document.close();
+}
     
-    orders.forEach(item => {
-        if (!ordersMap[item['Id Order']]) {
-            ordersMap[item['Id Order']] = [];
+        function getFontSizeCommand(sizeType) {
+            const ESC = '\x1B';
+            // Font A is standard, Font B is smaller
+            // Small = Font B, Medium = Font A, Big = Font A with double height
+            switch(sizeType) {
+                case 'small':
+                    return ESC + 'M' + '\x01'; // Font B (smaller)
+                case 'medium':
+                    return ESC + 'M' + '\x00'; // Font A (normal)
+                case 'big':
+                    return ESC + 'M' + '\x00'; // Font A + we'll add double height
+                default:
+                    return ESC + 'M' + '\x00';
+            }
         }
+        
+        function getDoubleHeightCommand(isBig) {
+            const GS = '\x1D';
+            if (isBig === 'big') {
+                return GS + '!' + '\x01'; // Double height
+            }
+            return GS + '!' + '\x00'; // Normal
+        }
+    
+async function printKitchenOrder(orderId, orderItems, tableNumber, orderTime, statusLabel = "NEW ORDER") {
+    const now = new Date();
+    const formattedDate = now.toLocaleDateString();
+    const formattedTime = now.toLocaleTimeString();
+    
+    // Group items by category
+    const foodItems = [];
+    const beverageItems = [];
+    
+    for (const item of orderItems) {
+        const category = menuCategories[item['Id Menu']] || 'Food';
+        if (category === 'Beverage') {
+            beverageItems.push(item);
+        } else {
+            foodItems.push(item);
+        }
+    }
+    
+    // Helper function to print a single ticket
+    async function printSingleTicket(printFor, category, items) {
+        if (items.length === 0) return true;
+        
+        let printContent = "";
+        
+        // Header
+        printContent += "================================\n";
+        printContent += `        ${printFor.toUpperCase()}\n`;
+        printContent += "================================\n";
+        printContent += `Printed : ${formattedDate} ${formattedTime}\n`;
+        printContent += "================================\n";
+        printContent += `ORDER # : ${orderId}\n`;
+        printContent += `TABLE : ${tableNumber || 'Unknown'}\n`;
+        printContent += `ORDER TIME : ${formatTime(orderTime)}\n`;
+        printContent += "--------------------------------\n";
+        printContent += `${category.toUpperCase()} ITEMS :\n`;
+        
+        // Items
+        items.forEach(item => {
+            const itemName = getMenuName(item['Id Menu']);
+            const quantity = item.Quantity || 1;
+            
+            printContent += `${quantity} x ${itemName.padEnd(printerConfig.menuPadding)} ${printerConfig.checkboxStyle}\n`;
+            
+            if (item['Id Variant'] && item['Id Variant'] !== '') {
+                const variantName = variantData[item['Id Variant']] || item['Id Variant'];
+                printContent += `  Variant : ${variantName}\n`;
+            }
+            
+            if (item['Id Add On'] && item['Id Add On'] !== '') {
+                const addOnIds = item['Id Add On'].split(',');
+                const addOnNames = addOnIds.map(id => addOnData[id] || id).filter(name => name);
+                if (addOnNames.length > 0) {
+                    printContent += `  Add On : ${addOnNames.join(', ')}\n`;
+                }
+            }
+            
+            if (item.Notes && item.Notes.trim() !== '') {
+                printContent += `  Notes : ${item.Notes}\n`;
+            }
+            
+            if ((item['Id Variant'] && item['Id Variant'] !== '') || (item['Id Add On'] && item['Id Add On'] !== '') || (item.Notes && item.Notes.trim() !== '')) {
+                printContent += `\n`;
+            }
+        });
+        
+        // Footer
+        printContent += "--------------------------------\n";
+        printContent += `STATUS: ${statusLabel}\n`;
+        printContent += `PRINTED: ${printFor.toUpperCase()}\n`;
+        printContent += "================================\n";
+        
+        printContent = addPrinterCommands(printContent);
+        
+        if (navigator.bluetooth) {
+            return await printViaBluetooth(printContent);
+        } else {
+            printToFallback(printContent);
+            return true;
+        }
+    }
+    
+    let allSuccess = true;
+    
+    // Print KITCHEN copies
+    if (foodItems.length > 0) {
+        const success = await printSingleTicket('KITCHEN STATION', 'FOOD', foodItems);
+        if (!success) allSuccess = false;
+    }
+    
+    if (beverageItems.length > 0) {
+        const success = await printSingleTicket('BEVERAGE STATION', 'BEVERAGE', beverageItems);
+        if (!success) allSuccess = false;
+    }
+    
+    // Print WAITER copies
+    if (foodItems.length > 0) {
+        const success = await printSingleTicket('WAITER FOOD', 'FOOD', foodItems);
+        if (!success) allSuccess = false;
+    }
+    
+    if (beverageItems.length > 0) {
+        const success = await printSingleTicket('WAITER BEVERAGE', 'BEVERAGE', beverageItems);
+        if (!success) allSuccess = false;
+    }
+    
+    return allSuccess;
+}
+        
+        // Track printed orders to avoid duplicate auto-prints
+        let autoPrintedOrders = new Set();
+        
+async function checkAndAutoPrintNewOrder(ordersList, oldOrdersMap) {
+    if (!printerConfig.autoPrint) return;
+    
+    const ordersMap = {};
+    ordersList.forEach(item => {
+        if (!ordersMap[item['Id Order']]) ordersMap[item['Id Order']] = [];
         ordersMap[item['Id Order']].push(item);
     });
     
-    // First filter by current status filter
+    for (const orderId in ordersMap) {
+        const orderItems = ordersMap[orderId];
+        const hasPending = orderItems.some(item => item.Status === 'Pending');
+        if (!hasPending) continue;
+        
+        if (autoPrintedOrders.has(orderId)) continue;
+        
+        const oldHadPending = oldOrdersMap[orderId] ? oldOrdersMap[orderId].some(item => item.Status === 'Pending') : false;
+        
+        // Only print if this is a brand new order (not just status update)
+        if (!oldOrdersMap[orderId]) {
+            // Mark as processing
+            autoPrintedOrders.add(orderId);
+            
+            console.log(`New order ${orderId} detected with ${orderItems.length} items, waiting 5 seconds for more items...`);
+            
+            // Wait 5 seconds before printing to ensure all items are inserted
+            setTimeout(async () => {
+                try {
+                    // Refresh orders to get all items
+                    const refreshResponse = await fetch(`${ORDER_ITEMS_API_URL}?action=getKitchenOrders`);
+                    const refreshResult = await refreshResponse.json();
+                    if (refreshResult.success) {
+                        const freshOrders = refreshResult.data;
+                        let freshOrderItems = freshOrders.filter(item => item['Id Order'] === orderId);
+                        
+                        // Fetch table number for the order
+                        const tableNumber = await fetchOrderTableData(orderId);
+                        
+                        // Add TableNumber to each item
+                        freshOrderItems = freshOrderItems.map(item => ({
+                            ...item,
+                            TableNumber: tableNumber
+                        }));
+                        
+                        // Update the main orders array with all items
+                        // Remove old items for this order and add all fresh ones
+                        const otherOrders = orders.filter(item => item['Id Order'] !== orderId);
+                        orders = [...otherOrders, ...freshOrderItems];
+                        
+                        // Re-render the display with updated data
+                        renderOrders();
+                        
+                        const createdAt = freshOrderItems[0]?.['Created At'] || new Date();
+                        
+                        console.log(`Printing order ${orderId} with ${freshOrderItems.length} items after delay, Table: ${tableNumber}`);
+                        await printKitchenOrder(orderId, freshOrderItems, tableNumber, createdAt, "PENDING - NEW ORDER");
+                    }
+                } catch (error) {
+                    console.error('Error in delayed print:', error);
+                }
+            }, 8000);
+        }
+    }
+}       
+        
+        // ==================== EXISTING APP CODE ====================
+        const ORDER_ITEMS_API_URL = 'https://script.google.com/macros/s/AKfycby1WHd4YjXGHFZ4b0AKhjUeses608seEMON64q3Pd2DeCL_wVwPgytIjhinfv9y3UzqVQ/exec';
+const ORDER_API_URL = 'https://script.google.com/macros/s/AKfycbzwGqmFpoFSyIpaJOs6ccBi-WlPmWYlSgfti8CLnCC6Nz_zao8cer58JJVTFU5xUy65QQ/exec';
+const MENU_API_URL = 'https://script.google.com/macros/s/AKfycbyL3qH9ra_3sNw1nLchIKHrGo31obMaL0cdK4zNTwyiBPORIPYr349katf1ANzWVEmJMw/exec';
+const VARIANT_API_URL = 'https://script.google.com/macros/s/AKfycbwQxx0JLOTPGmpp9zj6DwAojB0e7ix2ZXcfjuO70NarLrnDOKc4NpdOjog2wAFPZKOjyQ/exec';
+const ADDON_API_URL = 'https://script.google.com/macros/s/AKfycbzz6y1BvK1nc93MmEQOmz0ZAswthg6tilaJ2prLSGkqLo1ezKfmA3gN84rgEutsGokv/exec';
+
+        let currentStaff = { id: localStorage.getItem('staffId'), name: localStorage.getItem('staffName'), role: localStorage.getItem('staffRole') };
+        let orders = [];
+        let timers = {};
+        let currentFilter = 'all';
+        let elapsedTimes = {};
+        let startTimes = {};
+        let searchQuery = '';
+        let menuData = {};
+        let menuCategories = {}; // Add this line with other global variables
+        let variantData = {};
+        let addOnData = {};
+
+        if (!currentStaff.id || currentStaff.role !== 'kitchen') window.location.href = 'login.html';
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('staffName').textContent = `Welcome, ${currentStaff.name}`;
+            loadMenuData();
+            loadVariantData();  // Add this line
+            loadAddOnData();    // Add this line
+            loadKitchenOrders();
+            setInterval(loadKitchenOrders, 15000);
+            loadPrinterSettings();
+        });
+
+        async function loadKitchenOrders() {
+            try {
+                const response = await fetch(`${ORDER_ITEMS_API_URL}?action=getKitchenOrders`);
+                const result = await response.json();
+                if (result.success) {
+                    const newOrders = result.data;
+                    const orderIds = [...new Set(newOrders.map(item => item['Id Order']))];
+                    const tablePromises = orderIds.map(orderId => fetchOrderTableData(orderId));
+                    const tableNumbers = await Promise.all(tablePromises);
+                    const orderTableMap = {};
+                    orderIds.forEach((orderId, index) => { orderTableMap[orderId] = tableNumbers[index]; });
+                    newOrders.forEach(item => { item.TableNumber = orderTableMap[item['Id Order']]; });
+                    
+                    const oldOrdersMap = {};
+                    orders.forEach(item => {
+                        if (!oldOrdersMap[item['Id Order']]) oldOrdersMap[item['Id Order']] = [];
+                        oldOrdersMap[item['Id Order']].push(item);
+                    });
+                    
+                    orders = newOrders;
+                    
+                    await checkAndAutoPrintNewOrder(orders, oldOrdersMap);
+                    
+                    renderOrders();
+                }
+            } catch (error) { console.error('Error loading kitchen orders:', error); }
+        }
+        
+        async function manualPrintOrder(orderId) {
+            const orderItems = orders.filter(item => item['Id Order'] === orderId);
+            if (orderItems.length === 0) {
+                alert('Order not found');
+                return;
+            }
+            const tableNumber = orderItems[0].TableNumber || 'Unknown';
+            const createdAt = orderItems[0]['Created At'];
+            const hasPending = orderItems.some(item => item.Status === 'Pending');
+            const statusLabel = hasPending ? "PENDING ORDER" : "MANUAL REPRINT";
+            
+            const success = await printKitchenOrder(orderId, orderItems, tableNumber, createdAt, statusLabel);
+            if (success) {
+                alert(`Order ${orderId} sent to printer!`);
+            } else {
+                alert(`Print failed. Please check printer connection in Settings.`);
+            }
+        }
+
+async function printCategoryOrder(orderId, category) {
+    const orderItems = orders.filter(item => item['Id Order'] === orderId);
+    if (orderItems.length === 0) {
+        alert('Order not found');
+        return;
+    }
+    
+    // Filter items by category
+    const filteredItems = orderItems.filter(item => {
+        const itemCategory = menuCategories[item['Id Menu']] || 'Food';
+        return category === 'FOOD' ? itemCategory !== 'Beverage' : itemCategory === 'Beverage';
+    });
+    
+    if (filteredItems.length === 0) {
+        alert(`No ${category.toLowerCase()} items in this order`);
+        return;
+    }
+    
+    const tableNumber = orderItems[0].TableNumber || 'Unknown';
+    const createdAt = orderItems[0]['Created At'];
+    const hasPending = filteredItems.some(item => item.Status === 'Pending');
+    const statusLabel = hasPending ? "PENDING ORDER" : "MANUAL REPRINT";
+    const now = new Date();
+    const formattedDate = now.toLocaleDateString();
+    const formattedTime = now.toLocaleTimeString();
+    
+    // Helper function to print a single ticket for specific category
+    async function printSingleTicket(printFor, categoryName, items) {
+        if (items.length === 0) return true;
+        
+        let printContent = "";
+        
+        // Header
+        printContent += "================================\n";
+        printContent += `        ${printFor.toUpperCase()}\n`;
+        printContent += "================================\n";
+        printContent += `Printed : ${formattedDate} ${formattedTime}\n`;
+        printContent += "================================\n";
+        printContent += `ORDER # : ${orderId}\n`;
+        printContent += `TABLE : ${tableNumber || 'Unknown'}\n`;
+        printContent += `ORDER TIME : ${formatTime(createdAt)}\n`;
+        printContent += "--------------------------------\n";
+        printContent += `${categoryName.toUpperCase()} ITEMS :\n`;
+        
+        // Items
+        items.forEach(item => {
+            const itemName = getMenuName(item['Id Menu']);
+            const quantity = item.Quantity || 1;
+            
+            printContent += `${quantity} x ${itemName.padEnd(printerConfig.menuPadding)} ${printerConfig.checkboxStyle}\n`;
+            
+            if (item['Id Variant'] && item['Id Variant'] !== '') {
+                const variantName = variantData[item['Id Variant']] || item['Id Variant'];
+                printContent += `  Variant : ${variantName}\n`;
+            }
+            
+            if (item['Id Add On'] && item['Id Add On'] !== '') {
+                const addOnIds = item['Id Add On'].split(',');
+                const addOnNames = addOnIds.map(id => addOnData[id] || id).filter(name => name);
+                if (addOnNames.length > 0) {
+                    printContent += `  Add On : ${addOnNames.join(', ')}\n`;
+                }
+            }
+            
+            if (item.Notes && item.Notes.trim() !== '') {
+                printContent += `  Notes : ${item.Notes}\n`;
+            }
+            
+            if ((item['Id Variant'] && item['Id Variant'] !== '') || (item['Id Add On'] && item['Id Add On'] !== '') || (item.Notes && item.Notes.trim() !== '')) {
+                printContent += `\n`;
+            }
+        });
+        
+        // Footer
+        printContent += "--------------------------------\n";
+        printContent += `STATUS: ${statusLabel}\n`;
+        printContent += `PRINTED: ${printFor.toUpperCase()}\n`;
+        printContent += "================================\n";
+        
+        printContent = addPrinterCommands(printContent);
+        
+        if (navigator.bluetooth) {
+            return await printViaBluetooth(printContent);
+        } else {
+            printToFallback(printContent);
+            return true;
+        }
+    }
+    
+    let allSuccess = true;
+    
+    if (category === 'FOOD') {
+        // Print KITCHEN STATION and WAITER FOOD for FOOD category
+        const success1 = await printSingleTicket('KITCHEN STATION', 'FOOD', filteredItems);
+        if (!success1) allSuccess = false;
+        
+        const success2 = await printSingleTicket('WAITER FOOD', 'FOOD', filteredItems);
+        if (!success2) allSuccess = false;
+        
+        if (allSuccess) {
+            alert(`Food items for order ${orderId} sent to printer!`);
+        } else {
+            alert(`Print failed for food items. Please check printer connection.`);
+        }
+    } else if (category === 'BEVERAGE') {
+        // Print BEVERAGE STATION and WAITER BEVERAGE for BEVERAGE category
+        const success1 = await printSingleTicket('BEVERAGE STATION', 'BEVERAGE', filteredItems);
+        if (!success1) allSuccess = false;
+        
+        const success2 = await printSingleTicket('WAITER BEVERAGE', 'BEVERAGE', filteredItems);
+        if (!success2) allSuccess = false;
+        
+        if (allSuccess) {
+            alert(`Beverage items for order ${orderId} sent to printer!`);
+        } else {
+            alert(`Print failed for beverage items. Please check printer connection.`);
+        }
+    }
+    
+    return allSuccess;
+}
+
+        function renderOrders() {
+    const kitchenDisplay = document.getElementById('kitchenDisplay');
+    const ordersMap = {};
+    orders.forEach(item => { if (!ordersMap[item['Id Order']]) ordersMap[item['Id Order']] = []; ordersMap[item['Id Order']].push(item); });
+    
     let filteredOrders = Object.keys(ordersMap).filter(orderId => {
         if (currentFilter === 'all') return true;
-        
         const orderItems = ordersMap[orderId];
-        if (currentFilter === 'pending') {
-            return orderItems.some(item => item.Status === 'Pending');
-        } else if (currentFilter === 'preparing') {
-            return orderItems.some(item => item.Status === 'Preparing');
-        }
+        if (currentFilter === 'pending') return orderItems.some(item => item.Status === 'Pending');
+        if (currentFilter === 'preparing') return orderItems.some(item => item.Status === 'Preparing');
         return false;
     });
     
-    // Then apply search filter if there's a search query
     if (searchQuery) {
         filteredOrders = filteredOrders.filter(orderId => {
             const orderItems = ordersMap[orderId];
             const orderIdStr = orderId.toLowerCase();
             const tableNumber = (orderItems[0].TableNumber || 'unknown').toString().toLowerCase();
             const menuItems = orderItems.map(item => getMenuName(item['Id Menu']).toLowerCase());
-            
-            return orderIdStr.includes(searchQuery) ||
-                   tableNumber.includes(searchQuery) ||
-                   menuItems.some(item => item.includes(searchQuery));
+            return orderIdStr.includes(searchQuery) || tableNumber.includes(searchQuery) || menuItems.some(item => item.includes(searchQuery));
         });
     }
     
-    // Replace the current empty state check in renderOrders() with this:
-if (filteredOrders.length === 0) {
-    kitchenDisplay.innerHTML = `
-        <div class="empty-state">
-            <div class="empty-icon">
-                <i class="fas fa-${searchQuery ? 'search' : 'check-circle'}"></i>
-            </div>
-            <div class="empty-text">
-                ${searchQuery ? 
-                    `No orders found for "${searchQuery}"` : 
-                    currentFilter === 'all' ? 
-                        'No orders in the kitchen at the moment' : 
-                        `No ${currentFilter} orders`}
-            </div>
-        </div>
-    `;
-    return;
-}
+    if (filteredOrders.length === 0) {
+        kitchenDisplay.innerHTML = `<div class="empty-state"><div class="empty-icon"><i class="fas fa-${searchQuery ? 'search' : 'check-circle'}"></i></div><div class="empty-text">${searchQuery ? `No orders found for "${searchQuery}"` : currentFilter === 'all' ? 'No orders in the kitchen' : `No ${currentFilter} orders`}</div></div>`;
+        return;
+    }
     
-    kitchenDisplay.innerHTML = filteredOrders.map(orderId => {
+    // Build HTML for each order card with categories grouped inside
+    let html = '';
+    
+    for (const orderId of filteredOrders) {
         const orderItems = ordersMap[orderId];
         const hasPending = orderItems.some(item => item.Status === 'Pending');
-        const isAllReady = orderItems.every(item => item.Status === 'Ready' || item.Status === 'Served');
+        const tableNumber = orderItems[0].TableNumber || 'Unknown';
+        const createdAt = orderItems[0]['Created At'];
         
-        return `
-            <div class="order-card">
-                ${hasPending ? '<div class="urgent-badge">NEW</div>' : ''}
-                
-                <div class="order-header">
-                    <div>
-                        <div class="order-id">Order ${orderId}</div>
-                        <div class="order-time">${formatTime(orderItems[0]['Created At'])}</div>
+        // Group items by category
+        const foodItems = [];
+        const beverageItems = [];
+        
+        for (const item of orderItems) {
+            const category = menuCategories[item['Id Menu']] || 'Food';
+            if (category === 'Beverage') {
+                beverageItems.push(item);
+            } else {
+                foodItems.push(item);
+            }
+        }
+        
+        // Build order card with category sections
+        html += `<div class="order-card">${hasPending ? '<div class="urgent-badge">NEW</div>' : ''}
+                    <div class="order-header">
+                        <div>
+                            <div class="order-id">Order ${orderId}</div>
+                            <div class="order-time">${formatTime(createdAt)}</div>
+                        </div>
+                        <div class="order-actions">
+                            <button class="manual-print-btn" onclick="manualPrintOrder('${orderId}')"><i class="fas fa-print"></i> Print Order</button>
+                            <div class="order-table">${tableNumber}</div>
+                        </div>
                     </div>
-                    <div class="order-table">${orderItems[0].TableNumber || 'Unknown'}</div>
-                </div>
-                
-                <div class="order-items">
-                    ${orderItems.map(item => {
-                        const isUrgent = item.Status === 'pending' && new Date(item['Created At']) < new Date(Date.now() - 10*60000);
-                        
-                        return `
-                            <div class="order-item" id="item-${item['Id Item']}">
-                                <div class="item-info">
-                                    <div class="item-name">${getMenuName(item['Id Menu'])} × ${item.Quantity}</div>
-                                    ${item.Notes ? `<div class="item-notes">${item.Notes}</div>` : ''}
-                                    ${item.Status === 'Preparing' ? `<div class="timer" id="timer-${item['Id Item']}">${formatTimer(elapsedTimes[item['Id Item']] || 0)}</div>` : ''}
-                                </div>
-                                <div class="item-actions">
-                                    <select class="status-select ${item.Status.toLowerCase()}" 
-                                            onchange="updateOrderItemStatus('${item['Id Item']}', this.value)"
-                                            data-current-status="${item.Status}">
-                                        <option value="Pending" ${item.Status === 'Pending' ? 'selected' : ''}>PENDING</option>
-                                        <option value="Preparing" ${item.Status === 'Preparing' ? 'selected' : ''}>PREPARING</option>
-                                        <option value="Ready" ${item.Status === 'Ready' ? 'selected' : ''}>READY</option>
-                                        <option value="Served" ${item.Status === 'Served' ? 'selected' : ''}>SERVED</option>
-                                        <option value="Cancelled" ${item.Status === 'Cancelled' ? 'selected' : ''}>CANCELLED</option>
-                                    </select>
-                                </div>
-                            </div>
-                        `;
-                    }).join('')}
-                </div>
-                
-                <div class="order-footer">
-    <div class="order-status-control">
-        <div class="prep-time">
-            Est. Prep: ${calculateTotalPrepTime(orderItems)} min
-        </div>
-        <div style="margin-left: auto;">
-           <select class="order-status-dropdown ${getDominantStatus(orderItems) === 'CHANGE STATUS' ? 'change-status' : getDominantStatus(orderItems).toLowerCase()}" 
-        onchange="updateAllOrderStatus('${orderId}', this.value)"
-        data-current-status="${getDominantStatus(orderItems)}">
-    <option value="" ${getDominantStatus(orderItems) === 'CHANGE STATUS' ? 'selected' : ''} disabled>CHANGE STATUS</option>
-    <option value="Pending" ${getDominantStatus(orderItems) === 'Pending' ? 'selected' : ''}>PENDING</option>
-    <option value="Preparing" ${getDominantStatus(orderItems) === 'Preparing' ? 'selected' : ''}>PREPARING</option>
-    <option value="Ready" ${getDominantStatus(orderItems) === 'Ready' ? 'selected' : ''}>READY</option>
-    <option value="Served" ${getDominantStatus(orderItems) === 'Served' ? 'selected' : ''}>SERVED</option>
-    <option value="Cancelled" ${getDominantStatus(orderItems) === 'Cancelled' ? 'selected' : ''}>CANCELLED</option>
-</select>
-        </div>
-    </div>
-</div>
-            </div>
-        `;
-    }).join('');
-    
-    // Restart timers for items in 'Preparing' status
-    setTimeout(() => {
-        orders.forEach(item => {
-            if (item.Status === 'Preparing') {
-                startTimer(item['Id Item']);
-            }
-        });
-    }, 100);
-}
-
-        function formatTime(dateString) {
-            const date = new Date(dateString);
-            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        }
-
-        function calculateTotalPrepTime(orderItems) {
-            return orderItems.reduce((total, item) => {
-                return total + (parseInt(item['Preparation Time']) || 15);
-            }, 0);
-        }
-
-       
-        // Update the startTimer function
-function startTimer(itemId) {
-    // If timer already exists, clear it
-    if (timers[itemId]) {
-        clearInterval(timers[itemId]);
-    }
-    
-    // Create or get timer display
-    const itemElement = document.getElementById(`item-${itemId}`);
-    if (!itemElement) return;
-    
-    let timerDisplay = document.getElementById(`timer-${itemId}`);
-    if (!timerDisplay) {
-        timerDisplay = document.createElement('div');
-        timerDisplay.className = 'timer';
-        timerDisplay.id = `timer-${itemId}`;
-        const infoDiv = itemElement.querySelector('.item-info');
-        if (infoDiv) {
-            infoDiv.appendChild(timerDisplay);
-        }
-    }
-    
-    // Start from saved elapsed time or 0
-    let seconds = elapsedTimes[itemId] || 0;
-    timerDisplay.textContent = formatTimer(seconds);
-    
-    // Store start time
-    startTimes[itemId] = Date.now() - (seconds * 1000);
-    
-    // Start timer
-    timers[itemId] = setInterval(() => {
-        seconds = Math.floor((Date.now() - startTimes[itemId]) / 1000);
-        elapsedTimes[itemId] = seconds;
-        timerDisplay.textContent = formatTimer(seconds);
-    }, 1000);
-}
-
-// Add this helper function
-function formatTimer(seconds) {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-}
-
-        function filterOrders(filter) {
-            currentFilter = filter;
-            
-            // Update active button
-            document.querySelectorAll('.filter-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            event.target.classList.add('active');
-            
-            renderOrders();
-        }
-
-        function logout() {
-            localStorage.clear();
-            window.location.href = 'login.html';
-        }
-
-async function loadMenuData() {
-    try {
-        const response = await fetch(`${MENU_API_URL}?action=getAllMenu`);
-        const result = await response.json();
+                    <div class="order-items">`;
         
-        if (result.success) {
-            // Create a mapping of menu ID to menu name
-            result.data.forEach(menu => {
-                menuData[menu['Id Menu']] = menu['Name'];
-            });
-        }
-    } catch (error) {
-        console.error('Error loading menu data:', error);
-    }
-}
-
-function getMenuName(menuId) {
-    // Return the menu name if found, otherwise return the menu ID
-    return menuData[menuId] || menuId;
-}
-
-async function updateOrderItemStatus(itemId, newStatus) {
-    if (!confirm(`Change status to "${newStatus}"?`)) return;
+        // FOOD Section
+if (foodItems.length > 0) {
+    html += `<div class="category-group" style="margin-bottom: 20px;">
+                <div class="category-title" style="background: linear-gradient(135deg, #ff8c00, #ff5e00); color: white; padding: 8px 12px; border-radius: 8px; margin-bottom: 10px; font-size: 14px; font-weight: bold; display: flex; justify-content: space-between; align-items: center;">
+                    <span><i class="fas fa-utensils"></i> FOOD</span>
+                    <button class="print-category-btn" onclick="event.stopPropagation(); printCategoryOrder('${orderId}', 'FOOD')" style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 4px 10px; border-radius: 15px; cursor: pointer; font-size: 11px; font-weight: 500;">
+                        <i class="fas fa-print"></i> Print FOOD
+                    </button>
+                </div>`;
     
-    try {
-        // Encode parameters for URL
-        const encodedStatus = encodeURIComponent(newStatus);
-        const encodedStaffId = encodeURIComponent(currentStaff.id);
-        
-        // Use GET request instead of POST
-        const url = `${ORDER_ITEMS_API_URL}?action=updateOrderItem&id=${itemId}&status=${encodedStatus}&preparedBy=${encodedStaffId}`;
-        const response = await fetch(url);
-        const result = await response.json();
-        
-        if (result.success) {
-            // Handle timer logic based on status
-            if (newStatus === 'Preparing') {
-                // Reset timer when starting preparation
-                elapsedTimes[itemId] = 0;
-                startTimes[itemId] = Date.now();
-                startTimer(itemId);
-            } else if (newStatus === 'Ready' || newStatus === 'Served' || newStatus === 'Cancelled' || newStatus === 'Pending') {
-    // Stop timer if item is no longer in preparation
-    if (timers[itemId]) {
-        clearInterval(timers[itemId]);
-        delete timers[itemId];
-        delete elapsedTimes[itemId];
-        delete startTimes[itemId];
-    }
-}
-            
-            // Update the local orders array instead of reloading from server
-            const itemIndex = orders.findIndex(item => item['Id Item'] === itemId);
-            if (itemIndex !== -1) {
-                orders[itemIndex].Status = newStatus;
-            }
-            
-            alert(`Status updated to ${newStatus}`);
-            renderOrders(); // Re-render with updated status
-        } else {
-            alert(result.message || 'Error updating status');
-        }
-    } catch (error) {
-        console.error('Error updating status:', error);
-        alert('Error updating status');
-    }
-}
-
-async function fetchOrderTableData(orderId) {
-    try {
-        const response = await fetch(`${ORDER_API_URL}?action=getOrderById&id=${orderId}`);
-        const result = await response.json();
-        
-        if (result.success) {
-            return result.data['Id Table'] || 'Unknown';
-        }
-        return 'Unknown';
-    } catch (error) {
-        console.error('Error fetching order table data:', error);
-        return 'Unknown';
-    }
-}
-
-function getDominantStatus(orderItems) {
-    // Check if all items have the same status
-    const firstStatus = orderItems[0].Status;
-    const allSameStatus = orderItems.every(item => item.Status === firstStatus);
-    
-    // If all items have the same status, return that status (in title case)
-    // Otherwise return "CHANGE STATUS"
-    return allSameStatus ? firstStatus : "CHANGE STATUS";
-}
-
-async function updateAllOrderStatus(orderId, newStatus) {
- // Don't proceed if "CHANGE STATUS" is selected (empty value)
-    if (!newStatus) {
-        return;
-    }
-
-    if (!confirm(`Update ALL items in Order ${orderId} to "${newStatus}"?`)) {
-        // Reset dropdown to current dominant status
-        const orderItems = orders.filter(item => item['Id Order'] === orderId);
-        const dropdown = document.querySelector(`[onchange*="${orderId}"]`);
-        if (dropdown) {
-            dropdown.value = getDominantStatus(orderItems);
-        }
-        return;
-    }
-    
-    try {
-        // Get all items for this order
-        const orderItems = orders.filter(item => item['Id Order'] === orderId);
-        
-        // Update each item individually
-        const updatePromises = orderItems.map(item => {
-            const itemId = item['Id Item'];
-            
-            // Handle timer logic
-            if (newStatus === 'Preparing') { // Changed from 'PREPARING'
-                elapsedTimes[itemId] = 0;
-                startTimes[itemId] = Date.now();
-                startTimer(itemId);
-            } else if (['Ready', 'Served', 'Cancelled', 'Pending'].includes(newStatus)) { // Changed from uppercase
-                if (timers[itemId]) {
-                    clearInterval(timers[itemId]);
-                    delete timers[itemId];
-                    delete elapsedTimes[itemId];
-                    delete startTimes[itemId];
+    foodItems.forEach(item => {
+                let variantText = '';
+                if (item['Id Variant'] && item['Id Variant'] !== '') {
+                    variantText = variantData[item['Id Variant']] || item['Id Variant'];
                 }
-            }
+                
+                let addOnText = '';
+                if (item['Id Add On'] && item['Id Add On'] !== '') {
+                    const addOnIds = item['Id Add On'].split(',');
+                    const addOnNames = addOnIds.map(id => addOnData[id] || id).filter(name => name);
+                    if (addOnNames.length > 0) {
+                        addOnText = addOnNames.join(', ');
+                    }
+                }
+                
+                const customNotes = item.Notes || '';
+                
+                let notesHtml = '';
+                if (variantText) {
+                    notesHtml += `<div class="item-notes" style="color: #666; font-size: 0.85rem;">• Variant: ${variantText}</div>`;
+                }
+                if (addOnText) {
+                    notesHtml += `<div class="item-notes" style="color: #764ba2; font-size: 0.85rem;">• Add On: ${addOnText}</div>`;
+                }
+                if (customNotes && customNotes.trim() !== '') {
+                    notesHtml += `<div class="item-notes" style="color: #666; font-style: italic; font-size: 0.85rem;">• Notes: ${customNotes}</div>`;
+                }
+                
+                html += `<div class="order-item" id="item-${item['Id Item']}">
+                            <div class="item-info">
+                                <div class="item-name">${getMenuName(item['Id Menu'])} × ${item.Quantity}</div>
+                                ${notesHtml}
+                                ${item.Status === 'Preparing' ? `<div class="timer" id="timer-${item['Id Item']}">${formatTimer(elapsedTimes[item['Id Item']] || 0)}</div>` : ''}
+                            </div>
+                            <div class="item-actions">
+                                <select class="status-select ${item.Status.toLowerCase()}" onchange="updateOrderItemStatus('${item['Id Item']}', this.value)">
+                                    <option value="Pending" ${item.Status === 'Pending' ? 'selected' : ''}>PENDING</option>
+                                    <option value="Preparing" ${item.Status === 'Preparing' ? 'selected' : ''}>PREPARING</option>
+                                    <option value="Ready" ${item.Status === 'Ready' ? 'selected' : ''}>READY</option>
+                                    <option value="Served" ${item.Status === 'Served' ? 'selected' : ''}>SERVED</option>
+                                    <option value="Cancelled" ${item.Status === 'Cancelled' ? 'selected' : ''}>CANCELLED</option>
+                                </select>
+                            </div>
+                        </div>`;
+            });
             
-            // Update via API - newStatus is already in title case
-            const encodedStatus = encodeURIComponent(newStatus);
-            const encodedStaffId = encodeURIComponent(currentStaff.id);
-            return fetch(`${ORDER_ITEMS_API_URL}?action=updateOrderItem&id=${itemId}&status=${encodedStatus}&preparedBy=${encodedStaffId}`);
-        });
-        
-        // Wait for all updates to complete
-        await Promise.all(updatePromises);
-        
-        // Update local orders array
-        orders.forEach(item => {
-            if (item['Id Order'] === orderId) {
-                item.Status = newStatus;
-            }
-        });
-        
-        alert(`All items in Order ${orderId} updated to ${newStatus}`);
-        
-        // Update the dropdown's data-current-status attribute
-        const dropdown = document.querySelector(`[onchange*="${orderId}"]`);
-        if (dropdown) {
-            dropdown.setAttribute('data-current-status', newStatus);
+            html += `</div>`;
         }
         
-        renderOrders(); // Re-render to reflect changes
+        // BEVERAGE Section
+if (beverageItems.length > 0) {
+    html += `<div class="category-group" style="margin-bottom: 10px;">
+                <div class="category-title" style="background: linear-gradient(135deg, #00b4db, #0083b0); color: white; padding: 8px 12px; border-radius: 8px; margin-bottom: 10px; font-size: 14px; font-weight: bold; display: flex; justify-content: space-between; align-items: center;">
+                    <span><i class="fas fa-coffee"></i> BEVERAGE</span>
+                    <button class="print-category-btn" onclick="event.stopPropagation(); printCategoryOrder('${orderId}', 'BEVERAGE')" style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 4px 10px; border-radius: 15px; cursor: pointer; font-size: 11px; font-weight: 500;">
+                        <i class="fas fa-print"></i> Print BEVERAGE
+                    </button>
+                </div>`;
+    
+    beverageItems.forEach(item => {
+                let variantText = '';
+                if (item['Id Variant'] && item['Id Variant'] !== '') {
+                    variantText = variantData[item['Id Variant']] || item['Id Variant'];
+                }
+                
+                let addOnText = '';
+                if (item['Id Add On'] && item['Id Add On'] !== '') {
+                    const addOnIds = item['Id Add On'].split(',');
+                    const addOnNames = addOnIds.map(id => addOnData[id] || id).filter(name => name);
+                    if (addOnNames.length > 0) {
+                        addOnText = addOnNames.join(', ');
+                    }
+                }
+                
+                const customNotes = item.Notes || '';
+                
+                let notesHtml = '';
+                if (variantText) {
+                    notesHtml += `<div class="item-notes" style="color: #666; font-size: 0.85rem;">• Variant: ${variantText}</div>`;
+                }
+                if (addOnText) {
+                    notesHtml += `<div class="item-notes" style="color: #764ba2; font-size: 0.85rem;">• Add On: ${addOnText}</div>`;
+                }
+                if (customNotes && customNotes.trim() !== '') {
+                    notesHtml += `<div class="item-notes" style="color: #666; font-style: italic; font-size: 0.85rem;">• Notes: ${customNotes}</div>`;
+                }
+                
+                html += `<div class="order-item" id="item-${item['Id Item']}">
+                            <div class="item-info">
+                                <div class="item-name">${getMenuName(item['Id Menu'])} × ${item.Quantity}</div>
+                                ${notesHtml}
+                                ${item.Status === 'Preparing' ? `<div class="timer" id="timer-${item['Id Item']}">${formatTimer(elapsedTimes[item['Id Item']] || 0)}</div>` : ''}
+                            </div>
+                            <div class="item-actions">
+                                <select class="status-select ${item.Status.toLowerCase()}" onchange="updateOrderItemStatus('${item['Id Item']}', this.value)">
+                                    <option value="Pending" ${item.Status === 'Pending' ? 'selected' : ''}>PENDING</option>
+                                    <option value="Preparing" ${item.Status === 'Preparing' ? 'selected' : ''}>PREPARING</option>
+                                    <option value="Ready" ${item.Status === 'Ready' ? 'selected' : ''}>READY</option>
+                                    <option value="Served" ${item.Status === 'Served' ? 'selected' : ''}>SERVED</option>
+                                    <option value="Cancelled" ${item.Status === 'Cancelled' ? 'selected' : ''}>CANCELLED</option>
+                                </select>
+                            </div>
+                        </div>`;
+            });
+            
+            html += `</div>`;
+        }
         
-    } catch (error) {
-        console.error('Error updating all order statuses:', error);
-        alert('Error updating statuses');
+        html += `</div>
+                    <div class="order-footer">
+                        <div class="order-status-control">
+                            <div class="prep-time">Est. Prep: ${calculateTotalPrepTime(orderItems)} min</div>
+                            <select class="order-status-dropdown" onchange="updateAllOrderStatus('${orderId}', this.value)">
+                                <option value="" disabled>CHANGE STATUS</option>
+                                <option value="Pending">PENDING</option>
+                                <option value="Preparing">PREPARING</option>
+                                <option value="Ready">READY</option>
+                                <option value="Served">SERVED</option>
+                                <option value="Cancelled">CANCELLED</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>`;
+    }
+    
+    kitchenDisplay.innerHTML = html;
+    
+    setTimeout(() => { orders.forEach(item => { if (item.Status === 'Preparing') startTimer(item['Id Item']); }); }, 100);
+}
+
+        function startTimer(itemId) { if (timers[itemId]) clearInterval(timers[itemId]); let seconds = elapsedTimes[itemId] || 0; const timerDisplay = document.getElementById(`timer-${itemId}`); if (!timerDisplay) return; startTimes[itemId] = Date.now() - (seconds * 1000); timers[itemId] = setInterval(() => { seconds = Math.floor((Date.now() - startTimes[itemId]) / 1000); elapsedTimes[itemId] = seconds; if(document.getElementById(`timer-${itemId}`)) document.getElementById(`timer-${itemId}`).textContent = formatTimer(seconds); }, 1000); }
+        function formatTimer(seconds) { const mins = Math.floor(seconds / 60), secs = seconds % 60; return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`; }
+        function formatTime(dateString) { return new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
+        function calculateTotalPrepTime(orderItems) { return orderItems.reduce((total, item) => total + (parseInt(item['Preparation Time']) || 15), 0); }
+        function filterOrders(filter) { currentFilter = filter; document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active')); event.target.classList.add('active'); renderOrders(); }
+        function logout() { localStorage.clear(); window.location.href = 'login.html'; }
+        
+async function loadMenuData() { 
+    try { 
+        const response = await fetch(`${MENU_API_URL}?action=getAllMenu`); 
+        const result = await response.json(); 
+        if(result.success) {
+            result.data.forEach(menu => { 
+                menuData[menu['Id Menu']] = menu['Name'];
+                menuCategories[menu['Id Menu']] = menu['Category']; // Add this line
+            }); 
+        }
+    } catch(e) { 
+        console.error(e); 
+    } 
+}
+
+async function loadVariantData() {
+    try {
+        const response = await fetch(`${VARIANT_API_URL}?action=getAllVariants`);
+        const result = await response.json();
+        if (result.success) {
+            result.data.forEach(variant => {
+                variantData[variant['Id Variant']] = variant.Name;
+            });
+        }
+    } catch(e) {
+        console.error('Error loading variant data:', e);
     }
 }
 
-function handleSearch(event) {
-    searchQuery = event.target.value.toLowerCase().trim();
-    const clearBtn = document.getElementById('clearSearch');
-    
-    // Show/hide clear button
-    if (searchQuery) {
-        clearBtn.style.display = 'block';
-    } else {
-        clearBtn.style.display = 'none';
+async function loadAddOnData() {
+    try {
+        const response = await fetch(`${ADDON_API_URL}?action=getAllAddOns`);
+        const result = await response.json();
+        if (result.success) {
+            result.data.forEach(addon => {
+                addOnData[addon['Id Add On']] = addon.Name;
+            });
+        }
+    } catch(e) {
+        console.error('Error loading add-on data:', e);
     }
-    
-    // Perform search - call renderOrders() instead
-    renderOrders();  // Changed from filterBySearch()
 }
 
-function clearSearch() {
-    document.getElementById('globalSearch').value = '';
-    searchQuery = '';
-    document.getElementById('clearSearch').style.display = 'none';
-    renderOrders();  // Changed from filterBySearch()
+// Add this function after loadAddOnData() or near other helper functions
+async function getMenuCategory(menuId) {
+    try {
+        const response = await fetch(`${MENU_API_URL}?action=getMenuById&id=${menuId}`);
+        const result = await response.json();
+        if (result.success && result.data) {
+            return result.data['Category'] || 'Food';
+        }
+    } catch(e) {
+        console.error('Error getting menu category:', e);
+    }
+    return 'Food'; // Default to Food if error
 }
 
+        function getMenuName(menuId) { return menuData[menuId] || menuId; }
+        async function updateOrderItemStatus(itemId, newStatus) { if (!confirm(`Change status to "${newStatus}"?`)) return; try { const url = `${ORDER_ITEMS_API_URL}?action=updateOrderItem&id=${itemId}&status=${encodeURIComponent(newStatus)}&preparedBy=${encodeURIComponent(currentStaff.id)}`; const response = await fetch(url); const result = await response.json(); if (result.success) { if (newStatus === 'Preparing') { elapsedTimes[itemId] = 0; startTimer(itemId); } else if (timers[itemId]) { clearInterval(timers[itemId]); delete timers[itemId]; delete elapsedTimes[itemId]; } const itemIndex = orders.findIndex(item => item['Id Item'] === itemId); if (itemIndex !== -1) orders[itemIndex].Status = newStatus; renderOrders(); } else alert(result.message || 'Error'); } catch(e) { console.error(e); alert('Error'); } }
+        async function fetchOrderTableData(orderId) { try { const response = await fetch(`${ORDER_API_URL}?action=getOrderById&id=${orderId}`); const result = await response.json(); return result.success ? result.data['Id Table'] || 'Unknown' : 'Unknown'; } catch(e) { return 'Unknown'; } }
+        async function updateAllOrderStatus(orderId, newStatus) { if (!newStatus) return; if (!confirm(`Update ALL items in Order ${orderId} to "${newStatus}"?`)) return; try { const orderItems = orders.filter(item => item['Id Order'] === orderId); await Promise.all(orderItems.map(item => fetch(`${ORDER_ITEMS_API_URL}?action=updateOrderItem&id=${item['Id Item']}&status=${encodeURIComponent(newStatus)}&preparedBy=${encodeURIComponent(currentStaff.id)}`))); orders.forEach(item => { if (item['Id Order'] === orderId) item.Status = newStatus; }); renderOrders(); } catch(e) { console.error(e); alert('Error'); } }
+        function handleSearch(event) { searchQuery = event.target.value.toLowerCase().trim(); document.getElementById('clearSearch').style.display = searchQuery ? 'block' : 'none'; renderOrders(); }
+        function clearSearch() { document.getElementById('globalSearch').value = ''; searchQuery = ''; document.getElementById('clearSearch').style.display = 'none'; renderOrders(); }
+        async function testPrint() { 
+            await printKitchenOrder('TEST-001', [{ 'Id Menu': '1', Quantity: 1, Notes: 'Test print' }], 'TEST', new Date().toISOString(), "TEST PRINT");
+        }
     </script>
 </body>
 </html>
