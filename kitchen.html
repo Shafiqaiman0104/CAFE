@@ -925,14 +925,19 @@ async function printKitchenOrder(orderId, orderItems, tableNumber, orderTime, st
                 }
             }
             
-            if (item.Notes && item.Notes.trim() !== '') {
-                printContent += `  Notes : ${item.Notes}\n`;
-            }
+            const notes = item.Notes ? String(item.Notes) : '';
+if (notes && notes.trim() !== '') {
+    printContent += `  Notes : ${notes}\n`;
+}
             
-            if ((item['Id Variant'] && item['Id Variant'] !== '') || (item['Id Add On'] && item['Id Add On'] !== '') || (item.Notes && item.Notes.trim() !== '')) {
-                printContent += `\n`;
-            }
-        });
+            const hasVariant = item['Id Variant'] && item['Id Variant'] !== '';
+const hasAddOn = item['Id Add On'] && item['Id Add On'] !== '';
+const hasNotes = notes && notes.trim() !== '';
+if (hasVariant || hasAddOn || hasNotes) {
+    printContent += `\n`;
+}
+
+ });
         
         // Footer
         printContent += "--------------------------------\n";
@@ -1187,13 +1192,17 @@ async function printCategoryOrder(orderId, category) {
                 }
             }
             
-            if (item.Notes && item.Notes.trim() !== '') {
-                printContent += `  Notes : ${item.Notes}\n`;
-            }
+            const notes = item.Notes ? String(item.Notes) : '';
+if (notes && notes.trim() !== '') {
+    printContent += `  Notes : ${notes}\n`;
+}
             
-            if ((item['Id Variant'] && item['Id Variant'] !== '') || (item['Id Add On'] && item['Id Add On'] !== '') || (item.Notes && item.Notes.trim() !== '')) {
-                printContent += `\n`;
-            }
+            const hasVariant = item['Id Variant'] && item['Id Variant'] !== '';
+const hasAddOn = item['Id Add On'] && item['Id Add On'] !== '';
+const hasNotes = notes && notes.trim() !== '';
+if (hasVariant || hasAddOn || hasNotes) {
+    printContent += `\n`;
+}
         });
         
         // Footer
@@ -1334,7 +1343,7 @@ if (foodItems.length > 0) {
                     }
                 }
                 
-                const customNotes = item.Notes || '';
+                const customNotes = item.Notes ? String(item.Notes) : '';
                 
                 let notesHtml = '';
                 if (variantText) {
@@ -1357,7 +1366,6 @@ if (foodItems.length > 0) {
                                 <select class="status-select ${item.Status.toLowerCase()}" onchange="updateOrderItemStatus('${item['Id Item']}', this.value)">
                                     <option value="Pending" ${item.Status === 'Pending' ? 'selected' : ''}>PENDING</option>
                                     <option value="Preparing" ${item.Status === 'Preparing' ? 'selected' : ''}>PREPARING</option>
-                                    <option value="Ready" ${item.Status === 'Ready' ? 'selected' : ''}>READY</option>
                                     <option value="Served" ${item.Status === 'Served' ? 'selected' : ''}>SERVED</option>
                                     <option value="Cancelled" ${item.Status === 'Cancelled' ? 'selected' : ''}>CANCELLED</option>
                                 </select>
@@ -1393,7 +1401,7 @@ if (beverageItems.length > 0) {
                     }
                 }
                 
-                const customNotes = item.Notes || '';
+                const customNotes = item.Notes ? String(item.Notes) : '';
                 
                 let notesHtml = '';
                 if (variantText) {
@@ -1416,7 +1424,6 @@ if (beverageItems.length > 0) {
                                 <select class="status-select ${item.Status.toLowerCase()}" onchange="updateOrderItemStatus('${item['Id Item']}', this.value)">
                                     <option value="Pending" ${item.Status === 'Pending' ? 'selected' : ''}>PENDING</option>
                                     <option value="Preparing" ${item.Status === 'Preparing' ? 'selected' : ''}>PREPARING</option>
-                                    <option value="Ready" ${item.Status === 'Ready' ? 'selected' : ''}>READY</option>
                                     <option value="Served" ${item.Status === 'Served' ? 'selected' : ''}>SERVED</option>
                                     <option value="Cancelled" ${item.Status === 'Cancelled' ? 'selected' : ''}>CANCELLED</option>
                                 </select>
@@ -1435,7 +1442,6 @@ if (beverageItems.length > 0) {
                                 <option value="" disabled>CHANGE STATUS</option>
                                 <option value="Pending">PENDING</option>
                                 <option value="Preparing">PREPARING</option>
-                                <option value="Ready">READY</option>
                                 <option value="Served">SERVED</option>
                                 <option value="Cancelled">CANCELLED</option>
                             </select>
