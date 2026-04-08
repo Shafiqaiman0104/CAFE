@@ -1593,20 +1593,28 @@
             </div>
             
             <!-- Total Price and Estimated Time -->
-            <div style="margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 10px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <span style="font-size: 1.1rem; color: #555;" data-en="Total:" data-bm="Jumlah:">Total:</span>
-                    <span style="font-size: 1.3rem; font-weight: 700; color: #764ba2;">RM <span id="modalTotalPrice">0.00</span></span>
-                </div>
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <span style="font-size: 1rem; color: #555;">
-                        <i class="fa-solid fa-clock"></i> <span data-en="Estimated Preparation Time:" data-bm="Anggaran Masa Penyediaan:">Estimated Preparation Time:</span>
-                    </span>
-                    <span style="font-size: 1.1rem; font-weight: 600; color: #667eea;">
-                        <span id="modalTotalTime">0</span> <span data-en="mins" data-bm="minit">mins</span>
-                    </span>
-                </div>
-            </div>
+<div style="margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 10px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <span style="font-size: 1.1rem; color: #555;" data-en="Total:" data-bm="Jumlah:">Total:</span>
+        <span style="font-size: 1.3rem; font-weight: 700; color: #764ba2;">RM <span id="modalTotalPrice">0.00</span></span>
+    </div>
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <span style="font-size: 1rem; color: #555;">
+            <i class="fa-solid fa-cart-shopping"></i> <span data-en="Total Order Items:" data-bm="Jumlah Item Pesanan:">Total Order Items:</span>
+        </span>
+        <span style="font-size: 1.1rem; font-weight: 600; color: #667eea;">
+            <span id="modalTotalItems">0</span> <span data-en="items" data-bm="item">items</span>
+        </span>
+    </div>
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-size: 1rem; color: #555;">
+            <i class="fa-solid fa-clock"></i> <span data-en="Estimated Preparation Time:" data-bm="Anggaran Masa Penyediaan:">Estimated Preparation Time:</span>
+        </span>
+        <span style="font-size: 1.1rem; font-weight: 600; color: #667eea;">
+            <span id="modalTotalTime">0</span> <span data-en="mins" data-bm="minit">mins</span>
+        </span>
+    </div>
+</div>
             
             <div class="action-buttons">
                 <button type="button" class="secondary-btn" onclick="closeCustomerModal()" data-en="Cancel" data-bm="Batal">Cancel</button>
@@ -2772,23 +2780,27 @@ function updateModalCartDisplay() {
     const modalCartItems = document.getElementById('modalCartItems');
     const modalTotalPrice = document.getElementById('modalTotalPrice');
     const modalTotalTime = document.getElementById('modalTotalTime');
+    const modalTotalItems = document.getElementById('modalTotalItems');
     
     if (cart.length === 0) {
         const emptyCartMsg = currentLanguage === 'bm' ? 'Troli anda kosong' : 'Your cart is empty';
         modalCartItems.innerHTML = `<div style="text-align: center; color: #666; padding: 20px;">${emptyCartMsg}</div>`;
         modalTotalPrice.textContent = '0.00';
         modalTotalTime.textContent = '0';
+        if (modalTotalItems) modalTotalItems.textContent = '0';
         return;
     }
     
     let totalPrice = 0;
     let totalTime = 0;
+    let totalItems = 0; // Add this line
     let itemsHTML = '';
     
     cart.forEach((item, index) => {
         const itemTotal = item.totalPrice * item.quantity;
         totalPrice += itemTotal;
         totalTime += item.prepTime * item.quantity;
+        totalItems += item.quantity; // Add this line
         
         itemsHTML += `
             <div style="border-bottom: 1px solid #eaeaea; padding: 10px 0;">
@@ -2807,7 +2819,7 @@ function updateModalCartDisplay() {
             `;
         }
         
-        // Add add-ons info if exists - THIS WAS MISSING
+        // Add add-ons info if exists
         if (item.addOns && item.addOns.length > 0) {
             const addOnText = currentLanguage === 'bm' ? 'Tambah:' : 'Add On:';
             itemsHTML += `
@@ -2838,6 +2850,7 @@ function updateModalCartDisplay() {
     modalCartItems.innerHTML = itemsHTML;
     modalTotalPrice.textContent = totalPrice.toFixed(2);
     modalTotalTime.textContent = totalTime;
+    if (modalTotalItems) modalTotalItems.textContent = totalItems; // Add this line
 }
 
         // Close customer modal
@@ -2861,6 +2874,9 @@ function updateModalCartDisplay() {
             const totalPreparationTime = cart.reduce((sum, item) => {
                 return sum + (item.prepTime * item.quantity);
             }, 0);
+
+            // Calculate total order items (sum of all quantities)
+            const totalOrderItems = cart.reduce((sum, item) => sum + item.quantity, 0);
             
             // Check table status for Dine In
             if (orderType === 'Dine In') {
@@ -2882,13 +2898,13 @@ function updateModalCartDisplay() {
                 }
             }
             
-            // Create order data
-            const orderData = {
-                idTable: tableId,
-                totalAmount: totalAmount,
-                orderType: orderType,
-                preparationTime: totalPreparationTime
-            };
+const orderData = {
+    idTable: tableId,
+    totalAmount: totalAmount,
+    orderType: orderType,
+    preparationTime: totalPreparationTime,
+    totalOrderItems: totalOrderItems  // Add this line
+};
             
             try {
                 // Create order
