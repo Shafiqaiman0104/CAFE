@@ -481,6 +481,17 @@
             .order-footer { flex-direction: column; align-items: stretch; }
             .order-status-control { flex-direction: column; align-items: stretch; }
         }
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -40%);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, -50%);
+    }
+}
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
@@ -1006,54 +1017,63 @@ async function checkAndAutoPrintNewOrder(ordersList, oldOrdersMap) {
         
         if (autoPrintedOrders.has(orderId)) continue;
         
-        const oldHadPending = oldOrdersMap[orderId] ? oldOrdersMap[orderId].some(item => item.Status === 'Pending') : false;
+        // Check if this is a new order
+        const oldHadOrder = oldOrdersMap[orderId] !== undefined;
         
-        // Only print if this is a brand new order (not just status update)
-        if (!oldOrdersMap[orderId]) {
+        if (!oldHadOrder) {
+            // Calculate current total quantity (sum of all quantities)
+            const currentTotalQuantity = orderItems.reduce((sum, item) => sum + (parseInt(item.Quantity) || 1), 0);
+            const totalExpected = await getTotalOrderItems(orderId);
+            
             // Mark as processing
             autoPrintedOrders.add(orderId);
             
-            console.log(`New order ${orderId} detected with ${orderItems.length} items, waiting 5 seconds for more items...`);
+            console.log(`New order ${orderId} detected with total quantity ${currentTotalQuantity}, expected ${totalExpected}...`);
             
-            // Wait 5 seconds before printing to ensure all items are inserted
-            setTimeout(async () => {
-                try {
-                    // Refresh orders to get all items
+            // Show loading popup if incomplete
+            if (totalExpected > 0 && currentTotalQuantity < totalExpected) {
+                showLoadingPopup(orderId, currentTotalQuantity, totalExpected);
+                
+                // Wait for completion
+                const isComplete = await waitForCompleteOrder(orderId, currentTotalQuantity);
+                
+                if (isComplete) {
+                    // Refresh to get all items
                     const refreshResponse = await fetch(`${ORDER_ITEMS_API_URL}?action=getKitchenOrders`);
                     const refreshResult = await refreshResponse.json();
                     if (refreshResult.success) {
-                        const freshOrders = refreshResult.data;
-                        let freshOrderItems = freshOrders.filter(item => item['Id Order'] === orderId);
-                        
-                        // Fetch table number for the order
+                        const completeOrderItems = refreshResult.data.filter(item => item['Id Order'] === orderId);
                         const tableNumber = await fetchOrderTableData(orderId);
+                        completeOrderItems.forEach(item => { item.TableNumber = tableNumber; });
                         
-                        // Add TableNumber to each item
-                        freshOrderItems = freshOrderItems.map(item => ({
-                            ...item,
-                            TableNumber: tableNumber
-                        }));
-                        
-                        // Update the main orders array with all items
-                        // Remove old items for this order and add all fresh ones
+                        // Update orders array
                         const otherOrders = orders.filter(item => item['Id Order'] !== orderId);
-                        orders = [...otherOrders, ...freshOrderItems];
+                        orders = [...otherOrders, ...completeOrderItems];
                         
-                        // Re-render the display with updated data
+                        closeLoadingPopup();
+                        
+                        const createdAt = completeOrderItems[0]?.['Created At'] || new Date();
+                        await printKitchenOrder(orderId, completeOrderItems, tableNumber, createdAt, "PENDING - COMPLETE ORDER");
                         renderOrders();
-                        
-                        const createdAt = freshOrderItems[0]?.['Created At'] || new Date();
-                        
-                        console.log(`Printing order ${orderId} with ${freshOrderItems.length} items after delay, Table: ${tableNumber}`);
-                        await printKitchenOrder(orderId, freshOrderItems, tableNumber, createdAt, "PENDING - NEW ORDER");
                     }
-                } catch (error) {
-                    console.error('Error in delayed print:', error);
+                } else {
+                    closeLoadingPopup();
+                    // Print with what we have
+                    const tableNumber = await fetchOrderTableData(orderId);
+                    const createdAt = orderItems[0]?.['Created At'] || new Date();
+                    await printKitchenOrder(orderId, orderItems, tableNumber, createdAt, "PENDING - PARTIAL ORDER");
+                    renderOrders();
                 }
-            }, 8000);
+            } else {
+                // Order is complete or no total set, print immediately
+                const tableNumber = await fetchOrderTableData(orderId);
+                const createdAt = orderItems[0]?.['Created At'] || new Date();
+                await printKitchenOrder(orderId, orderItems, tableNumber, createdAt, "PENDING - NEW ORDER");
+                renderOrders();
+            }
         }
     }
-}       
+}     
         
         // ==================== EXISTING APP CODE ====================
         const ORDER_ITEMS_API_URL = 'https://script.google.com/macros/s/AKfycbxrVReaCXfFynLTQL7YRfhr5wwYFF49xfiYVvc4OMTdnN6q0SsbQ2mVjq_skKTBdqLQ/exec';
@@ -1172,6 +1192,163 @@ setInterval(async () => {
             });
         }
 
+// Function to get total quantity sum for an order from ORDER_ITEMS
+async function getTotalQuantityForOrder(orderId) {
+    try {
+        const response = await fetch(`${ORDER_ITEMS_API_URL}?action=getKitchenOrders`);
+        const result = await response.json();
+        if (result.success) {
+            const orderItems = result.data.filter(item => item['Id Order'] === orderId);
+            // Sum up all Quantity values
+            const totalQuantity = orderItems.reduce((sum, item) => sum + (parseInt(item.Quantity) || 1), 0);
+            return totalQuantity;
+        }
+    } catch(e) {
+        console.error('Error calculating total quantity:', e);
+    }
+    return 0;
+}
+
+// Function to get Total Order Items from ORDER_API
+async function getTotalOrderItems(orderId) {
+    try {
+        const response = await fetch(`${ORDER_API_URL}?action=getOrderById&id=${orderId}`);
+        const result = await response.json();
+        if (result.success && result.data) {
+            return parseInt(result.data['Total Order Items']) || 0;
+        }
+    } catch(e) {
+        console.error('Error fetching total order items:', e);
+    }
+    return 0;
+}
+
+// Function to check if order is complete before displaying (based on QUANTITY sum)
+async function waitForCompleteOrder(orderId, currentTotalQuantity, maxWaitSeconds = 30) {
+    const startTime = Date.now();
+    const checkInterval = 2000; // Check every 2 seconds
+    
+    return new Promise((resolve, reject) => {
+        const checkCompletion = async () => {
+            try {
+                const totalExpected = await getTotalOrderItems(orderId);
+                
+                // Get the CURRENT total quantity from live data (sum of all quantities)
+                const liveResponse = await fetch(`${ORDER_ITEMS_API_URL}?action=getKitchenOrders`);
+                const liveResult = await liveResponse.json();
+                let liveTotalQuantity = 0;
+                if (liveResult.success) {
+                    const orderItems = liveResult.data.filter(item => item['Id Order'] === orderId);
+                    liveTotalQuantity = orderItems.reduce((sum, item) => sum + (parseInt(item.Quantity) || 1), 0);
+                }
+                
+                // Update loading popup with live total quantity
+                if (loadingPopup) {
+                    updateLoadingPopup(liveTotalQuantity, totalExpected);
+                }
+                
+                if (totalExpected === 0) {
+                    // No total set yet, wait more
+                    if (Date.now() - startTime < maxWaitSeconds * 1000) {
+                        setTimeout(checkCompletion, checkInterval);
+                    } else {
+                        resolve(false);
+                    }
+                    return;
+                }
+                
+                if (liveTotalQuantity >= totalExpected) {
+                    console.log(`✅ Order ${orderId} complete! Total Quantity: ${liveTotalQuantity}/${totalExpected}`);
+                    resolve(true);
+                } else if (Date.now() - startTime >= maxWaitSeconds * 1000) {
+                    console.log(`⚠️ Order ${orderId} timeout - showing anyway (${liveTotalQuantity}/${totalExpected})`);
+                    resolve(false);
+                } else {
+                    console.log(`⏳ Order ${orderId} waiting: ${liveTotalQuantity}/${totalExpected} total quantity...`);
+                    setTimeout(checkCompletion, checkInterval);
+                }
+            } catch (error) {
+                console.error('Error checking order completion:', error);
+                if (Date.now() - startTime < maxWaitSeconds * 1000) {
+                    setTimeout(checkCompletion, checkInterval);
+                } else {
+                    resolve(false);
+                }
+            }
+        };
+        
+        checkCompletion();
+    });
+}
+
+// Loading popup for order arrival
+let loadingPopup = null;
+
+function showLoadingPopup(orderId, currentCount, expectedCount) {
+    // Remove existing popup if any
+    if (loadingPopup) {
+        loadingPopup.remove();
+    }
+    
+    // Create loading popup
+    loadingPopup = document.createElement('div');
+    loadingPopup.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: white;
+        border-radius: 15px;
+        padding: 25px 35px;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        z-index: 10000;
+        text-align: center;
+        min-width: 300px;
+        animation: fadeInUp 0.3s ease;
+    `;
+    
+    loadingPopup.innerHTML = `
+        <div style="margin-bottom: 15px;">
+            <i class="fas fa-spinner fa-pulse" style="font-size: 40px; color: #764ba2;"></i>
+        </div>
+        <h3 style="color: #333; margin-bottom: 10px;">New Order Arriving!</h3>
+        <p style="color: #666; margin-bottom: 10px;">Order: <strong>${orderId}</strong></p>
+        <p style="color: #764ba2; font-size: 14px;">
+            Receiving items... <span id="loadingItemCount">${currentCount}</span> / <span id="loadingExpectedCount">${expectedCount || '?'}</span>
+        </p>
+        <div style="margin-top: 15px;">
+            <div style="width: 100%; height: 4px; background: #f0f0f0; border-radius: 2px; overflow: hidden;">
+                <div id="loadingProgress" style="width: ${expectedCount ? (currentCount/expectedCount)*100 : 10}%; height: 100%; background: linear-gradient(90deg, #667eea, #764ba2); transition: width 0.3s;"></div>
+            </div>
+        </div>
+        <button onclick="closeLoadingPopup()" style="margin-top: 20px; background: #6c757d; color: white; border: none; padding: 8px 20px; border-radius: 20px; cursor: pointer;">Close</button>
+    `;
+    
+    document.body.appendChild(loadingPopup);
+}
+
+function updateLoadingPopup(currentCount, expectedCount) {
+    if (loadingPopup) {
+        const itemCountSpan = document.getElementById('loadingItemCount');
+        const expectedSpan = document.getElementById('loadingExpectedCount');
+        const progressBar = document.getElementById('loadingProgress');
+        
+        if (itemCountSpan) itemCountSpan.textContent = currentCount;
+        if (expectedSpan) expectedSpan.textContent = expectedCount;
+        if (progressBar && expectedCount > 0) {
+            progressBar.style.width = `${(currentCount / expectedCount) * 100}%`;
+        }
+    }
+}
+
+function closeLoadingPopup() {
+    if (loadingPopup) {
+        loadingPopup.remove();
+        loadingPopup = null;
+    }
+}
+
+
 // Force sync Google Sheets to Firebase on page load
 async function syncGoogleSheetsToFirebase() {
     console.log('🔄 Syncing Google Sheets to Firebase...');
@@ -1224,33 +1401,101 @@ async function syncGoogleSheetsToFirebase() {
             }
         }
 
-        async function loadKitchenOrders() {
-            try {
-                const response = await fetch(`${ORDER_ITEMS_API_URL}?action=getKitchenOrders`);
-                const result = await response.json();
-                if (result.success) {
-                    const newOrders = result.data;
-                    const orderIds = [...new Set(newOrders.map(item => item['Id Order']))];
-                    const tablePromises = orderIds.map(orderId => fetchOrderTableData(orderId));
-                    const tableNumbers = await Promise.all(tablePromises);
-                    const orderTableMap = {};
-                    orderIds.forEach((orderId, index) => { orderTableMap[orderId] = tableNumbers[index]; });
-                    newOrders.forEach(item => { item.TableNumber = orderTableMap[item['Id Order']]; });
-                    
-                    const oldOrdersMap = {};
-                    orders.forEach(item => {
-                        if (!oldOrdersMap[item['Id Order']]) oldOrdersMap[item['Id Order']] = [];
-                        oldOrdersMap[item['Id Order']].push(item);
-                    });
-                    
-                    orders = newOrders;
-                    
-                    await checkAndAutoPrintNewOrder(orders, oldOrdersMap);
-                    
-                    renderOrders();
+async function loadKitchenOrders() {
+    try {
+        const response = await fetch(`${ORDER_ITEMS_API_URL}?action=getKitchenOrders`);
+        const result = await response.json();
+        if (result.success) {
+            const newOrders = result.data;
+            const orderIds = [...new Set(newOrders.map(item => item['Id Order']))];
+            const tablePromises = orderIds.map(orderId => fetchOrderTableData(orderId));
+            const tableNumbers = await Promise.all(tablePromises);
+            const orderTableMap = {};
+            orderIds.forEach((orderId, index) => { orderTableMap[orderId] = tableNumbers[index]; });
+            newOrders.forEach(item => { item.TableNumber = orderTableMap[item['Id Order']]; });
+            
+            const oldOrdersMap = {};
+            orders.forEach(item => {
+                if (!oldOrdersMap[item['Id Order']]) oldOrdersMap[item['Id Order']] = [];
+                oldOrdersMap[item['Id Order']].push(item);
+            });
+            
+            // Check for NEW orders that need to wait for completion
+            const newOrderIds = [];
+            for (const orderId of orderIds) {
+                if (!oldOrdersMap[orderId]) {
+                    newOrderIds.push(orderId);
                 }
-            } catch (error) { console.error('Error loading kitchen orders:', error); }
+            }
+            
+            // Process new orders - wait for them to be complete (based on QUANTITY sum)
+            for (const orderId of newOrderIds) {
+                const orderItems = newOrders.filter(item => item['Id Order'] === orderId);
+                // Calculate total quantity (sum of all quantities)
+                const currentTotalQuantity = orderItems.reduce((sum, item) => sum + (parseInt(item.Quantity) || 1), 0);
+                const totalExpected = await getTotalOrderItems(orderId);
+                
+                // Show loading popup if order is incomplete
+                if (totalExpected > 0 && currentTotalQuantity < totalExpected) {
+                    showLoadingPopup(orderId, currentTotalQuantity, totalExpected);
+                    
+                    // Wait for the order to be complete
+                    const isComplete = await waitForCompleteOrder(orderId, currentTotalQuantity);
+                    
+                    if (isComplete) {
+                        // Refresh data to get all items
+                        const refreshResponse = await fetch(`${ORDER_ITEMS_API_URL}?action=getKitchenOrders`);
+                        const refreshResult = await refreshResponse.json();
+                        if (refreshResult.success) {
+                            const completeOrderItems = refreshResult.data.filter(item => item['Id Order'] === orderId);
+                            completeOrderItems.forEach(item => { item.TableNumber = orderTableMap[orderId]; });
+                            
+                            // Update orders array
+                            const otherOrders = orders.filter(item => item['Id Order'] !== orderId);
+                            orders = [...otherOrders, ...completeOrderItems];
+                            
+                            closeLoadingPopup();
+                            
+                            // Auto print the complete order
+                            if (printerConfig.autoPrint) {
+                                const tableNumber = orderTableMap[orderId] || 'Unknown';
+                                const createdAt = completeOrderItems[0]?.['Created At'] || new Date();
+                                await printKitchenOrder(orderId, completeOrderItems, tableNumber, createdAt, "PENDING - COMPLETE ORDER");
+                            }
+                            
+                            renderOrders();
+                        }
+                    } else {
+                        closeLoadingPopup();
+                        // Show anyway after timeout
+                        orders = newOrders;
+                        renderOrders();
+                    }
+                } else {
+                    // Order is already complete or no total set
+                    if (totalExpected > 0 && currentTotalQuantity >= totalExpected) {
+                        console.log(`✅ Order ${orderId} already complete (Total Quantity: ${currentTotalQuantity}/${totalExpected})`);
+                        if (printerConfig.autoPrint && !autoPrintedOrders.has(orderId)) {
+                            autoPrintedOrders.add(orderId);
+                            const tableNumber = orderTableMap[orderId] || 'Unknown';
+                            const createdAt = orderItems[0]?.['Created At'] || new Date();
+                            await printKitchenOrder(orderId, orderItems, tableNumber, createdAt, "PENDING - COMPLETE ORDER");
+                        }
+                    }
+                }
+            }
+            
+            // For existing orders, just update
+            const existingOrderIds = orderIds.filter(id => oldOrdersMap[id]);
+            if (existingOrderIds.length > 0) {
+                orders = newOrders;
+                renderOrders();
+            }
         }
+    } catch (error) { 
+        console.error('Error loading kitchen orders:', error); 
+    }
+}
         
         async function manualPrintOrder(orderId) {
             const orderItems = orders.filter(item => item['Id Order'] === orderId);
