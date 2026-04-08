@@ -483,6 +483,11 @@
         }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+ <!-- Firebase SDK for Real-time -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
 </head>
 <body>
     <nav class="navbar">
@@ -1051,7 +1056,7 @@ async function checkAndAutoPrintNewOrder(ordersList, oldOrdersMap) {
 }       
         
         // ==================== EXISTING APP CODE ====================
-        const ORDER_ITEMS_API_URL = 'https://script.google.com/macros/s/AKfycby1WHd4YjXGHFZ4b0AKhjUeses608seEMON64q3Pd2DeCL_wVwPgytIjhinfv9y3UzqVQ/exec';
+        const ORDER_ITEMS_API_URL = 'https://script.google.com/macros/s/AKfycbxrVReaCXfFynLTQL7YRfhr5wwYFF49xfiYVvc4OMTdnN6q0SsbQ2mVjq_skKTBdqLQ/exec';
 const ORDER_API_URL = 'https://script.google.com/macros/s/AKfycbzwGqmFpoFSyIpaJOs6ccBi-WlPmWYlSgfti8CLnCC6Nz_zao8cer58JJVTFU5xUy65QQ/exec';
 const MENU_API_URL = 'https://script.google.com/macros/s/AKfycbyL3qH9ra_3sNw1nLchIKHrGo31obMaL0cdK4zNTwyiBPORIPYr349katf1ANzWVEmJMw/exec';
 const VARIANT_API_URL = 'https://script.google.com/macros/s/AKfycbwQxx0JLOTPGmpp9zj6DwAojB0e7ix2ZXcfjuO70NarLrnDOKc4NpdOjog2wAFPZKOjyQ/exec';
@@ -1071,15 +1076,126 @@ const ADDON_API_URL = 'https://script.google.com/macros/s/AKfycbzz6y1BvK1nc93MmE
 
         if (!currentStaff.id || currentStaff.role !== 'kitchen') window.location.href = 'login.html';
 
+               // Firebase Configuration (REAL-TIME)
+        const firebaseConfig = {
+            apiKey: "AIzaSyDFFVP_UqpIzXbWv9dNpLkB4Ot3Z9aC7aE",
+            authDomain: "caferealtime-43213.firebaseapp.com",
+            databaseURL: "https://caferealtime-43213-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "caferealtime-43213",
+            storageBucket: "caferealtime-43213.firebasestorage.app",
+            messagingSenderId: "813540068315",
+            appId: "1:813540068315:web:76271282255545550735fe"
+        };
+        
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        const kitchenOrdersRef = database.ref('kitchenOrders');
+        
+        // Track if real-time is active
+        let isRealtimeActive = false;
+        
         document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('staffName').textContent = `Welcome, ${currentStaff.name}`;
             loadMenuData();
-            loadVariantData();  // Add this line
-            loadAddOnData();    // Add this line
-            loadKitchenOrders();
-            setInterval(loadKitchenOrders, 15000);
+            loadVariantData();
+            loadAddOnData();
+            
+            // Start REAL-TIME listener (NO POLLING!)
+            setupRealtimeListener();
+            
+            // Keep polling as backup (60 seconds instead of 15)
+            setInterval(loadKitchenOrders, 60000);
+            
             loadPrinterSettings();
         });
+        
+        // NEW: Real-time Firebase listener
+        function setupRealtimeListener() {
+            console.log('🔥 Setting up REAL-TIME Firebase listener...');
+            
+            kitchenOrdersRef.on('value', async (snapshot) => {
+                const firebaseData = snapshot.val();
+                
+                if (firebaseData && Array.isArray(firebaseData) && firebaseData.length > 0) {
+                    console.log(`📡 REAL-TIME update at ${new Date().toLocaleTimeString()} - ${firebaseData.length} items`);
+                    
+                    // Store old orders for auto-print detection
+                    const oldOrdersMap = {};
+                    orders.forEach(item => {
+                        if (!oldOrdersMap[item['Id Order']]) oldOrdersMap[item['Id Order']] = [];
+                        oldOrdersMap[item['Id Order']].push(item);
+                    });
+                    
+                    // Update orders with Firebase data
+                    orders = firebaseData;
+                    
+                    // Fetch table numbers for orders
+                    const orderIds = [...new Set(orders.map(item => item['Id Order']))];
+                    const tablePromises = orderIds.map(orderId => fetchOrderTableData(orderId));
+                    const tableNumbers = await Promise.all(tablePromises);
+                    const orderTableMap = {};
+                    orderIds.forEach((orderId, index) => { orderTableMap[orderId] = tableNumbers[index]; });
+                    orders.forEach(item => { item.TableNumber = orderTableMap[item['Id Order']]; });
+                    
+                    // Check for new orders and auto-print (only if not already printed)
+                    if (!isRealtimeActive) {
+                        isRealtimeActive = true;
+                        await checkAndAutoPrintNewOrder(orders, oldOrdersMap);
+                        isRealtimeActive = false;
+                    }
+                    
+                    // Re-render the display
+                    renderOrders();
+                    
+                    // Add visual indicator
+                    updateRealtimeIndicator(true);
+                }
+            });
+            
+            // Handle connection status
+            const connectedRef = database.ref('.info/connected');
+            connectedRef.on('value', (snap) => {
+                if (snap.val() === true) {
+                    console.log('✅ Firebase REAL-TIME connected');
+                    updateRealtimeIndicator(true);
+                } else {
+                    console.log('⚠️ Firebase disconnected - using backup polling');
+                    updateRealtimeIndicator(false);
+                }
+            });
+        }
+        
+        // Add real-time indicator to navbar
+        function updateRealtimeIndicator(isConnected) {
+            let indicator = document.getElementById('realtimeIndicator');
+            if (!indicator) {
+                const logoDiv = document.querySelector('.logo');
+                if (logoDiv) {
+                    indicator = document.createElement('span');
+                    indicator.id = 'realtimeIndicator';
+                    indicator.style.marginLeft = '10px';
+                    indicator.style.padding = '4px 10px';
+                    indicator.style.borderRadius = '20px';
+                    indicator.style.fontSize = '11px';
+                    indicator.style.fontWeight = 'bold';
+                    logoDiv.appendChild(indicator);
+                }
+            }
+            if (indicator) {
+                if (isConnected) {
+                    indicator.innerHTML = '🔴 LIVE';
+                    indicator.style.background = '#ff4444';
+                    indicator.style.color = 'white';
+                    indicator.style.animation = 'pulse 1.5s infinite';
+                } else {
+                    indicator.innerHTML = '⏳ POLLING';
+                    indicator.style.background = '#ffa500';
+                    indicator.style.color = 'white';
+                    indicator.style.animation = 'none';
+                }
+            }
+        }
 
         async function loadKitchenOrders() {
             try {
