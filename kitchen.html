@@ -1095,20 +1095,26 @@ const ADDON_API_URL = 'https://script.google.com/macros/s/AKfycbzz6y1BvK1nc93MmE
         // Track if real-time is active
         let isRealtimeActive = false;
         
-        document.addEventListener('DOMContentLoaded', function() {
-            document.getElementById('staffName').textContent = `Welcome, ${currentStaff.name}`;
-            loadMenuData();
-            loadVariantData();
-            loadAddOnData();
-            
-            // Start REAL-TIME listener (NO POLLING!)
-            setupRealtimeListener();
-            
-            // Keep polling as backup (60 seconds instead of 15)
-            setInterval(loadKitchenOrders, 60000);
-            
-            loadPrinterSettings();
-        });
+        document.addEventListener('DOMContentLoaded', async function() {
+    document.getElementById('staffName').textContent = `Welcome, ${currentStaff.name}`;
+    loadMenuData();
+    loadVariantData();
+    loadAddOnData();
+    
+    // FIRST: Sync Google Sheets to Firebase by calling doGet
+    await syncGoogleSheetsToFirebase();
+    
+    // THEN: Start REAL-TIME listener (NO POLLING!)
+    setupRealtimeListener();
+    
+    // Keep polling as backup and sync Firebase every 60 seconds
+setInterval(async () => {
+    await syncGoogleSheetsToFirebase();  // First sync Google Sheets to Firebase
+    await loadKitchenOrders();            // Then load orders as backup
+}, 60000);
+    
+    loadPrinterSettings();
+});
         
         // NEW: Real-time Firebase listener
         function setupRealtimeListener() {
@@ -1165,6 +1171,27 @@ const ADDON_API_URL = 'https://script.google.com/macros/s/AKfycbzz6y1BvK1nc93MmE
                 }
             });
         }
+
+// Force sync Google Sheets to Firebase on page load
+async function syncGoogleSheetsToFirebase() {
+    console.log('🔄 Syncing Google Sheets to Firebase...');
+    try {
+        // Call Apps Script without action parameter to trigger doGet sync
+        const response = await fetch(ORDER_ITEMS_API_URL);
+        const result = await response.json();
+        
+        if (result.success) {
+            console.log('✅ Google Sheets synced to Firebase successfully');
+            return true;
+        } else {
+            console.warn('⚠️ Sync failed:', result.message);
+            return false;
+        }
+    } catch (error) {
+        console.error('❌ Error syncing:', error);
+        return false;
+    }
+}
         
         // Add real-time indicator to navbar
         function updateRealtimeIndicator(isConnected) {
