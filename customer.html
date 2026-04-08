@@ -1375,6 +1375,36 @@
         padding-bottom: 60px;
     }
 }
+
+.recommend-badge {
+    background: linear-gradient(135deg, #ff6b6b 0%, #ff8e53 100%);
+    color: white;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    width: fit-content;
+    margin-bottom: 8px;
+    box-shadow: 0 2px 5px rgba(255, 107, 107, 0.3);
+}
+
+.recommend-badge i {
+    font-size: 0.7rem;
+}
+
+/* Desktop styles */
+@media (min-width: 768px) {
+    .recommend-badge {
+        padding: 4px 12px;
+        font-size: 0.8rem;
+    }
+    .recommend-badge i {
+        font-size: 0.8rem;
+    }
+}
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
@@ -2271,6 +2301,12 @@ const itemCount = cart
                         <div class="menu-price">RM ${parseFloat(item.Price).toFixed(2)}</div>
                     </div>
                     <p class="menu-description">${item.Description || (currentLanguage === 'bm' ? 'Tiada penerangan.' : 'No description available.')}</p>
+
+${item.Recommend === true || item.Recommend === 'TRUE' ? `
+    <div class="recommend-badge">
+        <i class="fa-solid fa-fire"></i> ${currentLanguage === 'bm' ? 'Cadangan' : 'Recommend'}
+    </div>
+` : ''}
                     
                     <div style="color: #666; font-size: 0.9rem; margin-bottom: 10px;">
                         <i class="fas fa-clock"></i> ${currentLanguage === 'bm' ? 'Anggaran:' : 'Est:'} ${item['Preparation Time'] || 15} ${currentLanguage === 'bm' ? 'minit' : 'mins'}
