@@ -676,6 +676,29 @@
             color: white;
         }
 
+.date-separator {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 15px;
+    margin: 20px 0 15px 0;
+    font-weight: bold;
+    font-size: 1.1rem;
+    backdrop-filter: blur(5px);
+    text-align: center;
+    letter-spacing: 1px;
+}
+
+.date-separator i {
+    margin-right: 10px;
+}
+
+.kitchen-display.list-view .date-separator {
+    margin: 15px 0 10px 0;
+    padding: 10px 15px;
+    font-size: 1rem;
+}
+
         .search-container {
             position: relative;
             flex: 1;
@@ -1998,6 +2021,25 @@ if (hasVariant || hasAddOn || hasNotes) {
     return allSuccess;
 }
 
+   // Helper function to parse date from "dd/mm/yyyy HH:MM:SS" format
+    function parseCustomDate(dateString) {
+        if (!dateString) return new Date();
+        // Split date and time
+        const parts = dateString.split(' ');
+        const datePart = parts[0];
+        // Split date part by '/' (dd/mm/yyyy)
+        const dateParts = datePart.split('/');
+        if (dateParts.length === 3) {
+            // Format: dd/mm/yyyy -> month, day, year
+            const day = parseInt(dateParts[0], 10);
+            const month = parseInt(dateParts[1], 10) - 1; // Month is 0-indexed
+            const year = parseInt(dateParts[2], 10);
+            return new Date(year, month, day);
+        }
+        // Fallback to default parsing
+        return new Date(dateString);
+    }
+
 function renderOrders() {
     const kitchenDisplay = document.getElementById('kitchenDisplay');
     const ordersMap = {};
@@ -2026,13 +2068,242 @@ function renderOrders() {
         return;
     }
     
+    // Group orders by date
+    const ordersByDate = {};
+    filteredOrders.forEach(orderId => {
+        const orderItems = ordersMap[orderId];
+        const createdAt = orderItems[0]['Created At'];
+        
+        // Parse the date correctly from dd/mm/yyyy format
+        const orderDate = parseCustomDate(createdAt);
+        
+        // Format date as dd/mm/yyyy
+        const day = orderDate.getDate().toString().padStart(2, '0');
+        const month = (orderDate.getMonth() + 1).toString().padStart(2, '0');
+        const year = orderDate.getFullYear();
+        let dateKey = `${day}/${month}/${year}`;
+        
+        // Check if the date is today
+        const today = new Date();
+        const todayDay = today.getDate().toString().padStart(2, '0');
+        const todayMonth = (today.getMonth() + 1).toString().padStart(2, '0');
+        const todayYear = today.getFullYear();
+        const todayKey = `${todayDay}/${todayMonth}/${todayYear}`;
+        
+        if (dateKey === todayKey) {
+            dateKey = 'Today';
+        }
+        
+        if (!ordersByDate[dateKey]) {
+            ordersByDate[dateKey] = [];
+        }
+        ordersByDate[dateKey].push(orderId);
+    });
+    
+    // Sort dates (Today first, then recent dates)
+    const sortedDates = Object.keys(ordersByDate).sort((a, b) => {
+        if (a === 'Today') return -1;
+        if (b === 'Today') return 1;
+        return new Date(b) - new Date(a);
+    });
+    
     // Check if we're in list view mode
     if (currentView === 'list') {
-        // LIST VIEW - Two row layout: Row1: Order ID + Table, Row2: Time + Buttons
+        // LIST VIEW - Two row layout with date separators
         let html = '';
         
-        for (const orderId of filteredOrders) {
+        for (const dateKey of sortedDates) {
+            const orderIds = ordersByDate[dateKey];
+            
+            // Add date separator
+            html += `<div class="date-separator">
+                        <i class="fas fa-calendar-alt"></i> ${dateKey}
+                    </div>`;
+            
+            for (const orderId of orderIds) {
+                const orderItems = ordersMap[orderId];
+                const tableNumber = orderItems[0].TableNumber || 'Unknown';
+                const createdAt = orderItems[0]['Created At'];
+                
+                // Group items by category
+                const foodItems = [];
+                const beverageItems = [];
+                
+                for (const item of orderItems) {
+                    const category = menuCategories[item['Id Menu']] || 'Food';
+                    if (category === 'Beverage') {
+                        beverageItems.push(item);
+                    } else {
+                        foodItems.push(item);
+                    }
+                }
+                
+                html += `<div class="order-card ${waitingOrders.has(orderId) ? 'waiting' : ''}" data-order-id="${orderId}">
+                            <div class="order-header">
+                                <div class="order-header-row">
+                                    <div class="order-id">Order #${orderId}</div>
+                                    <div class="order-table">Table: ${tableNumber}</div>
+                                </div>
+                                <div class="order-actions-row">
+                                    <div class="order-time">${formatTime(createdAt)}</div>
+                                    <div class="action-buttons">
+                                        <button class="manual-print-btn" onclick="manualPrintOrder('${orderId}')"><i class="fas fa-print"></i> Print</button>
+                                        <button class="view-order-details" onclick="toggleOrderDetails('${orderId}')"><i class="fas fa-eye"></i> View</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="order-details-expanded" id="expanded-${orderId}">`;
+                
+                // FOOD Section in expanded view
+                if (foodItems.length > 0) {
+                    html += `<div class="expanded-category">
+                                <div class="expanded-category-header">
+                                    <span><i class="fas fa-utensils"></i> FOOD</span>
+                                    <button class="expanded-category-print-btn" onclick="event.stopPropagation(); printCategoryOrder('${orderId}', 'FOOD')">
+                                        <i class="fas fa-print"></i> Print FOOD
+                                    </button>
+                                </div>
+                                <div class="expanded-category-items">`;
+                    
+                    for (const item of foodItems) {
+                        const itemName = getMenuName(item['Id Menu']);
+                        const quantity = item.Quantity || 1;
+                        const statusClass = item.Status ? item.Status.toLowerCase() : 'pending';
+                        
+                        html += `<div class="expanded-item-with-status">
+                                    <div class="expanded-item-info">
+                                        <div class="expanded-item-name-status">
+                                            <span>${itemName}</span>
+                                            <span class="expanded-item-quantity-status">×${quantity}</span>
+                                        </div>`;
+                        
+                        // Add variant if exists
+                        if (item['Id Variant'] && item['Id Variant'] !== '') {
+                            const variantName = variantData[item['Id Variant']] || item['Id Variant'];
+                            html += `<div class="expanded-details"><i class="fas fa-tag"></i> Variant: ${variantName}</div>`;
+                        }
+                        
+                        // Add add-ons if exist
+                        if (item['Id Add On'] && item['Id Add On'] !== '') {
+                            const addOnIds = item['Id Add On'].split(',');
+                            const addOnNames = addOnIds.map(id => addOnData[id] || id).filter(name => name);
+                            if (addOnNames.length > 0) {
+                                html += `<div class="expanded-details"><i class="fas fa-plus-circle"></i> Add On: ${addOnNames.join(', ')}</div>`;
+                            }
+                        }
+                        
+                        // Add notes if exist
+                        const notes = item.Notes ? String(item.Notes) : '';
+                        if (notes && notes.trim() !== '') {
+                            html += `<div class="expanded-details"><i class="fas fa-pencil-alt"></i> Notes: ${notes}</div>`;
+                        }
+                        
+                        html += `</div>
+                                    <select class="expanded-status-select ${statusClass}" onchange="updateOrderItemStatus('${item['Id Item']}', this.value)">
+                                        <option value="Pending" ${item.Status === 'Pending' ? 'selected' : ''}>PENDING</option>
+                                        <option value="Preparing" ${item.Status === 'Preparing' ? 'selected' : ''}>PREPARING</option>
+                                        <option value="Served" ${item.Status === 'Served' ? 'selected' : ''}>SERVED</option>
+                                        <option value="Cancelled" ${item.Status === 'Cancelled' ? 'selected' : ''}>CANCELLED</option>
+                                    </select>
+                                </div>`;
+                    }
+                    
+                    html += `</div></div>`;
+                }
+                
+                // BEVERAGE Section in expanded view
+                if (beverageItems.length > 0) {
+                    html += `<div class="expanded-category">
+                                <div class="expanded-category-header beverage">
+                                    <span><i class="fas fa-coffee"></i> BEVERAGE</span>
+                                    <button class="expanded-category-print-btn" onclick="event.stopPropagation(); printCategoryOrder('${orderId}', 'BEVERAGE')">
+                                        <i class="fas fa-print"></i> Print BEVERAGE
+                                    </button>
+                                </div>
+                                <div class="expanded-category-items">`;
+                    
+                    for (const item of beverageItems) {
+                        const itemName = getMenuName(item['Id Menu']);
+                        const quantity = item.Quantity || 1;
+                        const statusClass = item.Status ? item.Status.toLowerCase() : 'pending';
+                        
+                        html += `<div class="expanded-item-with-status">
+                                    <div class="expanded-item-info">
+                                        <div class="expanded-item-name-status">
+                                            <span>${itemName}</span>
+                                            <span class="expanded-item-quantity-status">×${quantity}</span>
+                                        </div>`;
+                        
+                        // Add variant if exists
+                        if (item['Id Variant'] && item['Id Variant'] !== '') {
+                            const variantName = variantData[item['Id Variant']] || item['Id Variant'];
+                            html += `<div class="expanded-details"><i class="fas fa-tag"></i> Variant: ${variantName}</div>`;
+                        }
+                        
+                        // Add add-ons if exist
+                        if (item['Id Add On'] && item['Id Add On'] !== '') {
+                            const addOnIds = item['Id Add On'].split(',');
+                            const addOnNames = addOnIds.map(id => addOnData[id] || id).filter(name => name);
+                            if (addOnNames.length > 0) {
+                                html += `<div class="expanded-details"><i class="fas fa-plus-circle"></i> Add On: ${addOnNames.join(', ')}</div>`;
+                            }
+                        }
+                        
+                        // Add notes if exist
+                        const notes = item.Notes ? String(item.Notes) : '';
+                        if (notes && notes.trim() !== '') {
+                            html += `<div class="expanded-details"><i class="fas fa-pencil-alt"></i> Notes: ${notes}</div>`;
+                        }
+                        
+                        html += `</div>
+                                    <select class="expanded-status-select ${statusClass}" onchange="updateOrderItemStatus('${item['Id Item']}', this.value)">
+                                        <option value="Pending" ${item.Status === 'Pending' ? 'selected' : ''}>PENDING</option>
+                                        <option value="Preparing" ${item.Status === 'Preparing' ? 'selected' : ''}>PREPARING</option>
+                                        <option value="Served" ${item.Status === 'Served' ? 'selected' : ''}>SERVED</option>
+                                        <option value="Cancelled" ${item.Status === 'Cancelled' ? 'selected' : ''}>CANCELLED</option>
+                                    </select>
+                                </div>`;
+                    }
+                    
+                    html += `</div></div>`;
+                }
+                
+                // Add footer with total prep time and status dropdown
+                html += `<div class="expanded-order-footer">
+                            <div class="order-status-control">
+                                <div class="prep-time">Est. Prep: ${calculateTotalPrepTime(orderItems)} min</div>
+                                <select class="order-status-dropdown" onchange="updateAllOrderStatus('${orderId}', this.value)">
+                                    <option value="" disabled>CHANGE ALL STATUS</option>
+                                    <option value="Pending">PENDING</option>
+                                    <option value="Preparing">PREPARING</option>
+                                    <option value="Served">SERVED</option>
+                                    <option value="Cancelled">CANCELLED</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            }
+        }
+        
+        kitchenDisplay.innerHTML = html;
+        return;
+    }    
+    
+    // GRID VIEW - original detailed display with date separators
+    let html = '';
+    
+    for (const dateKey of sortedDates) {
+        const orderIds = ordersByDate[dateKey];
+        
+        // Add date separator
+        html += `<div class="date-separator">
+                    <i class="fas fa-calendar-alt"></i> ${dateKey}
+                </div>`;
+        
+        for (const orderId of orderIds) {
             const orderItems = ordersMap[orderId];
+            const hasPending = orderItems.some(item => item.Status === 'Pending');
             const tableNumber = orderItems[0].TableNumber || 'Unknown';
             const createdAt = orderItems[0]['Created At'];
             
@@ -2049,323 +2320,151 @@ function renderOrders() {
                 }
             }
             
-            html += `<div class="order-card ${waitingOrders.has(orderId) ? 'waiting' : ''}" data-order-id="${orderId}">
+            // Build order card with category sections
+            html += `<div class="order-card ${waitingOrders.has(orderId) ? 'waiting' : ''}" data-order-id="${orderId}">${hasPending ? '<div class="urgent-badge">NEW</div>' : ''}
                         <div class="order-header">
-                            <div class="order-header-row">
-                                <div class="order-id">Order #${orderId}</div>
-                                <div class="order-table">Table: ${tableNumber}</div>
-                            </div>
-                            <div class="order-actions-row">
+                            <div>
+                                <div class="order-id">Order ${orderId}</div>
                                 <div class="order-time">${formatTime(createdAt)}</div>
-                                <div class="action-buttons">
-                                    <button class="manual-print-btn" onclick="manualPrintOrder('${orderId}')"><i class="fas fa-print"></i> Print</button>
-                                    <button class="view-order-details" onclick="toggleOrderDetails('${orderId}')"><i class="fas fa-eye"></i> View</button>
-                                </div>
+                            </div>
+                            <div class="order-actions">
+                                <button class="manual-print-btn" onclick="manualPrintOrder('${orderId}')"><i class="fas fa-print"></i> Print Order</button>
+                                <div class="order-table">${tableNumber}</div>
                             </div>
                         </div>
-                        <div class="order-details-expanded" id="expanded-${orderId}">`;
+                        <div class="order-items">`;
             
-            // FOOD Section in expanded view
+            // FOOD Section
             if (foodItems.length > 0) {
-                html += `<div class="expanded-category">
-                            <div class="expanded-category-header">
+                html += `<div class="category-group" style="margin-bottom: 20px;">
+                            <div class="category-title" style="background: linear-gradient(135deg, #ff8c00, #ff5e00); color: white; padding: 8px 12px; border-radius: 8px; margin-bottom: 10px; font-size: 14px; font-weight: bold; display: flex; justify-content: space-between; align-items: center;">
                                 <span><i class="fas fa-utensils"></i> FOOD</span>
-                                <button class="expanded-category-print-btn" onclick="event.stopPropagation(); printCategoryOrder('${orderId}', 'FOOD')">
+                                <button class="print-category-btn" onclick="event.stopPropagation(); printCategoryOrder('${orderId}', 'FOOD')" style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 4px 10px; border-radius: 15px; cursor: pointer; font-size: 11px; font-weight: 500;">
                                     <i class="fas fa-print"></i> Print FOOD
                                 </button>
-                            </div>
-                            <div class="expanded-category-items">`;
+                            </div>`;
                 
-                for (const item of foodItems) {
-                    const itemName = getMenuName(item['Id Menu']);
-                    const quantity = item.Quantity || 1;
-                    const statusClass = item.Status ? item.Status.toLowerCase() : 'pending';
-                    
-                    html += `<div class="expanded-item-with-status">
-                                <div class="expanded-item-info">
-                                    <div class="expanded-item-name-status">
-                                        <span>${itemName}</span>
-                                        <span class="expanded-item-quantity-status">×${quantity}</span>
-                                    </div>`;
-                    
-                    // Add variant if exists
+                foodItems.forEach(item => {
+                    let variantText = '';
                     if (item['Id Variant'] && item['Id Variant'] !== '') {
-                        const variantName = variantData[item['Id Variant']] || item['Id Variant'];
-                        html += `<div class="expanded-details"><i class="fas fa-tag"></i> Variant: ${variantName}</div>`;
+                        variantText = variantData[item['Id Variant']] || item['Id Variant'];
                     }
                     
-                    // Add add-ons if exist
+                    let addOnText = '';
                     if (item['Id Add On'] && item['Id Add On'] !== '') {
                         const addOnIds = item['Id Add On'].split(',');
                         const addOnNames = addOnIds.map(id => addOnData[id] || id).filter(name => name);
                         if (addOnNames.length > 0) {
-                            html += `<div class="expanded-details"><i class="fas fa-plus-circle"></i> Add On: ${addOnNames.join(', ')}</div>`;
+                            addOnText = addOnNames.join(', ');
                         }
                     }
                     
-                    // Add notes if exist
-                    const notes = item.Notes ? String(item.Notes) : '';
-                    if (notes && notes.trim() !== '') {
-                        html += `<div class="expanded-details"><i class="fas fa-pencil-alt"></i> Notes: ${notes}</div>`;
+                    const customNotes = item.Notes ? String(item.Notes) : '';
+                    
+                    let notesHtml = '';
+                    if (variantText) {
+                        notesHtml += `<div class="item-notes" style="color: #666; font-size: 0.85rem;">• Variant: ${variantText}</div>`;
+                    }
+                    if (addOnText) {
+                        notesHtml += `<div class="item-notes" style="color: #764ba2; font-size: 0.85rem;">• Add On: ${addOnText}</div>`;
+                    }
+                    if (customNotes && customNotes.trim() !== '') {
+                        notesHtml += `<div class="item-notes" style="color: #666; font-style: italic; font-size: 0.85rem;">• Notes: ${customNotes}</div>`;
                     }
                     
-                    html += `</div>
-                                <select class="expanded-status-select ${statusClass}" onchange="updateOrderItemStatus('${item['Id Item']}', this.value)">
-                                    <option value="Pending" ${item.Status === 'Pending' ? 'selected' : ''}>PENDING</option>
-                                    <option value="Preparing" ${item.Status === 'Preparing' ? 'selected' : ''}>PREPARING</option>
-                                    <option value="Served" ${item.Status === 'Served' ? 'selected' : ''}>SERVED</option>
-                                    <option value="Cancelled" ${item.Status === 'Cancelled' ? 'selected' : ''}>CANCELLED</option>
-                                </select>
+                    html += `<div class="order-item" id="item-${item['Id Item']}">
+                                <div class="item-info">
+                                    <div class="item-name">${getMenuName(item['Id Menu'])} × ${item.Quantity}</div>
+                                    ${notesHtml}
+                                    ${item.Status === 'Preparing' ? `<div class="timer" id="timer-${item['Id Item']}">${formatTimer(elapsedTimes[item['Id Item']] || 0)}</div>` : ''}
+                                </div>
+                                <div class="item-actions">
+                                    <select class="status-select ${item.Status.toLowerCase()}" onchange="updateOrderItemStatus('${item['Id Item']}', this.value)">
+                                        <option value="Pending" ${item.Status === 'Pending' ? 'selected' : ''}>PENDING</option>
+                                        <option value="Preparing" ${item.Status === 'Preparing' ? 'selected' : ''}>PREPARING</option>
+                                        <option value="Served" ${item.Status === 'Served' ? 'selected' : ''}>SERVED</option>
+                                        <option value="Cancelled" ${item.Status === 'Cancelled' ? 'selected' : ''}>CANCELLED</option>
+                                    </select>
+                                </div>
                             </div>`;
-                }
+                });
                 
-                html += `</div></div>`;
+                html += `</div>`;
             }
             
-            // BEVERAGE Section in expanded view
+            // BEVERAGE Section
             if (beverageItems.length > 0) {
-                html += `<div class="expanded-category">
-                            <div class="expanded-category-header beverage">
+                html += `<div class="category-group" style="margin-bottom: 10px;">
+                            <div class="category-title" style="background: linear-gradient(135deg, #00b4db, #0083b0); color: white; padding: 8px 12px; border-radius: 8px; margin-bottom: 10px; font-size: 14px; font-weight: bold; display: flex; justify-content: space-between; align-items: center;">
                                 <span><i class="fas fa-coffee"></i> BEVERAGE</span>
-                                <button class="expanded-category-print-btn" onclick="event.stopPropagation(); printCategoryOrder('${orderId}', 'BEVERAGE')">
+                                <button class="print-category-btn" onclick="event.stopPropagation(); printCategoryOrder('${orderId}', 'BEVERAGE')" style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 4px 10px; border-radius: 15px; cursor: pointer; font-size: 11px; font-weight: 500;">
                                     <i class="fas fa-print"></i> Print BEVERAGE
                                 </button>
-                            </div>
-                            <div class="expanded-category-items">`;
+                            </div>`;
                 
-                for (const item of beverageItems) {
-                    const itemName = getMenuName(item['Id Menu']);
-                    const quantity = item.Quantity || 1;
-                    const statusClass = item.Status ? item.Status.toLowerCase() : 'pending';
-                    
-                    html += `<div class="expanded-item-with-status">
-                                <div class="expanded-item-info">
-                                    <div class="expanded-item-name-status">
-                                        <span>${itemName}</span>
-                                        <span class="expanded-item-quantity-status">×${quantity}</span>
-                                    </div>`;
-                    
-                    // Add variant if exists
+                beverageItems.forEach(item => {
+                    let variantText = '';
                     if (item['Id Variant'] && item['Id Variant'] !== '') {
-                        const variantName = variantData[item['Id Variant']] || item['Id Variant'];
-                        html += `<div class="expanded-details"><i class="fas fa-tag"></i> Variant: ${variantName}</div>`;
+                        variantText = variantData[item['Id Variant']] || item['Id Variant'];
                     }
                     
-                    // Add add-ons if exist
+                    let addOnText = '';
                     if (item['Id Add On'] && item['Id Add On'] !== '') {
                         const addOnIds = item['Id Add On'].split(',');
                         const addOnNames = addOnIds.map(id => addOnData[id] || id).filter(name => name);
                         if (addOnNames.length > 0) {
-                            html += `<div class="expanded-details"><i class="fas fa-plus-circle"></i> Add On: ${addOnNames.join(', ')}</div>`;
+                            addOnText = addOnNames.join(', ');
                         }
                     }
                     
-                    // Add notes if exist
-                    const notes = item.Notes ? String(item.Notes) : '';
-                    if (notes && notes.trim() !== '') {
-                        html += `<div class="expanded-details"><i class="fas fa-pencil-alt"></i> Notes: ${notes}</div>`;
+                    const customNotes = item.Notes ? String(item.Notes) : '';
+                    
+                    let notesHtml = '';
+                    if (variantText) {
+                        notesHtml += `<div class="item-notes" style="color: #666; font-size: 0.85rem;">• Variant: ${variantText}</div>`;
+                    }
+                    if (addOnText) {
+                        notesHtml += `<div class="item-notes" style="color: #764ba2; font-size: 0.85rem;">• Add On: ${addOnText}</div>`;
+                    }
+                    if (customNotes && customNotes.trim() !== '') {
+                        notesHtml += `<div class="item-notes" style="color: #666; font-style: italic; font-size: 0.85rem;">• Notes: ${customNotes}</div>`;
                     }
                     
-                    html += `</div>
-                                <select class="expanded-status-select ${statusClass}" onchange="updateOrderItemStatus('${item['Id Item']}', this.value)">
-                                    <option value="Pending" ${item.Status === 'Pending' ? 'selected' : ''}>PENDING</option>
-                                    <option value="Preparing" ${item.Status === 'Preparing' ? 'selected' : ''}>PREPARING</option>
-                                    <option value="Served" ${item.Status === 'Served' ? 'selected' : ''}>SERVED</option>
-                                    <option value="Cancelled" ${item.Status === 'Cancelled' ? 'selected' : ''}>CANCELLED</option>
-                                </select>
+                    html += `<div class="order-item" id="item-${item['Id Item']}">
+                                <div class="item-info">
+                                    <div class="item-name">${getMenuName(item['Id Menu'])} × ${item.Quantity}</div>
+                                    ${notesHtml}
+                                    ${item.Status === 'Preparing' ? `<div class="timer" id="timer-${item['Id Item']}">${formatTimer(elapsedTimes[item['Id Item']] || 0)}</div>` : ''}
+                                </div>
+                                <div class="item-actions">
+                                    <select class="status-select ${item.Status.toLowerCase()}" onchange="updateOrderItemStatus('${item['Id Item']}', this.value)">
+                                        <option value="Pending" ${item.Status === 'Pending' ? 'selected' : ''}>PENDING</option>
+                                        <option value="Preparing" ${item.Status === 'Preparing' ? 'selected' : ''}>PREPARING</option>
+                                        <option value="Served" ${item.Status === 'Served' ? 'selected' : ''}>SERVED</option>
+                                        <option value="Cancelled" ${item.Status === 'Cancelled' ? 'selected' : ''}>CANCELLED</option>
+                                    </select>
+                                </div>
                             </div>`;
-                }
+                });
                 
-                html += `</div></div>`;
+                html += `</div>`;
             }
             
-            // Add footer with total prep time and status dropdown
-            html += `<div class="expanded-order-footer">
-                        <div class="order-status-control">
-                            <div class="prep-time">Est. Prep: ${calculateTotalPrepTime(orderItems)} min</div>
-                            <select class="order-status-dropdown" onchange="updateAllOrderStatus('${orderId}', this.value)">
-                                <option value="" disabled>CHANGE ALL STATUS</option>
-                                <option value="Pending">PENDING</option>
-                                <option value="Preparing">PREPARING</option>
-                                <option value="Served">SERVED</option>
-                                <option value="Cancelled">CANCELLED</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-            </div>`;
-        }
-        
-        kitchenDisplay.innerHTML = html;
-        return;
-    }    
-    
-    // GRID VIEW - original detailed display
-    let html = '';
-    
-    for (const orderId of filteredOrders) {
-        const orderItems = ordersMap[orderId];
-        const hasPending = orderItems.some(item => item.Status === 'Pending');
-        const tableNumber = orderItems[0].TableNumber || 'Unknown';
-        const createdAt = orderItems[0]['Created At'];
-        
-        // Group items by category
-        const foodItems = [];
-        const beverageItems = [];
-        
-        for (const item of orderItems) {
-            const category = menuCategories[item['Id Menu']] || 'Food';
-            if (category === 'Beverage') {
-                beverageItems.push(item);
-            } else {
-                foodItems.push(item);
-            }
-        }
-        
-        // Build order card with category sections
-        html += `<div class="order-card ${waitingOrders.has(orderId) ? 'waiting' : ''}" data-order-id="${orderId}">${hasPending ? '<div class="urgent-badge">NEW</div>' : ''}
-                    <div class="order-header">
-                        <div>
-                            <div class="order-id">Order ${orderId}</div>
-                            <div class="order-time">${formatTime(createdAt)}</div>
-                        </div>
-                        <div class="order-actions">
-                            <button class="manual-print-btn" onclick="manualPrintOrder('${orderId}')"><i class="fas fa-print"></i> Print Order</button>
-                            <div class="order-table">${tableNumber}</div>
-                        </div>
-                    </div>
-                    <div class="order-items">`;
-        
-        // FOOD Section
-        if (foodItems.length > 0) {
-            html += `<div class="category-group" style="margin-bottom: 20px;">
-                        <div class="category-title" style="background: linear-gradient(135deg, #ff8c00, #ff5e00); color: white; padding: 8px 12px; border-radius: 8px; margin-bottom: 10px; font-size: 14px; font-weight: bold; display: flex; justify-content: space-between; align-items: center;">
-                            <span><i class="fas fa-utensils"></i> FOOD</span>
-                            <button class="print-category-btn" onclick="event.stopPropagation(); printCategoryOrder('${orderId}', 'FOOD')" style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 4px 10px; border-radius: 15px; cursor: pointer; font-size: 11px; font-weight: 500;">
-                                <i class="fas fa-print"></i> Print FOOD
-                            </button>
-                        </div>`;
-            
-            foodItems.forEach(item => {
-                let variantText = '';
-                if (item['Id Variant'] && item['Id Variant'] !== '') {
-                    variantText = variantData[item['Id Variant']] || item['Id Variant'];
-                }
-                
-                let addOnText = '';
-                if (item['Id Add On'] && item['Id Add On'] !== '') {
-                    const addOnIds = item['Id Add On'].split(',');
-                    const addOnNames = addOnIds.map(id => addOnData[id] || id).filter(name => name);
-                    if (addOnNames.length > 0) {
-                        addOnText = addOnNames.join(', ');
-                    }
-                }
-                
-                const customNotes = item.Notes ? String(item.Notes) : '';
-                
-                let notesHtml = '';
-                if (variantText) {
-                    notesHtml += `<div class="item-notes" style="color: #666; font-size: 0.85rem;">• Variant: ${variantText}</div>`;
-                }
-                if (addOnText) {
-                    notesHtml += `<div class="item-notes" style="color: #764ba2; font-size: 0.85rem;">• Add On: ${addOnText}</div>`;
-                }
-                if (customNotes && customNotes.trim() !== '') {
-                    notesHtml += `<div class="item-notes" style="color: #666; font-style: italic; font-size: 0.85rem;">• Notes: ${customNotes}</div>`;
-                }
-                
-                html += `<div class="order-item" id="item-${item['Id Item']}">
-                            <div class="item-info">
-                                <div class="item-name">${getMenuName(item['Id Menu'])} × ${item.Quantity}</div>
-                                ${notesHtml}
-                                ${item.Status === 'Preparing' ? `<div class="timer" id="timer-${item['Id Item']}">${formatTimer(elapsedTimes[item['Id Item']] || 0)}</div>` : ''}
-                            </div>
-                            <div class="item-actions">
-                                <select class="status-select ${item.Status.toLowerCase()}" onchange="updateOrderItemStatus('${item['Id Item']}', this.value)">
-                                    <option value="Pending" ${item.Status === 'Pending' ? 'selected' : ''}>PENDING</option>
-                                    <option value="Preparing" ${item.Status === 'Preparing' ? 'selected' : ''}>PREPARING</option>
-                                    <option value="Served" ${item.Status === 'Served' ? 'selected' : ''}>SERVED</option>
-                                    <option value="Cancelled" ${item.Status === 'Cancelled' ? 'selected' : ''}>CANCELLED</option>
+            html += `</div>
+                        <div class="order-footer">
+                            <div class="order-status-control">
+                                <div class="prep-time">Est. Prep: ${calculateTotalPrepTime(orderItems)} min</div>
+                                <select class="order-status-dropdown" onchange="updateAllOrderStatus('${orderId}', this.value)">
+                                    <option value="" disabled>CHANGE STATUS</option>
+                                    <option value="Pending">PENDING</option>
+                                    <option value="Preparing">PREPARING</option>
+                                    <option value="Served">SERVED</option>
+                                    <option value="Cancelled">CANCELLED</option>
                                 </select>
                             </div>
-                        </div>`;
-            });
-            
-            html += `</div>`;
-        }
-        
-        // BEVERAGE Section
-        if (beverageItems.length > 0) {
-            html += `<div class="category-group" style="margin-bottom: 10px;">
-                        <div class="category-title" style="background: linear-gradient(135deg, #00b4db, #0083b0); color: white; padding: 8px 12px; border-radius: 8px; margin-bottom: 10px; font-size: 14px; font-weight: bold; display: flex; justify-content: space-between; align-items: center;">
-                            <span><i class="fas fa-coffee"></i> BEVERAGE</span>
-                            <button class="print-category-btn" onclick="event.stopPropagation(); printCategoryOrder('${orderId}', 'BEVERAGE')" style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 4px 10px; border-radius: 15px; cursor: pointer; font-size: 11px; font-weight: 500;">
-                                <i class="fas fa-print"></i> Print BEVERAGE
-                            </button>
-                        </div>`;
-            
-            beverageItems.forEach(item => {
-                let variantText = '';
-                if (item['Id Variant'] && item['Id Variant'] !== '') {
-                    variantText = variantData[item['Id Variant']] || item['Id Variant'];
-                }
-                
-                let addOnText = '';
-                if (item['Id Add On'] && item['Id Add On'] !== '') {
-                    const addOnIds = item['Id Add On'].split(',');
-                    const addOnNames = addOnIds.map(id => addOnData[id] || id).filter(name => name);
-                    if (addOnNames.length > 0) {
-                        addOnText = addOnNames.join(', ');
-                    }
-                }
-                
-                const customNotes = item.Notes ? String(item.Notes) : '';
-                
-                let notesHtml = '';
-                if (variantText) {
-                    notesHtml += `<div class="item-notes" style="color: #666; font-size: 0.85rem;">• Variant: ${variantText}</div>`;
-                }
-                if (addOnText) {
-                    notesHtml += `<div class="item-notes" style="color: #764ba2; font-size: 0.85rem;">• Add On: ${addOnText}</div>`;
-                }
-                if (customNotes && customNotes.trim() !== '') {
-                    notesHtml += `<div class="item-notes" style="color: #666; font-style: italic; font-size: 0.85rem;">• Notes: ${customNotes}</div>`;
-                }
-                
-                html += `<div class="order-item" id="item-${item['Id Item']}">
-                            <div class="item-info">
-                                <div class="item-name">${getMenuName(item['Id Menu'])} × ${item.Quantity}</div>
-                                ${notesHtml}
-                                ${item.Status === 'Preparing' ? `<div class="timer" id="timer-${item['Id Item']}">${formatTimer(elapsedTimes[item['Id Item']] || 0)}</div>` : ''}
-                            </div>
-                            <div class="item-actions">
-                                <select class="status-select ${item.Status.toLowerCase()}" onchange="updateOrderItemStatus('${item['Id Item']}', this.value)">
-                                    <option value="Pending" ${item.Status === 'Pending' ? 'selected' : ''}>PENDING</option>
-                                    <option value="Preparing" ${item.Status === 'Preparing' ? 'selected' : ''}>PREPARING</option>
-                                    <option value="Served" ${item.Status === 'Served' ? 'selected' : ''}>SERVED</option>
-                                    <option value="Cancelled" ${item.Status === 'Cancelled' ? 'selected' : ''}>CANCELLED</option>
-                                </select>
-                            </div>
-                        </div>`;
-            });
-            
-            html += `</div>`;
-        }
-        
-        html += `</div>
-                    <div class="order-footer">
-                        <div class="order-status-control">
-                            <div class="prep-time">Est. Prep: ${calculateTotalPrepTime(orderItems)} min</div>
-                            <select class="order-status-dropdown" onchange="updateAllOrderStatus('${orderId}', this.value)">
-                                <option value="" disabled>CHANGE STATUS</option>
-                                <option value="Pending">PENDING</option>
-                                <option value="Preparing">PREPARING</option>
-                                <option value="Served">SERVED</option>
-                                <option value="Cancelled">CANCELLED</option>
-                            </select>
                         </div>
-                    </div>
-                </div>`;
+                    </div>`;
+        }
     }
     
     kitchenDisplay.innerHTML = html;
