@@ -348,6 +348,319 @@
             flex-wrap: wrap;
         }
 
+.view-toggle {
+    display: flex;
+    gap: 10px;
+    margin-left: auto;
+}
+
+.view-btn {
+    background: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 25px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #764ba2;
+}
+
+.view-btn.active {
+    background: #764ba2;
+    color: white;
+}
+
+.view-btn i {
+    font-size: 16px;
+}
+
+/* List View Styles */
+.kitchen-display.list-view {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.kitchen-display.list-view .order-card {
+    padding: 15px 20px;
+}
+
+.kitchen-display.list-view .order-header {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+    gap: 10px;
+}
+
+/* Row 1: Order ID and Table side by side */
+.kitchen-display.list-view .order-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    width: 100%;
+}
+
+.kitchen-display.list-view .order-id {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #333;
+}
+
+.kitchen-display.list-view .order-table {
+    background: #764ba2;
+    color: white;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-weight: 600;
+    display: inline-block;
+    font-size: 0.9rem;
+}
+
+/* Row 2: Time and buttons side by side */
+.kitchen-display.list-view .order-actions-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    width: 100%;
+}
+
+.kitchen-display.list-view .order-time {
+    color: #666;
+    font-size: 0.8rem;
+}
+
+.kitchen-display.list-view .action-buttons {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.kitchen-display.list-view .manual-print-btn {
+    background: #17a2b8;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.kitchen-display.list-view .view-order-details {
+    background: #667eea;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+    transition: all 0.3s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.kitchen-display.list-view .view-order-details:hover {
+    background: #764ba2;
+    transform: scale(1.02);
+}
+
+/* Mobile responsive for list view */
+@media (max-width: 480px) {
+
+     .expanded-item-name-status {
+        font-size: 0.75rem;
+     }
+    .kitchen-display.list-view .order-card {
+        padding: 12px 15px;
+    }
+    
+    .kitchen-display.list-view .order-id {
+        font-size: 1rem;
+    }
+    
+    .kitchen-display.list-view .order-table {
+        font-size: 0.8rem;
+        padding: 4px 10px;
+    }
+    
+    .kitchen-display.list-view .order-time {
+        font-size: 0.75rem;
+    }
+    
+    .kitchen-display.list-view .manual-print-btn,
+    .kitchen-display.list-view .view-order-details {
+        padding: 5px 10px;
+        font-size: 11px;
+    }
+    
+    .kitchen-display.list-view .manual-print-btn i,
+    .kitchen-display.list-view .view-order-details i {
+        font-size: 11px;
+    }
+}
+
+/* Expanded order details in list view */
+.order-details-expanded {
+    display: none;
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #f0f0f0;
+    background: #f9f9f9;
+    border-radius: 10px;
+    padding: 15px;
+}
+
+.order-details-expanded.show {
+    display: block;
+}
+
+.expanded-items-list {
+    margin-top: 10px;
+}
+
+.expanded-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+    font-size: 13px;
+}
+
+.expanded-item:last-child {
+    border-bottom: none;
+}
+
+.expanded-item-name {
+    font-weight: 600;
+    color: #333;
+}
+
+.expanded-item-quantity {
+    color: #764ba2;
+    font-weight: 600;
+}
+
+/* Category sections in expanded view */
+.expanded-category {
+    margin-bottom: 20px;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.expanded-category-header {
+    background: linear-gradient(135deg, #ff8c00, #ff5e00);
+    color: white;
+    padding: 8px 12px;
+    font-size: 13px;
+    font-weight: bold;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.expanded-category-header.beverage {
+    background: linear-gradient(135deg, #00b4db, #0083b0);
+}
+
+.expanded-category-items {
+    padding: 10px;
+}
+
+.expanded-item-with-status {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.expanded-item-with-status:last-child {
+    border-bottom: none;
+}
+
+.expanded-item-info {
+    flex: 1;
+}
+
+.expanded-item-name-status {
+    font-weight: 600;
+    color: #333;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.expanded-item-quantity-status {
+    color: #764ba2;
+    font-weight: 600;
+    font-size: 12px;
+}
+
+.expanded-status-select {
+    padding: 3px 8px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    font-size: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    background: white;
+    min-width: 85px;
+}
+
+.expanded-status-select.pending { background: #fff3cd; color: #856404; }
+.expanded-status-select.preparing { background: #cce5ff; color: #004085; }
+.expanded-status-select.served { background: #d4edda; color: #155724; }
+.expanded-status-select.cancelled { background: #f8d7da; color: #721c24; }
+
+.expanded-details {
+    font-size: 11px;
+    color: #666;
+    padding-left: 10px;
+    margin-top: 4px;
+}
+
+.expanded-details div {
+    margin-top: 2px;
+}
+
+.expanded-category-print-btn {
+    background: rgba(255,255,255,0.2);
+    border: none;
+    color: white;
+    padding: 3px 10px;
+    border-radius: 15px;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.expanded-category-print-btn:hover {
+    background: rgba(255,255,255,0.3);
+}
+
+.expanded-order-footer {
+    margin-top: 15px;
+    padding-top: 10px;
+    border-top: 1px solid #e0e0e0;
+    text-align: right;
+}
+
         .filter-btn {
             background: white;
             border: none;
@@ -533,10 +846,14 @@
     </nav>
 
     <div class="filter-buttons">
-        <button class="filter-btn active" onclick="filterOrders('all')">All Orders</button>
-        <button class="filter-btn" onclick="filterOrders('pending')">Pending</button>
-        <button class="filter-btn" onclick="filterOrders('preparing')">Preparing</button>
+    <button class="filter-btn active" onclick="filterOrders('all')">All Orders</button>
+    <button class="filter-btn" onclick="filterOrders('pending')">Pending</button>
+    <button class="filter-btn" onclick="filterOrders('preparing')">Preparing</button>
+    <div class="view-toggle">
+        <button class="view-btn active" id="gridViewBtn" onclick="setView('grid')"><i class="fas fa-th"></i> Grid</button>
+        <button class="view-btn" id="listViewBtn" onclick="setView('list')"><i class="fas fa-list"></i> List</button>
     </div>
+</div>
 
     <div class="kitchen-display" id="kitchenDisplay"></div>
 
@@ -1681,7 +1998,7 @@ if (hasVariant || hasAddOn || hasNotes) {
     return allSuccess;
 }
 
-        function renderOrders() {
+function renderOrders() {
     const kitchenDisplay = document.getElementById('kitchenDisplay');
     const ordersMap = {};
     orders.forEach(item => { if (!ordersMap[item['Id Order']]) ordersMap[item['Id Order']] = []; ordersMap[item['Id Order']].push(item); });
@@ -1709,7 +2026,181 @@ if (hasVariant || hasAddOn || hasNotes) {
         return;
     }
     
-    // Build HTML for each order card with categories grouped inside
+    // Check if we're in list view mode
+    if (currentView === 'list') {
+        // LIST VIEW - Two row layout: Row1: Order ID + Table, Row2: Time + Buttons
+        let html = '';
+        
+        for (const orderId of filteredOrders) {
+            const orderItems = ordersMap[orderId];
+            const tableNumber = orderItems[0].TableNumber || 'Unknown';
+            const createdAt = orderItems[0]['Created At'];
+            
+            // Group items by category
+            const foodItems = [];
+            const beverageItems = [];
+            
+            for (const item of orderItems) {
+                const category = menuCategories[item['Id Menu']] || 'Food';
+                if (category === 'Beverage') {
+                    beverageItems.push(item);
+                } else {
+                    foodItems.push(item);
+                }
+            }
+            
+            html += `<div class="order-card ${waitingOrders.has(orderId) ? 'waiting' : ''}" data-order-id="${orderId}">
+                        <div class="order-header">
+                            <div class="order-header-row">
+                                <div class="order-id">Order #${orderId}</div>
+                                <div class="order-table">Table: ${tableNumber}</div>
+                            </div>
+                            <div class="order-actions-row">
+                                <div class="order-time">${formatTime(createdAt)}</div>
+                                <div class="action-buttons">
+                                    <button class="manual-print-btn" onclick="manualPrintOrder('${orderId}')"><i class="fas fa-print"></i> Print</button>
+                                    <button class="view-order-details" onclick="toggleOrderDetails('${orderId}')"><i class="fas fa-eye"></i> View</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="order-details-expanded" id="expanded-${orderId}">`;
+            
+            // FOOD Section in expanded view
+            if (foodItems.length > 0) {
+                html += `<div class="expanded-category">
+                            <div class="expanded-category-header">
+                                <span><i class="fas fa-utensils"></i> FOOD</span>
+                                <button class="expanded-category-print-btn" onclick="event.stopPropagation(); printCategoryOrder('${orderId}', 'FOOD')">
+                                    <i class="fas fa-print"></i> Print FOOD
+                                </button>
+                            </div>
+                            <div class="expanded-category-items">`;
+                
+                for (const item of foodItems) {
+                    const itemName = getMenuName(item['Id Menu']);
+                    const quantity = item.Quantity || 1;
+                    const statusClass = item.Status ? item.Status.toLowerCase() : 'pending';
+                    
+                    html += `<div class="expanded-item-with-status">
+                                <div class="expanded-item-info">
+                                    <div class="expanded-item-name-status">
+                                        <span>${itemName}</span>
+                                        <span class="expanded-item-quantity-status">×${quantity}</span>
+                                    </div>`;
+                    
+                    // Add variant if exists
+                    if (item['Id Variant'] && item['Id Variant'] !== '') {
+                        const variantName = variantData[item['Id Variant']] || item['Id Variant'];
+                        html += `<div class="expanded-details"><i class="fas fa-tag"></i> Variant: ${variantName}</div>`;
+                    }
+                    
+                    // Add add-ons if exist
+                    if (item['Id Add On'] && item['Id Add On'] !== '') {
+                        const addOnIds = item['Id Add On'].split(',');
+                        const addOnNames = addOnIds.map(id => addOnData[id] || id).filter(name => name);
+                        if (addOnNames.length > 0) {
+                            html += `<div class="expanded-details"><i class="fas fa-plus-circle"></i> Add On: ${addOnNames.join(', ')}</div>`;
+                        }
+                    }
+                    
+                    // Add notes if exist
+                    const notes = item.Notes ? String(item.Notes) : '';
+                    if (notes && notes.trim() !== '') {
+                        html += `<div class="expanded-details"><i class="fas fa-pencil-alt"></i> Notes: ${notes}</div>`;
+                    }
+                    
+                    html += `</div>
+                                <select class="expanded-status-select ${statusClass}" onchange="updateOrderItemStatus('${item['Id Item']}', this.value)">
+                                    <option value="Pending" ${item.Status === 'Pending' ? 'selected' : ''}>PENDING</option>
+                                    <option value="Preparing" ${item.Status === 'Preparing' ? 'selected' : ''}>PREPARING</option>
+                                    <option value="Served" ${item.Status === 'Served' ? 'selected' : ''}>SERVED</option>
+                                    <option value="Cancelled" ${item.Status === 'Cancelled' ? 'selected' : ''}>CANCELLED</option>
+                                </select>
+                            </div>`;
+                }
+                
+                html += `</div></div>`;
+            }
+            
+            // BEVERAGE Section in expanded view
+            if (beverageItems.length > 0) {
+                html += `<div class="expanded-category">
+                            <div class="expanded-category-header beverage">
+                                <span><i class="fas fa-coffee"></i> BEVERAGE</span>
+                                <button class="expanded-category-print-btn" onclick="event.stopPropagation(); printCategoryOrder('${orderId}', 'BEVERAGE')">
+                                    <i class="fas fa-print"></i> Print BEVERAGE
+                                </button>
+                            </div>
+                            <div class="expanded-category-items">`;
+                
+                for (const item of beverageItems) {
+                    const itemName = getMenuName(item['Id Menu']);
+                    const quantity = item.Quantity || 1;
+                    const statusClass = item.Status ? item.Status.toLowerCase() : 'pending';
+                    
+                    html += `<div class="expanded-item-with-status">
+                                <div class="expanded-item-info">
+                                    <div class="expanded-item-name-status">
+                                        <span>${itemName}</span>
+                                        <span class="expanded-item-quantity-status">×${quantity}</span>
+                                    </div>`;
+                    
+                    // Add variant if exists
+                    if (item['Id Variant'] && item['Id Variant'] !== '') {
+                        const variantName = variantData[item['Id Variant']] || item['Id Variant'];
+                        html += `<div class="expanded-details"><i class="fas fa-tag"></i> Variant: ${variantName}</div>`;
+                    }
+                    
+                    // Add add-ons if exist
+                    if (item['Id Add On'] && item['Id Add On'] !== '') {
+                        const addOnIds = item['Id Add On'].split(',');
+                        const addOnNames = addOnIds.map(id => addOnData[id] || id).filter(name => name);
+                        if (addOnNames.length > 0) {
+                            html += `<div class="expanded-details"><i class="fas fa-plus-circle"></i> Add On: ${addOnNames.join(', ')}</div>`;
+                        }
+                    }
+                    
+                    // Add notes if exist
+                    const notes = item.Notes ? String(item.Notes) : '';
+                    if (notes && notes.trim() !== '') {
+                        html += `<div class="expanded-details"><i class="fas fa-pencil-alt"></i> Notes: ${notes}</div>`;
+                    }
+                    
+                    html += `</div>
+                                <select class="expanded-status-select ${statusClass}" onchange="updateOrderItemStatus('${item['Id Item']}', this.value)">
+                                    <option value="Pending" ${item.Status === 'Pending' ? 'selected' : ''}>PENDING</option>
+                                    <option value="Preparing" ${item.Status === 'Preparing' ? 'selected' : ''}>PREPARING</option>
+                                    <option value="Served" ${item.Status === 'Served' ? 'selected' : ''}>SERVED</option>
+                                    <option value="Cancelled" ${item.Status === 'Cancelled' ? 'selected' : ''}>CANCELLED</option>
+                                </select>
+                            </div>`;
+                }
+                
+                html += `</div></div>`;
+            }
+            
+            // Add footer with total prep time and status dropdown
+            html += `<div class="expanded-order-footer">
+                        <div class="order-status-control">
+                            <div class="prep-time">Est. Prep: ${calculateTotalPrepTime(orderItems)} min</div>
+                            <select class="order-status-dropdown" onchange="updateAllOrderStatus('${orderId}', this.value)">
+                                <option value="" disabled>CHANGE ALL STATUS</option>
+                                <option value="Pending">PENDING</option>
+                                <option value="Preparing">PREPARING</option>
+                                <option value="Served">SERVED</option>
+                                <option value="Cancelled">CANCELLED</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+        }
+        
+        kitchenDisplay.innerHTML = html;
+        return;
+    }    
+    
+    // GRID VIEW - original detailed display
     let html = '';
     
     for (const orderId of filteredOrders) {
@@ -1746,16 +2237,16 @@ if (hasVariant || hasAddOn || hasNotes) {
                     <div class="order-items">`;
         
         // FOOD Section
-if (foodItems.length > 0) {
-    html += `<div class="category-group" style="margin-bottom: 20px;">
-                <div class="category-title" style="background: linear-gradient(135deg, #ff8c00, #ff5e00); color: white; padding: 8px 12px; border-radius: 8px; margin-bottom: 10px; font-size: 14px; font-weight: bold; display: flex; justify-content: space-between; align-items: center;">
-                    <span><i class="fas fa-utensils"></i> FOOD</span>
-                    <button class="print-category-btn" onclick="event.stopPropagation(); printCategoryOrder('${orderId}', 'FOOD')" style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 4px 10px; border-radius: 15px; cursor: pointer; font-size: 11px; font-weight: 500;">
-                        <i class="fas fa-print"></i> Print FOOD
-                    </button>
-                </div>`;
-    
-    foodItems.forEach(item => {
+        if (foodItems.length > 0) {
+            html += `<div class="category-group" style="margin-bottom: 20px;">
+                        <div class="category-title" style="background: linear-gradient(135deg, #ff8c00, #ff5e00); color: white; padding: 8px 12px; border-radius: 8px; margin-bottom: 10px; font-size: 14px; font-weight: bold; display: flex; justify-content: space-between; align-items: center;">
+                            <span><i class="fas fa-utensils"></i> FOOD</span>
+                            <button class="print-category-btn" onclick="event.stopPropagation(); printCategoryOrder('${orderId}', 'FOOD')" style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 4px 10px; border-radius: 15px; cursor: pointer; font-size: 11px; font-weight: 500;">
+                                <i class="fas fa-print"></i> Print FOOD
+                            </button>
+                        </div>`;
+            
+            foodItems.forEach(item => {
                 let variantText = '';
                 if (item['Id Variant'] && item['Id Variant'] !== '') {
                     variantText = variantData[item['Id Variant']] || item['Id Variant'];
@@ -1804,16 +2295,16 @@ if (foodItems.length > 0) {
         }
         
         // BEVERAGE Section
-if (beverageItems.length > 0) {
-    html += `<div class="category-group" style="margin-bottom: 10px;">
-                <div class="category-title" style="background: linear-gradient(135deg, #00b4db, #0083b0); color: white; padding: 8px 12px; border-radius: 8px; margin-bottom: 10px; font-size: 14px; font-weight: bold; display: flex; justify-content: space-between; align-items: center;">
-                    <span><i class="fas fa-coffee"></i> BEVERAGE</span>
-                    <button class="print-category-btn" onclick="event.stopPropagation(); printCategoryOrder('${orderId}', 'BEVERAGE')" style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 4px 10px; border-radius: 15px; cursor: pointer; font-size: 11px; font-weight: 500;">
-                        <i class="fas fa-print"></i> Print BEVERAGE
-                    </button>
-                </div>`;
-    
-    beverageItems.forEach(item => {
+        if (beverageItems.length > 0) {
+            html += `<div class="category-group" style="margin-bottom: 10px;">
+                        <div class="category-title" style="background: linear-gradient(135deg, #00b4db, #0083b0); color: white; padding: 8px 12px; border-radius: 8px; margin-bottom: 10px; font-size: 14px; font-weight: bold; display: flex; justify-content: space-between; align-items: center;">
+                            <span><i class="fas fa-coffee"></i> BEVERAGE</span>
+                            <button class="print-category-btn" onclick="event.stopPropagation(); printCategoryOrder('${orderId}', 'BEVERAGE')" style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 4px 10px; border-radius: 15px; cursor: pointer; font-size: 11px; font-weight: 500;">
+                                <i class="fas fa-print"></i> Print BEVERAGE
+                            </button>
+                        </div>`;
+            
+            beverageItems.forEach(item => {
                 let variantText = '';
                 if (item['Id Variant'] && item['Id Variant'] !== '') {
                     variantText = variantData[item['Id Variant']] || item['Id Variant'];
@@ -1955,6 +2446,36 @@ async function getMenuCategory(menuId) {
         async function testPrint() { 
             await printKitchenOrder('TEST-001', [{ 'Id Menu': '1', Quantity: 1, Notes: 'Test print' }], 'TEST', new Date().toISOString(), "TEST PRINT");
         }
+
+// View mode management
+let currentView = 'grid'; // 'grid' or 'list'
+
+function setView(view) {
+    currentView = view;
+    const kitchenDisplay = document.getElementById('kitchenDisplay');
+    const gridBtn = document.getElementById('gridViewBtn');
+    const listBtn = document.getElementById('listViewBtn');
+    
+    if (view === 'grid') {
+        kitchenDisplay.classList.remove('list-view');
+        gridBtn.classList.add('active');
+        listBtn.classList.remove('active');
+    } else {
+        kitchenDisplay.classList.add('list-view');
+        gridBtn.classList.remove('active');
+        listBtn.classList.add('active');
+    }
+    
+    renderOrders(); // Re-render with new view mode
+}
+
+function toggleOrderDetails(orderId) {
+    const expandedDiv = document.getElementById(`expanded-${orderId}`);
+    if (expandedDiv) {
+        expandedDiv.classList.toggle('show');
+    }
+}
+
     </script>
 </body>
 </html>
