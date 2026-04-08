@@ -492,6 +492,20 @@
         transform: translate(-50%, -50%);
     }
 }
+
+.order-card.waiting {
+    background: #9e9e9e;
+    opacity: 0.8;
+    pointer-events: none;
+}
+
+.order-card.waiting .status-select,
+.order-card.waiting .order-status-dropdown,
+.order-card.waiting .manual-print-btn,
+.order-card.waiting .print-category-btn {
+    pointer-events: none;
+    opacity: 0.6;
+}
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
@@ -1051,6 +1065,7 @@ async function checkAndAutoPrintNewOrder(ordersList, oldOrdersMap) {
                         orders = [...otherOrders, ...completeOrderItems];
                         
                         closeLoadingPopup();
+                        waitingOrders.delete(orderId); // Make sure it's removed from waiting set
                         
                         const createdAt = completeOrderItems[0]?.['Created At'] || new Date();
                         await printKitchenOrder(orderId, completeOrderItems, tableNumber, createdAt, "PENDING - COMPLETE ORDER");
@@ -1058,6 +1073,7 @@ async function checkAndAutoPrintNewOrder(ordersList, oldOrdersMap) {
                     }
                 } else {
                     closeLoadingPopup();
+                     waitingOrders.delete(orderId); // Remove from waiting set on timeout
                     // Print with what we have
                     const tableNumber = await fetchOrderTableData(orderId);
                     const createdAt = orderItems[0]?.['Created At'] || new Date();
@@ -1093,6 +1109,7 @@ const ADDON_API_URL = 'https://script.google.com/macros/s/AKfycbzz6y1BvK1nc93MmE
         let menuCategories = {}; // Add this line with other global variables
         let variantData = {};
         let addOnData = {};
+        let waitingOrders = new Set(); // Track orders that are waiting for completion
 
         if (!currentStaff.id || currentStaff.role !== 'kitchen') window.location.href = 'login.html';
 
@@ -1285,6 +1302,15 @@ async function waitForCompleteOrder(orderId, currentTotalQuantity, maxWaitSecond
 let loadingPopup = null;
 
 function showLoadingPopup(orderId, currentCount, expectedCount) {
+    // Add to waiting orders set
+    waitingOrders.add(orderId);
+    
+    // Update the order card to grey if it exists
+    const orderCard = document.querySelector(`.order-card[data-order-id="${orderId}"]`);
+    if (orderCard) {
+        orderCard.classList.add('waiting');
+    }
+    
     // Remove existing popup if any
     if (loadingPopup) {
         loadingPopup.remove();
@@ -1343,6 +1369,18 @@ function updateLoadingPopup(currentCount, expectedCount) {
 
 function closeLoadingPopup() {
     if (loadingPopup) {
+        // Get the orderId from the popup before removing
+        const orderIdElement = loadingPopup.querySelector('p strong');
+        if (orderIdElement) {
+            const orderId = orderIdElement.textContent;
+            waitingOrders.delete(orderId);
+            
+            // Remove grey class from order card
+            const orderCard = document.querySelector(`.order-card[data-order-id="${orderId}"]`);
+            if (orderCard) {
+                orderCard.classList.remove('waiting');
+            }
+        }
         loadingPopup.remove();
         loadingPopup = null;
     }
@@ -1467,6 +1505,7 @@ async function loadKitchenOrders() {
                         }
                     } else {
                         closeLoadingPopup();
+                        waitingOrders.delete(orderId); // Remove from waiting set on timeout
                         // Show anyway after timeout
                         orders = newOrders;
                         renderOrders();
@@ -1693,7 +1732,7 @@ if (hasVariant || hasAddOn || hasNotes) {
         }
         
         // Build order card with category sections
-        html += `<div class="order-card">${hasPending ? '<div class="urgent-badge">NEW</div>' : ''}
+        html += `<div class="order-card ${waitingOrders.has(orderId) ? 'waiting' : ''}" data-order-id="${orderId}">${hasPending ? '<div class="urgent-badge">NEW</div>' : ''}
                     <div class="order-header">
                         <div>
                             <div class="order-id">Order ${orderId}</div>
