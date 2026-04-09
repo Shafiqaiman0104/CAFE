@@ -1499,6 +1499,34 @@ setInterval(async () => {
             
             kitchenOrdersRef.on('value', async (snapshot) => {
                 const firebaseData = snapshot.val();
+
+ // FIX: Handle empty data (null) properly
+        if (firebaseData === null) {
+            console.log('📡 REAL-TIME update - Database is EMPTY');
+            
+            // Store old orders before clearing
+            const oldOrdersMap = {};
+            orders.forEach(item => {
+                if (!oldOrdersMap[item['Id Order']]) oldOrdersMap[item['Id Order']] = [];
+                oldOrdersMap[item['Id Order']].push(item);
+            });
+            
+            // Clear orders array
+            orders = [];
+            
+            // Clear any waiting orders
+            waitingOrders.clear();
+            
+            // Clear auto-printed orders set
+            autoPrintedOrders.clear();
+            
+            // Re-render empty display
+            renderOrders();
+            
+            // Update real-time indicator
+            updateRealtimeIndicator(true);
+            return;
+        }
                 
                 if (firebaseData && Array.isArray(firebaseData) && firebaseData.length > 0) {
                     console.log(`📡 REAL-TIME update at ${new Date().toLocaleTimeString()} - ${firebaseData.length} items`);
@@ -1533,7 +1561,15 @@ setInterval(async () => {
                     
                     // Add visual indicator
                     updateRealtimeIndicator(true);
-                }
+                } else if (firebaseData && Array.isArray(firebaseData) && firebaseData.length === 0) {
+            // Handle empty array case
+            console.log('📡 REAL-TIME update - Empty array received');
+            orders = [];
+            waitingOrders.clear();
+            autoPrintedOrders.clear();
+            renderOrders();
+            updateRealtimeIndicator(true);
+        }
             });
             
             // Handle connection status
@@ -1737,6 +1773,18 @@ async function syncGoogleSheetsToFirebase() {
         
         if (result.success) {
             console.log('✅ Google Sheets synced to Firebase successfully');
+ // After sync, force a refresh of Firebase data
+            const snapshot = await kitchenOrdersRef.once('value');
+            const firebaseData = snapshot.val();
+            
+            // If Firebase has null or empty data, update orders immediately
+            if (firebaseData === null || (Array.isArray(firebaseData) && firebaseData.length === 0)) {
+                console.log('🔄 Firebase data is empty, clearing frontend...');
+                orders = [];
+                waitingOrders.clear();
+                autoPrintedOrders.clear();
+                renderOrders();
+            }
             return true;
         } else {
             console.warn('⚠️ Sync failed:', result.message);
