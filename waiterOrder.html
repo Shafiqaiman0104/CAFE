@@ -762,6 +762,8 @@
                 <button class="view-btn active" id="gridViewBtn" onclick="setViewMode('grid')"><i class="fas fa-th"></i> Grid</button>
                 <button class="view-btn" id="listViewBtn" onclick="setViewMode('list')"><i class="fas fa-list"></i> List</button>
             </div>
+ <!-- ADD THIS BUTTON -->
+    <button class="order-btn" style="background: #4caf50;" onclick="openCustomOrderModal()"><i class="fas fa-plus-circle"></i> Custom Order</button>
             <button class="order-btn" onclick="toggleOrdersPanel()"><i class="fas fa-clipboard-list"></i> Current Orders <span id="orderCountBadge" class="badge">0</span></button>
             <button class="logout-btn" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
         </div>
@@ -826,6 +828,42 @@
             <div id="searchResults" style="max-height: 400px; overflow-y: auto;"></div>
         </div>
     </div>
+
+<!-- Custom Order Modal -->
+<div id="customOrderModal" class="modal">
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
+            <h3><i class="fas fa-plus-circle"></i> Add Custom Menu Item</h3>
+            <button class="secondary-btn" onclick="closeCustomOrderModal()">❌</button>
+        </div>
+        <div id="customOrderBody">
+            <div class="form-group">
+                <label>ID Menu:</label>
+                <input type="text" id="customMenuId" readonly style="background: #f5f5f5; font-family: monospace;">
+            </div>
+            <div class="form-group">
+                <label>Name: <span style="color:red;">*</span></label>
+                <input type="text" id="customMenuName" placeholder="Enter item name" required>
+            </div>
+            <div class="form-group">
+                <label>Price (RM): <span style="color:red;">*</span></label>
+                <input type="number" id="customMenuPrice" step="0.01" min="0" placeholder="0.00" required>
+            </div>
+            <div class="form-group">
+                <label>Category:</label>
+                <input type="text" id="customMenuCategory" value="CUSTOM" readonly style="background: #f5f5f5;">
+            </div>
+            <div class="form-group">
+                <label>Preparation Time (minutes): <span style="color:red;">*</span></label>
+                <input type="number" id="customMenuPrepTime" min="1" value="15" required>
+            </div>
+            <div class="action-buttons">
+                <button class="secondary-btn" onclick="closeCustomOrderModal()">Cancel</button>
+                <button class="primary-btn" onclick="addCustomOrder()" style="background: linear-gradient(135deg, #4caf50, #45a049);">Add Custom Order</button>
+            </div>
+        </div>
+    </div>
+</div>
 
     <div id="itemModal" class="modal"><div class="modal-content"><div class="modal-header"><h3 id="modalTitle">Customize Order</h3><button class="secondary-btn" onclick="closeItemModal()">❌</button></div><div id="modalBody"></div><div class="action-buttons"><button class="secondary-btn" onclick="closeItemModal()">Cancel</button><button class="primary-btn" onclick="addToCartFromModal()">Add to Cart</button></div></div></div>
     <div id="notesModal" class="modal"><div class="modal-content"><div class="modal-header"><h3>Edit Notes</h3><button class="secondary-btn" onclick="closeNotesModal()">❌</button></div><textarea id="notesInput" rows="3" placeholder="Special instructions..."></textarea><div class="action-buttons"><button class="secondary-btn" onclick="closeNotesModal()">Cancel</button><button class="primary-btn" onclick="saveNotes()">Save</button></div></div></div>
@@ -1035,6 +1073,134 @@ function addToCartFromModal() {
         window.addToCartFromModal = addToCartFromModal; window.toggleOrdersPanel = toggleOrdersPanel; window.setViewMode = setViewMode;
         window.openTableSelectionModal = openTableSelectionModal; window.closeTableModal = closeTableModal; window.confirmTableAndSubmit = confirmTableAndSubmit;
         window.filterByCategory = filterByCategory; window.openSearchModal = openSearchModal; window.closeSearchModal = closeSearchModal; window.closeSuccessModal = closeSuccessModal;
+
+// Custom Order Functions
+function openCustomOrderModal() {
+    // Generate CUSTOM ID with timestamp
+    const timestamp = Date.now();
+    const customId = `CUSTOM${timestamp}`;
+    document.getElementById('customMenuId').value = customId;
+    
+    // Clear previous values
+    document.getElementById('customMenuName').value = '';
+    document.getElementById('customMenuPrice').value = '';
+    document.getElementById('customMenuPrepTime').value = '15';
+    
+    document.getElementById('customOrderModal').style.display = 'flex';
+}
+
+function closeCustomOrderModal() {
+    document.getElementById('customOrderModal').style.display = 'none';
+}
+
+async function addCustomOrder() {
+    // Validate inputs
+    const menuName = document.getElementById('customMenuName').value.trim();
+    const menuPrice = document.getElementById('customMenuPrice').value;
+    const prepTime = document.getElementById('customMenuPrepTime').value;
+    const customId = document.getElementById('customMenuId').value;
+    
+    if (!menuName) {
+        alert('Please enter menu name');
+        return;
+    }
+    
+    if (!menuPrice || parseFloat(menuPrice) <= 0) {
+        alert('Please enter a valid price');
+        return;
+    }
+    
+    if (!prepTime || parseInt(prepTime) <= 0) {
+        alert('Please enter valid preparation time');
+        return;
+    }
+    
+    showLoading('Adding custom menu item...');
+    
+    try {
+        // Prepare menu data for API - description is now hardcoded
+        const menuData = {
+            id: customId,
+            name: menuName,
+            description: 'Custom menu item',  // Hardcoded description
+            price: parseFloat(menuPrice),
+            category: 'CUSTOM',
+            preparationTime: parseInt(prepTime),
+            available: true,
+            recommend: false,
+            tags: 'custom',
+            image: ''
+        };
+        
+        // Call MENU_API to create the menu item
+        const response = await fetch(`${MENU_API}?action=createMenu`, {
+            method: 'POST',
+            body: JSON.stringify(menuData)
+        });
+        
+        const result = await response.json();
+        
+        if (!result.success) {
+            throw new Error(result.message || 'Failed to create custom menu');
+        }
+        
+        // Create custom menu object for cart (matching the structure expected by addToCart)
+        const customMenuObj = {
+            'Id Menu': customId,
+            'Name': menuName,
+            'Price': parseFloat(menuPrice),
+            'Preparation Time': parseInt(prepTime),
+            'Category': 'CUSTOM',
+            'Description': 'Custom menu item'
+        };
+        
+        // Add directly to cart with CLEAR notes (user can edit later)
+        const notes = '';  // Empty notes - user can add their own notes
+        
+        cart.push({
+            id: customId,
+            name: menuName,
+            basePrice: parseFloat(menuPrice),
+            variant: null,
+            addOns: [],
+            notes: notes,  // Empty notes
+            quantity: 1,
+            totalPrice: parseFloat(menuPrice),
+            prepTime: parseInt(prepTime)
+        });
+        
+        // Also add to local menuItems array for display (without page reload)
+        menuItems.push(customMenuObj);
+        
+        // Refresh categories and menu display
+        extractCategories();
+        renderCategoryButtons();
+        renderMenu();
+        
+        // Update orders UI
+        updateOrdersUI();
+        
+        hideLoading();
+        closeCustomOrderModal();
+        
+        // Show success message
+        alert(`Custom menu "${menuName}" has been added to your current orders!`);
+        
+        // Optionally open orders panel to show the new item
+        toggleOrdersPanel(true);
+        
+    } catch (error) {
+        hideLoading();
+        console.error('Error adding custom order:', error);
+        alert('Failed to add custom order: ' + error.message);
+    }
+}
+
+// Make functions globally accessible
+window.openCustomOrderModal = openCustomOrderModal;
+window.closeCustomOrderModal = closeCustomOrderModal;
+window.addCustomOrder = addCustomOrder;
+
     </script>
 </body>
 </html>
