@@ -1295,9 +1295,7 @@
                 }
                 if (selectedOrderType === 'Dine In') await fetch(`${TABLE_API}?action=updateTableStatus&id=${selectedTableId}&status=Occupied`);
 
-                // CLEAR waiting lists on order submit
-                localStorage.removeItem('waitingLists');
-                updateWaitingListBadge();
+
 
                 hideLoading();
                 document.getElementById('successOrderId').innerText = `Order ID: ${orderId}`;
