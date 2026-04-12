@@ -431,6 +431,7 @@
         }
         .status-dot.white { background: white; }
         .status-dot.orange { background: #ff9800; }
+        .status-dot.red { background: red; }
 
         /* Orders Panel */
         .orders-panel {
@@ -1032,11 +1033,15 @@
                 <div class="table-status-info">
                     <div class="status-indicator">
                         <span class="status-dot white"></span>
-                        <span>White = Available</span>
+                        <span>Available</span>
                     </div>
                     <div class="status-indicator">
                         <span class="status-dot orange"></span>
-                        <span>Orange = Active Table</span>
+                        <span style="color:orange;">Active Table</span>
+                    </div>
+                    <div class="status-indicator">
+                        <span class="status-dot red"></span>
+                        <span style="color:red;>Ready Table</span>
                     </div>
                 </div>
                 
