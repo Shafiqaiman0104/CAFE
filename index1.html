@@ -1,0 +1,4304 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Restaurant POS System</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+            min-height: 100vh;
+        }
+        
+        .login-container {
+            max-width: 400px;
+            margin: 0 auto;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .login-box {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        .login-box h2 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        
+        .input-group {
+            margin-bottom: 20px;
+        }
+        
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        
+        .input-group input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+        }
+        
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 15px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .btn-secondary {
+            background: #e0e0e0;
+            color: #333;
+            margin-top: 10px;
+        }
+        
+        .error {
+            color: #e53e3e;
+            text-align: center;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+        
+        .app-container {
+            display: none;
+            min-height: 100vh;
+            background: #f5f5f5;
+        }
+        
+        .top-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 100;
+        }
+        
+        .menu-toggle {
+            font-size: 24px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+        }
+        
+        .restaurant-name {
+            font-weight: bold;
+            font-size: 18px;
+        }
+        
+        .staff-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .sidebar {
+            position: fixed;
+            top: 60px;
+            left: 0;
+            bottom: 0;
+            width: 280px;
+            background: white;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            transform: translateX(-100%);
+            transition: transform 0.3s;
+            z-index: 99;
+            overflow-y: auto;
+        }
+        
+        .sidebar.open {
+            transform: translateX(0);
+        }
+        
+        .sidebar-overlay {
+            position: fixed;
+            top: 60px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            z-index: 98;
+        }
+        
+        .sidebar-overlay.open {
+            display: block;
+        }
+        
+        .sidebar-menu {
+            padding: 15px 0;
+        }
+        
+        .menu-section {
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .menu-section-title {
+            padding: 10px 20px;
+            font-size: 12px;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .menu-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 20px;
+            color: #333;
+            text-decoration: none;
+            transition: background 0.2s;
+            cursor: pointer;
+        }
+        
+        .menu-item:hover {
+            background: #f5f5f5;
+        }
+        
+        .menu-item.active {
+            background: #667eea;
+            color: white;
+        }
+        
+        .menu-item i {
+            width: 24px;
+            margin-right: 15px;
+            font-size: 18px;
+        }
+        
+        .main-content {
+            margin-top: 60px;
+            padding: 15px;
+            min-height: calc(100vh - 60px);
+        }
+        
+        .page {
+            display: none;
+        }
+        
+        .page.active {
+            display: block;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        
+        .stat-value {
+            font-size: 28px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .stat-label {
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .section-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .section-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .btn-icon {
+            background: #667eea;
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 18px;
+        }
+        
+        .btn-small {
+            padding: 8px 15px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .table-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 15px;
+        }
+        
+        .table-card-item {
+            background: white;
+            border-radius: 15px;
+            padding: 15px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            cursor: pointer;
+        }
+        
+        .table-available {
+            border-left: 4px solid #38a169;
+        }
+        
+        .table-occupied {
+            border-left: 4px solid #e53e3e;
+        }
+        
+        .table-number {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        
+        .table-capacity {
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+        
+        .menu-card {
+            background: white;
+            border-radius: 15px;
+            padding: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        
+        .menu-card-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .menu-card-price {
+            color: #667eea;
+            font-weight: bold;
+        }
+        
+        .order-items-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .order-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .order-total-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid #eee;
+        }
+        
+        .order-total-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        
+        .order-grand-total {
+            font-size: 20px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: flex-end;
+        }
+        
+        .modal-content {
+            background: white;
+            width: 100%;
+            max-width: 500px;
+            max-height: 90vh;
+            border-radius: 20px 20px 0 0;
+            padding: 20px;
+            overflow-y: auto;
+            animation: slideUp 0.3s;
+        }
+        
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .modal-title {
+            font-size: 20px;
+            font-weight: bold;
+        }
+        
+        .modal-close {
+            font-size: 24px;
+            background: none;
+            border: none;
+            cursor: pointer;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .checkbox-group input {
+            width: auto;
+        }
+        
+        @media (min-width: 768px) {
+            .sidebar {
+                transform: translateX(0);
+            }
+            .menu-toggle {
+                display: none;
+            }
+            .main-content {
+                margin-left: 280px;
+            }
+            .sidebar-overlay {
+                display: none !important;
+            }
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        
+        .role-badge {
+            background: #667eea;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            text-transform: capitalize;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        
+        .btn-edit {
+            background: #3182ce;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        .btn-delete {
+            background: #e53e3e;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        .btn-view {
+            background: #38a169;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        .variant-section, .modifier-section {
+            background: #f7fafc;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+        }
+        
+        .option-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .option-row input {
+            padding: 10px 12px;
+            border: 1.5px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+            background: white;
+        }
+        
+        .option-row input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .selected-variant, .selected-modifier {
+            background: #e2e8f0;
+            padding: 8px 12px;
+            border-radius: 8px;
+            margin: 5px 0;
+        }
+        
+        .search-select {
+            position: relative;
+        }
+        
+        .search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 10;
+        }
+        
+        .search-result-item {
+            padding: 10px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .search-result-item:hover {
+            background: #f5f5f5;
+        }
+        
+        /* Improved option fields styling */
+        .options-container {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px dashed #cbd5e0;
+        }
+        
+        .option-header {
+            display: grid;
+            grid-template-columns: 2fr 1fr 40px;
+            gap: 10px;
+            margin-bottom: 10px;
+            font-size: 12px;
+            color: #718096;
+            font-weight: 600;
+            padding: 0 5px;
+        }
+        
+        .option-row-improved {
+            display: grid;
+            grid-template-columns: 2fr 1fr 40px;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .option-row-improved input {
+            padding: 10px 12px;
+            border: 1.5px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 14px;
+            width: 100%;
+            background: white;
+        }
+        
+        .option-row-improved input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .btn-remove-option {
+            background: #f56565;
+            color: white;
+            border: none;
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .btn-add-option {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 10px;
+            width: 100%;
+        }
+        
+        /* Order details panel */
+        .order-detail-card {
+            background: #f7fafc;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .order-items-detail {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #e2e8f0;
+        }
+        
+        .order-item-detail {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px dashed #e2e8f0;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: capitalize;
+        }
+        
+        .status-active { background: #fef3c7; color: #92400e; }
+        .status-completed { background: #d1fae5; color: #065f46; }
+        .status-cancelled { background: #fee2e2; color: #991b1b; }
+        .status-preparing { background: #dbeafe; color: #1e40af; }
+        
+        .transaction-card {
+            background: #f7fafc;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 12px;
+        }
+/* New Take Order Page Styles */
+body.take-order-page {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.take-order-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 12px;
+}
+
+.category-header-takeorder {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.category-header-takeorder h2 {
+    color: white;
+    font-size: 1.2rem;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+
+.search-icon-takeorder {
+    width: 36px;
+    height: 36px;
+    background: rgba(255,255,255,0.2);
+    backdrop-filter: blur(5px);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    color: white;
+    font-size: 1.1rem;
+}
+
+.category-bar-takeorder {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 8px;
+    margin-bottom: 20px;
+    padding: 6px 2px;
+    overflow-x: auto;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
+}
+
+.category-btn-takeorder {
+    background: rgba(255,255,255,0.2);
+    backdrop-filter: blur(5px);
+    border: none;
+    padding: 7px 16px;
+    border-radius: 40px;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.8rem;
+    white-space: nowrap;
+}
+
+.category-btn-takeorder.active {
+    background: #ff9800;
+    color: white;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+}
+
+.menu-grid-takeorder {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+@media (min-width: 640px) {
+    .menu-grid-takeorder { grid-template-columns: repeat(3, 1fr); }
+}
+@media (min-width: 900px) {
+    .menu-grid-takeorder { grid-template-columns: repeat(4, 1fr); }
+}
+@media (min-width: 1200px) {
+    .menu-grid-takeorder { grid-template-columns: repeat(5, 1fr); }
+}
+
+.menu-grid-takeorder.list-view {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.menu-grid-takeorder.list-view .menu-card-takeorder {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    padding: 10px;
+}
+
+.menu-grid-takeorder.list-view .menu-image-takeorder {
+    width: 70px;
+    height: 70px;
+    border-radius: 12px;
+}
+
+.menu-grid-takeorder.list-view .menu-name-overlay-takeorder {
+    display: none;
+}
+
+.menu-card-takeorder {
+    background: white;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+    cursor: pointer;
+    position: relative;
+}
+
+.menu-card-takeorder:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+}
+
+.top-right-badge {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    background: #ff9800;
+    color: white;
+    border-radius: 50%;
+    min-width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.65rem;
+    font-weight: bold;
+    z-index: 10;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    padding: 0 4px;
+}
+
+.image-wrapper-takeorder {
+    position: relative;
+    width: 100%;
+}
+
+.menu-image-takeorder {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    display: block;
+}
+
+.menu-name-overlay-takeorder {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.7), rgba(0,0,0,0.3), transparent);
+    padding: 16px 8px 6px 10px;
+}
+
+.menu-name-overlay-takeorder span {
+    color: white;
+    font-weight: 700;
+    font-size: 0.9rem;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    display: block;
+    line-height: 1.2;
+}
+
+.menu-content-takeorder {
+    padding: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: white;
+}
+
+.menu-price-takeorder {
+    font-weight: 800;
+    color: #764ba2;
+    font-size: 1rem;
+}
+
+.table-section-takeorder {
+    display: block;
+}
+
+.menu-section-takeorder {
+    display: none;
+}
+
+.back-to-tables-btn {
+    background: rgba(255,255,255,0.2);
+    border: none;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    cursor: pointer;
+    margin-bottom: 15px;
+    font-size: 0.9rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.table-grid-takeorder {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    padding: 8px 0;
+    max-height: calc(100vh - 380px);
+    overflow-y: auto;
+}
+
+.table-grid-takeorder.list-view {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.table-grid-takeorder.list-view .table-card-takeorder {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 15px 20px;
+    gap: 20px;
+}
+
+@media (min-width: 640px) {
+    .table-grid-takeorder { grid-template-columns: repeat(5, 1fr); }
+}
+
+.table-card-takeorder {
+    background: white;
+    border-radius: 16px;
+    padding: 20px 8px;
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 2px solid transparent;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.table-card-takeorder:hover {
+    transform: scale(1.02);
+}
+
+.table-card-takeorder.occupied {
+    background: #ff9800;
+    color: white;
+}
+
+.table-card-takeorder .capacity-takeorder {
+    font-size: 0.8rem;
+    opacity: 0.8;
+    margin-top: 5px;
+}
+
+.table-card-takeorder .table-number-takeorder {
+    font-size: 1.8rem;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.table-status-info {
+    background: rgba(255,255,255,0.15);
+    backdrop-filter: blur(5px);
+    color: white;
+    padding: 12px 16px;
+    border-radius: 40px;
+    margin: 15px 0 10px 0;
+    text-align: center;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.status-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+}
+
+.status-dot.white { background: white; }
+.status-dot.orange { background: #ff9800; }
+
+.location-filter-bar {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 8px;
+    margin-bottom: 15px;
+    padding: 6px 2px;
+    overflow-x: auto;
+}
+
+.orders-panel-takeorder {
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 200px);
+    margin-top: 20px;
+}
+
+.orders-header-takeorder {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    padding: 14px 20px;
+    border-radius: 20px 20px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.orders-header-takeorder h3 {
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.orders-list-takeorder {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px;
+    max-height: 50vh;
+}
+
+.order-item-card-takeorder {
+    background: #f8f9fa;
+    border-radius: 14px;
+    padding: 12px;
+    margin-bottom: 10px;
+    border-left: 4px solid #764ba2;
+}
+
+.order-item-header-takeorder {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 8px;
+}
+
+.order-item-name-takeorder {
+    font-weight: 700;
+    color: #333;
+    font-size: 0.95rem;
+}
+
+.order-item-price-takeorder {
+    font-weight: 700;
+    color: #764ba2;
+    font-size: 0.95rem;
+}
+
+.order-item-details-takeorder {
+    font-size: 0.75rem;
+    color: #666;
+    margin-bottom: 8px;
+}
+
+.order-item-actions-takeorder {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 8px;
+    gap: 10px;
+}
+
+.qty-control-takeorder {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: white;
+    padding: 3px 8px;
+    border-radius: 30px;
+}
+
+.qty-btn-takeorder {
+    background: #e0e0e0;
+    border: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.orders-total-takeorder {
+    padding: 14px 20px;
+    border-top: 2px solid #e0e0e0;
+    background: white;
+}
+
+.total-row-takeorder {
+    display: flex;
+    justify-content: space-between;
+    font-weight: 700;
+    font-size: 1.1rem;
+    margin-bottom: 12px;
+}
+
+.submit-order-btn-takeorder {
+    width: 100%;
+    background: linear-gradient(135deg, #4caf50, #45a049);
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: 40px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.empty-orders-takeorder {
+    text-align: center;
+    color: #888;
+    padding: 40px 20px;
+}
+
+.empty-orders-takeorder i {
+    font-size: 3rem;
+    margin-bottom: 10px;
+    opacity: 0.5;
+}
+
+.bottom-action-bar-takeorder {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 70px;
+    background: rgba(255,255,255,0.95);
+    backdrop-filter: blur(10px);
+    border-top: 1px solid rgba(0,0,0,0.1);
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    padding: 0 16px;
+    z-index: 100;
+    box-shadow: 0 -4px 15px rgba(0,0,0,0.1);
+}
+
+.bottom-btn-takeorder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    background: none;
+    border: none;
+    color: #555;
+    font-size: 0.7rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 8px 16px;
+    border-radius: 40px;
+    flex: 1;
+    max-width: 120px;
+}
+
+.bottom-btn-takeorder i {
+    font-size: 1.6rem;
+    color: #764ba2;
+}
+
+.bottom-btn-takeorder.current-order-btn-takeorder {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 50px;
+    flex: 2;
+    max-width: 200px;
+}
+
+.bottom-btn-takeorder.current-order-btn-takeorder i {
+    color: white;
+    margin-right: 8px;
+}
+
+.bottom-btn-takeorder .badge {
+    background: #ff9800;
+    color: white;
+    border-radius: 20px;
+    padding: 2px 8px;
+    font-size: 0.7rem;
+    margin-left: 6px;
+}
+
+.order-type-switch-takeorder {
+    display: flex;
+    gap: 12px;
+    background: #f0f0f0;
+    padding: 5px;
+    border-radius: 50px;
+}
+
+.type-option-takeorder {
+    flex: 1;
+    text-align: center;
+    padding: 8px 10px;
+    border-radius: 40px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s;
+    background: transparent;
+    color: #555;
+    font-size: 0.9rem;
+}
+
+.type-option-takeorder.selected {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+}
+
+.view-toggle-takeorder {
+    display: flex;
+    gap: 5px;
+    background: rgba(255,255,255,0.2);
+    padding: 3px;
+    border-radius: 30px;
+}
+
+.view-btn-takeorder {
+    background: transparent;
+    border: none;
+    color: white;
+    padding: 5px 12px;
+    border-radius: 25px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: all 0.2s;
+}
+
+.view-btn-takeorder.active {
+    background: white;
+    color: #764ba2;
+}
+
+.delivery-fields-takeorder {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 16px;
+    margin: 15px 0;
+}
+
+@media (min-width: 769px) {
+    .take-order-layout {
+        display: flex;
+        gap: 20px;
+        align-items: flex-start;
+    }
+    
+    .menu-wrapper-takeorder {
+        flex: 1;
+        min-width: 0;
+    }
+    
+    .orders-panel-takeorder {
+        width: 350px;
+        flex-shrink: 0;
+        position: sticky;
+        top: 80px;
+        margin-top: 0;
+    }
+}
+
+.variant-option-takeorder, .addon-option-takeorder {
+    border: 2px solid #e0e0e0;
+    border-radius: 16px;
+    padding: 12px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    justify-content: space-between;
+}
+
+.variant-option-takeorder.selected, .addon-option-takeorder.selected {
+    border-color: #764ba2;
+    background: #f0e6ff;
+}
+    </style>
+</head>
+<body>
+    <!-- License Screen -->
+    <div id="licenseScreen" class="login-container">
+        <div class="login-box">
+            <h2>🔐 Restaurant POS</h2>
+            <div class="input-group">
+                <label>License Key</label>
+                <input type="text" id="licenseInput" placeholder="Enter license key">
+            </div>
+            <button class="btn" onclick="checkLicense()">Verify</button>
+            <p id="licenseError" class="error"></p>
+        </div>
+    </div>
+
+    <!-- PIN Screen -->
+    <div id="pinScreen" class="login-container" style="display: none;">
+        <div class="login-box">
+            <h2 id="restaurantNameDisplay">Restaurant</h2>
+            <div class="input-group">
+                <label>Enter PIN</label>
+                <input type="password" id="pinInput" placeholder="6-digit PIN" maxlength="6">
+            </div>
+            <button class="btn" onclick="loginWithPin()">Login</button>
+            <button class="btn btn-secondary" onclick="backToLicense()">← Change License</button>
+            <p id="pinError" class="error"></p>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="appContainer" class="app-container">
+        <!-- Top Bar -->
+        <div class="top-bar">
+            <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+            <span class="restaurant-name" id="appRestaurantName"></span>
+            <div class="staff-info">
+                <span id="staffNameTop"></span>
+                <span id="staffRoleTop" class="role-badge"></span>
+                <button class="btn-small" onclick="logout()" style="margin-left: 10px;">Logout</button>
+            </div>
+        </div>
+
+        <!-- Sidebar Overlay -->
+        <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+        <!-- Sidebar -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-menu">
+                <div class="menu-section">
+                    <div class="menu-section-title">MAIN</div>
+                    <div class="menu-item active" onclick="showPage('dashboard')">
+                        <i class="fas fa-chart-pie"></i> Dashboard
+                    </div>
+                </div>
+
+                <div class="menu-section" id="managerMenu">
+                    <div class="menu-section-title">MANAGEMENT</div>
+                    <div class="menu-item" onclick="showPage('menu')">
+                        <i class="fas fa-utensils"></i> Menu Items
+                    </div>
+                    <div class="menu-item" onclick="showPage('categories')">
+                        <i class="fas fa-list"></i> Categories
+                    </div>
+                    <div class="menu-item" onclick="showPage('variants')">
+                        <i class="fas fa-sliders-h"></i> Variants
+                    </div>
+                    <div class="menu-item" onclick="showPage('modifiers')">
+                        <i class="fas fa-plus-circle"></i> Modifiers
+                    </div>
+                    <div class="menu-item" onclick="showPage('tables')">
+                        <i class="fas fa-chair"></i> Tables
+                    </div>
+                    <div class="menu-item" onclick="showPage('discounts')">
+                        <i class="fas fa-tag"></i> Discounts
+                    </div>
+                    <div class="menu-item" onclick="showPage('staff')">
+                        <i class="fas fa-users"></i> Staff
+                    </div>
+                    <div class="menu-item" onclick="showPage('roles')">
+                        <i class="fas fa-shield-alt"></i> Roles
+                    </div>
+                    <div class="menu-item" onclick="showPage('tax')">
+                        <i class="fas fa-percent"></i> Tax Settings
+                    </div>
+                    <div class="menu-item" onclick="showPage('allOrders')">
+                        <i class="fas fa-clipboard-list"></i> All Orders
+                    </div>
+                    <div class="menu-item" onclick="showPage('allTransactions')">
+                        <i class="fas fa-money-bill-wave"></i> All Transactions
+                    </div>
+                    <div class="menu-item" onclick="showPage('reports')">
+                        <i class="fas fa-chart-bar"></i> Reports
+                    </div>
+                </div>
+
+                <div class="menu-section" id="staffMenu">
+                    <div class="menu-section-title">OPERATIONS</div>
+                    <div class="menu-item" onclick="showPage('takeOrder')">
+                        <i class="fas fa-pen"></i> Take Order
+                    </div>
+                    <div class="menu-item" onclick="showPage('activeOrders')">
+                        <i class="fas fa-clock"></i> Active Orders
+                    </div>
+                    <div class="menu-item" onclick="showPage('cashier')">
+                        <i class="fas fa-cash-register"></i> Cashier
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Dashboard Page -->
+            <div id="dashboard" class="page active">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="dashTotalOrders">0</div>
+                        <div class="stat-label">Today's Orders</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="dashTotalSales">RM 0</div>
+                        <div class="stat-label">Today's Sales</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="dashActiveTables">0</div>
+                        <div class="stat-label">Active Tables</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="dashTotalStaff">0</div>
+                        <div class="stat-label">Staff Members</div>
+                    </div>
+                </div>
+                <div class="section-card">
+                    <div class="section-header">
+                        <span class="section-title">Recent Orders</span>
+                    </div>
+                    <div id="recentOrdersList"></div>
+                </div>
+            </div>
+
+            <!-- Menu Items Page -->
+            <div id="menu" class="page">
+                <div class="section-card">
+                    <div class="section-header">
+                        <span class="section-title">Menu Items</span>
+                        <button class="btn-icon" onclick="showAddMenuItemModal()">+</button>
+                    </div>
+                    <div id="menuItemsList" class="menu-grid"></div>
+                </div>
+            </div>
+
+            <!-- Variants Page -->
+            <div id="variants" class="page">
+                <div class="section-card">
+                    <div class="section-header">
+                        <span class="section-title">Global Variants</span>
+                        <button class="btn-icon" onclick="showAddGlobalVariantModal()">+</button>
+                    </div>
+                    <div id="globalVariantsList"></div>
+                </div>
+            </div>
+
+            <!-- Modifiers Page -->
+            <div id="modifiers" class="page">
+                <div class="section-card">
+                    <div class="section-header">
+                        <span class="section-title">Global Modifiers</span>
+                        <button class="btn-icon" onclick="showAddGlobalModifierModal()">+</button>
+                    </div>
+                    <div id="globalModifiersList"></div>
+                </div>
+            </div>
+
+            <!-- Categories Page -->
+            <div id="categories" class="page">
+                <div class="section-card">
+                    <div class="section-header">
+                        <span class="section-title">Categories</span>
+                        <button class="btn-icon" onclick="showAddCategoryModal()">+</button>
+                    </div>
+                    <div id="categoriesList"></div>
+                </div>
+            </div>
+
+            <!-- Tables Page -->
+            <div id="tables" class="page">
+                <div class="section-card">
+                    <div class="section-header">
+                        <span class="section-title">Tables</span>
+                        <button class="btn-icon" onclick="showAddTableModal()">+</button>
+                    </div>
+                    <div id="tablesList" class="table-grid"></div>
+                </div>
+            </div>
+
+            <!-- Staff Page -->
+            <div id="staff" class="page">
+                <div class="section-card">
+                    <div class="section-header">
+                        <span class="section-title">Staff Members</span>
+                        <button class="btn-icon" onclick="showAddStaffModal()">+</button>
+                    </div>
+                    <div id="staffList"></div>
+                </div>
+            </div>
+
+            <!-- Discounts Page -->
+            <div id="discounts" class="page">
+                <div class="section-card">
+                    <div class="section-header">
+                        <span class="section-title">Discounts</span>
+                        <button class="btn-icon" onclick="showAddDiscountModal()">+</button>
+                    </div>
+                    <div id="discountsList"></div>
+                </div>
+            </div>
+
+            <!-- Tax Settings Page -->
+            <div id="tax" class="page">
+                <div class="section-card">
+                    <div class="section-header">
+                        <span class="section-title">Tax Settings</span>
+                    </div>
+                    <div id="taxSettingsContent"></div>
+                </div>
+            </div>
+
+            <!-- Roles Page -->
+            <div id="roles" class="page">
+                <div class="section-card">
+                    <div class="section-header">
+                        <span class="section-title">Roles & Permissions</span>
+                        <button class="btn-icon" onclick="showAddRoleModal()">+</button>
+                    </div>
+                    <div id="rolesList"></div>
+                </div>
+            </div>
+
+            <!-- All Orders Page -->
+            <div id="allOrders" class="page">
+                <div class="section-card">
+                    <div class="section-header">
+                        <span class="section-title">All Orders</span>
+                        <button class="btn-icon" onclick="refreshAllOrders()"><i class="fas fa-sync-alt"></i></button>
+                    </div>
+                    <div id="allOrdersList"></div>
+                </div>
+            </div>
+
+            <!-- All Transactions Page -->
+            <div id="allTransactions" class="page">
+                <div class="section-card">
+                    <div class="section-header">
+                        <span class="section-title">All Transactions</span>
+                        <button class="btn-icon" onclick="refreshAllTransactions()"><i class="fas fa-sync-alt"></i></button>
+                    </div>
+                    <div id="allTransactionsList"></div>
+                </div>
+            </div>
+
+            <!-- Reports Page -->
+            <div id="reports" class="page">
+                <div class="section-card">
+                    <div class="section-header">
+                        <span class="section-title">Sales Reports</span>
+                    </div>
+                    <div id="reportsContent">
+                        <div class="form-group">
+                            <label>Start Date</label>
+                            <input type="date" id="reportStartDate">
+                        </div>
+                        <div class="form-group">
+                            <label>End Date</label>
+                            <input type="date" id="reportEndDate">
+                        </div>
+                        <button class="btn-small" onclick="generateReport()">Generate Report</button>
+                        <div id="reportResults" style="margin-top:20px;"></div>
+                    </div>
+                </div>
+            </div>
+
+                        <!-- Take Order Page -->
+            <div id="takeOrder" class="page">
+                <!-- Table Selection Section -->
+                <div id="tableSectionTakeOrder" class="table-section-takeorder">
+                    <div class="category-header-takeorder">
+                        <h2><i class="fas fa-chair"></i> Select Table</h2>
+                        <div class="view-toggle-takeorder">
+                            <button class="view-btn-takeorder active" id="gridViewBtnTakeOrder" onclick="setViewModeTakeOrder('grid')"><i class="fas fa-th"></i> Grid</button>
+                            <button class="view-btn-takeorder" id="listViewBtnTakeOrder" onclick="setViewModeTakeOrder('list')"><i class="fas fa-list"></i> List</button>
+                        </div>
+                    </div>
+                    
+                    <div class="location-filter-bar" id="locationFilterBarTakeOrder">
+                        <button class="category-btn-takeorder active" data-location="All" onclick="filterTablesByLocationTakeOrder('All')">All</button>
+                    </div>
+                    
+                    <div class="table-status-info">
+                        <div class="status-indicator"><span class="status-dot white"></span><span>Available</span></div>
+                        <div class="status-indicator"><span class="status-dot orange"></span><span>Occupied</span></div>
+                    </div>
+                    
+                    <div id="tableGridTakeOrder" class="table-grid-takeorder">
+                        <div style="text-align:center;padding:40px;color:white;">Loading tables...</div>
+                    </div>
+                </div>
+                
+                <!-- Menu Section -->
+                <div id="menuSectionTakeOrder" class="menu-section-takeorder">
+                    <button class="back-to-tables-btn" onclick="showTableSectionTakeOrder()">
+                        <i class="fas fa-arrow-left"></i> Back to Tables
+                    </button>
+                    
+                    <div class="take-order-layout">
+                        <div class="menu-wrapper-takeorder">
+                            <div class="category-header-takeorder">
+                                <h2><i class="fas fa-utensils"></i> Menu - <span id="selectedTableDisplayTakeOrder"></span></h2>
+                                <div class="view-toggle-takeorder">
+                                    <button class="view-btn-takeorder active" id="menuGridViewBtn" onclick="setMenuViewMode('grid')"><i class="fas fa-th"></i> Grid</button>
+                                    <button class="view-btn-takeorder" id="menuListViewBtn" onclick="setMenuViewMode('list')"><i class="fas fa-list"></i> List</button>
+                                </div>
+                                <div class="search-icon-takeorder" onclick="openSearchModalTakeOrder()">
+                                    <i class="fas fa-search"></i>
+                                </div>
+                            </div>
+                            
+                            <div class="category-bar-takeorder" id="categoryBarTakeOrder">
+                                <button class="category-btn-takeorder active">Loading...</button>
+                            </div>
+                            
+                            <div id="menuGridTakeOrder" class="menu-grid-takeorder">
+                                <div style="text-align:center;padding:40px;color:white;">Loading menu...</div>
+                            </div>
+                            
+                            <div class="form-group" style="margin-top:20px;">
+                                <label style="color:white;">Order Type</label>
+                                <div class="order-type-switch-takeorder" style="background:rgba(255,255,255,0.2);">
+                                    <div class="type-option-takeorder selected" data-type="dine-in" onclick="selectOrderTypeTakeOrder('dine-in')">
+                                        <i class="fas fa-utensils"></i> Dine In
+                                    </div>
+                                    <div class="type-option-takeorder" data-type="takeaway" onclick="selectOrderTypeTakeOrder('takeaway')">
+                                        <i class="fas fa-bag-shopping"></i> Takeaway
+                                    </div>
+                                    <div class="type-option-takeorder" data-type="delivery" onclick="selectOrderTypeTakeOrder('delivery')">
+                                        <i class="fas fa-motorcycle"></i> Delivery
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div id="deliveryFieldsTakeOrder" class="delivery-fields-takeorder" style="display:none;">
+                                <div class="form-group"><label>Customer Name</label><input type="text" id="customerNameTakeOrder" placeholder="Enter customer name"></div>
+                                <div class="form-group"><label>Customer Phone</label><input type="text" id="customerPhoneTakeOrder" placeholder="Enter phone number"></div>
+                                <div class="form-group"><label>Address</label><textarea id="customerAddressTakeOrder" rows="2" placeholder="Enter delivery address"></textarea></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Orders Panel -->
+                        <div class="orders-panel-takeorder" id="ordersPanelTakeOrder">
+                            <div class="orders-header-takeorder">
+                                <h3><i class="fas fa-shopping-cart"></i> Current Orders</h3>
+                                <span id="orderCountBadgeTakeOrder" class="badge" style="background:#ff9800;padding:2px 10px;border-radius:20px;">0</span>
+                            </div>
+                            <div class="orders-list-takeorder" id="ordersListTakeOrder"></div>
+                            <div class="orders-total-takeorder">
+                                <div class="total-row-takeorder"><span>Subtotal:</span><span id="orderSubtotalTakeOrder">RM 0.00</span></div>
+                                <div class="total-row-takeorder" id="taxRowTakeOrder" style="font-size:0.9rem;"><span>Tax (<span id="taxRateDisplayTakeOrder">6</span>%):</span><span id="orderTaxTakeOrder">RM 0.00</span></div>
+                                <div class="total-row-takeorder" style="font-size:1.2rem;"><span>Total:</span><span id="orderTotalTakeOrder">RM 0.00</span></div>
+                                <button class="submit-order-btn-takeorder" onclick="submitOrderTakeOrder()"><i class="fas fa-check-circle"></i> Place Order</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Bottom Action Bar -->
+                <div class="bottom-action-bar-takeorder" id="bottomActionBarTakeOrder" style="display:none;">
+                    <button class="bottom-btn-takeorder" onclick="openCustomOrderModalTakeOrder()"><i class="fas fa-plus-circle"></i><span>Custom</span></button>
+                    <button class="bottom-btn-takeorder current-order-btn-takeorder"><span><i class="fas fa-clipboard-list"></i> Current Order <span id="orderCountBadgeBottomTakeOrder" class="badge">0</span></span></button>
+                    <button class="bottom-btn-takeorder" onclick="saveToWaitingListTakeOrder()"><i class="fas fa-save"></i><span>Save</span></button>
+                </div>
+            </div>
+
+            <!-- Active Orders Page -->
+            <div id="activeOrders" class="page">
+                <div class="section-card">
+                    <div class="section-header">
+                        <span class="section-title">Active Orders</span>
+                    </div>
+                    <div id="activeOrdersList"></div>
+                </div>
+            </div>
+
+            <!-- Cashier Page -->
+            <div id="cashier" class="page">
+                <div class="section-card">
+                    <div class="section-header">
+                        <span class="section-title">Process Payment</span>
+                    </div>
+                    <div class="form-group">
+                        <label>Select Order</label>
+                        <select id="paymentOrderSelect">
+                            <option value="">Select order...</option>
+                        </select>
+                    </div>
+                    <div id="paymentOrderDetails"></div>
+                    <div class="form-group">
+                        <label>Payment Method</label>
+                        <select id="paymentMethod">
+                            <option value="cash">Cash</option>
+                            <option value="card">Credit/Debit Card</option>
+                            <option value="ewallet">E-Wallet</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Amount Received (RM)</label>
+                        <input type="number" id="amountReceived" step="0.01">
+                    </div>
+                    <div id="changeAmount" style="margin:15px 0;"></div>
+                    <button class="btn" onclick="processPayment()">Process Payment</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div id="addMenuItemModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title" id="menuItemModalTitle">Add Menu Item</span>
+                <button class="modal-close" onclick="closeModal('addMenuItemModal')">&times;</button>
+            </div>
+            <input type="hidden" id="editingMenuItemId">
+            <div class="form-group">
+                <label>Name</label>
+                <input type="text" id="menuItemName">
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <textarea id="menuItemDesc"></textarea>
+            </div>
+            <div class="form-group">
+                <label>Price (RM)</label>
+                <input type="number" id="menuItemPrice" step="0.01">
+            </div>
+            <div class="form-group">
+                <label>Category</label>
+                <select id="menuItemCategory"></select>
+            </div>
+            <div class="form-group">
+                <label>Preparation Time (mins)</label>
+                <input type="number" id="menuItemPrepTime" value="15">
+            </div>
+            <div class="form-group">
+                <label>Tags (comma separated)</label>
+                <input type="text" id="menuItemTags" placeholder="spicy,popular">
+            </div>
+            <div class="checkbox-group">
+                <input type="checkbox" id="menuItemRecommended">
+                <label>Recommended</label>
+            </div>
+            <div class="checkbox-group">
+                <input type="checkbox" id="menuItemActive" checked>
+                <label>Active</label>
+            </div>
+            <div class="form-group">
+                <label>Variants</label>
+                <div id="menuItemVariantsList"></div>
+                <button type="button" class="btn-small" onclick="showVariantSelector()">+ Add Variant</button>
+            </div>
+            <div class="form-group">
+                <label>Modifiers</label>
+                <div id="menuItemModifiersList"></div>
+                <button type="button" class="btn-small" onclick="showModifierSelector()">+ Add Modifier</button>
+            </div>
+            <button class="btn" onclick="saveMenuItem()">Save</button>
+        </div>
+    </div>
+
+    <!-- Global Variant Modal -->
+    <div id="globalVariantModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title" id="globalVariantModalTitle">Add Global Variant</span>
+                <button class="modal-close" onclick="closeModal('globalVariantModal')">&times;</button>
+            </div>
+            <input type="hidden" id="editingGlobalVariantId">
+            <div class="form-group">
+                <label>Variant Name (e.g., Spicy Level)</label>
+                <input type="text" id="globalVariantName" placeholder="Enter variant name">
+            </div>
+            <div class="checkbox-group">
+                <input type="checkbox" id="globalVariantRequired" checked>
+                <label>Required</label>
+            </div>
+            <div class="checkbox-group">
+                <input type="checkbox" id="globalVariantMultiSelect">
+                <label>Multi-Select</label>
+            </div>
+            <div class="options-container">
+                <div class="option-header">
+                    <span>Option Name</span>
+                    <span>Price Adj. (RM)</span>
+                    <span></span>
+                </div>
+                <div id="globalVariantOptionsContainer"></div>
+            </div>
+            <button type="button" class="btn-add-option" onclick="addGlobalVariantOption()">
+                <i class="fas fa-plus"></i> Add Option
+            </button>
+            <button class="btn" onclick="saveGlobalVariant()" style="margin-top:15px;">Save Variant</button>
+        </div>
+    </div>
+
+    <!-- Global Modifier Modal -->
+    <div id="globalModifierModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title" id="globalModifierModalTitle">Add Global Modifier</span>
+                <button class="modal-close" onclick="closeModal('globalModifierModal')">&times;</button>
+            </div>
+            <input type="hidden" id="editingGlobalModifierId">
+            <div class="form-group">
+                <label>Modifier Name (e.g., Add-ons)</label>
+                <input type="text" id="globalModifierName" placeholder="Enter modifier name">
+            </div>
+            <div class="form-group">
+                <label>Min Selections</label>
+                <input type="number" id="globalModifierMin" value="0" min="0">
+            </div>
+            <div class="form-group">
+                <label>Max Selections</label>
+                <input type="number" id="globalModifierMax" value="3" min="1">
+            </div>
+            <div class="options-container">
+                <div class="option-header">
+                    <span>Option Name</span>
+                    <span>Price (RM)</span>
+                    <span></span>
+                </div>
+                <div id="globalModifierOptionsContainer"></div>
+            </div>
+            <button type="button" class="btn-add-option" onclick="addGlobalModifierOption()">
+                <i class="fas fa-plus"></i> Add Option
+            </button>
+            <button class="btn" onclick="saveGlobalModifier()" style="margin-top:15px;">Save Modifier</button>
+        </div>
+    </div>
+
+    <!-- Order Detail Modal -->
+    <div id="orderDetailModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title">Order Details</span>
+                <button class="modal-close" onclick="closeModal('orderDetailModal')">&times;</button>
+            </div>
+            <div id="orderDetailContent"></div>
+        </div>
+    </div>
+
+    <!-- Edit Order Modal -->
+    <div id="editOrderModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title">Edit Order</span>
+                <button class="modal-close" onclick="closeModal('editOrderModal')">&times;</button>
+            </div>
+            <input type="hidden" id="editOrderId">
+            <div class="form-group">
+                <label>Status</label>
+                <select id="editOrderStatus">
+                    <option value="active">Active</option>
+                    <option value="preparing">Preparing</option>
+                    <option value="completed">Completed</option>
+                    <option value="cancelled">Cancelled</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Order Type</label>
+                <select id="editOrderType">
+                    <option value="dine-in">Dine-in</option>
+                    <option value="takeaway">Takeaway</option>
+                    <option value="delivery">Delivery</option>
+                </select>
+            </div>
+            <button class="btn" onclick="saveOrderEdit()">Save Changes</button>
+        </div>
+    </div>
+
+    <!-- Edit Transaction Modal -->
+    <div id="editTransactionModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title">Edit Transaction</span>
+                <button class="modal-close" onclick="closeModal('editTransactionModal')">&times;</button>
+            </div>
+            <input type="hidden" id="editTransactionId">
+            <div class="form-group">
+                <label>Payment Method</label>
+                <select id="editTransactionMethod">
+                    <option value="cash">Cash</option>
+                    <option value="card">Credit/Debit Card</option>
+                    <option value="ewallet">E-Wallet</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Status</label>
+                <select id="editTransactionStatus">
+                    <option value="completed">Completed</option>
+                    <option value="refunded">Refunded</option>
+                    <option value="failed">Failed</option>
+                </select>
+            </div>
+            <button class="btn" onclick="saveTransactionEdit()">Save Changes</button>
+        </div>
+    </div>
+
+    <!-- Variant Selector Modal -->
+    <div id="variantSelectorModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title">Select Variants</span>
+                <button class="modal-close" onclick="closeModal('variantSelectorModal')">&times;</button>
+            </div>
+            <div class="form-group">
+                <input type="text" id="variantSearchInput" placeholder="Search variants..." onkeyup="filterVariants()">
+            </div>
+            <div id="variantSelectorList"></div>
+        </div>
+    </div>
+
+    <!-- Modifier Selector Modal -->
+    <div id="modifierSelectorModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title">Select Modifiers</span>
+                <button class="modal-close" onclick="closeModal('modifierSelectorModal')">&times;</button>
+            </div>
+            <div class="form-group">
+                <input type="text" id="modifierSearchInput" placeholder="Search modifiers..." onkeyup="filterModifiers()">
+            </div>
+            <div id="modifierSelectorList"></div>
+        </div>
+    </div>
+
+    <div id="addCategoryModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title" id="categoryModalTitle">Add Category</span>
+                <button class="modal-close" onclick="closeModal('addCategoryModal')">&times;</button>
+            </div>
+            <input type="hidden" id="editingCategoryId">
+            <div class="form-group">
+                <label>Category Name</label>
+                <input type="text" id="categoryName">
+            </div>
+            <button class="btn" onclick="saveCategory()">Save</button>
+        </div>
+    </div>
+
+    <div id="addTableModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title" id="tableModalTitle">Add Table</span>
+                <button class="modal-close" onclick="closeModal('addTableModal')">&times;</button>
+            </div>
+            <input type="hidden" id="editingTableId">
+            <div class="form-group">
+                <label>Table ID (e.g., T1)</label>
+                <input type="text" id="tableId">
+            </div>
+            <div class="form-group">
+                <label>Capacity</label>
+                <input type="number" id="tableCapacity" min="1">
+            </div>
+            <div class="form-group">
+                <label>Location</label>
+                <input type="text" id="tableLocation" placeholder="Main Hall">
+            </div>
+            <div class="form-group">
+                <label>Status</label>
+                <select id="tableStatus">
+                    <option value="available">Available</option>
+                    <option value="occupied">Occupied</option>
+                    <option value="reserved">Reserved</option>
+                </select>
+            </div>
+            <button class="btn" onclick="saveTable()">Save</button>
+        </div>
+    </div>
+
+    <div id="addStaffModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title" id="staffModalTitle">Add Staff</span>
+                <button class="modal-close" onclick="closeModal('addStaffModal')">&times;</button>
+            </div>
+            <input type="hidden" id="editingStaffId">
+            <div class="form-group">
+                <label>Name</label>
+                <input type="text" id="staffName">
+            </div>
+            <div class="form-group">
+                <label>Phone</label>
+                <input type="text" id="staffPhone">
+            </div>
+            <div class="form-group">
+                <label>PIN (6 digits)</label>
+                <input type="password" id="staffPin" maxlength="6">
+            </div>
+            <div class="form-group">
+                <label>Role</label>
+                <select id="staffRole"></select>
+            </div>
+            <div class="checkbox-group">
+                <input type="checkbox" id="staffActive" checked>
+                <label>Active</label>
+            </div>
+            <button class="btn" onclick="saveStaff()">Save</button>
+        </div>
+    </div>
+
+    <div id="addDiscountModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title" id="discountModalTitle">Add Discount</span>
+                <button class="modal-close" onclick="closeModal('addDiscountModal')">&times;</button>
+            </div>
+            <input type="hidden" id="editingDiscountId">
+            <div class="form-group">
+                <label>Name</label>
+                <input type="text" id="discountName">
+            </div>
+            <div class="form-group">
+                <label>Type</label>
+                <select id="discountType">
+                    <option value="percentage">Percentage (%)</option>
+                    <option value="fixed">Fixed (RM)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Value</label>
+                <input type="number" id="discountValue" step="0.01">
+            </div>
+            <div class="form-group">
+                <label>Start Time (optional)</label>
+                <input type="datetime-local" id="discountStartTime">
+            </div>
+            <div class="form-group">
+                <label>End Time (optional)</label>
+                <input type="datetime-local" id="discountEndTime">
+            </div>
+            <div class="checkbox-group">
+                <input type="checkbox" id="discountActive" checked>
+                <label>Active</label>
+            </div>
+            <button class="btn" onclick="saveDiscount()">Save</button>
+        </div>
+    </div>
+
+    <div id="addRoleModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title" id="roleModalTitle">Add Role</span>
+                <button class="modal-close" onclick="closeModal('addRoleModal')">&times;</button>
+            </div>
+            <input type="hidden" id="editingRoleId">
+            <div class="form-group">
+                <label>Role ID (e.g., chef)</label>
+                <input type="text" id="roleId">
+            </div>
+            <div id="rolePermissions"></div>
+            <button class="btn" onclick="saveRole()">Save</button>
+        </div>
+    </div>
+
+    <!-- Take Order Modals -->
+    <div id="itemModalTakeOrder" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modalTitleTakeOrder">Customize Order</h3>
+                <button class="modal-close" onclick="closeItemModalTakeOrder()">&times;</button>
+            </div>
+            <div id="modalBodyTakeOrder"></div>
+            <div class="action-buttons">
+                <button class="secondary-btn" onclick="closeItemModalTakeOrder()">Cancel</button>
+                <button class="primary-btn" onclick="addToCartFromModalTakeOrder()">Add to Cart</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="searchModalTakeOrder" class="modal">
+        <div class="modal-content" style="max-width:500px;">
+            <div class="modal-header"><h3>Search Menu</h3><button class="modal-close" onclick="closeSearchModalTakeOrder()">&times;</button></div>
+            <input type="text" id="searchInputTakeOrder" placeholder="Type item name..." style="width:100%;padding:12px;border-radius:40px;border:1px solid #ddd;margin-bottom:15px;">
+            <div id="searchResultsTakeOrder" class="search-results"></div>
+        </div>
+    </div>
+
+    <div id="customOrderModalTakeOrder" class="modal">
+        <div class="modal-content" style="max-width:500px;">
+            <div class="modal-header"><h3><i class="fas fa-plus-circle"></i> Add Custom Item</h3><button class="modal-close" onclick="closeCustomOrderModalTakeOrder()">&times;</button></div>
+            <div class="form-group"><label>Name:</label><input type="text" id="customMenuNameTakeOrder" placeholder="Enter item name"></div>
+            <div class="form-group"><label>Price (RM):</label><input type="number" id="customMenuPriceTakeOrder" step="0.01" min="0" placeholder="0.00"></div>
+            <div class="form-group"><label>Quantity:</label><input type="number" id="customMenuQtyTakeOrder" value="1" min="1"></div>
+            <div class="action-buttons"><button class="secondary-btn" onclick="closeCustomOrderModalTakeOrder()">Cancel</button><button class="primary-btn" onclick="addCustomOrderTakeOrder()">Add</button></div>
+        </div>
+    </div>
+
+    <div id="notesModalTakeOrder" class="modal">
+        <div class="modal-content">
+            <div class="modal-header"><h3>Edit Notes</h3><button class="modal-close" onclick="closeNotesModalTakeOrder()">&times;</button></div>
+            <textarea id="notesInputTakeOrder" rows="3" placeholder="Special instructions..."></textarea>
+            <div class="action-buttons"><button class="secondary-btn" onclick="closeNotesModalTakeOrder()">Cancel</button><button class="primary-btn" onclick="saveNotesTakeOrder()">Save</button></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+        import { 
+            getFirestore, doc, getDoc, collection, query, where, getDocs,
+            onSnapshot, addDoc, updateDoc, setDoc, Timestamp, deleteDoc
+        } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDFFVP_UqpIzXbWv9dNpLkB4Ot3Z9aC7aE",
+            authDomain: "caferealtime-43213.firebaseapp.com",
+            projectId: "caferealtime-43213",
+            storageBucket: "caferealtime-43213.firebasestorage.app",
+            messagingSenderId: "813540068315",
+            appId: "1:813540068315:web:76271282255545550735fe"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        let currentClientId = '';
+        let currentStaff = null;
+        let currentOrderItems = [];
+        let unsubscribers = {};
+        let currentTaxRate = 6;
+        let taxActive = true;
+        let globalVariantOptionsCount = 0;
+        let globalModifierOptionsCount = 0;
+        let selectedVariants = [];
+        let selectedModifiers = [];
+        let allGlobalVariants = [];
+        let allGlobalModifiers = [];
+        let menuItemsTakeOrder = [];
+        let cartTakeOrder = [];
+        let tablesListTakeOrder = [];
+        let selectedTableIdTakeOrder = null;
+        let selectedTableNumberTakeOrder = '';
+        let selectedOrderTypeTakeOrder = 'dine-in';
+        let activeCategoryTakeOrder = 'All';
+        let categoriesTakeOrder = [];
+        let viewModeTakeOrder = 'grid';
+        let menuViewMode = 'grid';
+        let activeLocationTakeOrder = 'All';
+        let locationsTakeOrder = [];
+        let currentMenuObjTakeOrder = null;
+        let currentSelectedVariantTakeOrder = null;
+        let currentSelectedModifiersTakeOrder = [];
+        let notesEditIndexTakeOrder = null;
+
+        // ========== LICENSE CHECK ==========
+        window.checkLicense = async function() {
+            const licenseKey = document.getElementById('licenseInput').value.trim();
+            const errorEl = document.getElementById('licenseError');
+            
+            if (!licenseKey) { errorEl.textContent = 'Enter license key'; return; }
+            
+            try {
+                const q = query(collection(db, 'licenses'), where('licenseKey', '==', licenseKey));
+                const snapshot = await getDocs(q);
+                
+                if (snapshot.empty) { errorEl.textContent = 'Invalid license'; return; }
+                
+                const licenseDoc = snapshot.docs[0];
+                const data = licenseDoc.data();
+                
+                if (data.status !== 'active') { errorEl.textContent = 'License inactive'; return; }
+                if (data.expiryDate?.toDate() < new Date()) { errorEl.textContent = 'License expired'; return; }
+                
+                currentClientId = licenseDoc.id;
+                localStorage.setItem('clientId', currentClientId);
+                document.getElementById('restaurantNameDisplay').textContent = data.restaurantName;
+                document.getElementById('appRestaurantName').textContent = data.restaurantName;
+                
+                document.getElementById('licenseScreen').style.display = 'none';
+                document.getElementById('pinScreen').style.display = 'flex';
+                
+            } catch (e) { errorEl.textContent = e.message; }
+        };
+
+        window.backToLicense = function() {
+            document.getElementById('pinScreen').style.display = 'none';
+            document.getElementById('licenseScreen').style.display = 'flex';
+        };
+
+        // ========== PIN LOGIN ==========
+        window.loginWithPin = async function() {
+            const pin = document.getElementById('pinInput').value;
+            const errorEl = document.getElementById('pinError');
+            
+            if (!pin) { errorEl.textContent = 'Enter PIN'; return; }
+            
+            try {
+                const q = query(collection(db, 'licenses', currentClientId, 'staff'), where('pin', '==', pin), where('active', '==', true));
+                const snapshot = await getDocs(q);
+                
+                if (snapshot.empty) { errorEl.textContent = 'Invalid PIN'; return; }
+                
+                const staffDoc = snapshot.docs[0];
+                currentStaff = { id: staffDoc.id, ...staffDoc.data() };
+                
+                const roleRef = doc(db, 'licenses', currentClientId, 'roles', currentStaff.role);
+                const roleSnap = await getDoc(roleRef);
+                currentStaff.permissions = roleSnap.exists() ? roleSnap.data() : {};
+                
+                localStorage.setItem('currentStaff', JSON.stringify(currentStaff));
+                
+                document.getElementById('pinScreen').style.display = 'none';
+                document.getElementById('appContainer').style.display = 'block';
+                
+                document.getElementById('staffNameTop').textContent = currentStaff.name;
+                document.getElementById('staffRoleTop').textContent = currentStaff.role;
+                
+                if (currentStaff.role === 'manager') {
+                    document.getElementById('managerMenu').style.display = 'block';
+                }
+                document.getElementById('staffMenu').style.display = 'block';
+                
+                await loadTaxRate();
+                await loadGlobalVariants();
+                await loadGlobalModifiers();
+                loadDashboard();
+                
+            } catch (e) { errorEl.textContent = e.message; }
+        };
+
+        async function loadTaxRate() {
+    const taxRef = doc(db, 'licenses', currentClientId, 'tax_settings', 'settings');
+    const taxSnap = await getDoc(taxRef);
+    if (taxSnap.exists()) {
+        const taxData = taxSnap.data();
+        taxActive = taxData.active === true;
+        currentTaxRate = taxActive ? (parseFloat(taxData.rate) || 6) : 0;
+    }
+    
+    // Update both possible tax rate display elements
+    const taxDisplay = document.getElementById('taxRateDisplay');
+    const taxDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder');
+    const taxRow = document.getElementById('taxRow');
+    const taxRowTakeOrder = document.getElementById('taxRowTakeOrder');
+    
+    if (taxDisplay) taxDisplay.textContent = currentTaxRate;
+    if (taxDisplayTakeOrder) taxDisplayTakeOrder.textContent = currentTaxRate;
+    if (taxRow) taxRow.style.display = taxActive ? 'flex' : 'none';
+    if (taxRowTakeOrder) taxRowTakeOrder.style.display = taxActive ? 'flex' : 'none';
+}
+
+        // ========== SIDEBAR & NAVIGATION ==========
+        window.toggleSidebar = function() {
+            document.getElementById('sidebar').classList.toggle('open');
+            document.getElementById('sidebarOverlay').classList.toggle('open');
+        };
+
+                window.showPage = function(pageId) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+            document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
+            if (event && event.target) event.target.closest('.menu-item').classList.add('active');
+            
+            if (window.innerWidth < 768) toggleSidebar();
+            
+            // Handle body class for take order page
+            if (pageId === 'takeOrder') {
+                document.body.classList.add('take-order-page');
+            } else {
+                document.body.classList.remove('take-order-page');
+            }
+            
+            if (pageId === 'dashboard') loadDashboard();
+            else if (pageId === 'menu') loadMenuItems();
+            else if (pageId === 'variants') loadGlobalVariantsPage();
+            else if (pageId === 'modifiers') loadGlobalModifiersPage();
+            else if (pageId === 'categories') loadCategories();
+            else if (pageId === 'tables') loadTables();
+            else if (pageId === 'staff') loadStaff();
+            else if (pageId === 'discounts') loadDiscounts();
+            else if (pageId === 'tax') loadTaxSettings();
+            else if (pageId === 'roles') loadRoles();
+            else if (pageId === 'reports') loadReportsPage();
+            else if (pageId === 'takeOrder') loadTakeOrderPage();
+            else if (pageId === 'activeOrders') loadActiveOrders();
+            else if (pageId === 'cashier') loadCashierPage();
+            else if (pageId === 'allOrders') loadAllOrders();
+            else if (pageId === 'allTransactions') loadAllTransactions();
+        };
+
+        // ========== DASHBOARD ==========
+        async function loadDashboard() {
+            const ordersRef = collection(db, 'licenses', currentClientId, 'orders');
+            const today = new Date(); today.setHours(0,0,0,0);
+            const q = query(ordersRef, where('createdAt', '>=', Timestamp.fromDate(today)));
+            
+            onSnapshot(q, (snapshot) => {
+                let total = 0;
+                snapshot.forEach(d => total += parseFloat(d.data().total) || 0);
+                document.getElementById('dashTotalOrders').textContent = snapshot.size;
+                document.getElementById('dashTotalSales').textContent = `RM ${total.toFixed(2)}`;
+                
+                let recentHtml = '';
+                snapshot.docs.slice(0, 5).forEach(d => {
+                    const o = d.data();
+                    recentHtml += `<div style="padding:10px;border-bottom:1px solid #eee;">${o.orderNumber} - RM ${o.total}</div>`;
+                });
+                document.getElementById('recentOrdersList').innerHTML = recentHtml || '<div class="loading">No orders today</div>';
+            });
+            
+            const tablesRef = collection(db, 'licenses', currentClientId, 'tables');
+            onSnapshot(tablesRef, (snapshot) => {
+                const occupied = snapshot.docs.filter(d => d.data().status === 'occupied').length;
+                document.getElementById('dashActiveTables').textContent = occupied;
+            });
+            
+            const staffRef = collection(db, 'licenses', currentClientId, 'staff');
+            onSnapshot(staffRef, (snapshot) => {
+                document.getElementById('dashTotalStaff').textContent = snapshot.size;
+            });
+        }
+
+        // ========== GLOBAL VARIANTS ==========
+        async function loadGlobalVariants() {
+            const ref = collection(db, 'licenses', currentClientId, 'global_variants');
+            const snapshot = await getDocs(ref);
+            allGlobalVariants = [];
+            snapshot.forEach(doc => {
+                allGlobalVariants.push({ id: doc.id, ...doc.data() });
+            });
+        }
+
+        function loadGlobalVariantsPage() {
+            const ref = collection(db, 'licenses', currentClientId, 'global_variants');
+            onSnapshot(ref, async (snapshot) => {
+                const container = document.getElementById('globalVariantsList');
+                allGlobalVariants = [];
+                let html = '';
+                
+                for (const variantDoc of snapshot.docs) {
+                    const variant = variantDoc.data();
+                    allGlobalVariants.push({ id: variantDoc.id, ...variant });
+                    
+                    const optionsRef = collection(db, 'licenses', currentClientId, 'global_variants', variantDoc.id, 'options');
+                    const optionsSnap = await getDocs(optionsRef);
+                    
+                    html += `<div style="background:#f7fafc;padding:10px;border-radius:8px;margin-bottom:10px;">
+                        <b>${variant.name}</b> ${variant.required ? '(Required)' : ''} ${variant.multiSelect ? '(Multi)' : ''}<br>
+                        Options: `;
+                    optionsSnap.forEach(opt => {
+                        html += `${opt.data().name} (${opt.data().priceAdjustment || '0.00'}) `;
+                    });
+                    html += `<div class="action-buttons" style="margin-top:5px;">
+                        <button class="btn-edit" onclick="editGlobalVariant('${variantDoc.id}')">Edit</button>
+                        <button class="btn-delete" onclick="deleteGlobalVariant('${variantDoc.id}')">Delete</button>
+                    </div></div>`;
+                }
+                container.innerHTML = html || '<div class="loading">No global variants</div>';
+            });
+        }
+
+        window.showAddGlobalVariantModal = function() {
+            document.getElementById('globalVariantModalTitle').textContent = 'Add Global Variant';
+            document.getElementById('editingGlobalVariantId').value = '';
+            document.getElementById('globalVariantName').value = '';
+            document.getElementById('globalVariantRequired').checked = true;
+            document.getElementById('globalVariantMultiSelect').checked = false;
+            document.getElementById('globalVariantOptionsContainer').innerHTML = '';
+            globalVariantOptionsCount = 0;
+            document.getElementById('globalVariantModal').style.display = 'flex';
+        };
+
+        window.editGlobalVariant = async function(id) {
+            const snap = await getDoc(doc(db, 'licenses', currentClientId, 'global_variants', id));
+            if (!snap.exists()) return;
+            
+            const variant = snap.data();
+            document.getElementById('globalVariantModalTitle').textContent = 'Edit Global Variant';
+            document.getElementById('editingGlobalVariantId').value = id;
+            document.getElementById('globalVariantName').value = variant.name;
+            document.getElementById('globalVariantRequired').checked = variant.required;
+            document.getElementById('globalVariantMultiSelect').checked = variant.multiSelect;
+            
+            const optionsRef = collection(db, 'licenses', currentClientId, 'global_variants', id, 'options');
+            const optionsSnap = await getDocs(optionsRef);
+            
+            let html = '';
+            let i = 0;
+            optionsSnap.forEach(opt => {
+                html += `<div class="option-row-improved">
+                    <input type="text" id="editVariantOptName${i}" value="${opt.data().name}" placeholder="Option name">
+                    <input type="number" id="editVariantOptPrice${i}" value="${opt.data().priceAdjustment || '0.00'}" step="0.01" placeholder="0.00">
+                    <button type="button" class="btn-remove-option" onclick="this.parentElement.remove()">✕</button>
+                </div>`;
+                i++;
+            });
+            document.getElementById('globalVariantOptionsContainer').innerHTML = html;
+            globalVariantOptionsCount = i;
+            document.getElementById('globalVariantModal').style.display = 'flex';
+        };
+
+        window.addGlobalVariantOption = function() {
+            const container = document.getElementById('globalVariantOptionsContainer');
+            container.innerHTML += `
+                <div class="option-row-improved">
+                    <input type="text" id="globalVariantOptName${globalVariantOptionsCount}" placeholder="Option name">
+                    <input type="number" id="globalVariantOptPrice${globalVariantOptionsCount}" placeholder="0.00" value="0.00" step="0.01">
+                    <button type="button" class="btn-remove-option" onclick="this.parentElement.remove()">✕</button>
+                </div>
+            `;
+            globalVariantOptionsCount++;
+        };
+
+        window.saveGlobalVariant = async function() {
+            const id = document.getElementById('editingGlobalVariantId').value;
+            const name = document.getElementById('globalVariantName').value;
+            const required = document.getElementById('globalVariantRequired').checked;
+            const multiSelect = document.getElementById('globalVariantMultiSelect').checked;
+            
+            if (!name) { alert('Enter variant name'); return; }
+            
+            let variantRef;
+            if (id) {
+                variantRef = doc(db, 'licenses', currentClientId, 'global_variants', id);
+                await setDoc(variantRef, { name, required, multiSelect, updatedAt: Timestamp.now() }, { merge: true });
+            } else {
+                variantRef = await addDoc(collection(db, 'licenses', currentClientId, 'global_variants'), {
+                    name, required, multiSelect, createdAt: Timestamp.now()
+                });
+            }
+            
+            const variantId = id || variantRef.id;
+            const optionsRef = collection(db, 'licenses', currentClientId, 'global_variants', variantId, 'options');
+            const existingOptions = await getDocs(optionsRef);
+            for (const opt of existingOptions.docs) {
+                await deleteDoc(opt.ref);
+            }
+            
+            const optionRows = document.querySelectorAll('#globalVariantOptionsContainer .option-row-improved');
+            for (const row of optionRows) {
+                const inputs = row.querySelectorAll('input');
+                const optName = inputs[0]?.value;
+                if (optName) {
+                    await addDoc(optionsRef, {
+                        name: optName,
+                        priceAdjustment: inputs[1]?.value || '0.00'
+                    });
+                }
+            }
+            
+            closeModal('globalVariantModal');
+            loadGlobalVariantsPage();
+        };
+
+        window.deleteGlobalVariant = async function(id) {
+            if (confirm('Delete variant?')) {
+                await deleteDoc(doc(db, 'licenses', currentClientId, 'global_variants', id));
+            }
+        };
+
+        // ========== GLOBAL MODIFIERS ==========
+        async function loadGlobalModifiers() {
+            const ref = collection(db, 'licenses', currentClientId, 'global_modifiers');
+            const snapshot = await getDocs(ref);
+            allGlobalModifiers = [];
+            snapshot.forEach(doc => {
+                allGlobalModifiers.push({ id: doc.id, ...doc.data() });
+            });
+        }
+
+        function loadGlobalModifiersPage() {
+            const ref = collection(db, 'licenses', currentClientId, 'global_modifiers');
+            onSnapshot(ref, async (snapshot) => {
+                const container = document.getElementById('globalModifiersList');
+                allGlobalModifiers = [];
+                let html = '';
+                
+                for (const modDoc of snapshot.docs) {
+                    const mod = modDoc.data();
+                    allGlobalModifiers.push({ id: modDoc.id, ...mod });
+                    
+                    const optionsRef = collection(db, 'licenses', currentClientId, 'global_modifiers', modDoc.id, 'options');
+                    const optionsSnap = await getDocs(optionsRef);
+                    
+                    html += `<div style="background:#f7fafc;padding:10px;border-radius:8px;margin-bottom:10px;">
+                        <b>${mod.name}</b> (Min: ${mod.minSelections}, Max: ${mod.maxSelections})<br>
+                        Options: `;
+                    optionsSnap.forEach(opt => {
+                        html += `${opt.data().name} (RM ${opt.data().price}) `;
+                    });
+                    html += `<div class="action-buttons" style="margin-top:5px;">
+                        <button class="btn-edit" onclick="editGlobalModifier('${modDoc.id}')">Edit</button>
+                        <button class="btn-delete" onclick="deleteGlobalModifier('${modDoc.id}')">Delete</button>
+                    </div></div>`;
+                }
+                container.innerHTML = html || '<div class="loading">No global modifiers</div>';
+            });
+        }
+
+        window.showAddGlobalModifierModal = function() {
+            document.getElementById('globalModifierModalTitle').textContent = 'Add Global Modifier';
+            document.getElementById('editingGlobalModifierId').value = '';
+            document.getElementById('globalModifierName').value = '';
+            document.getElementById('globalModifierMin').value = '0';
+            document.getElementById('globalModifierMax').value = '3';
+            document.getElementById('globalModifierOptionsContainer').innerHTML = '';
+            globalModifierOptionsCount = 0;
+            document.getElementById('globalModifierModal').style.display = 'flex';
+        };
+
+        window.editGlobalModifier = async function(id) {
+            const snap = await getDoc(doc(db, 'licenses', currentClientId, 'global_modifiers', id));
+            if (!snap.exists()) return;
+            
+            const mod = snap.data();
+            document.getElementById('globalModifierModalTitle').textContent = 'Edit Global Modifier';
+            document.getElementById('editingGlobalModifierId').value = id;
+            document.getElementById('globalModifierName').value = mod.name;
+            document.getElementById('globalModifierMin').value = mod.minSelections;
+            document.getElementById('globalModifierMax').value = mod.maxSelections;
+            
+            const optionsRef = collection(db, 'licenses', currentClientId, 'global_modifiers', id, 'options');
+            const optionsSnap = await getDocs(optionsRef);
+            
+            let html = '';
+            let i = 0;
+            optionsSnap.forEach(opt => {
+                html += `<div class="option-row-improved">
+                    <input type="text" id="editModOptName${i}" value="${opt.data().name}" placeholder="Option name">
+                    <input type="number" id="editModOptPrice${i}" value="${opt.data().price}" step="0.01" placeholder="0.00">
+                    <button type="button" class="btn-remove-option" onclick="this.parentElement.remove()">✕</button>
+                </div>`;
+                i++;
+            });
+            document.getElementById('globalModifierOptionsContainer').innerHTML = html;
+            globalModifierOptionsCount = i;
+            document.getElementById('globalModifierModal').style.display = 'flex';
+        };
+
+        window.addGlobalModifierOption = function() {
+            const container = document.getElementById('globalModifierOptionsContainer');
+            container.innerHTML += `
+                <div class="option-row-improved">
+                    <input type="text" id="globalModOptName${globalModifierOptionsCount}" placeholder="Option name">
+                    <input type="number" id="globalModOptPrice${globalModifierOptionsCount}" placeholder="0.00" value="0.00" step="0.01">
+                    <button type="button" class="btn-remove-option" onclick="this.parentElement.remove()">✕</button>
+                </div>
+            `;
+            globalModifierOptionsCount++;
+        };
+
+        window.saveGlobalModifier = async function() {
+            const id = document.getElementById('editingGlobalModifierId').value;
+            const name = document.getElementById('globalModifierName').value;
+            const minSelections = document.getElementById('globalModifierMin').value;
+            const maxSelections = document.getElementById('globalModifierMax').value;
+            
+            if (!name) { alert('Enter modifier name'); return; }
+            
+            let modRef;
+            if (id) {
+                modRef = doc(db, 'licenses', currentClientId, 'global_modifiers', id);
+                await setDoc(modRef, { name, minSelections, maxSelections, updatedAt: Timestamp.now() }, { merge: true });
+            } else {
+                modRef = await addDoc(collection(db, 'licenses', currentClientId, 'global_modifiers'), {
+                    name, minSelections, maxSelections, createdAt: Timestamp.now()
+                });
+            }
+            
+            const modId = id || modRef.id;
+            const optionsRef = collection(db, 'licenses', currentClientId, 'global_modifiers', modId, 'options');
+            const existingOptions = await getDocs(optionsRef);
+            for (const opt of existingOptions.docs) {
+                await deleteDoc(opt.ref);
+            }
+            
+            const optionRows = document.querySelectorAll('#globalModifierOptionsContainer .option-row-improved');
+            for (const row of optionRows) {
+                const inputs = row.querySelectorAll('input');
+                const optName = inputs[0]?.value;
+                if (optName) {
+                    await addDoc(optionsRef, {
+                        name: optName,
+                        price: inputs[1]?.value || '0.00'
+                    });
+                }
+            }
+            
+            closeModal('globalModifierModal');
+            loadGlobalModifiersPage();
+        };
+
+        window.deleteGlobalModifier = async function(id) {
+            if (confirm('Delete modifier?')) {
+                await deleteDoc(doc(db, 'licenses', currentClientId, 'global_modifiers', id));
+            }
+        };
+
+        // ========== MENU ITEMS ==========
+        let tempSelectedVariants = [];
+        let tempSelectedModifiers = [];
+
+        async function loadMenuItems() {
+            const ref = collection(db, 'licenses', currentClientId, 'menu_items');
+            onSnapshot(ref, async (snapshot) => {
+                const container = document.getElementById('menuItemsList');
+                const categories = await getCategoriesMap();
+                
+                let html = '';
+                snapshot.forEach(doc => {
+                    const item = doc.data();
+                    html += `
+                        <div class="menu-card">
+                            <div class="menu-card-name">${item.name}</div>
+                            <div class="menu-card-price">RM ${item.price}</div>
+                            <small>${categories[item.categoryId] || ''}</small>
+                            ${item.recommend ? '<span style="background:#f6ad55;color:white;padding:2px 6px;border-radius:4px;font-size:10px;">★ Recommended</span>' : ''}
+                            <div class="action-buttons" style="margin-top:10px;">
+                                <button class="btn-edit" onclick="editMenuItem('${doc.id}')">Edit</button>
+                                <button class="btn-delete" onclick="deleteMenuItem('${doc.id}')">Delete</button>
+                            </div>
+                        </div>
+                    `;
+                });
+                container.innerHTML = html || '<div class="loading">No menu items</div>';
+            });
+        }
+
+        async function getCategoriesMap() {
+            const snap = await getDocs(collection(db, 'licenses', currentClientId, 'menu_categories'));
+            const map = {};
+            snap.forEach(d => map[d.id] = d.data().name);
+            return map;
+        }
+
+        window.showAddMenuItemModal = async function() {
+            document.getElementById('menuItemModalTitle').textContent = 'Add Menu Item';
+            document.getElementById('editingMenuItemId').value = '';
+            document.getElementById('menuItemName').value = '';
+            document.getElementById('menuItemDesc').value = '';
+            document.getElementById('menuItemPrice').value = '';
+            document.getElementById('menuItemPrepTime').value = '15';
+            document.getElementById('menuItemTags').value = '';
+            document.getElementById('menuItemRecommended').checked = false;
+            document.getElementById('menuItemActive').checked = true;
+            
+            tempSelectedVariants = [];
+            tempSelectedModifiers = [];
+            updateMenuItemVariantsDisplay();
+            updateMenuItemModifiersDisplay();
+            
+            const select = document.getElementById('menuItemCategory');
+            const snap = await getDocs(collection(db, 'licenses', currentClientId, 'menu_categories'));
+            select.innerHTML = '<option value="">Select category</option>';
+            snap.forEach(d => {
+                select.innerHTML += `<option value="${d.id}">${d.data().name}</option>`;
+            });
+            document.getElementById('addMenuItemModal').style.display = 'flex';
+        };
+
+        window.editMenuItem = async function(id) {
+            const itemRef = doc(db, 'licenses', currentClientId, 'menu_items', id);
+            const itemSnap = await getDoc(itemRef);
+            if (!itemSnap.exists()) return;
+            
+            const item = itemSnap.data();
+            document.getElementById('menuItemModalTitle').textContent = 'Edit Menu Item';
+            document.getElementById('editingMenuItemId').value = id;
+            document.getElementById('menuItemName').value = item.name || '';
+            document.getElementById('menuItemDesc').value = item.description || '';
+            document.getElementById('menuItemPrice').value = item.price || '';
+            document.getElementById('menuItemPrepTime').value = item.preparationTime || '15';
+            document.getElementById('menuItemTags').value = item.tags || '';
+            document.getElementById('menuItemRecommended').checked = item.recommend || false;
+            document.getElementById('menuItemActive').checked = item.active !== false;
+            
+            tempSelectedVariants = item.variants || [];
+            tempSelectedModifiers = item.modifiers || [];
+            updateMenuItemVariantsDisplay();
+            updateMenuItemModifiersDisplay();
+            
+            const select = document.getElementById('menuItemCategory');
+            const snap = await getDocs(collection(db, 'licenses', currentClientId, 'menu_categories'));
+            select.innerHTML = '<option value="">Select category</option>';
+            snap.forEach(d => {
+                select.innerHTML += `<option value="${d.id}" ${d.id === item.categoryId ? 'selected' : ''}>${d.data().name}</option>`;
+            });
+            
+            document.getElementById('addMenuItemModal').style.display = 'flex';
+        };
+
+        window.showVariantSelector = function() {
+            const container = document.getElementById('variantSelectorList');
+            let html = '';
+            allGlobalVariants.forEach(v => {
+                const isSelected = tempSelectedVariants.some(sv => sv.id === v.id);
+                html += `<div class="search-result-item" onclick="toggleVariantSelection('${v.id}')">
+                    <input type="checkbox" ${isSelected ? 'checked' : ''} disabled> ${v.name}
+                </div>`;
+            });
+            container.innerHTML = html || '<div class="loading">No variants available</div>';
+            document.getElementById('variantSelectorModal').style.display = 'flex';
+        };
+
+        window.toggleVariantSelection = function(variantId) {
+            const existing = tempSelectedVariants.find(v => v.id === variantId);
+            if (existing) {
+                tempSelectedVariants = tempSelectedVariants.filter(v => v.id !== variantId);
+            } else {
+                const variant = allGlobalVariants.find(v => v.id === variantId);
+                if (variant) tempSelectedVariants.push({ id: variantId, name: variant.name });
+            }
+            updateMenuItemVariantsDisplay();
+            showVariantSelector();
+        };
+
+        window.showModifierSelector = function() {
+            const container = document.getElementById('modifierSelectorList');
+            let html = '';
+            allGlobalModifiers.forEach(m => {
+                const isSelected = tempSelectedModifiers.some(sm => sm.id === m.id);
+                html += `<div class="search-result-item" onclick="toggleModifierSelection('${m.id}')">
+                    <input type="checkbox" ${isSelected ? 'checked' : ''} disabled> ${m.name}
+                </div>`;
+            });
+            container.innerHTML = html || '<div class="loading">No modifiers available</div>';
+            document.getElementById('modifierSelectorModal').style.display = 'flex';
+        };
+
+        window.toggleModifierSelection = function(modifierId) {
+            const existing = tempSelectedModifiers.find(m => m.id === modifierId);
+            if (existing) {
+                tempSelectedModifiers = tempSelectedModifiers.filter(m => m.id !== modifierId);
+            } else {
+                const modifier = allGlobalModifiers.find(m => m.id === modifierId);
+                if (modifier) tempSelectedModifiers.push({ id: modifierId, name: modifier.name });
+            }
+            updateMenuItemModifiersDisplay();
+            showModifierSelector();
+        };
+
+        function updateMenuItemVariantsDisplay() {
+            const container = document.getElementById('menuItemVariantsList');
+            let html = '';
+            tempSelectedVariants.forEach(v => {
+                html += `<span class="selected-variant" style="display:inline-block;margin:3px;">${v.name} 
+                    <button type="button" onclick="removeTempVariant('${v.id}')" style="background:none;border:none;cursor:pointer;">✕</button>
+                </span>`;
+            });
+            container.innerHTML = html || '<span style="color:#999;">No variants selected</span>';
+        }
+
+        function updateMenuItemModifiersDisplay() {
+            const container = document.getElementById('menuItemModifiersList');
+            let html = '';
+            tempSelectedModifiers.forEach(m => {
+                html += `<span class="selected-modifier" style="display:inline-block;margin:3px;">${m.name}
+                    <button type="button" onclick="removeTempModifier('${m.id}')" style="background:none;border:none;cursor:pointer;">✕</button>
+                </span>`;
+            });
+            container.innerHTML = html || '<span style="color:#999;">No modifiers selected</span>';
+        }
+
+        window.removeTempVariant = function(variantId) {
+            tempSelectedVariants = tempSelectedVariants.filter(v => v.id !== variantId);
+            updateMenuItemVariantsDisplay();
+        };
+
+        window.removeTempModifier = function(modifierId) {
+            tempSelectedModifiers = tempSelectedModifiers.filter(m => m.id !== modifierId);
+            updateMenuItemModifiersDisplay();
+        };
+
+        window.filterVariants = function() {
+            const search = document.getElementById('variantSearchInput').value.toLowerCase();
+            const container = document.getElementById('variantSelectorList');
+            let html = '';
+            allGlobalVariants.filter(v => v.name.toLowerCase().includes(search)).forEach(v => {
+                const isSelected = tempSelectedVariants.some(sv => sv.id === v.id);
+                html += `<div class="search-result-item" onclick="toggleVariantSelection('${v.id}')">
+                    <input type="checkbox" ${isSelected ? 'checked' : ''} disabled> ${v.name}
+                </div>`;
+            });
+            container.innerHTML = html || '<div class="loading">No matching variants</div>';
+        };
+
+        window.filterModifiers = function() {
+            const search = document.getElementById('modifierSearchInput').value.toLowerCase();
+            const container = document.getElementById('modifierSelectorList');
+            let html = '';
+            allGlobalModifiers.filter(m => m.name.toLowerCase().includes(search)).forEach(m => {
+                const isSelected = tempSelectedModifiers.some(sm => sm.id === m.id);
+                html += `<div class="search-result-item" onclick="toggleModifierSelection('${m.id}')">
+                    <input type="checkbox" ${isSelected ? 'checked' : ''} disabled> ${m.name}
+                </div>`;
+            });
+            container.innerHTML = html || '<div class="loading">No matching modifiers</div>';
+        };
+
+        window.saveMenuItem = async function() {
+            const id = document.getElementById('editingMenuItemId').value;
+            const data = {
+                name: document.getElementById('menuItemName').value,
+                description: document.getElementById('menuItemDesc').value,
+                price: document.getElementById('menuItemPrice').value,
+                categoryId: document.getElementById('menuItemCategory').value,
+                preparationTime: document.getElementById('menuItemPrepTime').value,
+                tags: document.getElementById('menuItemTags').value,
+                recommend: document.getElementById('menuItemRecommended').checked,
+                active: document.getElementById('menuItemActive').checked,
+                variants: tempSelectedVariants,
+                modifiers: tempSelectedModifiers,
+                updatedAt: Timestamp.now()
+            };
+            
+            if (!id) data.createdAt = Timestamp.now();
+            
+            if (id) {
+                await updateDoc(doc(db, 'licenses', currentClientId, 'menu_items', id), data);
+            } else {
+                await addDoc(collection(db, 'licenses', currentClientId, 'menu_items'), data);
+            }
+            closeModal('addMenuItemModal');
+        };
+
+        window.deleteMenuItem = async function(id) {
+            if (confirm('Delete this item?')) {
+                await deleteDoc(doc(db, 'licenses', currentClientId, 'menu_items', id));
+            }
+        };
+
+        // ========== CATEGORIES ==========
+        function loadCategories() {
+            const ref = collection(db, 'licenses', currentClientId, 'menu_categories');
+            onSnapshot(ref, (snapshot) => {
+                const container = document.getElementById('categoriesList');
+                let html = '';
+                snapshot.forEach(doc => {
+                    html += `<div style="padding:10px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;">
+                        ${doc.data().name}
+                        <div class="action-buttons">
+                            <button class="btn-edit" onclick="editCategory('${doc.id}')">Edit</button>
+                            <button class="btn-delete" onclick="deleteCategory('${doc.id}')">Delete</button>
+                        </div>
+                    </div>`;
+                });
+                container.innerHTML = html || '<div class="loading">No categories</div>';
+            });
+        }
+
+        window.showAddCategoryModal = function() {
+            document.getElementById('categoryModalTitle').textContent = 'Add Category';
+            document.getElementById('editingCategoryId').value = '';
+            document.getElementById('categoryName').value = '';
+            document.getElementById('addCategoryModal').style.display = 'flex';
+        };
+
+        window.editCategory = async function(id) {
+            const snap = await getDoc(doc(db, 'licenses', currentClientId, 'menu_categories', id));
+            if (snap.exists()) {
+                document.getElementById('categoryModalTitle').textContent = 'Edit Category';
+                document.getElementById('editingCategoryId').value = id;
+                document.getElementById('categoryName').value = snap.data().name;
+                document.getElementById('addCategoryModal').style.display = 'flex';
+            }
+        };
+
+        window.saveCategory = async function() {
+            const id = document.getElementById('editingCategoryId').value;
+            const data = { name: document.getElementById('categoryName').value, updatedAt: Timestamp.now() };
+            if (!id) data.createdAt = Timestamp.now();
+            
+            if (id) {
+                await updateDoc(doc(db, 'licenses', currentClientId, 'menu_categories', id), data);
+            } else {
+                await addDoc(collection(db, 'licenses', currentClientId, 'menu_categories'), data);
+            }
+            closeModal('addCategoryModal');
+        };
+
+        window.deleteCategory = async function(id) {
+            if (confirm('Delete category?')) {
+                await deleteDoc(doc(db, 'licenses', currentClientId, 'menu_categories', id));
+            }
+        };
+
+        // ========== TABLES ==========
+        function loadTables() {
+            const ref = collection(db, 'licenses', currentClientId, 'tables');
+            onSnapshot(ref, (snapshot) => {
+                const container = document.getElementById('tablesList');
+                let html = '';
+                snapshot.forEach(doc => {
+                    const t = doc.data();
+                    html += `
+                        <div class="table-card-item ${t.status === 'available' ? 'table-available' : 'table-occupied'}">
+                            <div class="table-number">${doc.id.toUpperCase()}</div>
+                            <div class="table-capacity">👥 ${t.capacity}</div>
+                            <div>${t.status}</div>
+                            <div class="action-buttons" style="margin-top:5px;">
+                                <button class="btn-edit" onclick="editTable('${doc.id}')">Edit</button>
+                                <button class="btn-delete" onclick="deleteTable('${doc.id}')">Delete</button>
+                            </div>
+                        </div>
+                    `;
+                });
+                container.innerHTML = html || '<div class="loading">No tables</div>';
+            });
+        }
+
+        window.showAddTableModal = function() {
+            document.getElementById('tableModalTitle').textContent = 'Add Table';
+            document.getElementById('editingTableId').value = '';
+            document.getElementById('tableId').value = '';
+            document.getElementById('tableCapacity').value = '';
+            document.getElementById('tableLocation').value = '';
+            document.getElementById('tableStatus').value = 'available';
+            document.getElementById('tableId').disabled = false;
+            document.getElementById('addTableModal').style.display = 'flex';
+        };
+
+        window.editTable = async function(id) {
+            const snap = await getDoc(doc(db, 'licenses', currentClientId, 'tables', id));
+            if (snap.exists()) {
+                const t = snap.data();
+                document.getElementById('tableModalTitle').textContent = 'Edit Table';
+                document.getElementById('editingTableId').value = id;
+                document.getElementById('tableId').value = id;
+                document.getElementById('tableCapacity').value = t.capacity;
+                document.getElementById('tableLocation').value = t.location || '';
+                document.getElementById('tableStatus').value = t.status || 'available';
+                document.getElementById('tableId').disabled = true;
+                document.getElementById('addTableModal').style.display = 'flex';
+            }
+        };
+
+        window.saveTable = async function() {
+            const editingId = document.getElementById('editingTableId').value;
+            const id = editingId || document.getElementById('tableId').value.toLowerCase();
+            const data = {
+                capacity: document.getElementById('tableCapacity').value,
+                location: document.getElementById('tableLocation').value,
+                status: document.getElementById('tableStatus').value,
+                updatedAt: Timestamp.now()
+            };
+            if (!editingId) data.createdAt = Timestamp.now();
+            
+            await setDoc(doc(db, 'licenses', currentClientId, 'tables', id), data, { merge: true });
+            closeModal('addTableModal');
+        };
+
+        window.deleteTable = async function(id) {
+            if (confirm('Delete table?')) {
+                await deleteDoc(doc(db, 'licenses', currentClientId, 'tables', id));
+            }
+        };
+
+        // ========== STAFF ==========
+        function loadStaff() {
+            const ref = collection(db, 'licenses', currentClientId, 'staff');
+            onSnapshot(ref, (snapshot) => {
+                const container = document.getElementById('staffList');
+                let html = '';
+                snapshot.forEach(doc => {
+                    const s = doc.data();
+                    html += `<div style="padding:10px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;">
+                        <div><b>${s.name}</b> - ${s.role}<br><small>${s.phone}</small></div>
+                        <div class="action-buttons">
+                            <button class="btn-edit" onclick="editStaff('${doc.id}')">Edit</button>
+                            <button class="btn-delete" onclick="deleteStaff('${doc.id}')">Delete</button>
+                        </div>
+                    </div>`;
+                });
+                container.innerHTML = html || '<div class="loading">No staff</div>';
+            });
+        }
+
+        window.showAddStaffModal = async function() {
+            document.getElementById('staffModalTitle').textContent = 'Add Staff';
+            document.getElementById('editingStaffId').value = '';
+            document.getElementById('staffName').value = '';
+            document.getElementById('staffPhone').value = '';
+            document.getElementById('staffPin').value = '';
+            document.getElementById('staffActive').checked = true;
+            
+            const select = document.getElementById('staffRole');
+            const snap = await getDocs(collection(db, 'licenses', currentClientId, 'roles'));
+            select.innerHTML = '';
+            snap.forEach(d => { select.innerHTML += `<option value="${d.id}">${d.id}</option>`; });
+            
+            document.getElementById('addStaffModal').style.display = 'flex';
+        };
+
+        window.editStaff = async function(id) {
+            const snap = await getDoc(doc(db, 'licenses', currentClientId, 'staff', id));
+            if (snap.exists()) {
+                const s = snap.data();
+                document.getElementById('staffModalTitle').textContent = 'Edit Staff';
+                document.getElementById('editingStaffId').value = id;
+                document.getElementById('staffName').value = s.name;
+                document.getElementById('staffPhone').value = s.phone;
+                document.getElementById('staffPin').value = s.pin;
+                document.getElementById('staffActive').checked = s.active;
+                
+                const select = document.getElementById('staffRole');
+                const snapRoles = await getDocs(collection(db, 'licenses', currentClientId, 'roles'));
+                select.innerHTML = '';
+                snapRoles.forEach(d => { 
+                    select.innerHTML += `<option value="${d.id}" ${d.id === s.role ? 'selected' : ''}>${d.id}</option>`; 
+                });
+                
+                document.getElementById('addStaffModal').style.display = 'flex';
+            }
+        };
+
+        window.saveStaff = async function() {
+            const id = document.getElementById('editingStaffId').value;
+            const pin = document.getElementById('staffPin').value;
+            if (pin.length !== 6) { alert('PIN must be 6 digits'); return; }
+            
+            const data = {
+                name: document.getElementById('staffName').value,
+                phone: document.getElementById('staffPhone').value,
+                pin: pin,
+                role: document.getElementById('staffRole').value,
+                active: document.getElementById('staffActive').checked,
+                updatedAt: Timestamp.now()
+            };
+            if (!id) data.createdAt = Timestamp.now();
+            
+            if (id) {
+                await updateDoc(doc(db, 'licenses', currentClientId, 'staff', id), data);
+            } else {
+                await addDoc(collection(db, 'licenses', currentClientId, 'staff'), data);
+            }
+            closeModal('addStaffModal');
+        };
+
+        window.deleteStaff = async function(id) {
+            if (confirm('Delete staff?')) {
+                await deleteDoc(doc(db, 'licenses', currentClientId, 'staff', id));
+            }
+        };
+
+        // ========== DISCOUNTS ==========
+        function loadDiscounts() {
+            const ref = collection(db, 'licenses', currentClientId, 'discounts');
+            onSnapshot(ref, (snapshot) => {
+                const container = document.getElementById('discountsList');
+                let html = '';
+                snapshot.forEach(doc => {
+                    const d = doc.data();
+                    html += `<div style="padding:10px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;">
+                        <div><b>${d.name}</b> - ${d.type}: ${d.value}${d.type==='percentage'?'%':' RM'} ${d.active ? '✅' : '❌'}</div>
+                        <div class="action-buttons">
+                            <button class="btn-edit" onclick="editDiscount('${doc.id}')">Edit</button>
+                            <button class="btn-delete" onclick="deleteDiscount('${doc.id}')">Delete</button>
+                        </div>
+                    </div>`;
+                });
+                container.innerHTML = html || '<div class="loading">No discounts</div>';
+            });
+        }
+
+        window.showAddDiscountModal = function() {
+            document.getElementById('discountModalTitle').textContent = 'Add Discount';
+            document.getElementById('editingDiscountId').value = '';
+            document.getElementById('discountName').value = '';
+            document.getElementById('discountType').value = 'percentage';
+            document.getElementById('discountValue').value = '';
+            document.getElementById('discountStartTime').value = '';
+            document.getElementById('discountEndTime').value = '';
+            document.getElementById('discountActive').checked = true;
+            document.getElementById('addDiscountModal').style.display = 'flex';
+        };
+
+        window.editDiscount = async function(id) {
+            const snap = await getDoc(doc(db, 'licenses', currentClientId, 'discounts', id));
+            if (snap.exists()) {
+                const d = snap.data();
+                document.getElementById('discountModalTitle').textContent = 'Edit Discount';
+                document.getElementById('editingDiscountId').value = id;
+                document.getElementById('discountName').value = d.name;
+                document.getElementById('discountType').value = d.type;
+                document.getElementById('discountValue').value = d.value;
+                document.getElementById('discountActive').checked = d.active;
+                document.getElementById('addDiscountModal').style.display = 'flex';
+            }
+        };
+
+        window.saveDiscount = async function() {
+            const id = document.getElementById('editingDiscountId').value;
+            const data = {
+                name: document.getElementById('discountName').value,
+                type: document.getElementById('discountType').value,
+                value: document.getElementById('discountValue').value,
+                active: document.getElementById('discountActive').checked,
+                updatedAt: Timestamp.now()
+            };
+            
+            const startTime = document.getElementById('discountStartTime').value;
+            const endTime = document.getElementById('discountEndTime').value;
+            if (startTime) data.startTime = Timestamp.fromDate(new Date(startTime));
+            if (endTime) data.endTime = Timestamp.fromDate(new Date(endTime));
+            if (!id) data.createdAt = Timestamp.now();
+            
+            if (id) {
+                await updateDoc(doc(db, 'licenses', currentClientId, 'discounts', id), data);
+            } else {
+                await addDoc(collection(db, 'licenses', currentClientId, 'discounts'), data);
+            }
+            closeModal('addDiscountModal');
+        };
+
+        window.deleteDiscount = async function(id) {
+            if (confirm('Delete discount?')) {
+                await deleteDoc(doc(db, 'licenses', currentClientId, 'discounts', id));
+            }
+        };
+
+        // ========== TAX SETTINGS ==========
+        async function loadTaxSettings() {
+            const container = document.getElementById('taxSettingsContent');
+            const taxRef = doc(db, 'licenses', currentClientId, 'tax_settings', 'settings');
+            const taxSnap = await getDoc(taxRef);
+            const tax = taxSnap.exists() ? taxSnap.data() : { name: 'SST', rate: '6', active: true };
+            
+            container.innerHTML = `
+                <div class="form-group">
+                    <label>Tax Name</label>
+                    <input type="text" id="taxName" value="${tax.name || 'SST'}">
+                </div>
+                <div class="form-group">
+                    <label>Tax Rate (%)</label>
+                    <input type="number" id="taxRate" value="${tax.rate || '6'}" step="0.01">
+                </div>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="taxActive" ${tax.active ? 'checked' : ''}>
+                    <label>Active</label>
+                </div>
+                <button class="btn" onclick="saveTaxSettings()">Save Tax Settings</button>
+            `;
+        }
+
+        window.saveTaxSettings = async function() {
+            const active = document.getElementById('taxActive').checked;
+            const rate = document.getElementById('taxRate').value;
+            const data = {
+                name: document.getElementById('taxName').value,
+                rate: rate,
+                active: active,
+                updatedAt: Timestamp.now()
+            };
+            await setDoc(doc(db, 'licenses', currentClientId, 'tax_settings', 'settings'), data, { merge: true });
+            taxActive = active;
+            currentTaxRate = active ? (parseFloat(rate) || 6) : 0;
+            document.getElementById('taxRateDisplay').textContent = currentTaxRate;
+            document.getElementById('taxRow').style.display = taxActive ? 'flex' : 'none';
+            alert('Tax settings saved!');
+        };
+
+        // ========== ROLES ==========
+        function loadRoles() {
+            const ref = collection(db, 'licenses', currentClientId, 'roles');
+            onSnapshot(ref, (snapshot) => {
+                const container = document.getElementById('rolesList');
+                let html = '';
+                snapshot.forEach(doc => {
+                    html += `<div style="padding:10px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;">
+                        <b>${doc.id}</b>
+                        <div class="action-buttons">
+                            <button class="btn-edit" onclick="editRole('${doc.id}')">Edit</button>
+                            <button class="btn-delete" onclick="deleteRole('${doc.id}')">Delete</button>
+                        </div>
+                    </div>`;
+                });
+                container.innerHTML = html || '<div class="loading">No roles</div>';
+            });
+        }
+
+        window.showAddRoleModal = function() {
+            document.getElementById('roleModalTitle').textContent = 'Add Role';
+            document.getElementById('editingRoleId').value = '';
+            document.getElementById('roleId').value = '';
+            document.getElementById('roleId').disabled = false;
+            
+            const perms = ['canAddStaff', 'canApplyDiscount', 'canEditMenu', 'canProcessRefund', 'canViewReports', 'canVoidOrder'];
+            let html = '';
+            perms.forEach(p => {
+                html += `<div class="checkbox-group"><input type="checkbox" id="perm_${p}"><label>${p}</label></div>`;
+            });
+            document.getElementById('rolePermissions').innerHTML = html;
+            document.getElementById('addRoleModal').style.display = 'flex';
+        };
+
+        window.editRole = async function(roleId) {
+            const snap = await getDoc(doc(db, 'licenses', currentClientId, 'roles', roleId));
+            if (snap.exists()) {
+                const perms = snap.data();
+                document.getElementById('roleModalTitle').textContent = 'Edit Role';
+                document.getElementById('editingRoleId').value = roleId;
+                document.getElementById('roleId').value = roleId;
+                document.getElementById('roleId').disabled = true;
+                
+                const permList = ['canAddStaff', 'canApplyDiscount', 'canEditMenu', 'canProcessRefund', 'canViewReports', 'canVoidOrder'];
+                let html = '';
+                permList.forEach(p => {
+                    html += `<div class="checkbox-group"><input type="checkbox" id="perm_${p}" ${perms[p] ? 'checked' : ''}><label>${p}</label></div>`;
+                });
+                document.getElementById('rolePermissions').innerHTML = html;
+                document.getElementById('addRoleModal').style.display = 'flex';
+            }
+        };
+
+        window.saveRole = async function() {
+            const editingId = document.getElementById('editingRoleId').value;
+            const roleId = editingId || document.getElementById('roleId').value.toLowerCase();
+            const perms = {};
+            ['canAddStaff', 'canApplyDiscount', 'canEditMenu', 'canProcessRefund', 'canViewReports', 'canVoidOrder'].forEach(p => {
+                perms[p] = document.getElementById(`perm_${p}`)?.checked || false;
+            });
+            
+            await setDoc(doc(db, 'licenses', currentClientId, 'roles', roleId), perms);
+            closeModal('addRoleModal');
+        };
+
+        window.deleteRole = async function(roleId) {
+            if (confirm('Delete role?')) {
+                await deleteDoc(doc(db, 'licenses', currentClientId, 'roles', roleId));
+            }
+        };
+
+        // ========== ALL ORDERS ==========
+        window.loadAllOrders = function() {
+            refreshAllOrders();
+        };
+
+        window.refreshAllOrders = async function() {
+            const container = document.getElementById('allOrdersList');
+            container.innerHTML = '<div class="loading">Loading orders...</div>';
+            
+            const ordersRef = collection(db, 'licenses', currentClientId, 'orders');
+            const q = query(ordersRef);
+            
+            onSnapshot(q, async (snapshot) => {
+                let html = '';
+                const sortedDocs = snapshot.docs.sort((a, b) => {
+                    const aTime = a.data().createdAt?.toDate() || new Date(0);
+                    const bTime = b.data().createdAt?.toDate() || new Date(0);
+                    return bTime - aTime;
+                });
+                
+                for (const orderDoc of sortedDocs) {
+                    const order = orderDoc.data();
+                    const orderDate = order.createdAt?.toDate() || new Date();
+                    
+                    html += `
+                        <div class="order-detail-card">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                                <div>
+                                    <b>${order.orderNumber || 'ORD-' + orderDoc.id.slice(0,8)}</b>
+                                    <span class="status-badge status-${order.status || 'active'}">${order.status || 'active'}</span>
+                                </div>
+                                <div>${orderDate.toLocaleString()}</div>
+                            </div>
+                            <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:5px;margin-bottom:10px;">
+                                <div>Table: ${order.tableId?.toUpperCase() || 'N/A'}</div>
+                                <div>Type: ${order.orderType || 'dine-in'}</div>
+                                <div>Staff: ${order.staffName || 'Unknown'}</div>
+                                <div>Total: <b>RM ${order.total}</b></div>
+                            </div>
+                            ${order.customerName ? `<div>Customer: ${order.customerName} (${order.customerPhone || 'No phone'})</div>` : ''}
+                            <div class="action-buttons" style="margin-top:10px;">
+                                <button class="btn-view" onclick="viewOrderDetails('${orderDoc.id}')">View Items</button>
+                                <button class="btn-edit" onclick="editOrder('${orderDoc.id}')">Edit</button>
+                                <button class="btn-delete" onclick="deleteOrder('${orderDoc.id}')">Delete</button>
+                            </div>
+                        </div>
+                    `;
+                }
+                container.innerHTML = html || '<div class="loading">No orders found</div>';
+            });
+        };
+
+        window.viewOrderDetails = async function(orderId) {
+            const orderRef = doc(db, 'licenses', currentClientId, 'orders', orderId);
+            const orderSnap = await getDoc(orderRef);
+            if (!orderSnap.exists()) return;
+            
+            const order = orderSnap.data();
+            const itemsRef = collection(db, 'licenses', currentClientId, 'orders', orderId, 'items');
+            const itemsSnap = await getDocs(itemsRef);
+            
+            let itemsHtml = '';
+            let itemCount = 0;
+            
+            for (const itemDoc of itemsSnap.docs) {
+                const item = itemDoc.data();
+                itemCount++;
+                itemsHtml += `<div class="order-item-detail">
+                    <span>${item.name} x ${item.qty}</span>
+                    <span>RM ${item.total || (parseFloat(item.basePrice) * parseInt(item.qty)).toFixed(2)}</span>
+                </div>`;
+                
+                const variantsRef = collection(db, 'licenses', currentClientId, 'orders', orderId, 'items', itemDoc.id, 'selectedVariants');
+                const variantsSnap = await getDocs(variantsRef);
+                variantsSnap.forEach(v => {
+                    const vData = v.data();
+                    itemsHtml += `<div style="font-size:12px;color:#666;padding-left:15px;">+ ${vData.optionName} (RM ${vData.priceAdjustment || '0'})</div>`;
+                });
+                
+                const modifiersRef = collection(db, 'licenses', currentClientId, 'orders', orderId, 'items', itemDoc.id, 'selectedModifiers');
+                const modifiersSnap = await getDocs(modifiersRef);
+                modifiersSnap.forEach(m => {
+                    const mData = m.data();
+                    itemsHtml += `<div style="font-size:12px;color:#666;padding-left:15px;">+ ${mData.optionName} (RM ${mData.price || '0'})</div>`;
+                });
+            }
+            
+            const content = document.getElementById('orderDetailContent');
+            content.innerHTML = `
+                <div style="margin-bottom:15px;">
+                    <b>${order.orderNumber}</b><br>
+                    Status: <span class="status-badge status-${order.status || 'active'}">${order.status || 'active'}</span><br>
+                    Table: ${order.tableId?.toUpperCase() || 'N/A'}<br>
+                    Type: ${order.orderType || 'dine-in'}<br>
+                    Staff: ${order.staffName || 'Unknown'}<br>
+                    Date: ${order.createdAt?.toDate().toLocaleString() || 'N/A'}
+                </div>
+                <div class="order-items-detail">
+                    <b>Items (${itemCount}):</b>
+                    ${itemsHtml}
+                </div>
+                <div style="margin-top:15px;padding-top:15px;border-top:1px solid #e2e8f0;">
+                    <div style="display:flex;justify-content:space-between;">
+                        <span>Subtotal:</span>
+                        <span>RM ${order.subtotal || order.total}</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;">
+                        <span>Tax:</span>
+                        <span>RM ${order.tax || '0.00'}</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;font-weight:bold;margin-top:5px;">
+                        <span>Total:</span>
+                        <span>RM ${order.total}</span>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('orderDetailModal').style.display = 'flex';
+        };
+
+        window.editOrder = async function(orderId) {
+            const orderRef = doc(db, 'licenses', currentClientId, 'orders', orderId);
+            const orderSnap = await getDoc(orderRef);
+            if (!orderSnap.exists()) return;
+            
+            const order = orderSnap.data();
+            document.getElementById('editOrderId').value = orderId;
+            document.getElementById('editOrderStatus').value = order.status || 'active';
+            document.getElementById('editOrderType').value = order.orderType || 'dine-in';
+            
+            document.getElementById('editOrderModal').style.display = 'flex';
+        };
+
+        window.saveOrderEdit = async function() {
+            const orderId = document.getElementById('editOrderId').value;
+            const status = document.getElementById('editOrderStatus').value;
+            const orderType = document.getElementById('editOrderType').value;
+            
+            await updateDoc(doc(db, 'licenses', currentClientId, 'orders', orderId), {
+                status: status,
+                orderType: orderType,
+                updatedAt: Timestamp.now()
+            });
+            
+            const orderSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', orderId));
+            const tableId = orderSnap.data()?.tableId;
+            if (tableId && (status === 'completed' || status === 'cancelled')) {
+                await updateDoc(doc(db, 'licenses', currentClientId, 'tables', tableId), { status: 'available' });
+            } else if (tableId && status === 'active') {
+                await updateDoc(doc(db, 'licenses', currentClientId, 'tables', tableId), { status: 'occupied' });
+            }
+            
+            closeModal('editOrderModal');
+            alert('Order updated!');
+        };
+
+        window.deleteOrder = async function(orderId) {
+            if (!confirm('Are you sure you want to delete this order? This action cannot be undone.')) return;
+            
+            const orderSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', orderId));
+            const tableId = orderSnap.data()?.tableId;
+            
+            const itemsRef = collection(db, 'licenses', currentClientId, 'orders', orderId, 'items');
+            const itemsSnap = await getDocs(itemsRef);
+            for (const item of itemsSnap.docs) {
+                await deleteDoc(item.ref);
+            }
+            
+            await deleteDoc(doc(db, 'licenses', currentClientId, 'orders', orderId));
+            
+            if (tableId) {
+                await updateDoc(doc(db, 'licenses', currentClientId, 'tables', tableId), { status: 'available' });
+            }
+            
+            alert('Order deleted!');
+        };
+
+        // ========== ALL TRANSACTIONS ==========
+        window.loadAllTransactions = function() {
+            refreshAllTransactions();
+        };
+
+        window.refreshAllTransactions = async function() {
+            const container = document.getElementById('allTransactionsList');
+            container.innerHTML = '<div class="loading">Loading transactions...</div>';
+            
+            const transactionsRef = collection(db, 'licenses', currentClientId, 'transactions');
+            const q = query(transactionsRef);
+            
+            onSnapshot(q, async (snapshot) => {
+                let html = '';
+                const sortedDocs = snapshot.docs.sort((a, b) => {
+                    const aTime = a.data().createdAt?.toDate() || new Date(0);
+                    const bTime = b.data().createdAt?.toDate() || new Date(0);
+                    return bTime - aTime;
+                });
+                
+                for (const transDoc of sortedDocs) {
+                    const trans = transDoc.data();
+                    const transDate = trans.createdAt?.toDate() || new Date();
+                    
+                    let orderNumber = 'N/A';
+                    if (trans.orderId) {
+                        try {
+                            const orderSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', trans.orderId));
+                            if (orderSnap.exists()) {
+                                orderNumber = orderSnap.data().orderNumber || trans.orderId.slice(0,8);
+                            }
+                        } catch (e) {}
+                    }
+                    
+                    const statusClass = trans.status === 'completed' ? 'status-completed' : 
+                                      (trans.status === 'refunded' ? 'status-cancelled' : 'status-active');
+                    
+                    html += `
+                        <div class="transaction-card">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                                <div>
+                                    <b>Transaction #${transDoc.id.slice(0,8)}</b>
+                                    <span class="status-badge ${statusClass}">${trans.status || 'completed'}</span>
+                                </div>
+                                <div>${transDate.toLocaleString()}</div>
+                            </div>
+                            <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:5px;margin-bottom:10px;">
+                                <div>Order: ${orderNumber}</div>
+                                <div>Amount: <b>RM ${trans.amount}</b></div>
+                                <div>Method: ${trans.paymentMethod || 'cash'}</div>
+                                <div>Type: ${trans.type || 'payment'}</div>
+                            </div>
+                            <div class="action-buttons" style="margin-top:10px;">
+                                <button class="btn-edit" onclick="editTransaction('${transDoc.id}')">Edit</button>
+                                <button class="btn-delete" onclick="deleteTransaction('${transDoc.id}')">Delete</button>
+                            </div>
+                        </div>
+                    `;
+                }
+                container.innerHTML = html || '<div class="loading">No transactions found</div>';
+            });
+        };
+
+        window.editTransaction = async function(transId) {
+            const transRef = doc(db, 'licenses', currentClientId, 'transactions', transId);
+            const transSnap = await getDoc(transRef);
+            if (!transSnap.exists()) return;
+            
+            const trans = transSnap.data();
+            document.getElementById('editTransactionId').value = transId;
+            document.getElementById('editTransactionMethod').value = trans.paymentMethod || 'cash';
+            document.getElementById('editTransactionStatus').value = trans.status || 'completed';
+            
+            document.getElementById('editTransactionModal').style.display = 'flex';
+        };
+
+        window.saveTransactionEdit = async function() {
+            const transId = document.getElementById('editTransactionId').value;
+            const paymentMethod = document.getElementById('editTransactionMethod').value;
+            const status = document.getElementById('editTransactionStatus').value;
+            
+            await updateDoc(doc(db, 'licenses', currentClientId, 'transactions', transId), {
+                paymentMethod: paymentMethod,
+                status: status,
+                updatedAt: Timestamp.now()
+            });
+            
+            closeModal('editTransactionModal');
+            alert('Transaction updated!');
+        };
+
+        window.deleteTransaction = async function(transId) {
+            if (!confirm('Are you sure you want to delete this transaction?')) return;
+            
+            await deleteDoc(doc(db, 'licenses', currentClientId, 'transactions', transId));
+            alert('Transaction deleted!');
+        };
+
+        // ========== REPORTS ==========
+        function loadReportsPage() {
+            const today = new Date();
+            const lastWeek = new Date(today);
+            lastWeek.setDate(today.getDate() - 7);
+            
+            document.getElementById('reportStartDate').value = lastWeek.toISOString().split('T')[0];
+            document.getElementById('reportEndDate').value = today.toISOString().split('T')[0];
+        }
+
+        window.generateReport = async function() {
+            const startDate = new Date(document.getElementById('reportStartDate').value);
+            const endDate = new Date(document.getElementById('reportEndDate').value);
+            endDate.setHours(23, 59, 59);
+            
+            const ordersRef = collection(db, 'licenses', currentClientId, 'orders');
+            const q = query(ordersRef, 
+                where('createdAt', '>=', Timestamp.fromDate(startDate)),
+                where('createdAt', '<=', Timestamp.fromDate(endDate))
+            );
+            
+            const snapshot = await getDocs(q);
+            let totalSales = 0;
+            let orderCount = snapshot.size;
+            const paymentMethods = {};
+            
+            snapshot.forEach(doc => {
+                const order = doc.data();
+                totalSales += parseFloat(order.total) || 0;
+            });
+            
+            const transactionsRef = collection(db, 'licenses', currentClientId, 'transactions');
+            const tQ = query(transactionsRef,
+                where('createdAt', '>=', Timestamp.fromDate(startDate)),
+                where('createdAt', '<=', Timestamp.fromDate(endDate))
+            );
+            const tSnapshot = await getDocs(tQ);
+            tSnapshot.forEach(doc => {
+                const t = doc.data();
+                paymentMethods[t.paymentMethod] = (paymentMethods[t.paymentMethod] || 0) + parseFloat(t.amount || 0);
+            });
+            
+            let methodsHtml = '';
+            for (let [method, amount] of Object.entries(paymentMethods)) {
+                methodsHtml += `<p>${method}: RM ${amount.toFixed(2)}</p>`;
+            }
+            
+            document.getElementById('reportResults').innerHTML = `
+                <h3>Report: ${startDate.toDateString()} - ${endDate.toDateString()}</h3>
+                <p><b>Total Orders:</b> ${orderCount}</p>
+                <p><b>Total Sales:</b> RM ${totalSales.toFixed(2)}</p>
+                <h4>Payment Methods:</h4>
+                ${methodsHtml || '<p>No payment data</p>'}
+            `;
+        };
+
+                // ========== TAKE ORDER - NEW DESIGN ==========
+        async function loadTakeOrderPage() {
+            document.body.classList.add('take-order-page');
+            await loadTablesTakeOrder();
+            await loadMenuItemsTakeOrder();
+            
+            document.getElementById('tableSectionTakeOrder').style.display = 'block';
+            document.getElementById('menuSectionTakeOrder').style.display = 'none';
+            document.getElementById('bottomActionBarTakeOrder').style.display = 'none';
+            
+            updateOrdersUITakeOrder();
+        }
+
+        async function loadTablesTakeOrder() {
+            const tablesRef = collection(db, 'licenses', currentClientId, 'tables');
+            const snapshot = await getDocs(tablesRef);
+            tablesListTakeOrder = [];
+            locationsTakeOrder = ['All'];
+            
+            snapshot.forEach(doc => {
+                const table = { id: doc.id, ...doc.data() };
+                tablesListTakeOrder.push(table);
+                if (table.location && !locationsTakeOrder.includes(table.location)) {
+                    locationsTakeOrder.push(table.location);
+                }
+            });
+            
+            renderLocationFiltersTakeOrder();
+            renderTableGridTakeOrder();
+        }
+
+        function renderLocationFiltersTakeOrder() {
+            const bar = document.getElementById('locationFilterBarTakeOrder');
+            bar.innerHTML = locationsTakeOrder.map(loc => 
+                `<button class="category-btn-takeorder ${activeLocationTakeOrder === loc ? 'active' : ''}" onclick="filterTablesByLocationTakeOrder('${loc}')">${loc}</button>`
+            ).join('');
+        }
+
+        window.filterTablesByLocationTakeOrder = function(location) {
+            activeLocationTakeOrder = location;
+            renderLocationFiltersTakeOrder();
+            renderTableGridTakeOrder();
+        };
+
+        function renderTableGridTakeOrder() {
+            const grid = document.getElementById('tableGridTakeOrder');
+            let filteredTables = activeLocationTakeOrder === 'All' 
+                ? tablesListTakeOrder 
+                : tablesListTakeOrder.filter(t => t.location === activeLocationTakeOrder);
+            
+            grid.className = `table-grid-takeorder ${viewModeTakeOrder === 'list' ? 'list-view' : ''}`;
+            
+            if (!filteredTables.length) {
+                grid.innerHTML = '<div style="text-align:center;padding:40px;color:white;">No tables found.</div>';
+                return;
+            }
+            
+            grid.innerHTML = filteredTables.map(table => {
+                const isOccupied = table.status === 'occupied';
+                return `
+                    <div class="table-card-takeorder ${isOccupied ? 'occupied' : ''}" onclick="selectTableTakeOrder('${table.id}', '${table.id.toUpperCase()}')">
+                        <div class="table-number-takeorder">${table.id.toUpperCase()}</div>
+                        <div class="capacity-takeorder"><i class="fas fa-user"></i> ${table.capacity || 4} pax</div>
+                        <div style="font-size:0.7rem;margin-top:3px;">${table.status || 'available'}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        window.selectTableTakeOrder = function(tableId, tableNumber) {
+            selectedTableIdTakeOrder = tableId;
+            selectedTableNumberTakeOrder = tableNumber;
+            selectedOrderTypeTakeOrder = 'dine-in';
+            
+            document.getElementById('tableSectionTakeOrder').style.display = 'none';
+            document.getElementById('menuSectionTakeOrder').style.display = 'block';
+            document.getElementById('bottomActionBarTakeOrder').style.display = 'flex';
+            document.getElementById('selectedTableDisplayTakeOrder').innerText = `Table ${tableNumber}`;
+            
+            document.querySelectorAll('#takeOrder .type-option-takeorder').forEach(opt => opt.classList.remove('selected'));
+            document.querySelector('#takeOrder .type-option-takeorder[data-type="dine-in"]').classList.add('selected');
+        };
+
+        window.showTableSectionTakeOrder = function() {
+            if (cartTakeOrder.length > 0) {
+                if (!confirm('Going back will clear your current order. Continue?')) return;
+            }
+            cartTakeOrder = [];
+            selectedTableIdTakeOrder = null;
+            selectedTableNumberTakeOrder = '';
+            document.getElementById('tableSectionTakeOrder').style.display = 'block';
+            document.getElementById('menuSectionTakeOrder').style.display = 'none';
+            document.getElementById('bottomActionBarTakeOrder').style.display = 'none';
+            renderTableGridTakeOrder();
+            updateOrdersUITakeOrder();
+            renderMenuGridTakeOrder();
+        };
+
+        window.selectOrderTypeTakeOrder = function(type) {
+            selectedOrderTypeTakeOrder = type;
+            document.querySelectorAll('#takeOrder .type-option-takeorder').forEach(opt => opt.classList.remove('selected'));
+            document.querySelector(`#takeOrder .type-option-takeorder[data-type="${type}"]`).classList.add('selected');
+            document.getElementById('deliveryFieldsTakeOrder').style.display = type === 'delivery' ? 'block' : 'none';
+        };
+
+        window.setViewModeTakeOrder = function(mode) {
+            viewModeTakeOrder = mode;
+            document.getElementById('gridViewBtnTakeOrder').classList.toggle('active', mode === 'grid');
+            document.getElementById('listViewBtnTakeOrder').classList.toggle('active', mode === 'list');
+            renderTableGridTakeOrder();
+        };
+
+        window.setMenuViewMode = function(mode) {
+            menuViewMode = mode;
+            document.getElementById('menuGridViewBtn').classList.toggle('active', mode === 'grid');
+            document.getElementById('menuListViewBtn').classList.toggle('active', mode === 'list');
+            renderMenuGridTakeOrder();
+        };
+
+        async function loadMenuItemsTakeOrder() {
+            const menuRef = collection(db, 'licenses', currentClientId, 'menu_items');
+            const snapshot = await getDocs(query(menuRef, where('active', '==', true)));
+            menuItemsTakeOrder = [];
+            const cats = new Set(['All']);
+            
+            snapshot.forEach(doc => {
+                const item = { id: doc.id, ...doc.data() };
+                menuItemsTakeOrder.push(item);
+                if (item.categoryId) cats.add(item.categoryId);
+            });
+            
+            categoriesTakeOrder = Array.from(cats);
+            renderCategoryBarTakeOrder();
+            renderMenuGridTakeOrder();
+        }
+
+        function renderCategoryBarTakeOrder() {
+            const bar = document.getElementById('categoryBarTakeOrder');
+            bar.innerHTML = categoriesTakeOrder.map(cat => 
+                `<button class="category-btn-takeorder ${activeCategoryTakeOrder === cat ? 'active' : ''}" onclick="filterByCategoryTakeOrder('${cat}')">${cat === 'All' ? 'All' : cat}</button>`
+            ).join('');
+        }
+
+        window.filterByCategoryTakeOrder = function(category) {
+            activeCategoryTakeOrder = category;
+            renderCategoryBarTakeOrder();
+            renderMenuGridTakeOrder();
+        };
+
+        function getFilteredMenuTakeOrder() {
+            if (activeCategoryTakeOrder === 'All') return menuItemsTakeOrder;
+            return menuItemsTakeOrder.filter(item => item.categoryId === activeCategoryTakeOrder);
+        }
+
+        function renderMenuGridTakeOrder() {
+            const filtered = getFilteredMenuTakeOrder();
+            const grid = document.getElementById('menuGridTakeOrder');
+            grid.className = `menu-grid-takeorder ${menuViewMode === 'list' ? 'list-view' : ''}`;
+            
+            if (!filtered.length) {
+                grid.innerHTML = '<div style="text-align:center;padding:40px;color:white;">No menu items.</div>';
+                return;
+            }
+            
+            grid.innerHTML = filtered.map(item => {
+                const count = cartTakeOrder.filter(c => c.id === item.id).reduce((s, c) => s + c.qty, 0);
+                const badgeHtml = count > 0 ? `<div class="top-right-badge">${count}</div>` : '';
+                const imageUrl = item.image || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=300&h=300&fit=crop';
+                
+                if (menuViewMode === 'list') {
+                    return `
+                        <div class="menu-card-takeorder" onclick="openItemModalTakeOrder('${item.id}')">
+                            ${badgeHtml}
+                            <img class="menu-image-takeorder" src="${imageUrl}" onerror="this.src='https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=300&h=300&fit=crop'">
+                            <div class="menu-content-takeorder">
+                                <div><div class="menu-card-name">${item.name}</div>
+                                <div class="menu-price-takeorder">RM ${parseFloat(item.price).toFixed(2)}</div></div>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                return `
+                    <div class="menu-card-takeorder" onclick="openItemModalTakeOrder('${item.id}')">
+                        ${badgeHtml}
+                        <div class="image-wrapper-takeorder">
+                            <img class="menu-image-takeorder" src="${imageUrl}" onerror="this.src='https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=300&h=300&fit=crop'">
+                            <div class="menu-name-overlay-takeorder"><span>${item.name}</span></div>
+                        </div>
+                        <div class="menu-content-takeorder">
+                            <div class="menu-price-takeorder">RM ${parseFloat(item.price).toFixed(2)}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        window.openItemModalTakeOrder = async function(menuId) {
+            currentMenuObjTakeOrder = menuItemsTakeOrder.find(m => m.id === menuId);
+            if (!currentMenuObjTakeOrder) return;
+            
+            currentSelectedVariantTakeOrder = null;
+            currentSelectedModifiersTakeOrder = [];
+            
+            const modalBody = document.getElementById('modalBodyTakeOrder');
+            let html = `
+                <div class="form-group"><strong>${currentMenuObjTakeOrder.name}</strong><br>Base Price: RM ${parseFloat(currentMenuObjTakeOrder.price).toFixed(2)}</div>
+            `;
+            
+            if (currentMenuObjTakeOrder.variants && currentMenuObjTakeOrder.variants.length > 0) {
+                html += `<div class="variant-section"><label>Select Variant:</label>`;
+                for (const v of currentMenuObjTakeOrder.variants) {
+                    const variant = allGlobalVariants.find(gv => gv.id === v.id);
+                    if (variant) {
+                        const optionsRef = collection(db, 'licenses', currentClientId, 'global_variants', v.id, 'options');
+                        const optionsSnap = await getDocs(optionsRef);
+                        optionsSnap.forEach(opt => {
+                            const optData = opt.data();
+                            html += `<div class="variant-option-takeorder" onclick="selectVariantTakeOrder('${v.id}', '${opt.id}', '${optData.name}', ${optData.priceAdjustment || 0})">
+                                <span>${optData.name}</span><span>${optData.priceAdjustment != '0' ? '+RM ' + optData.priceAdjustment : ''}</span>
+                            </div>`;
+                        });
+                    }
+                }
+                html += `</div>`;
+            }
+            
+            if (currentMenuObjTakeOrder.modifiers && currentMenuObjTakeOrder.modifiers.length > 0) {
+                html += `<div class="modifier-section"><label>Add-ons:</label>`;
+                for (const m of currentMenuObjTakeOrder.modifiers) {
+                    const modifier = allGlobalModifiers.find(gm => gm.id === m.id);
+                    if (modifier) {
+                        const optionsRef = collection(db, 'licenses', currentClientId, 'global_modifiers', m.id, 'options');
+                        const optionsSnap = await getDocs(optionsRef);
+                        optionsSnap.forEach(opt => {
+                            const optData = opt.data();
+                            html += `<div class="addon-option-takeorder" onclick="toggleModifierTakeOrder('${m.id}', '${opt.id}', '${optData.name}', ${optData.price})">
+                                <span>${optData.name}</span><span>+RM ${optData.price}</span>
+                            </div>`;
+                        });
+                    }
+                }
+                html += `</div>`;
+            }
+            
+            html += `
+                <div class="form-group"><label>Quantity:</label><input type="number" id="itemQtyModalTakeOrder" value="1" min="1" style="width:100%;padding:12px;border-radius:16px;"></div>
+                <div class="form-group"><label>Notes:</label><textarea id="itemNotesModalTakeOrder" rows="2" placeholder="Special instructions..."></textarea></div>
+            `;
+            
+            modalBody.innerHTML = html;
+            document.getElementById('itemModalTakeOrder').style.display = 'flex';
+        };
+
+        window.selectVariantTakeOrder = function(variantId, optionId, optionName, priceAdjustment) {
+            document.querySelectorAll('.variant-option-takeorder').forEach(el => el.classList.remove('selected'));
+            event.target.closest('.variant-option-takeorder').classList.add('selected');
+            currentSelectedVariantTakeOrder = { variantId, optionId, optionName, priceAdjustment: parseFloat(priceAdjustment) };
+        };
+
+        window.toggleModifierTakeOrder = function(modifierId, optionId, optionName, price) {
+            const el = event.target.closest('.addon-option-takeorder');
+            if (el.classList.contains('selected')) {
+                el.classList.remove('selected');
+                currentSelectedModifiersTakeOrder = currentSelectedModifiersTakeOrder.filter(m => m.optionId !== optionId);
+            } else {
+                el.classList.add('selected');
+                currentSelectedModifiersTakeOrder.push({ modifierId, optionId, optionName, price: parseFloat(price) });
+            }
+        };
+
+        window.addToCartFromModalTakeOrder = function() {
+            if (!currentMenuObjTakeOrder) return;
+            
+            const qty = parseInt(document.getElementById('itemQtyModalTakeOrder')?.value || 1);
+            const notes = document.getElementById('itemNotesModalTakeOrder')?.value || '';
+            
+            const basePrice = parseFloat(currentMenuObjTakeOrder.price);
+            const variantPrice = currentSelectedVariantTakeOrder?.priceAdjustment || 0;
+            const modifierTotal = currentSelectedModifiersTakeOrder.reduce((s, m) => s + m.price, 0);
+            const unitPrice = basePrice + variantPrice + modifierTotal;
+            
+            cartTakeOrder.push({
+                id: currentMenuObjTakeOrder.id,
+                name: currentMenuObjTakeOrder.name,
+                basePrice,
+                qty,
+                variant: currentSelectedVariantTakeOrder,
+                modifiers: [...currentSelectedModifiersTakeOrder],
+                notes,
+                unitPrice,
+                total: unitPrice * qty
+            });
+            
+            closeItemModalTakeOrder();
+            updateOrdersUITakeOrder();
+            renderMenuGridTakeOrder();
+        };
+
+        window.closeItemModalTakeOrder = function() {
+            document.getElementById('itemModalTakeOrder').style.display = 'none';
+            currentMenuObjTakeOrder = null;
+            currentSelectedVariantTakeOrder = null;
+            currentSelectedModifiersTakeOrder = [];
+        };
+
+        function updateOrdersUITakeOrder() {
+            const container = document.getElementById('ordersListTakeOrder');
+            const subtotalSpan = document.getElementById('orderSubtotalTakeOrder');
+            const taxSpan = document.getElementById('orderTaxTakeOrder');
+            const totalSpan = document.getElementById('orderTotalTakeOrder');
+            const badgeBottom = document.getElementById('orderCountBadgeBottomTakeOrder');
+            const badgeTop = document.getElementById('orderCountBadgeTakeOrder');
+            
+            const totalItems = cartTakeOrder.reduce((s, i) => s + i.qty, 0);
+            if (badgeBottom) badgeBottom.innerText = totalItems;
+            if (badgeTop) badgeTop.innerText = totalItems;
+            
+            document.getElementById('taxRateDisplayTakeOrder').textContent = currentTaxRate;
+            document.getElementById('taxRowTakeOrder').style.display = taxActive ? 'flex' : 'none';
+            
+            if (!cartTakeOrder.length) {
+                container.innerHTML = `<div class="empty-orders-takeorder"><i class="fas fa-shopping-basket"></i><p>No orders yet.</p></div>`;
+                subtotalSpan.innerText = 'RM 0.00';
+                taxSpan.innerText = 'RM 0.00';
+                totalSpan.innerText = 'RM 0.00';
+                return;
+            }
+            
+            let subtotal = 0;
+            let html = '';
+            
+            cartTakeOrder.forEach((item, idx) => {
+                subtotal += item.total;
+                
+                let details = '';
+                if (item.variant) details += `<div class="variant-text">Variant: ${item.variant.optionName} (+RM ${item.variant.priceAdjustment.toFixed(2)})</div>`;
+                if (item.modifiers.length) details += `<div class="addon-text">Add-ons: ${item.modifiers.map(m => m.optionName).join(', ')}</div>`;
+                if (item.notes) details += `<div class="notes-text"><i class="fas fa-pen"></i> ${item.notes}</div>`;
+                
+                html += `
+                    <div class="order-item-card-takeorder">
+                        <div class="order-item-header-takeorder">
+                            <span class="order-item-name-takeorder">${item.name} × ${item.qty}</span>
+                            <span class="order-item-price-takeorder">RM ${item.total.toFixed(2)}</span>
+                        </div>
+                        <div class="order-item-details-takeorder">${details}</div>
+                        <div class="order-item-actions-takeorder">
+                            <div class="qty-control-takeorder">
+                                <button class="qty-btn-takeorder" onclick="updateQtyTakeOrder(${idx}, -1)">-</button>
+                                <span>${item.qty}</span>
+                                <button class="qty-btn-takeorder" onclick="updateQtyTakeOrder(${idx}, 1)">+</button>
+                            </div>
+                            <button class="edit-note-btn" onclick="openNotesEditTakeOrder(${idx})"><i class="fas fa-edit"></i></button>
+                            <button class="remove-item-btn" onclick="removeCartItemTakeOrder(${idx})"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+            
+            const tax = taxActive ? subtotal * (currentTaxRate / 100) : 0;
+            const total = subtotal + tax;
+            
+            subtotalSpan.innerText = `RM ${subtotal.toFixed(2)}`;
+            taxSpan.innerText = `RM ${tax.toFixed(2)}`;
+            totalSpan.innerText = `RM ${total.toFixed(2)}`;
+        }
+
+        window.updateQtyTakeOrder = function(index, delta) {
+            const item = cartTakeOrder[index];
+            let newQty = item.qty + delta;
+            if (newQty < 1) {
+                cartTakeOrder.splice(index, 1);
+            } else {
+                item.qty = newQty;
+                item.total = item.unitPrice * newQty;
+            }
+            updateOrdersUITakeOrder();
+            renderMenuGridTakeOrder();
+        };
+
+        window.removeCartItemTakeOrder = function(index) {
+            cartTakeOrder.splice(index, 1);
+            updateOrdersUITakeOrder();
+            renderMenuGridTakeOrder();
+        };
+
+        window.openNotesEditTakeOrder = function(index) {
+            notesEditIndexTakeOrder = index;
+            document.getElementById('notesInputTakeOrder').value = cartTakeOrder[index].notes || '';
+            document.getElementById('notesModalTakeOrder').style.display = 'flex';
+        };
+
+        window.closeNotesModalTakeOrder = function() {
+            document.getElementById('notesModalTakeOrder').style.display = 'none';
+            notesEditIndexTakeOrder = null;
+        };
+
+        window.saveNotesTakeOrder = function() {
+            if (notesEditIndexTakeOrder !== null) {
+                cartTakeOrder[notesEditIndexTakeOrder].notes = document.getElementById('notesInputTakeOrder').value;
+                updateOrdersUITakeOrder();
+            }
+            closeNotesModalTakeOrder();
+        };
+
+        window.submitOrderTakeOrder = async function() {
+            if (!cartTakeOrder.length) { alert('No items in cart'); return; }
+            if (!selectedTableIdTakeOrder && selectedOrderTypeTakeOrder === 'dine-in') { 
+                alert('Please select a table first.'); 
+                showTableSectionTakeOrder(); 
+                return; 
+            }
+            
+            let subtotal = cartTakeOrder.reduce((s, i) => s + i.total, 0);
+            const tax = taxActive ? subtotal * (currentTaxRate / 100) : 0;
+            const total = subtotal + tax;
+            
+            const orderData = {
+                orderNumber: 'ORD-' + Date.now().toString().slice(-8),
+                staffId: currentStaff.id,
+                staffName: currentStaff.name,
+                status: 'active',
+                tableId: selectedOrderTypeTakeOrder === 'dine-in' ? selectedTableIdTakeOrder : null,
+                orderType: selectedOrderTypeTakeOrder,
+                customerName: selectedOrderTypeTakeOrder === 'delivery' ? (document.getElementById('customerNameTakeOrder')?.value || null) : null,
+                customerPhone: selectedOrderTypeTakeOrder === 'delivery' ? (document.getElementById('customerPhoneTakeOrder')?.value || null) : null,
+                customerAddress: selectedOrderTypeTakeOrder === 'delivery' ? (document.getElementById('customerAddressTakeOrder')?.value || null) : null,
+                subtotal: subtotal.toFixed(2),
+                tax: tax.toFixed(2),
+                total: total.toFixed(2),
+                createdAt: Timestamp.now()
+            };
+            
+            try {
+                const orderRef = await addDoc(collection(db, 'licenses', currentClientId, 'orders'), orderData);
+                
+                for (const item of cartTakeOrder) {
+                    const itemRef = await addDoc(collection(db, 'licenses', currentClientId, 'orders', orderRef.id, 'items'), {
+                        name: item.name,
+                        basePrice: item.basePrice.toString(),
+                        qty: item.qty.toString(),
+                        total: item.total.toFixed(2),
+                        notes: item.notes || '',
+                        status: 'pending'
+                    });
+                    
+                    if (item.variant) {
+                        await addDoc(collection(db, 'licenses', currentClientId, 'orders', orderRef.id, 'items', itemRef.id, 'selectedVariants'), {
+                            variantName: item.variant.optionName,
+                            optionName: item.variant.optionName,
+                            priceAdjustment: item.variant.priceAdjustment.toString()
+                        });
+                    }
+                    
+                    for (const m of item.modifiers) {
+                        await addDoc(collection(db, 'licenses', currentClientId, 'orders', orderRef.id, 'items', itemRef.id, 'selectedModifiers'), {
+                            modifierName: m.optionName,
+                            optionName: m.optionName,
+                            price: m.price.toString()
+                        });
+                    }
+                }
+                
+                if (selectedTableIdTakeOrder && selectedOrderTypeTakeOrder === 'dine-in') {
+                    await updateDoc(doc(db, 'licenses', currentClientId, 'tables', selectedTableIdTakeOrder), { status: 'occupied' });
+                }
+                
+                alert('Order placed successfully!');
+                cartTakeOrder = [];
+                updateOrdersUITakeOrder();
+                renderMenuGridTakeOrder();
+                showTableSectionTakeOrder();
+                await loadTablesTakeOrder();
+                
+            } catch (e) {
+                alert('Failed to submit order: ' + e.message);
+            }
+        };
+
+// Add this after the openSearchModalTakeOrder function
+window.openSearchModalTakeOrder = function() {
+    document.getElementById('searchModalTakeOrder').style.display = 'flex';
+    const searchInput = document.getElementById('searchInputTakeOrder');
+    searchInput.focus();
+    searchInput.value = '';
+    document.getElementById('searchResultsTakeOrder').innerHTML = '<div style="text-align:center;padding:20px;">Type to search...</div>';
+    
+    // Set up the input handler if not already set
+    if (!searchInput.hasAttribute('data-listener')) {
+        searchInput.setAttribute('data-listener', 'true');
+        searchInput.addEventListener('input', (e) => {
+            const term = e.target.value.toLowerCase();
+            const container = document.getElementById('searchResultsTakeOrder');
+            if (!term) { 
+                container.innerHTML = '<div style="text-align:center;padding:20px;">Type to search...</div>'; 
+                return; 
+            }
+            const results = menuItemsTakeOrder.filter(item => 
+                item.name.toLowerCase().includes(term) || 
+                (item.categoryId && item.categoryId.toLowerCase().includes(term))
+            );
+            if (!results.length) { 
+                container.innerHTML = '<div style="text-align:center;padding:20px;">No items found</div>'; 
+                return; 
+            }
+            container.innerHTML = results.map(item => `
+                <div class="search-result-item" onclick="openItemModalTakeOrder('${item.id}');closeSearchModalTakeOrder();">
+                    <strong>${item.name}</strong><br>
+                    <small>${item.categoryId || ''} | RM ${parseFloat(item.price).toFixed(2)}</small>
+                </div>
+            `).join('');
+        });
+    }
+};
+
+        window.closeSearchModalTakeOrder = function() {
+            document.getElementById('searchModalTakeOrder').style.display = 'none';
+        };
+
+        
+
+        // Custom Order
+        window.openCustomOrderModalTakeOrder = function() {
+            document.getElementById('customMenuNameTakeOrder').value = '';
+            document.getElementById('customMenuPriceTakeOrder').value = '';
+            document.getElementById('customMenuQtyTakeOrder').value = '1';
+            document.getElementById('customOrderModalTakeOrder').style.display = 'flex';
+        };
+
+        window.closeCustomOrderModalTakeOrder = function() {
+            document.getElementById('customOrderModalTakeOrder').style.display = 'none';
+        };
+
+        window.addCustomOrderTakeOrder = function() {
+            const name = document.getElementById('customMenuNameTakeOrder').value.trim();
+            const price = parseFloat(document.getElementById('customMenuPriceTakeOrder').value);
+            const qty = parseInt(document.getElementById('customMenuQtyTakeOrder').value);
+            
+            if (!name) { alert('Enter item name'); return; }
+            if (!price || price <= 0) { alert('Enter valid price'); return; }
+            
+            cartTakeOrder.push({
+                id: 'CUSTOM_' + Date.now(),
+                name: name + ' (Custom)',
+                basePrice: price,
+                qty,
+                variant: null,
+                modifiers: [],
+                notes: '',
+                unitPrice: price,
+                total: price * qty
+            });
+            
+            closeCustomOrderModalTakeOrder();
+            updateOrdersUITakeOrder();
+            renderMenuGridTakeOrder();
+        };
+
+        // Waiting List
+        window.saveToWaitingListTakeOrder = function() {
+            if (!cartTakeOrder.length) { alert('No items in cart'); return; }
+            let waitingLists = JSON.parse(localStorage.getItem('waitingListsTakeOrder') || '[]');
+            waitingLists.push({ id: 'WAIT_' + Date.now(), cart: JSON.parse(JSON.stringify(cartTakeOrder)), createdAt: new Date().toISOString() });
+            localStorage.setItem('waitingListsTakeOrder', JSON.stringify(waitingLists));
+            cartTakeOrder = [];
+            updateOrdersUITakeOrder();
+            renderMenuGridTakeOrder();
+            alert('Order saved to Waiting List!');
+        };        
+
+        
+        
+       
+        // ========== ACTIVE ORDERS ==========
+        function loadActiveOrders() {
+            const ref = collection(db, 'licenses', currentClientId, 'orders');
+            const q = query(ref, where('status', 'in', ['active', 'preparing']));
+            
+            onSnapshot(q, (snapshot) => {
+                const container = document.getElementById('activeOrdersList');
+                let html = '';
+                snapshot.forEach(doc => {
+                    const o = doc.data();
+                    html += `<div style="padding:15px;background:white;border-radius:10px;margin-bottom:10px;">
+                        <div style="display:flex;justify-content:space-between;">
+                            <b>${o.orderNumber}</b>
+                            <span>Table: ${o.tableId?.toUpperCase() || 'Takeaway'}</span>
+                        </div>
+                        <div>Total: RM ${o.total}</div>
+                        <div>Status: ${o.status}</div>
+                        <button class="btn-small" onclick="updateOrderStatus('${doc.id}', 'completed')">Mark Complete</button>
+                        <button class="btn-small" style="background:#e53e3e;" onclick="updateOrderStatus('${doc.id}', 'cancelled')">Cancel</button>
+                    </div>`;
+                });
+                container.innerHTML = html || '<div class="loading">No active orders</div>';
+            });
+        }
+
+        window.updateOrderStatus = async function(orderId, status) {
+            await updateDoc(doc(db, 'licenses', currentClientId, 'orders', orderId), { status });
+            const orderSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', orderId));
+            const tableId = orderSnap.data()?.tableId;
+            if (tableId && (status === 'completed' || status === 'cancelled')) {
+                await updateDoc(doc(db, 'licenses', currentClientId, 'tables', tableId), { status: 'available' });
+            }
+            alert('Order status updated!');
+        };
+
+        // ========== CASHIER ==========
+        async function loadCashierPage() {
+            const ref = collection(db, 'licenses', currentClientId, 'orders');
+            const q = query(ref, where('status', '==', 'active'));
+            const snapshot = await getDocs(q);
+            
+            const select = document.getElementById('paymentOrderSelect');
+            select.innerHTML = '<option value="">Select order...</option>';
+            snapshot.forEach(doc => {
+                const o = doc.data();
+                select.innerHTML += `<option value="${doc.id}" data-total="${o.total}">${o.orderNumber} - RM ${o.total}</option>`;
+            });
+            
+            document.getElementById('paymentOrderSelect').onchange = function() {
+                const total = this.options[this.selectedIndex]?.dataset.total;
+                if (total) {
+                    document.getElementById('paymentOrderDetails').innerHTML = `<p>Total Amount: <b>RM ${total}</b></p>`;
+                }
+            };
+            
+            document.getElementById('amountReceived').oninput = function() {
+                const total = parseFloat(document.getElementById('paymentOrderSelect').options[document.getElementById('paymentOrderSelect').selectedIndex]?.dataset.total) || 0;
+                const received = parseFloat(this.value) || 0;
+                const change = received - total;
+                document.getElementById('changeAmount').innerHTML = change >= 0 ? 
+                    `<p style="color:green;">Change: RM ${change.toFixed(2)}</p>` : 
+                    `<p style="color:red;">Insufficient: RM ${Math.abs(change).toFixed(2)}</p>`;
+            };
+        }
+
+        window.processPayment = async function() {
+            const orderId = document.getElementById('paymentOrderSelect').value;
+            const total = parseFloat(document.getElementById('paymentOrderSelect').options[document.getElementById('paymentOrderSelect').selectedIndex]?.dataset.total) || 0;
+            const received = parseFloat(document.getElementById('amountReceived').value) || 0;
+            
+            if (!orderId) { alert('Select order'); return; }
+            if (received < total) { alert('Insufficient amount'); return; }
+            
+            await updateDoc(doc(db, 'licenses', currentClientId, 'orders', orderId), { status: 'completed' });
+            
+            await addDoc(collection(db, 'licenses', currentClientId, 'transactions'), {
+                orderId: orderId,
+                amount: total.toString(),
+                paymentMethod: document.getElementById('paymentMethod').value,
+                status: 'completed',
+                type: 'payment',
+                createdAt: Timestamp.now()
+            });
+            
+            const orderSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', orderId));
+            const tableId = orderSnap.data()?.tableId;
+            if (tableId) {
+                await updateDoc(doc(db, 'licenses', currentClientId, 'tables', tableId), { status: 'available' });
+            }
+            
+            alert('Payment processed! Change: RM ' + (received - total).toFixed(2));
+            loadCashierPage();
+        };
+
+        // ========== UTILITIES ==========
+        window.closeModal = function(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        };
+
+        window.logout = function() {
+            Object.values(unsubscribers).forEach(u => u?.());
+            localStorage.clear();
+            location.reload();
+        };
+
+        // Check existing session
+        const savedClientId = localStorage.getItem('clientId');
+        const savedStaff = localStorage.getItem('currentStaff');
+        if (savedClientId && savedStaff) {
+            currentClientId = savedClientId;
+            currentStaff = JSON.parse(savedStaff);
+            document.getElementById('licenseScreen').style.display = 'none';
+            document.getElementById('pinScreen').style.display = 'none';
+            document.getElementById('appContainer').style.display = 'block';
+            document.getElementById('staffNameTop').textContent = currentStaff.name;
+            document.getElementById('staffRoleTop').textContent = currentStaff.role;
+            if (currentStaff.role === 'manager') document.getElementById('managerMenu').style.display = 'block';
+            document.getElementById('staffMenu').style.display = 'block';
+            loadTaxRate().then(() => {
+                loadGlobalVariants();
+                loadGlobalModifiers();
+                loadDashboard();
+            });
+        }
+
+        // Expose Take Order functions globally
+        window.filterTablesByLocationTakeOrder = filterTablesByLocationTakeOrder;
+        window.selectTableTakeOrder = selectTableTakeOrder;
+        window.showTableSectionTakeOrder = showTableSectionTakeOrder;
+        window.selectOrderTypeTakeOrder = selectOrderTypeTakeOrder;
+        window.setViewModeTakeOrder = setViewModeTakeOrder;
+        window.setMenuViewMode = setMenuViewMode;
+        window.filterByCategoryTakeOrder = filterByCategoryTakeOrder;
+        window.openItemModalTakeOrder = openItemModalTakeOrder;
+        window.selectVariantTakeOrder = selectVariantTakeOrder;
+        window.toggleModifierTakeOrder = toggleModifierTakeOrder;
+        window.addToCartFromModalTakeOrder = addToCartFromModalTakeOrder;
+        window.closeItemModalTakeOrder = closeItemModalTakeOrder;
+        window.updateQtyTakeOrder = updateQtyTakeOrder;
+        window.removeCartItemTakeOrder = removeCartItemTakeOrder;
+        window.openNotesEditTakeOrder = openNotesEditTakeOrder;
+        window.closeNotesModalTakeOrder = closeNotesModalTakeOrder;
+        window.saveNotesTakeOrder = saveNotesTakeOrder;
+        window.submitOrderTakeOrder = submitOrderTakeOrder;
+        window.openSearchModalTakeOrder = openSearchModalTakeOrder;
+        window.closeSearchModalTakeOrder = closeSearchModalTakeOrder;
+        window.openCustomOrderModalTakeOrder = openCustomOrderModalTakeOrder;
+        window.closeCustomOrderModalTakeOrder = closeCustomOrderModalTakeOrder;
+        window.addCustomOrderTakeOrder = addCustomOrderTakeOrder;
+        window.saveToWaitingListTakeOrder = saveToWaitingListTakeOrder;
+    </script>
+</body>
+</html>
