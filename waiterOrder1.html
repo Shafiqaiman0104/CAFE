@@ -367,9 +367,37 @@
             grid-template-columns: repeat(3, 1fr);
             gap: 12px;
             padding: 8px 0;
-            max-height: calc(100vh - 300px);
+            max-height: calc(100vh - 380px);
             overflow-y: auto;
         }
+        
+        /* Table Grid List View */
+        .table-grid.list-view {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .table-grid.list-view .table-card {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 15px 20px;
+            gap: 20px;
+        }
+        
+        .table-grid.list-view .table-card .table-number {
+            font-size: 1.5rem;
+            margin-bottom: 0;
+            min-width: 60px;
+        }
+        
+        .table-grid.list-view .table-card .capacity {
+            margin-top: 0;
+            margin-left: auto;
+        }
+        
         @media (min-width: 640px) {
             .table-grid { grid-template-columns: repeat(5, 1fr); }
         }
@@ -391,6 +419,14 @@
         .table-card.occupied {
             background: #ff9800;
             color: white;
+        }
+        .table-card.occupied.all-served {
+            background: #2196F3 !important;
+            color: white;
+        }
+        .table-card.available-for-change {
+            cursor: pointer;
+            border: 2px solid #4caf50;
         }
         .table-card .capacity {
             font-size: 0.8rem;
@@ -432,6 +468,67 @@
         .status-dot.white { background: white; }
         .status-dot.orange { background: #ff9800; }
         .status-dot.blue { background: #00e1ff; }
+
+        /* Table Filter Bar */
+        .table-filter-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            padding: 0 16px;
+            z-index: 99;
+            box-shadow: 0 -4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .table-filter-bar.hidden-bar {
+            display: none !important;
+        }
+        
+        .table-filter-btn {
+            flex: 1;
+            max-width: 120px;
+            padding: 10px 16px;
+            border-radius: 40px;
+            border: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background: #f0f0f0;
+            color: #555;
+        }
+        
+        .table-filter-btn.active {
+            background: #764ba2;
+            color: white;
+        }
+        
+        .table-filter-btn.available-btn.active {
+            background: #4caf50;
+        }
+        
+        .table-filter-btn.active-btn.active {
+            background: #ff9800;
+        }
+        
+        .table-filter-btn.ready-btn.active {
+            background: #2196F3;
+        }
+        
+        .table-filter-btn i {
+            font-size: 1rem;
+        }
 
         /* Orders Panel */
         .orders-panel {
@@ -977,6 +1074,48 @@
             color: #333;
         }
 
+        /* Change Table Modal */
+        .change-table-modal .table-grid {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        /* Popup buttons grid */
+        .popup-buttons-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .popup-btn {
+            padding: 12px;
+            border-radius: 40px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .popup-btn.change-table {
+            background: #2196F3;
+            color: white;
+        }
+        .popup-btn.add {
+            background: #4caf50;
+            color: white;
+        }
+        .popup-btn.back {
+            background: #9e9e9e;
+            color: white;
+        }
+        .popup-btn.complete {
+            background: #ff9800;
+            color: white;
+        }
+
         /* Responsive Tweaks */
         @media (max-width: 768px) {
             .menu-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
@@ -997,11 +1136,65 @@
           color: #888;
           padding: 40px 20px;
         }
+
+        /* Active Order Popup Styles */
+        .active-order-popup {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1500;
+        }
+        .popup-content {
+            background: white;
+            border-radius: 24px;
+            width: 90%;
+            max-width: 550px;
+            max-height: 85vh;
+            overflow-y: auto;
+            padding: 20px;
+            animation: slideUp 0.3s ease;
+        }
+        .order-group {
+            background: #f8f9fa;
+            border-radius: 16px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        .order-group h4 {
+            color: #764ba2;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 5px;
+        }
+        .order-item-mini {
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        /* Served item text color */
+        .order-item-mini.served-item,
+        .order-item-mini .served-text {
+            color: #2196F3 !important;
+        }
+        
+        .order-item-mini.served-item strong,
+        .order-item-mini.served-item span,
+        .order-item-mini .served-text strong,
+        .order-item-mini .served-text span {
+            color: #2196F3 !important;
+        }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 </head>
 <body>
-    <div id="loadingOverlay" class="loading-overlay"><div class="loading-spinner"></div><div id="loadingMessage">Loading menu data...</div></div>
+    <div id="loadingOverlay" class="loading-overlay"><div class="loading-spinner"></div><div id="loadingMessage">Loading data...</div></div>
 
     <nav class="navbar">
         <div class="logo"><i class="fas fa-user-tie"></i><span>Waiter Panel | Cafe Delight</span></div>
@@ -1073,6 +1266,19 @@
         </div>
     </div>
 
+    <!-- Table Filter Bar -->
+    <div class="table-filter-bar" id="tableFilterBar">
+        <button class="table-filter-btn available-btn" id="filterAvailableBtn" onclick="filterTablesByStatus('available')">
+            <i class="fas fa-circle" style="color: #4caf50;"></i> Available
+        </button>
+        <button class="table-filter-btn active-btn" id="filterActiveBtn" onclick="filterTablesByStatus('active')">
+            <i class="fas fa-circle" style="color: #ff9800;"></i> Active
+        </button>
+        <button class="table-filter-btn ready-btn" id="filterReadyBtn" onclick="filterTablesByStatus('ready')">
+            <i class="fas fa-circle" style="color: #2196F3;"></i> Ready
+        </button>
+    </div>
+
     <!-- Bottom Fixed Action Bar -->
     <div class="bottom-action-bar" id="bottomActionBar">
         <button class="bottom-btn" onclick="openCustomOrderModal()">
@@ -1089,6 +1295,43 @@
             <i class="fas fa-save"></i>
             <span>Save</span>
         </button>
+    </div>
+
+    <!-- ACTIVE ORDER POPUP -->
+    <div id="activeOrderPopup" class="active-order-popup">
+        <div class="popup-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-clipboard-list"></i> Table <span id="popupTableNumber"></span> Orders</h3>
+                <button class="secondary-btn" onclick="closeActiveOrderPopup()">❌</button>
+            </div>
+            <div id="popupOrdersContainer" style="max-height: 400px; overflow-y: auto; margin-bottom: 15px;">
+                <!-- Dynamic content -->
+            </div>
+            <div id="popupTotalDisplay" style="font-weight: bold; margin-bottom: 15px; text-align: right;"></div>
+            <div class="popup-buttons-grid">
+                <button class="popup-btn change-table" onclick="popupChangeTable()"><i class="fas fa-exchange-alt"></i> CHANGE TABLE</button>
+                <button class="popup-btn add" onclick="popupAddMore()"><i class="fas fa-plus"></i> ADD</button>
+                <button class="popup-btn back" onclick="closeActiveOrderPopup()"><i class="fas fa-arrow-left"></i> BACK</button>
+                <button class="popup-btn complete" onclick="popupCompleteOrder()"><i class="fas fa-check"></i> COMPLETE ORDER</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Change Table Modal -->
+    <div id="changeTableModal" class="modal change-table-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-exchange-alt"></i> Change Table</h3>
+                <button class="secondary-btn" onclick="closeChangeTableModal()">❌</button>
+            </div>
+            <p style="margin-bottom: 15px;">Select a new table for orders from Table <strong id="oldTableNumber"></strong>:</p>
+            <div id="availableTablesGrid" class="table-grid" style="max-height: 350px;">
+                <!-- Available tables will be rendered here -->
+            </div>
+            <div class="action-buttons">
+                <button class="secondary-btn" onclick="closeChangeTableModal()">Cancel</button>
+            </div>
+        </div>
     </div>
 
     <!-- Order Details Modal -->
@@ -1143,30 +1386,12 @@
                 <button class="secondary-btn" onclick="closeCustomOrderModal()">❌</button>
             </div>
             <div id="customOrderBody">
-                <div class="form-group">
-                    <label>ID Menu:</label>
-                    <input type="text" id="customMenuId" readonly style="background: #f5f5f5; font-family: monospace;">
-                </div>
-                <div class="form-group">
-                    <label>Name: <span style="color:red;">*</span></label>
-                    <input type="text" id="customMenuName" placeholder="Enter item name" required>
-                </div>
-                <div class="form-group">
-                    <label>Price (RM): <span style="color:red;">*</span></label>
-                    <input type="number" id="customMenuPrice" step="0.01" min="0" placeholder="0.00" required>
-                </div>
-                <div class="form-group">
-                    <label>Category:</label>
-                    <input type="text" id="customMenuCategory" value="CUSTOM" readonly style="background: #f5f5f5;">
-                </div>
-                <div class="form-group">
-                    <label>Preparation Time (minutes): <span style="color:red;">*</span></label>
-                    <input type="number" id="customMenuPrepTime" min="1" value="15" required>
-                </div>
-                <div class="action-buttons">
-                    <button class="secondary-btn" onclick="closeCustomOrderModal()">Cancel</button>
-                    <button class="primary-btn" onclick="addCustomOrder()" style="background: linear-gradient(135deg, #4caf50, #45a049);">Add Custom Order</button>
-                </div>
+                <div class="form-group"><label>ID Menu:</label><input type="text" id="customMenuId" readonly style="background: #f5f5f5; font-family: monospace;"></div>
+                <div class="form-group"><label>Name: <span style="color:red;">*</span></label><input type="text" id="customMenuName" placeholder="Enter item name" required></div>
+                <div class="form-group"><label>Price (RM): <span style="color:red;">*</span></label><input type="number" id="customMenuPrice" step="0.01" min="0" placeholder="0.00" required></div>
+                <div class="form-group"><label>Category:</label><input type="text" id="customMenuCategory" value="CUSTOM" readonly style="background: #f5f5f5;"></div>
+                <div class="form-group"><label>Preparation Time (minutes): <span style="color:red;">*</span></label><input type="number" id="customMenuPrepTime" min="1" value="15" required></div>
+                <div class="action-buttons"><button class="secondary-btn" onclick="closeCustomOrderModal()">Cancel</button><button class="primary-btn" onclick="addCustomOrder()" style="background: linear-gradient(135deg, #4caf50, #45a049);">Add Custom Order</button></div>
             </div>
         </div>
     </div>
@@ -1174,15 +1399,9 @@
     <!-- Waiting List Modal -->
     <div id="waitingListModal" class="modal">
         <div class="modal-content" style="max-width: 600px;">
-            <div class="modal-header">
-                <h3><i class="fas fa-clock"></i> Order Waiting List</h3>
-                <button class="secondary-btn" onclick="closeWaitingListModal()">❌</button>
-            </div>
+            <div class="modal-header"><h3><i class="fas fa-clock"></i> Order Waiting List</h3><button class="secondary-btn" onclick="closeWaitingListModal()">❌</button></div>
             <div id="waitingListContainer" style="max-height: 500px; overflow-y: auto;"></div>
-            <div class="action-buttons" style="margin-top: 15px;">
-                <button class="secondary-btn" onclick="closeWaitingListModal()">Close</button>
-                <button class="primary-btn" style="background: #e74c3c;" onclick="clearAllWaitingLists()">Clear All Waiting Lists</button>
-            </div>
+            <div class="action-buttons" style="margin-top: 15px;"><button class="secondary-btn" onclick="closeWaitingListModal()">Close</button><button class="primary-btn" style="background: #e74c3c;" onclick="clearAllWaitingLists()">Clear All Waiting Lists</button></div>
         </div>
     </div>
 
@@ -1190,6 +1409,22 @@
     <div id="notesModal" class="modal"><div class="modal-content"><div class="modal-header"><h3>Edit Notes</h3><button class="secondary-btn" onclick="closeNotesModal()">❌</button></div><textarea id="notesInput" rows="3" placeholder="Special instructions..."></textarea><div class="action-buttons"><button class="secondary-btn" onclick="closeNotesModal()">Cancel</button><button class="primary-btn" onclick="saveNotes()">Save</button></div></div></div>
 
     <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDFFVP_UqpIzXbWv9dNpLkB4Ot3Z9aC7aE",
+            authDomain: "caferealtime-43213.firebaseapp.com",
+            databaseURL: "https://caferealtime-43213-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "caferealtime-43213",
+            storageBucket: "caferealtime-43213.firebasestorage.app",
+            messagingSenderId: "813540068315",
+            appId: "1:813540068315:web:76271282255545550735fe"
+        };
+        
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        const kitchenOrdersRef = database.ref('kitchenOrders');
+        
         const MENU_API = 'https://script.google.com/macros/s/AKfycbyL3qH9ra_3sNw1nLchIKHrGo31obMaL0cdK4zNTwyiBPORIPYr349katf1ANzWVEmJMw/exec';
         const VARIANT_API = 'https://script.google.com/macros/s/AKfycbwQxx0JLOTPGmpp9zj6DwAojB0e7ix2ZXcfjuO70NarLrnDOKc4NpdOjog2wAFPZKOjyQ/exec';
         const ADDON_API = 'https://script.google.com/macros/s/AKfycbzz6y1BvK1nc93MmEQOmz0ZAswthg6tilaJ2prLSGkqLo1ezKfmA3gN84rgEutsGokv/exec';
@@ -1198,17 +1433,178 @@
         const TABLE_API = 'https://script.google.com/macros/s/AKfycbyKuPETE-5zyGx2d9k5GGOx01mMSnq1Qi7GxZoXzjhd26R5s1CKXG5o08SHk7NTydC5kA/exec';
 
         let menuItems = [], variantsMap = {}, addonsList = [], cart = [], currentVariants = [], currentSelectedVariant = null, currentSelectedAddons = [], viewMode = 'grid';
-        let tablesList = [], ordersMap = {}, selectedTableId = null, selectedTableNumber = '', selectedOrderType = 'Dine In';
+        let tablesList = [], tableOrdersMap = {}, selectedTableId = null, selectedTableNumber = '', selectedOrderType = 'Dine In';
         let activeCategory = 'All', uniqueCategories = [];
         let activeLocation = 'All';
         let isTableSelectionMode = true;
+        let menuData = {}, variantData = {}, addOnData = {};
+        let allOrderItems = [];
+        let pendingChangeTableContext = null;
+        let activeTableFilter = null; // null = show all, 'available', 'active', 'ready'
 
         function showLoading(msg) { document.getElementById('loadingMessage').innerText = msg; document.getElementById('loadingOverlay').style.display = 'flex'; }
         function hideLoading() { document.getElementById('loadingOverlay').style.display = 'none'; }
 
+        function renderLocationFilters() {
+            const locations = ['All', ...new Set(tablesList.map(t => t.location).filter(l => l))];
+            const bar = document.getElementById('locationFilterBar');
+            if (bar) {
+                bar.innerHTML = locations.map(loc => 
+                    `<button class="category-btn ${activeLocation === loc ? 'active' : ''}" data-location="${loc}" onclick="filterTablesByLocation('${loc}')">${loc}</button>`
+                ).join('');
+            }
+        }
+
+        async function loadMenuData() {
+            try {
+                const response = await fetch(`${MENU_API}?action=getAllMenu`);
+                const result = await response.json();
+                if (result.success) {
+                    result.data.forEach(menu => { menuData[menu['Id Menu']] = menu['Name']; });
+                }
+            } catch(e) { console.error(e); }
+        }
+
+        async function loadVariantData() {
+            try {
+                const response = await fetch(`${VARIANT_API}?action=getAllVariants`);
+                const result = await response.json();
+                if (result.success) {
+                    result.data.forEach(v => { variantData[v['Id Variant']] = v.Name; });
+                }
+            } catch(e) { console.error(e); }
+        }
+
+        async function loadAddOnData() {
+            try {
+                const response = await fetch(`${ADDON_API}?action=getAllAddOns`);
+                const result = await response.json();
+                if (result.success) {
+                    result.data.forEach(a => { addOnData[a['Id Add On']] = a.Name; });
+                }
+            } catch(e) { console.error(e); }
+        }
+
+        function getMenuName(menuId) { return menuData[menuId] || menuId; }
+        function getVariantName(variantId) { return variantData[variantId] || variantId; }
+        function getAddOnNames(addOnIds) {
+            if (!addOnIds) return '';
+            return addOnIds.split(',').map(id => addOnData[id] || id).filter(n => n).join(', ');
+        }
+
+        async function syncGoogleSheetsToFirebase() {
+            try {
+                await fetch(ORDER_ITEMS_API);
+                console.log('✅ Synced Google Sheets to Firebase');
+                return true;
+            } catch(e) {
+                console.error('Sync error:', e);
+                return false;
+            }
+        }
+
+        // Check if an order item is served
+        function isItemServed(item) {
+            return item.Status && item.Status.toLowerCase() === 'served';
+        }
+        
+        // Check if all items for a table are served
+        function areAllItemsServedForTable(tableId) {
+            const orders = tableOrdersMap[tableId] || [];
+            if (orders.length === 0) return false;
+            
+            let hasItems = false;
+            for (const order of orders) {
+                const items = getOrderItemsFromCache(order.idOrder);
+                if (items.length > 0) hasItems = true;
+                for (const item of items) {
+                    if (!isItemServed(item)) {
+                        return false;
+                    }
+                }
+            }
+            return hasItems;
+        }
+
+        function setupRealtimeListener() {
+            console.log('🔥 Setting up Firebase real-time listener...');
+            kitchenOrdersRef.on('value', (snapshot) => {
+                const firebaseData = snapshot.val();
+                if (firebaseData && Array.isArray(firebaseData)) {
+                    console.log(`📡 Real-time update: ${firebaseData.length} items`);
+                    allOrderItems = firebaseData;
+                    renderTableGrid();
+                } else {
+                    allOrderItems = [];
+                    tableOrdersMap = {};
+                    renderTableGrid();
+                }
+            });
+        }
+
+        async function loadTablesAndOrders() {
+            try {
+                const resTables = await fetch(`${TABLE_API}?action=getAllTables`);
+                const dataTables = await resTables.json();
+                if (dataTables.success && Array.isArray(dataTables.data)) {
+                    tablesList = dataTables.data.map(table => ({
+                        idTable: table['Id Table'],
+                        tableNumber: table['Table Number'] || table['Id Table']?.replace('TABLE', '') || '?',
+                        capacity: table['Capacity'] || '4',
+                        location: table['Location'] || 'Indoor'
+                    }));
+                } else {
+                    tablesList = [
+                        { idTable: 'TABLE0001', tableNumber: '1', capacity: '4', location: 'Indoor' },
+                        { idTable: 'TABLE0002', tableNumber: '2', capacity: '6', location: 'Outdoor' },
+                        { idTable: 'TABLE0003', tableNumber: '3', capacity: '2', location: 'Indoor' }
+                    ];
+                }
+
+                const resOrders = await fetch(`${ORDER_API}?action=getAllOrders`);
+                const dataOrders = await resOrders.json();
+                tableOrdersMap = {};
+                if (dataOrders.success && Array.isArray(dataOrders.data)) {
+                    dataOrders.data.forEach(order => {
+                        const tableId = order['Id Table'];
+                        if (tableId && order.Status !== 'Completed' && order.Status !== 'Paid') {
+                            if (!tableOrdersMap[tableId]) tableOrdersMap[tableId] = [];
+                            tableOrdersMap[tableId].push({
+                                idOrder: order['Id Order'],
+                                totalAmount: order['Total Amount'] || 0,
+                                orderType: order['Order Type'] || 'Dine In',
+                                status: order.Status,
+                                createdAt: order['Created At']
+                            });
+                        }
+                    });
+                }
+            } catch(e) {
+                console.error("Error loading tables/orders", e);
+            }
+        }
+
+        function getOrderItemsFromCache(orderId) {
+            return allOrderItems.filter(item => item['Id Order'] === orderId);
+        }
+
         document.addEventListener('DOMContentLoaded', async () => {
             showLoading('Loading data...');
-            await Promise.all([loadMenu(), loadVariants(), loadAddons(), loadTablesAndOrders()]);
+            
+            await syncGoogleSheetsToFirebase();
+            
+            await Promise.all([
+                loadMenu(), 
+                loadVariants(), 
+                loadAddons(), 
+                loadTablesAndOrders(), 
+                loadMenuData(), 
+                loadVariantData(), 
+                loadAddOnData()
+            ]);
+            
+            setupRealtimeListener();
+            
             extractCategories(); 
             renderCategoryButtons(); 
             renderMenu(); 
@@ -1238,16 +1634,19 @@
             const waitingBtn = document.getElementById('waitingListBtn');
             const ordersPanel = document.getElementById('ordersPanel');
             const bottomBar = document.getElementById('bottomActionBar');
+            const tableFilterBar = document.getElementById('tableFilterBar');
             
             if (isTableSelectionMode) {
                 waitingBtn.classList.add('disabled');
                 ordersPanel.classList.add('hidden-panel');
                 bottomBar.classList.add('hidden-bar');
-                document.body.style.paddingBottom = '20px';
+                tableFilterBar.classList.remove('hidden-bar');
+                document.body.style.paddingBottom = '60px';
             } else {
                 waitingBtn.classList.remove('disabled');
                 ordersPanel.classList.remove('hidden-panel');
                 bottomBar.classList.remove('hidden-bar');
+                tableFilterBar.classList.add('hidden-bar');
                 document.body.style.paddingBottom = '80px';
             }
         }
@@ -1261,82 +1660,45 @@
         async function loadMenu() { const res = await fetch(`${MENU_API}?action=getAvailableMenu`); const data = await res.json(); if (data.success) menuItems = data.data.filter(item => !item['Id Menu']?.toUpperCase().startsWith('CUSTOM')); }
         async function loadVariants() { const res = await fetch(`${VARIANT_API}?action=getAllVariants`); const data = await res.json(); if (data.success) data.data.forEach(v => { if (!variantsMap[v['Id Menu']]) variantsMap[v['Id Menu']] = []; variantsMap[v['Id Menu']].push(v); }); }
         async function loadAddons() { const res = await fetch(`${ADDON_API}?action=getAllAddOns`); const data = await res.json(); if (data.success) addonsList = data.data; }
-        
-        async function loadTablesAndOrders() {
-            try {
-                const resTables = await fetch(`${TABLE_API}?action=getAllTables`);
-                const dataTables = await resTables.json();
-                if (dataTables.success && Array.isArray(dataTables.data)) {
-                    tablesList = dataTables.data.map(table => ({
-                        idTable: table['Id Table'],
-                        tableNumber: table['Table Number'] || table['Id Table']?.replace('TABLE', '') || '?',
-                        capacity: table['Capacity'] || '4',
-                        location: table['Location'] || 'Indoor'
-                    }));
-                } else {
-                    tablesList = [
-                        { idTable: 'TABLE0001', tableNumber: '1', capacity: '4', location: 'Indoor' },
-                        { idTable: 'TABLE0002', tableNumber: '2', capacity: '6', location: 'Outdoor' },
-                        { idTable: 'TABLE0003', tableNumber: '3', capacity: '2', location: 'Indoor' }
-                    ];
+
+        window.selectTable = async (id, number) => {
+            const ordersForTable = tableOrdersMap[id] || [];
+            if (ordersForTable.length > 0) {
+                showLoading('Loading order details...');
+                try {
+                    const ordersWithItems = [];
+                    let grandTotal = 0;
+                    
+                    for (const order of ordersForTable) {
+                        const items = getOrderItemsFromCache(order.idOrder);
+                        const orderTotal = items.reduce((sum, item) => sum + ((item['Unit Price'] || 0) * (item.Quantity || 1)), 0);
+                        grandTotal += orderTotal;
+                        ordersWithItems.push({
+                            orderId: order.idOrder,
+                            items: items,
+                            orderTotal: orderTotal,
+                            orderType: order.orderType,
+                            createdAt: order.createdAt
+                        });
+                    }
+                    
+                    currentPopupContext = {
+                        tableId: id,
+                        tableNumber: number,
+                        orders: ordersWithItems,
+                        grandTotal: grandTotal
+                    };
+                    
+                    renderActiveOrderPopup(currentPopupContext);
+                    document.getElementById('activeOrderPopup').style.display = 'flex';
+                } catch(e) { 
+                    console.error(e);
+                    alert('Error loading order details'); 
                 }
-
-                const resOrders = await fetch(`${ORDER_API}?action=getAllOrders`);
-                const dataOrders = await resOrders.json();
-                if (dataOrders.success && Array.isArray(dataOrders.data)) {
-                    dataOrders.data.forEach(order => {
-                        if (order['Id Table'] && order.Status !== 'Completed' && order.Status !== 'Paid') {
-                            ordersMap[order['Id Table']] = order['Id Order'];
-                        }
-                    });
-                }
-            } catch(e) {
-                console.error("Error loading tables/orders", e);
-                tablesList = [
-                    { idTable: 'TABLE0001', tableNumber: '1', capacity: '4', location: 'Indoor' },
-                    { idTable: 'TABLE0002', tableNumber: '2', capacity: '6', location: 'Outdoor' }
-                ];
-            }
-        }
-
-        function renderLocationFilters() {
-            const locations = ['All', ...new Set(tablesList.map(t => t.location).filter(l => l))];
-            const bar = document.getElementById('locationFilterBar');
-            bar.innerHTML = locations.map(loc => 
-                `<button class="category-btn ${activeLocation === loc ? 'active' : ''}" data-location="${loc}" onclick="filterTablesByLocation('${loc}')">${loc}</button>`
-            ).join('');
-        }
-
-        window.filterTablesByLocation = (location) => {
-            activeLocation = location;
-            renderLocationFilters();
-            renderTableGrid();
-        };
-
-        function renderTableGrid() {
-            const grid = document.getElementById('tableGrid');
-            let filteredTables = activeLocation === 'All' 
-                ? tablesList 
-                : tablesList.filter(t => t.location === activeLocation);
-                
-            if (!filteredTables.length) {
-                grid.innerHTML = '<div style="text-align:center; padding:40px; color:white;">No tables found.</div>';
+                hideLoading();
                 return;
             }
-
-            grid.innerHTML = filteredTables.map(table => {
-                const isOccupied = ordersMap[table.idTable] ? true : false;
-                const occupiedClass = isOccupied ? 'occupied' : '';
-                return `
-                    <div class="table-card ${occupiedClass}" onclick="selectTable('${table.idTable}', '${table.tableNumber}')">
-                        <div class="table-number">${table.tableNumber}</div>
-                        <div class="capacity"><i class="fas fa-user"></i> ${table.capacity} pax</div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        window.selectTable = (id, number) => {
+            
             selectedTableId = id;
             selectedTableNumber = number;
             selectedOrderType = 'Dine In';
@@ -1347,6 +1709,240 @@
             document.getElementById('selectedTableDisplay').innerText = `Table ${number}`;
             
             updateUIBasedOnMode();
+        };
+
+        let currentPopupContext = null;
+
+        function renderActiveOrderPopup(context) {
+            document.getElementById('popupTableNumber').innerText = context.tableNumber;
+            const container = document.getElementById('popupOrdersContainer');
+            
+            let html = '';
+            context.orders.forEach((order, idx) => {
+                html += `<div class="order-group">`;
+                html += `<h4>Order ID: ${order.orderId} (${order.orderType})</h4>`;
+                if (order.createdAt) {
+                    html += `<div style="font-size:12px; color:#666; margin-bottom:10px;">${new Date(order.createdAt).toLocaleString()}</div>`;
+                }
+                
+                if (!order.items.length) {
+                    html += '<div>No items found.</div>';
+                } else {
+                    order.items.forEach(item => {
+                        const itemTotal = (item['Unit Price'] || 0) * (item.Quantity || 1);
+                        const menuName = getMenuName(item['Id Menu']);
+                        const isServed = isItemServed(item);
+                        const servedClass = isServed ? 'served-item' : '';
+                        
+                        html += `<div class="order-item-mini ${servedClass}">
+                            <div style="display:flex; justify-content:space-between;">
+                                <span><strong>${item.Quantity || 1}x ${menuName}</strong></span>
+                                <span>RM ${itemTotal.toFixed(2)}</span>
+                            </div>`;
+                        if (item['Id Variant']) {
+                            html += `<div class="variant-text">Variant: ${getVariantName(item['Id Variant'])}</div>`;
+                        }
+                        if (item['Id Add On']) {
+                            html += `<div class="addon-text">Add-ons: ${getAddOnNames(item['Id Add On'])}</div>`;
+                        }
+                        if (item.Notes) {
+                            html += `<div class="notes-text"><i class="fas fa-pen"></i> ${item.Notes}</div>`;
+                        }
+                        html += `</div>`;
+                    });
+                }
+                html += `<div style="text-align:right; margin-top:10px; font-weight:bold;">Order Total: RM ${order.orderTotal.toFixed(2)}</div>`;
+                html += `</div>`;
+            });
+            
+            container.innerHTML = html || '<div>No orders found.</div>';
+            document.getElementById('popupTotalDisplay').innerHTML = `<strong>Grand Total: RM ${context.grandTotal.toFixed(2)}</strong>`;
+        }
+
+        window.closeActiveOrderPopup = () => {
+            document.getElementById('activeOrderPopup').style.display = 'none';
+            currentPopupContext = null;
+        };
+
+        window.popupAddMore = () => {
+            if (!currentPopupContext) return;
+            selectedTableId = currentPopupContext.tableId;
+            selectedTableNumber = currentPopupContext.tableNumber;
+            isTableSelectionMode = false;
+            document.getElementById('tableSection').style.display = 'none';
+            document.getElementById('menuSection').style.display = 'block';
+            document.getElementById('selectedTableDisplay').innerText = `Table ${currentPopupContext.tableNumber}`;
+            updateUIBasedOnMode();
+            closeActiveOrderPopup();
+        };
+
+        window.popupCompleteOrder = () => {
+            alert('Coming soon.');
+        };
+
+        // Change Table function - now closes the order popup first
+        window.popupChangeTable = () => {
+            if (!currentPopupContext) return;
+            
+            pendingChangeTableContext = {
+                oldTableId: currentPopupContext.tableId,
+                oldTableNumber: currentPopupContext.tableNumber,
+                orderIds: currentPopupContext.orders.map(o => o.orderId)
+            };
+            
+            // Close the active order popup first
+            closeActiveOrderPopup();
+            
+            // Then open the change table modal
+            document.getElementById('oldTableNumber').innerText = pendingChangeTableContext.oldTableNumber;
+            renderAvailableTables();
+            document.getElementById('changeTableModal').style.display = 'flex';
+        };
+
+        function renderAvailableTables() {
+            const grid = document.getElementById('availableTablesGrid');
+            // Filter tables that have NO orders
+            const availableTables = tablesList.filter(table => {
+                return !tableOrdersMap[table.idTable] || tableOrdersMap[table.idTable].length === 0;
+            });
+            
+            if (availableTables.length === 0) {
+                grid.innerHTML = '<div style="text-align:center; padding:20px; color:#666;">No available tables found.</div>';
+                return;
+            }
+            
+            grid.innerHTML = availableTables.map(table => `
+                <div class="table-card available-for-change" onclick="changeTableTo('${table.idTable}', '${table.tableNumber}')">
+                    <div class="table-number">${table.tableNumber}</div>
+                    <div class="capacity"><i class="fas fa-user"></i> ${table.capacity} pax</div>
+                </div>
+            `).join('');
+        }
+
+        window.changeTableTo = async (newTableId, newTableNumber) => {
+            if (!pendingChangeTableContext) return;
+            
+            if (!confirm(`Move orders from Table ${pendingChangeTableContext.oldTableNumber} to Table ${newTableNumber}?`)) return;
+            
+            showLoading('Changing table...');
+            try {
+                // Update each order with new table ID
+                for (const orderId of pendingChangeTableContext.orderIds) {
+                    await fetch(`${ORDER_API}?action=updateOrderTable`, {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            idOrder: orderId,
+                            idTable: newTableId
+                        })
+                    });
+                }
+                
+                // Update old table status to Available
+                await fetch(`${TABLE_API}?action=updateTableStatus&id=${pendingChangeTableContext.oldTableId}&status=Available`);
+                
+                // Update new table status to Occupied
+                await fetch(`${TABLE_API}?action=updateTableStatus&id=${newTableId}&status=Occupied`);
+                
+                // Sync to Firebase
+                await syncGoogleSheetsToFirebase();
+                
+                // Reload data
+                await loadTablesAndOrders();
+                renderTableGrid();
+                
+                hideLoading();
+                closeChangeTableModal();
+                
+                alert(`Orders successfully moved to Table ${newTableNumber}!`);
+                
+                // Refresh the popup with new table
+                setTimeout(() => {
+                    selectTable(newTableId, newTableNumber);
+                }, 500);
+                
+            } catch(e) {
+                hideLoading();
+                alert('Failed to change table: ' + e.message);
+            }
+        };
+
+        window.closeChangeTableModal = () => {
+            document.getElementById('changeTableModal').style.display = 'none';
+            pendingChangeTableContext = null;
+        };
+
+        function renderTableGrid() {
+            const grid = document.getElementById('tableGrid');
+            let filteredTables = activeLocation === 'All' 
+                ? tablesList 
+                : tablesList.filter(t => t.location === activeLocation);
+            
+            // Apply status filter only if activeTableFilter is not null
+            if (activeTableFilter !== null) {
+                filteredTables = filteredTables.filter(table => {
+                    const hasOrders = tableOrdersMap[table.idTable] && tableOrdersMap[table.idTable].length > 0;
+                    const allServed = hasOrders && areAllItemsServedForTable(table.idTable);
+                    
+                    if (activeTableFilter === 'available') {
+                        return !hasOrders;
+                    } else if (activeTableFilter === 'active') {
+                        return hasOrders && !allServed;
+                    } else if (activeTableFilter === 'ready') {
+                        return hasOrders && allServed;
+                    }
+                    return true;
+                });
+            }
+                
+            if (!filteredTables.length) {
+                grid.innerHTML = '<div style="text-align:center; padding:40px; color:white;">No tables found.</div>';
+                return;
+            }
+
+            grid.className = `table-grid ${viewMode === 'list' ? 'list-view' : ''}`;
+            
+            grid.innerHTML = filteredTables.map(table => {
+                const hasOrders = tableOrdersMap[table.idTable] && tableOrdersMap[table.idTable].length > 0;
+                const allServed = hasOrders && areAllItemsServedForTable(table.idTable);
+                let occupiedClass = hasOrders ? 'occupied' : '';
+                if (allServed) {
+                    occupiedClass += ' all-served';
+                }
+                return `
+                    <div class="table-card ${occupiedClass}" onclick="selectTable('${table.idTable}', '${table.tableNumber}')">
+                        <div class="table-number">${table.tableNumber}</div>
+                        <div class="capacity"><i class="fas fa-user"></i> ${table.capacity} pax</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Updated function to filter tables by status with toggle behavior
+        window.filterTablesByStatus = (status) => {
+            // If clicking the same filter that's already active, clear the filter
+            if (activeTableFilter === status) {
+                activeTableFilter = null;
+                // Remove all active classes
+                document.getElementById('filterAvailableBtn').classList.remove('active');
+                document.getElementById('filterActiveBtn').classList.remove('active');
+                document.getElementById('filterReadyBtn').classList.remove('active');
+            } else {
+                activeTableFilter = status;
+                // Update button active states
+                document.getElementById('filterAvailableBtn').classList.remove('active');
+                document.getElementById('filterActiveBtn').classList.remove('active');
+                document.getElementById('filterReadyBtn').classList.remove('active');
+                
+                if (status === 'available') {
+                    document.getElementById('filterAvailableBtn').classList.add('active');
+                } else if (status === 'active') {
+                    document.getElementById('filterActiveBtn').classList.add('active');
+                } else if (status === 'ready') {
+                    document.getElementById('filterReadyBtn').classList.add('active');
+                }
+            }
+            
+            renderTableGrid();
         };
 
         window.showTableSection = () => {
@@ -1490,6 +2086,8 @@
                     await fetch(`${TABLE_API}?action=updateTableStatus&id=${selectedTableId}&status=Occupied`);
                 }
 
+                await syncGoogleSheetsToFirebase();
+
                 hideLoading();
                 document.getElementById('successOrderId').innerText = `Order ID: ${orderId}`;
                 document.getElementById('successModal').style.display = 'flex';
@@ -1529,7 +2127,16 @@
             }).join('');
         }
         
-        function setViewMode(mode) { viewMode = mode; document.getElementById('gridViewBtn').classList.toggle('active', mode === 'grid'); document.getElementById('listViewBtn').classList.toggle('active', mode === 'list'); renderMenu(); }
+        function setViewMode(mode) { 
+            viewMode = mode; 
+            document.getElementById('gridViewBtn').classList.toggle('active', mode === 'grid'); 
+            document.getElementById('listViewBtn').classList.toggle('active', mode === 'list'); 
+            if (isTableSelectionMode) {
+                renderTableGrid();
+            }
+            // Always render menu to keep it in sync
+            renderMenu();
+        }
 
         function openSearchModal() { document.getElementById('searchModal').style.display = 'flex'; document.getElementById('searchInput').focus(); document.getElementById('searchInput').value = ''; document.getElementById('searchResults').innerHTML = '<div style="text-align:center; padding:20px;">Type to search...</div>'; }
         function closeSearchModal() { document.getElementById('searchModal').style.display = 'none'; }
@@ -1728,6 +2335,13 @@
             if (badge) badge.innerText = waitingLists.length;
         }
 
+        window.filterTablesByLocation = (location) => {
+            activeLocation = location;
+            renderLocationFilters();
+            renderTableGrid();
+        };
+
+        // Expose functions
         window.selectVariant = selectVariant; 
         window.toggleAddon = toggleAddon; 
         window.updateQuantity = updateQuantity; 
@@ -1760,6 +2374,13 @@
         window.closeCustomOrderModal = closeCustomOrderModal;
         window.addCustomOrder = addCustomOrder;
         window.handleWaitingListClick = handleWaitingListClick;
+        window.closeActiveOrderPopup = closeActiveOrderPopup;
+        window.popupAddMore = popupAddMore;
+        window.popupCompleteOrder = popupCompleteOrder;
+        window.popupChangeTable = popupChangeTable;
+        window.closeChangeTableModal = closeChangeTableModal;
+        window.changeTableTo = changeTableTo;
+        window.filterTablesByStatus = filterTablesByStatus;
     </script>
 </body>
 </html>
