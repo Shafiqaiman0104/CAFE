@@ -69,7 +69,7 @@
         .btn {
             width: 100%;
             padding: 15px;
-            background: #667eea;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
             border-radius: 10px;
@@ -109,7 +109,7 @@
             justify-content: space-between;
             padding: 0 15px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            z-index: 100;
+            z-index: 102;
         }
         
         .menu-toggle {
@@ -124,6 +124,9 @@
         .restaurant-name {
             font-weight: bold;
             font-size: 18px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
         
         .staff-info {
@@ -142,27 +145,12 @@
             box-shadow: 2px 0 10px rgba(0,0,0,0.1);
             transform: translateX(-100%);
             transition: transform 0.3s;
-            z-index: 99;
+            z-index: 101;
             overflow-y: auto;
         }
         
         .sidebar.open {
             transform: translateX(0);
-        }
-        
-        .sidebar-overlay {
-            position: fixed;
-            top: 60px;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.5);
-            display: none;
-            z-index: 98;
-        }
-        
-        .sidebar-overlay.open {
-            display: block;
         }
         
         .sidebar-menu {
@@ -197,7 +185,7 @@
         }
         
         .menu-item.active {
-            background: #667eea;
+            background: #ff9800;
             color: white;
         }
         
@@ -211,6 +199,7 @@
             margin-top: 60px;
             padding: 15px;
             min-height: calc(100vh - 60px);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
         
         .page {
@@ -269,7 +258,7 @@
         }
         
         .btn-icon {
-            background: #667eea;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
             width: 40px;
@@ -281,7 +270,7 @@
         
         .btn-small {
             padding: 8px 15px;
-            background: #667eea;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
             border-radius: 8px;
@@ -457,14 +446,15 @@
         }
         
         @media (min-width: 768px) {
-            .sidebar {
-                transform: translateX(0);
+            .sidebar.open ~ .main-content {
+                margin-left: 280px;
             }
-            .menu-toggle {
-                display: none;
+            .sidebar.open ~ .main-content .bottom-action-bar-takeorder {
+                left: 280px;
             }
             .main-content {
-                margin-left: 280px;
+                margin-left: 0;
+                transition: margin-left 0.3s ease;
             }
             .sidebar-overlay {
                 display: none !important;
@@ -478,7 +468,7 @@
         }
         
         .role-badge {
-            background: #667eea;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             padding: 4px 10px;
             border-radius: 20px;
@@ -639,7 +629,7 @@
         }
         
         .btn-add-option {
-            background: #667eea;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
             padding: 10px 16px;
@@ -648,6 +638,31 @@
             font-size: 14px;
             margin-top: 10px;
             width: 100%;
+        }
+
+        .primary-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            flex: 1;
+            transition: opacity 0.2s;
+        }
+        .secondary-btn {
+            background: #f0f0f0;
+            color: #333;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            flex: 1;
+        }
+        .primary-btn:hover, .secondary-btn:hover {
+            opacity: 0.9;
         }
         
         /* Order details panel */
@@ -691,10 +706,6 @@
             padding: 15px;
             margin-bottom: 12px;
         }
-/* New Take Order Page Styles */
-body.take-order-page {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
 
 .take-order-container {
     max-width: 1400px;
@@ -1018,6 +1029,22 @@ body.take-order-page {
     margin-top: 20px;
 }
 
+@media (max-width: 768px) {
+    .orders-panel-takeorder {
+        display: none;
+        position: fixed;
+        bottom: 80px; /* Positions it just above the 70px bottom bar */
+        left: 10px;
+        right: 10px;
+        z-index: 99;
+        width: auto;
+        max-height: 70vh;
+    }
+    .orders-panel-takeorder.show-mobile {
+        display: flex;
+    }
+}
+
 .orders-header-takeorder {
     background: linear-gradient(135deg, #667eea, #764ba2);
     color: white;
@@ -1159,6 +1186,7 @@ body.take-order-page {
     padding: 0 16px;
     z-index: 100;
     box-shadow: 0 -4px 15px rgba(0,0,0,0.1);
+    transition: left 0.3s ease;
 }
 
 .bottom-btn-takeorder {
@@ -1300,6 +1328,35 @@ body.take-order-page {
     border-color: #764ba2;
     background: #f0e6ff;
 }
+
+        /* New styles for collapsible sidebar sections */
+        .menu-section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
+            font-size: 12px;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .menu-section-header:hover {
+            background: #f5f5f5;
+        }
+        .menu-toggle-icon {
+            transition: transform 0.3s ease;
+        }
+        .menu-toggle-icon.rotated {
+            transform: rotate(180deg);
+        }
+        .menu-sub-section {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+            display: block; /* Ensure it's block for max-height transition to work */
+        }
     </style>
 </head>
 <body>
@@ -1343,69 +1400,74 @@ body.take-order-page {
             </div>
         </div>
 
-        <!-- Sidebar Overlay -->
-        <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
-
         <!-- Sidebar -->
         <div class="sidebar" id="sidebar">
             <div class="sidebar-menu">
-                <div class="menu-section">
-                    <div class="menu-section-title">MAIN</div>
-                    <div class="menu-item active" onclick="showPage('dashboard')">
+                <!-- OPERATIONS Section -->
+                <div class="menu-section" id="staffMenu">
+                    <div class="menu-section-header" onclick="toggleSubMenu('operationsSubMenu', this)">
+                        <div class="menu-section-title">OPERATIONS</div>
+                        <i class="fas fa-chevron-down menu-toggle-icon"></i>
+                    </div>
+                    <div class="menu-sub-section" id="operationsSubMenu" style="max-height: 0;">
+                        <div class="menu-item" onclick="showPage('takeOrder')">
+                            <i class="fas fa-pen"></i> Take Order
+                        </div>
+                        <div class="menu-item" onclick="showPage('activeOrders')">
+                            <i class="fas fa-clock"></i> Active Orders
+                        </div>
+                        <div class="menu-item" onclick="showPage('cashier')">
+                            <i class="fas fa-cash-register"></i> Cashier
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MANAGEMENT Section -->
+                <div class="menu-section" id="managerMenu">
+                    <div class="menu-section-header" onclick="toggleSubMenu('managementSubMenu', this)">
+                        <div class="menu-section-title">MANAGEMENT</div>
+                        <i class="fas fa-chevron-down menu-toggle-icon"></i>
+                    </div>
+                    <div class="menu-sub-section" id="managementSubMenu" style="max-height: 0;">
+                        <div class="menu-item" onclick="showPage('dashboard')">
                         <i class="fas fa-chart-pie"></i> Dashboard
                     </div>
-                </div>
-
-                <div class="menu-section" id="managerMenu">
-                    <div class="menu-section-title">MANAGEMENT</div>
-                    <div class="menu-item" onclick="showPage('menu')">
-                        <i class="fas fa-utensils"></i> Menu Items
-                    </div>
-                    <div class="menu-item" onclick="showPage('categories')">
-                        <i class="fas fa-list"></i> Categories
-                    </div>
-                    <div class="menu-item" onclick="showPage('variants')">
-                        <i class="fas fa-sliders-h"></i> Variants
-                    </div>
-                    <div class="menu-item" onclick="showPage('modifiers')">
-                        <i class="fas fa-plus-circle"></i> Modifiers
-                    </div>
-                    <div class="menu-item" onclick="showPage('tables')">
-                        <i class="fas fa-chair"></i> Tables
-                    </div>
-                    <div class="menu-item" onclick="showPage('discounts')">
-                        <i class="fas fa-tag"></i> Discounts
-                    </div>
-                    <div class="menu-item" onclick="showPage('staff')">
-                        <i class="fas fa-users"></i> Staff
-                    </div>
-                    <div class="menu-item" onclick="showPage('roles')">
-                        <i class="fas fa-shield-alt"></i> Roles
-                    </div>
-                    <div class="menu-item" onclick="showPage('tax')">
-                        <i class="fas fa-percent"></i> Tax Settings
-                    </div>
-                    <div class="menu-item" onclick="showPage('allOrders')">
-                        <i class="fas fa-clipboard-list"></i> All Orders
-                    </div>
-                    <div class="menu-item" onclick="showPage('allTransactions')">
-                        <i class="fas fa-money-bill-wave"></i> All Transactions
-                    </div>
-                    <div class="menu-item" onclick="showPage('reports')">
-                        <i class="fas fa-chart-bar"></i> Reports
-                    </div>
-                </div>
-
-                <div class="menu-section" id="staffMenu">
-                    <div class="menu-section-title">OPERATIONS</div>
-                    <div class="menu-item" onclick="showPage('takeOrder')">
-                        <i class="fas fa-pen"></i> Take Order
-                    </div>
-                    <div class="menu-item" onclick="showPage('activeOrders')">
-                        <i class="fas fa-clock"></i> Active Orders
-                    </div>
-                    <div class="menu-item" onclick="showPage('cashier')">
-                        <i class="fas fa-cash-register"></i> Cashier
+                        <div class="menu-item" onclick="showPage('menu')">
+                            <i class="fas fa-utensils"></i> Menu Items
+                        </div>
+                        <div class="menu-item" onclick="showPage('categories')">
+                            <i class="fas fa-list"></i> Categories
+                        </div>
+                        <div class="menu-item" onclick="showPage('variants')">
+                            <i class="fas fa-sliders-h"></i> Variants
+                        </div>
+                        <div class="menu-item" onclick="showPage('modifiers')">
+                            <i class="fas fa-plus-circle"></i> Modifiers
+                        </div>
+                        <div class="menu-item" onclick="showPage('tables')">
+                            <i class="fas fa-chair"></i> Tables
+                        </div>
+                        <div class="menu-item" onclick="showPage('discounts')">
+                            <i class="fas fa-tag"></i> Discounts
+                        </div>
+                        <div class="menu-item" onclick="showPage('staff')">
+                            <i class="fas fa-users"></i> Staff
+                        </div>
+                        <div class="menu-item" onclick="showPage('roles')">
+                            <i class="fas fa-shield-alt"></i> Roles
+                        </div>
+                        <div class="menu-item" onclick="showPage('tax')">
+                            <i class="fas fa-percent"></i> Tax Settings
+                        </div>
+                        <div class="menu-item" onclick="showPage('allOrders')">
+                            <i class="fas fa-clipboard-list"></i> All Orders
+                        </div>
+                        <div class="menu-item" onclick="showPage('allTransactions')">
+                            <i class="fas fa-money-bill-wave"></i> All Transactions
+                        </div>
+                        <div class="menu-item" onclick="showPage('reports')">
+                            <i class="fas fa-chart-bar"></i> Reports
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1622,6 +1684,10 @@ body.take-order-page {
                                     <button class="view-btn-takeorder active" id="menuGridViewBtn" onclick="setMenuViewMode('grid')"><i class="fas fa-th"></i> Grid</button>
                                     <button class="view-btn-takeorder" id="menuListViewBtn" onclick="setMenuViewMode('list')"><i class="fas fa-list"></i> List</button>
                                 </div>
+                                <div class="search-icon-takeorder" style="margin-right: 8px; position: relative;" onclick="openWaitingListModalTakeOrder()">
+                                    <i class="fas fa-clock"></i>
+                                    <span id="waitingCountBadgeTakeOrder" class="badge" style="position: absolute; top: -5px; right: -5px; background: #ff9800; color: white; border-radius: 50%; min-width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; padding: 0 4px; border: 2px solid white;">0</span>
+                                </div>
                                 <div class="search-icon-takeorder" onclick="openSearchModalTakeOrder()">
                                     <i class="fas fa-search"></i>
                                 </div>
@@ -1677,7 +1743,7 @@ body.take-order-page {
                 <!-- Bottom Action Bar -->
                 <div class="bottom-action-bar-takeorder" id="bottomActionBarTakeOrder" style="display:none;">
                     <button class="bottom-btn-takeorder" onclick="openCustomOrderModalTakeOrder()"><i class="fas fa-plus-circle"></i><span>Custom</span></button>
-                    <button class="bottom-btn-takeorder current-order-btn-takeorder"><span><i class="fas fa-clipboard-list"></i> Current Order <span id="orderCountBadgeBottomTakeOrder" class="badge">0</span></span></button>
+                    <button class="bottom-btn-takeorder current-order-btn-takeorder" onclick="toggleOrdersPanelTakeOrder()"><span><i class="fas fa-clipboard-list"></i> Current Order <span id="orderCountBadgeBottomTakeOrder" class="badge">0</span></span></button>
                     <button class="bottom-btn-takeorder" onclick="saveToWaitingListTakeOrder()"><i class="fas fa-save"></i><span>Save</span></button>
                 </div>
             </div>
@@ -2116,6 +2182,16 @@ body.take-order-page {
         </div>
     </div>
 
+    <div id="waitingListModalTakeOrder" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header"><h3><i class="fas fa-clock"></i> Waiting Orders</h3><button class="modal-close" onclick="closeWaitingListModalTakeOrder()">&times;</button></div>
+            <div id="waitingListContainerTakeOrder" style="max-height: 500px; overflow-y: auto; padding: 10px 0;"></div>
+            <div class="action-buttons" style="margin-top: 15px;">
+                <button class="btn-delete" style="width: 100%; padding: 12px;" onclick="clearAllWaitingListsTakeOrder()">Clear All Lists</button>
+            </div>
+        </div>
+    </div>
+
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
         import { 
@@ -2157,10 +2233,11 @@ body.take-order-page {
         let categoriesTakeOrder = [];
         let viewModeTakeOrder = 'grid';
         let menuViewMode = 'grid';
+        let categoryMapTakeOrder = {};
         let activeLocationTakeOrder = 'All';
         let locationsTakeOrder = [];
         let currentMenuObjTakeOrder = null;
-        let currentSelectedVariantTakeOrder = null;
+        let currentSelectedVariantsTakeOrder = [];
         let currentSelectedModifiersTakeOrder = [];
         let notesEditIndexTakeOrder = null;
 
@@ -2185,6 +2262,7 @@ body.take-order-page {
                 
                 currentClientId = licenseDoc.id;
                 localStorage.setItem('clientId', currentClientId);
+                localStorage.setItem('restaurantName', data.restaurantName);
                 document.getElementById('restaurantNameDisplay').textContent = data.restaurantName;
                 document.getElementById('appRestaurantName').textContent = data.restaurantName;
                 
@@ -2224,18 +2302,26 @@ body.take-order-page {
                 document.getElementById('pinScreen').style.display = 'none';
                 document.getElementById('appContainer').style.display = 'block';
                 
+                // Open sidebar by default on Tablet/PC
+                if (window.innerWidth >= 768) {
+                    document.getElementById('sidebar').classList.add('open');
+                }
+
                 document.getElementById('staffNameTop').textContent = currentStaff.name;
                 document.getElementById('staffRoleTop').textContent = currentStaff.role;
                 
+                // Apply role-based visibility for main menu sections
                 if (currentStaff.role === 'manager') {
-                    document.getElementById('managerMenu').style.display = 'block';
+                    document.getElementById('managerMenu').style.display = 'block'; // Show the entire management section
+                } else {
+                    document.getElementById('managerMenu').style.display = 'none'; // Hide for non-managers
                 }
-                document.getElementById('staffMenu').style.display = 'block';
+                document.getElementById('staffMenu').style.display = 'block'; // Operations is always visible
                 
                 await loadTaxRate();
                 await loadGlobalVariants();
                 await loadGlobalModifiers();
-                loadDashboard();
+                showPage('takeOrder');
                 
             } catch (e) { errorEl.textContent = e.message; }
         };
@@ -2264,24 +2350,58 @@ body.take-order-page {
         // ========== SIDEBAR & NAVIGATION ==========
         window.toggleSidebar = function() {
             document.getElementById('sidebar').classList.toggle('open');
-            document.getElementById('sidebarOverlay').classList.toggle('open');
         };
 
-                window.showPage = function(pageId) {
+        window.toggleOrdersPanelTakeOrder = function() {
+            const panel = document.getElementById('ordersPanelTakeOrder');
+            panel.classList.toggle('show-mobile');
+        };
+
+        window.toggleSubMenu = function(subMenuId, headerElement) {
+            const subMenu = document.getElementById(subMenuId);
+            const icon = headerElement.querySelector('.menu-toggle-icon');
+
+            if (subMenu.style.maxHeight === '0px' || subMenu.style.maxHeight === '') {
+                subMenu.style.maxHeight = subMenu.scrollHeight + 'px';
+                icon.classList.add('rotated');
+            } else {
+                subMenu.style.maxHeight = '0px';
+                icon.classList.remove('rotated');
+            }
+        };
+
+        window.showPage = function(pageId) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.getElementById(pageId).classList.add('active');
             document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
-            if (event && event.target) event.target.closest('.menu-item').classList.add('active');
             
+            // Try to find the menu item either from a click event or by searching the DOM
+            let targetItem = null;
+            if (typeof event !== 'undefined' && event && event.target) {
+                targetItem = event.target.closest('.menu-item');
+            }
+            
+            if (!targetItem) {
+                targetItem = document.querySelector(`.menu-item[onclick*="'${pageId}'"]`);
+            }
+
+            if (targetItem) {
+                targetItem.classList.add('active');
+                // Ensure the parent sub-menu is open
+                let parentSubMenu = targetItem.closest('.menu-sub-section');
+                if (parentSubMenu) {
+                    parentSubMenu.style.maxHeight = parentSubMenu.scrollHeight + 'px';
+                    let icon = parentSubMenu.previousElementSibling.querySelector('.menu-toggle-icon');
+                    if (icon) icon.classList.add('rotated');
+                }
+            }
             if (window.innerWidth < 768) toggleSidebar();
-            
             // Handle body class for take order page
             if (pageId === 'takeOrder') {
                 document.body.classList.add('take-order-page');
             } else {
                 document.body.classList.remove('take-order-page');
             }
-            
             if (pageId === 'dashboard') loadDashboard();
             else if (pageId === 'menu') loadMenuItems();
             else if (pageId === 'variants') loadGlobalVariantsPage();
@@ -3584,6 +3704,7 @@ body.take-order-page {
             document.getElementById('bottomActionBarTakeOrder').style.display = 'none';
             
             updateOrdersUITakeOrder();
+            updateWaitingListBadgeTakeOrder();
         }
 
         async function loadTablesTakeOrder() {
@@ -3695,6 +3816,8 @@ body.take-order-page {
         async function loadMenuItemsTakeOrder() {
             const menuRef = collection(db, 'licenses', currentClientId, 'menu_items');
             const snapshot = await getDocs(query(menuRef, where('active', '==', true)));
+            
+            categoryMapTakeOrder = await getCategoriesMap();
             menuItemsTakeOrder = [];
             const cats = new Set(['All']);
             
@@ -3711,8 +3834,11 @@ body.take-order-page {
 
         function renderCategoryBarTakeOrder() {
             const bar = document.getElementById('categoryBarTakeOrder');
-            bar.innerHTML = categoriesTakeOrder.map(cat => 
-                `<button class="category-btn-takeorder ${activeCategoryTakeOrder === cat ? 'active' : ''}" onclick="filterByCategoryTakeOrder('${cat}')">${cat === 'All' ? 'All' : cat}</button>`
+            bar.innerHTML = categoriesTakeOrder.map(catId => {
+                const displayName = catId === 'All' ? 'All' : (categoryMapTakeOrder[catId] || catId);
+                return `<button class="category-btn-takeorder ${activeCategoryTakeOrder === catId ? 'active' : ''}" 
+                        onclick="filterByCategoryTakeOrder('${catId}')">${displayName}</button>`;
+            }
             ).join('');
         }
 
@@ -3774,7 +3900,7 @@ body.take-order-page {
             currentMenuObjTakeOrder = menuItemsTakeOrder.find(m => m.id === menuId);
             if (!currentMenuObjTakeOrder) return;
             
-            currentSelectedVariantTakeOrder = null;
+            currentSelectedVariantsTakeOrder = [];
             currentSelectedModifiersTakeOrder = [];
             
             const modalBody = document.getElementById('modalBodyTakeOrder');
@@ -3783,10 +3909,11 @@ body.take-order-page {
             `;
             
             if (currentMenuObjTakeOrder.variants && currentMenuObjTakeOrder.variants.length > 0) {
-                html += `<div class="variant-section"><label>Select Variant:</label>`;
                 for (const v of currentMenuObjTakeOrder.variants) {
                     const variant = allGlobalVariants.find(gv => gv.id === v.id);
                     if (variant) {
+                        const reqText = variant.required ? ' <span style="color:#e53e3e;">* (Required)</span>' : '';
+                        html += `<div class="variant-section"><label><strong>${variant.name}</strong>${reqText}</label>`;
                         const optionsRef = collection(db, 'licenses', currentClientId, 'global_variants', v.id, 'options');
                         const optionsSnap = await getDocs(optionsRef);
                         optionsSnap.forEach(opt => {
@@ -3795,16 +3922,18 @@ body.take-order-page {
                                 <span>${optData.name}</span><span>${optData.priceAdjustment != '0' ? '+RM ' + optData.priceAdjustment : ''}</span>
                             </div>`;
                         });
+                        html += `</div>`;
                     }
                 }
-                html += `</div>`;
             }
             
             if (currentMenuObjTakeOrder.modifiers && currentMenuObjTakeOrder.modifiers.length > 0) {
-                html += `<div class="modifier-section"><label>Add-ons:</label>`;
                 for (const m of currentMenuObjTakeOrder.modifiers) {
                     const modifier = allGlobalModifiers.find(gm => gm.id === m.id);
                     if (modifier) {
+                        const selectionInfo = ` (Min: ${modifier.minSelections || 0}, Max: ${modifier.maxSelections || '∞'})`;
+                        const reqText = (parseInt(modifier.minSelections) > 0) ? ' <span style="color:#e53e3e;">* (Required)</span>' : '';
+                        html += `<div class="modifier-section"><label><strong>${modifier.name}</strong>${selectionInfo}${reqText}</label>`;
                         const optionsRef = collection(db, 'licenses', currentClientId, 'global_modifiers', m.id, 'options');
                         const optionsSnap = await getDocs(optionsRef);
                         optionsSnap.forEach(opt => {
@@ -3813,9 +3942,9 @@ body.take-order-page {
                                 <span>${optData.name}</span><span>+RM ${optData.price}</span>
                             </div>`;
                         });
+                        html += `</div>`;
                     }
                 }
-                html += `</div>`;
             }
             
             html += `
@@ -3828,39 +3957,93 @@ body.take-order-page {
         };
 
         window.selectVariantTakeOrder = function(variantId, optionId, optionName, priceAdjustment) {
-            document.querySelectorAll('.variant-option-takeorder').forEach(el => el.classList.remove('selected'));
-            event.target.closest('.variant-option-takeorder').classList.add('selected');
-            currentSelectedVariantTakeOrder = { variantId, optionId, optionName, priceAdjustment: parseFloat(priceAdjustment) };
+            const el = event.target.closest('.variant-option-takeorder');
+            const section = el.closest('.variant-section');
+            
+            // Clear only inside this specific variant group section
+            section.querySelectorAll('.variant-option-takeorder').forEach(opt => opt.classList.remove('selected'));
+            el.classList.add('selected');
+            
+            // Update the state array: Remove existing selection for this variantId then add new one
+            currentSelectedVariantsTakeOrder = currentSelectedVariantsTakeOrder.filter(v => v.variantId !== variantId);
+            currentSelectedVariantsTakeOrder.push({ variantId, optionId, optionName, priceAdjustment: parseFloat(priceAdjustment) });
         };
 
         window.toggleModifierTakeOrder = function(modifierId, optionId, optionName, price) {
             const el = event.target.closest('.addon-option-takeorder');
+            const modifier = allGlobalModifiers.find(gm => gm.id === modifierId);
+            const maxSelections = parseInt(modifier?.maxSelections) || 0;
+
             if (el.classList.contains('selected')) {
                 el.classList.remove('selected');
                 currentSelectedModifiersTakeOrder = currentSelectedModifiersTakeOrder.filter(m => m.optionId !== optionId);
             } else {
-                el.classList.add('selected');
-                currentSelectedModifiersTakeOrder.push({ modifierId, optionId, optionName, price: parseFloat(price) });
+                const selectionsForThisModifier = currentSelectedModifiersTakeOrder.filter(m => m.modifierId === modifierId);
+                
+                if (maxSelections === 1) {
+                    // Radio button behavior: Clear previous selection in this group
+                    const section = el.closest('.modifier-section');
+                    if (section) {
+                        section.querySelectorAll('.addon-option-takeorder').forEach(opt => opt.classList.remove('selected'));
+                    }
+                    currentSelectedModifiersTakeOrder = currentSelectedModifiersTakeOrder.filter(m => m.modifierId !== modifierId);
+                    el.classList.add('selected');
+                    currentSelectedModifiersTakeOrder.push({ modifierId, optionId, optionName, price: parseFloat(price) });
+                } else if (maxSelections > 0 && selectionsForThisModifier.length >= maxSelections) {
+                    alert(`Maximum ${maxSelections} selections allowed for ${modifier.name}`);
+                } else {
+                    el.classList.add('selected');
+                    currentSelectedModifiersTakeOrder.push({ modifierId, optionId, optionName, price: parseFloat(price) });
+                }
             }
         };
 
         window.addToCartFromModalTakeOrder = function() {
             if (!currentMenuObjTakeOrder) return;
             
+            // Validation for required variants
+            if (currentMenuObjTakeOrder.variants && currentMenuObjTakeOrder.variants.length > 0) {
+                for (const v of currentMenuObjTakeOrder.variants) {
+                    const gv = allGlobalVariants.find(gv => gv.id === v.id);
+                    if (gv && gv.required) {
+                        const isSelected = currentSelectedVariantsTakeOrder.some(sv => sv.variantId === v.id);
+                        if (!isSelected) {
+                            alert(`Please select an option for ${gv.name}`);
+                            return;
+                        }
+                    }
+                }
+            }
+            
+            // Validation for required modifiers (Min Selections)
+            if (currentMenuObjTakeOrder.modifiers && currentMenuObjTakeOrder.modifiers.length > 0) {
+                for (const m of currentMenuObjTakeOrder.modifiers) {
+                    const gm = allGlobalModifiers.find(g => g.id === m.id);
+                    const min = parseInt(gm?.minSelections) || 0;
+                    if (min > 0) {
+                        const count = currentSelectedModifiersTakeOrder.filter(sm => sm.modifierId === m.id).length;
+                        if (count < min) {
+                            alert(`Selection required: Please choose at least ${min} option(s) from ${gm.name}`);
+                            return;
+                        }
+                    }
+                }
+            }
+            
             const qty = parseInt(document.getElementById('itemQtyModalTakeOrder')?.value || 1);
             const notes = document.getElementById('itemNotesModalTakeOrder')?.value || '';
             
             const basePrice = parseFloat(currentMenuObjTakeOrder.price);
-            const variantPrice = currentSelectedVariantTakeOrder?.priceAdjustment || 0;
+            const variantsTotal = currentSelectedVariantsTakeOrder.reduce((s, v) => s + v.priceAdjustment, 0);
             const modifierTotal = currentSelectedModifiersTakeOrder.reduce((s, m) => s + m.price, 0);
-            const unitPrice = basePrice + variantPrice + modifierTotal;
+            const unitPrice = basePrice + variantsTotal + modifierTotal;
             
             cartTakeOrder.push({
                 id: currentMenuObjTakeOrder.id,
                 name: currentMenuObjTakeOrder.name,
                 basePrice,
                 qty,
-                variant: currentSelectedVariantTakeOrder,
+                variants: [...currentSelectedVariantsTakeOrder],
                 modifiers: [...currentSelectedModifiersTakeOrder],
                 notes,
                 unitPrice,
@@ -3875,7 +4058,7 @@ body.take-order-page {
         window.closeItemModalTakeOrder = function() {
             document.getElementById('itemModalTakeOrder').style.display = 'none';
             currentMenuObjTakeOrder = null;
-            currentSelectedVariantTakeOrder = null;
+            currentSelectedVariantsTakeOrder = [];
             currentSelectedModifiersTakeOrder = [];
         };
 
@@ -3909,7 +4092,7 @@ body.take-order-page {
                 subtotal += item.total;
                 
                 let details = '';
-                if (item.variant) details += `<div class="variant-text">Variant: ${item.variant.optionName} (+RM ${item.variant.priceAdjustment.toFixed(2)})</div>`;
+                if (item.variants && item.variants.length) details += `<div class="variant-text">Variants: ${item.variants.map(v => v.optionName).join(', ')}</div>`;
                 if (item.modifiers.length) details += `<div class="addon-text">Add-ons: ${item.modifiers.map(m => m.optionName).join(', ')}</div>`;
                 if (item.notes) details += `<div class="notes-text"><i class="fas fa-pen"></i> ${item.notes}</div>`;
                 
@@ -4022,12 +4205,14 @@ body.take-order-page {
                         status: 'pending'
                     });
                     
-                    if (item.variant) {
-                        await addDoc(collection(db, 'licenses', currentClientId, 'orders', orderRef.id, 'items', itemRef.id, 'selectedVariants'), {
-                            variantName: item.variant.optionName,
-                            optionName: item.variant.optionName,
-                            priceAdjustment: item.variant.priceAdjustment.toString()
-                        });
+                    if (item.variants && item.variants.length) {
+                        for (const v of item.variants) {
+                            await addDoc(collection(db, 'licenses', currentClientId, 'orders', orderRef.id, 'items', itemRef.id, 'selectedVariants'), {
+                                variantName: v.optionName,
+                                optionName: v.optionName,
+                                priceAdjustment: v.priceAdjustment.toString()
+                            });
+                        }
                     }
                     
                     for (const m of item.modifiers) {
@@ -4046,6 +4231,7 @@ body.take-order-page {
                 alert('Order placed successfully!');
                 cartTakeOrder = [];
                 updateOrdersUITakeOrder();
+                document.getElementById('ordersPanelTakeOrder').classList.remove('show-mobile');
                 renderMenuGridTakeOrder();
                 showTableSectionTakeOrder();
                 await loadTablesTakeOrder();
@@ -4135,16 +4321,90 @@ window.openSearchModalTakeOrder = function() {
         };
 
         // Waiting List
+        window.updateWaitingListBadgeTakeOrder = function() {
+            const waitingLists = JSON.parse(localStorage.getItem('waitingListsTakeOrder') || '[]');
+            const badge = document.getElementById('waitingCountBadgeTakeOrder');
+            if (badge) badge.innerText = waitingLists.length;
+        };
+
         window.saveToWaitingListTakeOrder = function() {
             if (!cartTakeOrder.length) { alert('No items in cart'); return; }
             let waitingLists = JSON.parse(localStorage.getItem('waitingListsTakeOrder') || '[]');
-            waitingLists.push({ id: 'WAIT_' + Date.now(), cart: JSON.parse(JSON.stringify(cartTakeOrder)), createdAt: new Date().toISOString() });
+            const waitId = waitingLists.length + 1;
+            waitingLists.push({ 
+                id: waitId, 
+                cart: JSON.parse(JSON.stringify(cartTakeOrder)), 
+                createdAt: new Date().toLocaleString() 
+            });
             localStorage.setItem('waitingListsTakeOrder', JSON.stringify(waitingLists));
             cartTakeOrder = [];
             updateOrdersUITakeOrder();
             renderMenuGridTakeOrder();
+            updateWaitingListBadgeTakeOrder();
             alert('Order saved to Waiting List!');
-        };        
+        };
+
+        window.openWaitingListModalTakeOrder = function() {
+            const waitingLists = JSON.parse(localStorage.getItem('waitingListsTakeOrder') || '[]');
+            const container = document.getElementById('waitingListContainerTakeOrder');
+            
+            if (!waitingLists.length) {
+                container.innerHTML = '<div style="text-align:center;padding:20px;color:#666;">No waiting orders.</div>';
+            } else {
+                container.innerHTML = waitingLists.slice().reverse().map((wait, idx) => {
+                    const itemsSummary = wait.cart.map(item => `${item.qty}x ${item.name}`).join(', ');
+                    return `
+                        <div class="order-detail-card" style="border-left: 4px solid #ff9800; margin-bottom: 12px;">
+                            <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                                <strong>Waiting List ${wait.id}</strong>
+                                <small style="color:#666;">${wait.createdAt}</small>
+                            </div>
+                            <div style="font-size: 0.85rem; color: #444; margin-bottom: 12px;">${itemsSummary}</div>
+                            <div class="action-buttons">
+                                <button class="btn-view" style="flex:1;" onclick="fetchWaitingListTakeOrder(${waitingLists.length - 1 - idx})">Fetch to Order</button>
+                                <button class="btn-delete" onclick="removeWaitingListTakeOrder(${waitingLists.length - 1 - idx})">Remove</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+            document.getElementById('waitingListModalTakeOrder').style.display = 'flex';
+        };
+
+        window.closeWaitingListModalTakeOrder = function() {
+            document.getElementById('waitingListModalTakeOrder').style.display = 'none';
+        };
+
+        window.fetchWaitingListTakeOrder = function(index) {
+            let waitingLists = JSON.parse(localStorage.getItem('waitingListsTakeOrder') || '[]');
+            const waitOrder = waitingLists[index];
+            
+            if (cartTakeOrder.length > 0 && !confirm('Add these items to your current cart?')) return;
+            
+            cartTakeOrder = [...cartTakeOrder, ...waitOrder.cart];
+            waitingLists.splice(index, 1);
+            localStorage.setItem('waitingListsTakeOrder', JSON.stringify(waitingLists));
+            
+            updateOrdersUITakeOrder();
+            renderMenuGridTakeOrder();
+            updateWaitingListBadgeTakeOrder();
+            closeWaitingListModalTakeOrder();
+        };
+
+        window.removeWaitingListTakeOrder = function(index) {
+            let waitingLists = JSON.parse(localStorage.getItem('waitingListsTakeOrder') || '[]');
+            waitingLists.splice(index, 1);
+            localStorage.setItem('waitingListsTakeOrder', JSON.stringify(waitingLists));
+            updateWaitingListBadgeTakeOrder();
+            openWaitingListModalTakeOrder();
+        };
+
+        window.clearAllWaitingListsTakeOrder = function() {
+            if (!confirm('Clear all waiting orders?')) return;
+            localStorage.removeItem('waitingListsTakeOrder');
+            updateWaitingListBadgeTakeOrder();
+            openWaitingListModalTakeOrder();
+        };
 
         
         
@@ -4257,20 +4517,31 @@ window.openSearchModalTakeOrder = function() {
         // Check existing session
         const savedClientId = localStorage.getItem('clientId');
         const savedStaff = localStorage.getItem('currentStaff');
+        const savedRestaurantName = localStorage.getItem('restaurantName');
+
         if (savedClientId && savedStaff) {
             currentClientId = savedClientId;
             currentStaff = JSON.parse(savedStaff);
             document.getElementById('licenseScreen').style.display = 'none';
             document.getElementById('pinScreen').style.display = 'none';
             document.getElementById('appContainer').style.display = 'block';
+            document.getElementById('restaurantNameDisplay').textContent = savedRestaurantName || 'Restaurant';
+            document.getElementById('appRestaurantName').textContent = savedRestaurantName || 'Restaurant';
+            
+            // Open sidebar by default on Tablet/PC
+            if (window.innerWidth >= 768) {
+                document.getElementById('sidebar').classList.add('open');
+            }
+
             document.getElementById('staffNameTop').textContent = currentStaff.name;
             document.getElementById('staffRoleTop').textContent = currentStaff.role;
             if (currentStaff.role === 'manager') document.getElementById('managerMenu').style.display = 'block';
-            document.getElementById('staffMenu').style.display = 'block';
+            else document.getElementById('managerMenu').style.display = 'none';
+            document.getElementById('staffMenu').style.display = 'block'; // Operations is always visible
             loadTaxRate().then(() => {
                 loadGlobalVariants();
                 loadGlobalModifiers();
-                loadDashboard();
+                showPage('takeOrder');
             });
         }
 
@@ -4299,6 +4570,12 @@ window.openSearchModalTakeOrder = function() {
         window.closeCustomOrderModalTakeOrder = closeCustomOrderModalTakeOrder;
         window.addCustomOrderTakeOrder = addCustomOrderTakeOrder;
         window.saveToWaitingListTakeOrder = saveToWaitingListTakeOrder;
+        window.updateWaitingListBadgeTakeOrder = updateWaitingListBadgeTakeOrder;
+        window.openWaitingListModalTakeOrder = openWaitingListModalTakeOrder;
+        window.closeWaitingListModalTakeOrder = closeWaitingListModalTakeOrder;
+        window.fetchWaitingListTakeOrder = fetchWaitingListTakeOrder;
+        window.removeWaitingListTakeOrder = removeWaitingListTakeOrder;
+        window.clearAllWaitingListsTakeOrder = clearAllWaitingListsTakeOrder;
     </script>
 </body>
 </html>
