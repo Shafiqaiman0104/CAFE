@@ -3485,6 +3485,10 @@
                     <span>RM ${item.total || (parseFloat(item.basePrice) * parseInt(item.qty)).toFixed(2)}</span>
                 </div>`;
                 
+                if (item.notes) {
+                    itemsHtml += `<div style="font-size:12px;color:#764ba2;padding-left:15px;"><strong>Special Request:</strong> ${item.notes}</div>`;
+                }
+                
                 const variantsRef = collection(db, 'licenses', currentClientId, 'orders', orderId, 'items', itemDoc.id, 'selectedVariants');
                 const variantsSnap = await getDocs(variantsRef);
                 variantsSnap.forEach(v => {
@@ -4153,7 +4157,7 @@
                         details += `<div class="addon-text"><strong>${m.modifierGroupName} :</strong> ${m.optionName}</div>`;
                     });
                 }
-                if (item.notes) details += `<div class="notes-text"><strong>Remark:</strong> ${item.notes}</div>`;
+                if (item.notes) details += `<div class="notes-text"><strong>Special Request:</strong> ${item.notes}</div>`;
                 
                 html += `
                     <div class="order-item-card-takeorder">
