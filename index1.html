@@ -2224,7 +2224,7 @@
 
     <div id="notesModalTakeOrder" class="modal">
         <div class="modal-content">
-            <div class="modal-header"><h3>Edit Notes</h3><button class="modal-close" onclick="closeNotesModalTakeOrder()">&times;</button></div>
+            <div class="modal-header"><h3>Edit Special Request</h3><button class="modal-close" onclick="closeNotesModalTakeOrder()">&times;</button></div>
             <textarea id="notesInputTakeOrder" rows="3" placeholder="Special instructions..."></textarea>
             <div class="action-buttons"><button class="secondary-btn" onclick="closeNotesModalTakeOrder()">Cancel</button><button class="primary-btn" onclick="saveNotesTakeOrder()">Save</button></div>
         </div>
@@ -4004,7 +4004,7 @@
             
             html += `
                 <div class="form-group"><label>Quantity:</label><input type="number" id="itemQtyModalTakeOrder" value="1" min="1" style="width:100%;padding:12px;border-radius:16px;"></div>
-                <div class="form-group"><label>Notes:</label><textarea id="itemNotesModalTakeOrder" rows="2" placeholder="Special instructions..."></textarea></div>
+                <div class="form-group"><label>Special Request:</label><textarea id="itemNotesModalTakeOrder" rows="2" placeholder="Special instructions..."></textarea></div>
             `;
             
             modalBody.innerHTML = html;
