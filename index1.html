@@ -1329,6 +1329,44 @@
     background: #f0e6ff;
 }
 
+/* New styles for sticky menu header in Take Order tab */
+.menu-wrapper-takeorder {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.menu-header-static-takeorder {
+    padding: 0 0 15px 0;
+    z-index: 10;
+}
+
+.menu-scroll-content-takeorder {
+    /* Height: 100vh - topbar(60) - header contents(~200) - bottom action bar(70) */
+    max-height: calc(100vh - 350px);
+    overflow-y: auto;
+    padding-right: 5px; /* space for scrollbar */
+}
+
+/* Smooth scrollbar for the menu area */
+.menu-scroll-content-takeorder::-webkit-scrollbar { width: 6px; }
+.menu-scroll-content-takeorder::-webkit-scrollbar-track { background: rgba(255,255,255,0.1); }
+.menu-scroll-content-takeorder::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 10px; }
+
+/* Reset previous sticky header margins */
+.menu-header-static-takeorder .category-header-takeorder { margin-bottom: 0; }
+
+/* Add horizontal padding to elements below the sticky header to align them */
+#menuGridTakeOrder,
+.menu-wrapper-takeorder > .form-group {
+    padding: 0 15px;
+}
+.delivery-fields-takeorder {
+    margin-left: 15px;
+    margin-right: 15px;
+}
+
         /* New styles for collapsible sidebar sections */
         .menu-section-header {
             display: flex;
@@ -1672,54 +1710,60 @@
                 
                 <!-- Menu Section -->
                 <div id="menuSectionTakeOrder" class="menu-section-takeorder">
-                    <button class="back-to-tables-btn" onclick="showTableSectionTakeOrder()">
-                        <i class="fas fa-arrow-left"></i> Back to Tables
-                    </button>
-                    
                     <div class="take-order-layout">
                         <div class="menu-wrapper-takeorder">
-                            <div class="category-header-takeorder">
-                                <h2><i class="fas fa-utensils"></i> Menu - <span id="selectedTableDisplayTakeOrder"></span></h2>
-                                <div class="view-toggle-takeorder">
-                                    <button class="view-btn-takeorder active" id="menuGridViewBtn" onclick="setMenuViewMode('grid')"><i class="fas fa-th"></i> Grid</button>
-                                    <button class="view-btn-takeorder" id="menuListViewBtn" onclick="setMenuViewMode('list')"><i class="fas fa-list"></i> List</button>
-                                </div>
-                                <div class="search-icon-takeorder" style="margin-right: 8px; position: relative;" onclick="openWaitingListModalTakeOrder()">
-                                    <i class="fas fa-clock"></i>
-                                    <span id="waitingCountBadgeTakeOrder" class="badge" style="position: absolute; top: -5px; right: -5px; background: #ff9800; color: white; border-radius: 50%; min-width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; padding: 0 4px; border: 2px solid white;">0</span>
-                                </div>
-                                <div class="search-icon-takeorder" onclick="openSearchModalTakeOrder()">
-                                    <i class="fas fa-search"></i>
-                                </div>
-                            </div>
-                            
-                            <div class="category-bar-takeorder" id="categoryBarTakeOrder">
-                                <button class="category-btn-takeorder active">Loading...</button>
-                            </div>
-                            
-                            <div id="menuGridTakeOrder" class="menu-grid-takeorder">
-                                <div style="text-align:center;padding:40px;color:white;">Loading menu...</div>
-                            </div>
-                            
-                            <div class="form-group" style="margin-top:20px;">
-                                <label style="color:white;">Order Type</label>
-                                <div class="order-type-switch-takeorder" style="background:rgba(255,255,255,0.2);">
-                                    <div class="type-option-takeorder selected" data-type="dine-in" onclick="selectOrderTypeTakeOrder('dine-in')">
-                                        <i class="fas fa-utensils"></i> Dine In
-                                    </div>
-                                    <div class="type-option-takeorder" data-type="takeaway" onclick="selectOrderTypeTakeOrder('takeaway')">
-                                        <i class="fas fa-bag-shopping"></i> Takeaway
-                                    </div>
-                                    <div class="type-option-takeorder" data-type="delivery" onclick="selectOrderTypeTakeOrder('delivery')">
-                                        <i class="fas fa-motorcycle"></i> Delivery
+                            <div class="menu-header-static-takeorder">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0;">
+                                    <button class="back-to-tables-btn" onclick="showTableSectionTakeOrder()" style="margin-bottom: 0;">
+                                        <i class="fas fa-arrow-left"></i> Back to Tables
+                                    </button>
+                                    <div class="view-toggle-takeorder">
+                                        <button class="view-btn-takeorder active" id="menuGridViewBtn" onclick="setMenuViewMode('grid')"><i class="fas fa-th"></i> Grid</button>
+                                        <button class="view-btn-takeorder" id="menuListViewBtn" onclick="setMenuViewMode('list')"><i class="fas fa-list"></i> List</button>
                                     </div>
                                 </div>
+                                
+                                <div class="category-header-takeorder" style="padding-top: 15px;">
+                                    <h2><i class="fas fa-utensils"></i> Menu - <span id="selectedTableDisplayTakeOrder"></span></h2>
+                                    <div class="search-icon-takeorder" style="margin-right: 8px; position: relative;" onclick="openWaitingListModalTakeOrder()">
+                                        <i class="fas fa-clock"></i>
+                                        <span id="waitingCountBadgeTakeOrder" class="badge" style="position: absolute; top: -5px; right: -5px; background: #ff9800; color: white; border-radius: 50%; min-width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; padding: 0 4px; border: 2px solid white;">0</span>
+                                    </div>
+                                    <div class="search-icon-takeorder" onclick="openSearchModalTakeOrder()">
+                                        <i class="fas fa-search"></i>
+                                    </div>
+                                </div>
+                                
+                                <div class="category-bar-takeorder" id="categoryBarTakeOrder" style="padding-top: 12px;">
+                                    <button class="category-btn-takeorder active">Loading...</button>
+                                </div>
                             </div>
                             
-                            <div id="deliveryFieldsTakeOrder" class="delivery-fields-takeorder" style="display:none;">
-                                <div class="form-group"><label>Customer Name</label><input type="text" id="customerNameTakeOrder" placeholder="Enter customer name"></div>
-                                <div class="form-group"><label>Customer Phone</label><input type="text" id="customerPhoneTakeOrder" placeholder="Enter phone number"></div>
-                                <div class="form-group"><label>Address</label><textarea id="customerAddressTakeOrder" rows="2" placeholder="Enter delivery address"></textarea></div>
+                            <div class="menu-scroll-content-takeorder">
+                                <div id="menuGridTakeOrder" class="menu-grid-takeorder">
+                                    <div style="text-align:center;padding:40px;color:white;">Loading menu...</div>
+                                </div>
+                                
+                                <div class="form-group" style="margin-top:20px;">
+                                    <label style="color:white;">Order Type</label>
+                                    <div class="order-type-switch-takeorder" style="background:rgba(255,255,255,0.2);">
+                                        <div class="type-option-takeorder selected" data-type="dine-in" onclick="selectOrderTypeTakeOrder('dine-in')">
+                                            <i class="fas fa-utensils"></i> Dine In
+                                        </div>
+                                        <div class="type-option-takeorder" data-type="takeaway" onclick="selectOrderTypeTakeOrder('takeaway')">
+                                            <i class="fas fa-bag-shopping"></i> Takeaway
+                                        </div>
+                                        <div class="type-option-takeorder" data-type="delivery" onclick="selectOrderTypeTakeOrder('delivery')">
+                                            <i class="fas fa-motorcycle"></i> Delivery
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div id="deliveryFieldsTakeOrder" class="delivery-fields-takeorder" style="display:none;">
+                                    <div class="form-group"><label>Customer Name</label><input type="text" id="customerNameTakeOrder" placeholder="Enter customer name"></div>
+                                    <div class="form-group"><label>Customer Phone</label><input type="text" id="customerPhoneTakeOrder" placeholder="Enter phone number"></div>
+                                    <div class="form-group"><label>Address</label><textarea id="customerAddressTakeOrder" rows="2" placeholder="Enter delivery address"></textarea></div>
+                                </div>
                             </div>
                         </div>
                         
@@ -1805,6 +1849,10 @@
             <div class="form-group">
                 <label>Description</label>
                 <textarea id="menuItemDesc"></textarea>
+            </div>
+            <div class="form-group">
+                <label>Image URL</label>
+                <input type="text" id="menuItemImage" placeholder="https://example.com/image.jpg">
             </div>
             <div class="form-group">
                 <label>Price (RM)</label>
@@ -2770,6 +2818,7 @@
             document.getElementById('editingMenuItemId').value = '';
             document.getElementById('menuItemName').value = '';
             document.getElementById('menuItemDesc').value = '';
+            document.getElementById('menuItemImage').value = '';
             document.getElementById('menuItemPrice').value = '';
             document.getElementById('menuItemPrepTime').value = '15';
             document.getElementById('menuItemTags').value = '';
@@ -2800,6 +2849,7 @@
             document.getElementById('editingMenuItemId').value = id;
             document.getElementById('menuItemName').value = item.name || '';
             document.getElementById('menuItemDesc').value = item.description || '';
+            document.getElementById('menuItemImage').value = item.image || '';
             document.getElementById('menuItemPrice').value = item.price || '';
             document.getElementById('menuItemPrepTime').value = item.preparationTime || '15';
             document.getElementById('menuItemTags').value = item.tags || '';
@@ -2934,6 +2984,7 @@
             const data = {
                 name: document.getElementById('menuItemName').value,
                 description: document.getElementById('menuItemDesc').value,
+                image: document.getElementById('menuItemImage').value,
                 price: document.getElementById('menuItemPrice').value,
                 categoryId: document.getElementById('menuItemCategory').value,
                 preparationTime: document.getElementById('menuItemPrepTime').value,
@@ -3918,7 +3969,7 @@
                         const optionsSnap = await getDocs(optionsRef);
                         optionsSnap.forEach(opt => {
                             const optData = opt.data();
-                            html += `<div class="variant-option-takeorder" onclick="selectVariantTakeOrder('${v.id}', '${opt.id}', '${optData.name}', ${optData.priceAdjustment || 0})">
+                            html += `<div class="variant-option-takeorder" onclick="selectVariantTakeOrder('${v.id}', '${variant.name}', '${opt.id}', '${optData.name}', ${optData.priceAdjustment || 0})">
                                 <span>${optData.name}</span><span>${optData.priceAdjustment != '0' ? '+RM ' + optData.priceAdjustment : ''}</span>
                             </div>`;
                         });
@@ -3938,7 +3989,7 @@
                         const optionsSnap = await getDocs(optionsRef);
                         optionsSnap.forEach(opt => {
                             const optData = opt.data();
-                            html += `<div class="addon-option-takeorder" onclick="toggleModifierTakeOrder('${m.id}', '${opt.id}', '${optData.name}', ${optData.price})">
+                            html += `<div class="addon-option-takeorder" onclick="toggleModifierTakeOrder('${m.id}', '${modifier.name}', '${opt.id}', '${optData.name}', ${optData.price})">
                                 <span>${optData.name}</span><span>+RM ${optData.price}</span>
                             </div>`;
                         });
@@ -3956,7 +4007,7 @@
             document.getElementById('itemModalTakeOrder').style.display = 'flex';
         };
 
-        window.selectVariantTakeOrder = function(variantId, optionId, optionName, priceAdjustment) {
+        window.selectVariantTakeOrder = function(variantId, variantGroupName, optionId, optionName, priceAdjustment) {
             const el = event.target.closest('.variant-option-takeorder');
             const section = el.closest('.variant-section');
             
@@ -3966,10 +4017,10 @@
             
             // Update the state array: Remove existing selection for this variantId then add new one
             currentSelectedVariantsTakeOrder = currentSelectedVariantsTakeOrder.filter(v => v.variantId !== variantId);
-            currentSelectedVariantsTakeOrder.push({ variantId, optionId, optionName, priceAdjustment: parseFloat(priceAdjustment) });
+            currentSelectedVariantsTakeOrder.push({ variantId, variantGroupName, optionId, optionName, priceAdjustment: parseFloat(priceAdjustment) });
         };
 
-        window.toggleModifierTakeOrder = function(modifierId, optionId, optionName, price) {
+        window.toggleModifierTakeOrder = function(modifierId, modifierGroupName, optionId, optionName, price) {
             const el = event.target.closest('.addon-option-takeorder');
             const modifier = allGlobalModifiers.find(gm => gm.id === modifierId);
             const maxSelections = parseInt(modifier?.maxSelections) || 0;
@@ -3988,12 +4039,12 @@
                     }
                     currentSelectedModifiersTakeOrder = currentSelectedModifiersTakeOrder.filter(m => m.modifierId !== modifierId);
                     el.classList.add('selected');
-                    currentSelectedModifiersTakeOrder.push({ modifierId, optionId, optionName, price: parseFloat(price) });
+                    currentSelectedModifiersTakeOrder.push({ modifierId, modifierGroupName, optionId, optionName, price: parseFloat(price) });
                 } else if (maxSelections > 0 && selectionsForThisModifier.length >= maxSelections) {
                     alert(`Maximum ${maxSelections} selections allowed for ${modifier.name}`);
                 } else {
                     el.classList.add('selected');
-                    currentSelectedModifiersTakeOrder.push({ modifierId, optionId, optionName, price: parseFloat(price) });
+                    currentSelectedModifiersTakeOrder.push({ modifierId, modifierGroupName, optionId, optionName, price: parseFloat(price) });
                 }
             }
         };
@@ -4092,14 +4143,22 @@
                 subtotal += item.total;
                 
                 let details = '';
-                if (item.variants && item.variants.length) details += `<div class="variant-text">Variants: ${item.variants.map(v => v.optionName).join(', ')}</div>`;
-                if (item.modifiers.length) details += `<div class="addon-text">Add-ons: ${item.modifiers.map(m => m.optionName).join(', ')}</div>`;
-                if (item.notes) details += `<div class="notes-text"><i class="fas fa-pen"></i> ${item.notes}</div>`;
+                if (item.variants && item.variants.length) {
+                    item.variants.forEach(v => {
+                        details += `<div class="variant-text"><strong>${v.variantGroupName} :</strong> ${v.optionName}</div>`;
+                    });
+                }
+                if (item.modifiers && item.modifiers.length) {
+                    item.modifiers.forEach(m => {
+                        details += `<div class="addon-text"><strong>${m.modifierGroupName} :</strong> ${m.optionName}</div>`;
+                    });
+                }
+                if (item.notes) details += `<div class="notes-text"><strong>Remark:</strong> ${item.notes}</div>`;
                 
                 html += `
                     <div class="order-item-card-takeorder">
                         <div class="order-item-header-takeorder">
-                            <span class="order-item-name-takeorder">${item.name} × ${item.qty}</span>
+                            <span class="order-item-name-takeorder">${item.name} x ${item.qty}</span>
                             <span class="order-item-price-takeorder">RM ${item.total.toFixed(2)}</span>
                         </div>
                         <div class="order-item-details-takeorder">${details}</div>
