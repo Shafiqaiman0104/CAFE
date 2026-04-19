@@ -18,21 +18,25 @@
         }
         
         .login-container {
-            max-width: 400px;
-            margin: 0 auto;
-            padding: 24px;
+            width: 100%;
             min-height: 100vh;
             display: flex;
-            flex-direction: column;
+            align-items: center;
             justify-content: center;
+            padding: 20px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
         
         .login-box {
-            background: white;
-            border-radius: 32px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            width: 100%;
+            max-width: 400px;
+            border-radius: 24px;
             padding: 40px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
         }
         
         .login-box h2 {
@@ -56,14 +60,18 @@
         .input-group input {
             width: 100%;
             padding: 15px;
-            border: 2px solid #e0e0e0;
+            border: 2px solid #f1f5f9;
+            background: #f8fafc;
             border-radius: 16px;
             font-size: 16px;
+            transition: all 0.3s ease;
         }
         
         .input-group input:focus {
             outline: none;
             border-color: #667eea;
+            background: white;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
         }
         
         .btn {
@@ -76,12 +84,45 @@
             font-size: 16px;
             font-weight: bold;
             cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 15px -3px rgba(118, 75, 162, 0.3);
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 20px 25px -5px rgba(118, 75, 162, 0.4);
         }
         
         .btn-secondary {
-            background: #e0e0e0;
-            color: #333;
+            background: #f1f5f9;
+            color: #475569;
             margin-top: 10px;
+            box-shadow: none;
+        }
+        
+        .pin-numpad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+        
+        .pin-numpad .btn-numpad {
+            background: #f8fafc;
+            border: 2px solid #f1f5f9;
+            padding: 18px;
+            border-radius: 16px;
+            font-size: 20px;
+            font-weight: 600;
+            color: #475569;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .pin-numpad .btn-numpad:hover {
+            background: white;
+            border-color: #667eea;
+            color: #667eea;
         }
         
         .error {
@@ -113,12 +154,35 @@
         }
         
         .menu-toggle {
-            font-size: 24px;
             background: none;
             border: none;
             cursor: pointer;
             width: 40px;
             height: 40px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 6px;
+            padding: 0;
+        }
+        
+        .menu-toggle span {
+            display: block;
+            width: 24px;
+            height: 3px;
+            background-color: #333;
+            border-radius: 4px;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+        .menu-toggle.active span:nth-child(1) {
+            transform: translateY(9px) rotate(45deg);
+        }
+        .menu-toggle.active span:nth-child(2) {
+            opacity: 0;
+        }
+        .menu-toggle.active span:nth-child(3) {
+            transform: translateY(-9px) rotate(-45deg);
         }
         
         .restaurant-name {
@@ -683,9 +747,16 @@
         /* Order details panel */
         .order-detail-card {
             background: #fff;
-            border-radius: 12px;
-            padding: 15px;
+            border-radius: 20px;
+            padding: 20px;
             margin-bottom: 15px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .order-detail-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
         }
         
         .order-items-detail {
@@ -714,12 +785,31 @@
         .status-completed { background: #d1fae5; color: #065f46; }
         .status-cancelled { background: #fee2e2; color: #991b1b; }
         .status-preparing { background: #dbeafe; color: #1e40af; }
+        .status-served { background: #e0e7ff; color: #4338ca; }
         
         .transaction-card {
             background: #fff;
             border-radius: 12px;
             padding: 15px;
             margin-bottom: 12px;
+        }
+
+        /* Active Orders Layouts */
+        .active-orders-container {
+            display: grid;
+            gap: 15px;
+            transition: all 0.3s ease;
+        }
+        .active-orders-grid {
+            grid-template-columns: repeat(3, 1fr);
+        }
+        .active-orders-list {
+            grid-template-columns: 1fr;
+        }
+        @media (min-width: 768px) {
+            .active-orders-grid {
+                grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            }
         }
 
 .take-order-container {
@@ -1520,7 +1610,7 @@
     <!-- License Screen -->
     <div id="licenseScreen" class="login-container">
         <div class="login-box">
-            <h2>🔐 Restaurant POS</h2>
+            <h2>🔐 VentureRush POS</h2>
             <div class="input-group">
                 <label>License Key</label>
                 <input type="text" id="licenseInput" placeholder="Enter license key">
@@ -1538,6 +1628,20 @@
                 <label>Enter PIN</label>
                 <input type="password" id="pinInput" placeholder="6-digit PIN" maxlength="6">
             </div>
+            <div class="pin-numpad">
+                <button class="btn-numpad" onclick="pressPinKey('1')">1</button>
+                <button class="btn-numpad" onclick="pressPinKey('2')">2</button>
+                <button class="btn-numpad" onclick="pressPinKey('3')">3</button>
+                <button class="btn-numpad" onclick="pressPinKey('4')">4</button>
+                <button class="btn-numpad" onclick="pressPinKey('5')">5</button>
+                <button class="btn-numpad" onclick="pressPinKey('6')">6</button>
+                <button class="btn-numpad" onclick="pressPinKey('7')">7</button>
+                <button class="btn-numpad" onclick="pressPinKey('8')">8</button>
+                <button class="btn-numpad" onclick="pressPinKey('9')">9</button>
+                <button class="btn-numpad" style="color: #e53e3e;" onclick="pressPinKey('C')"><i class="fas fa-backspace"></i></button>
+                <button class="btn-numpad" onclick="pressPinKey('0')">0</button>
+                <button class="btn-numpad" style="color: #38a169;" onclick="loginWithPin()"><i class="fas fa-check"></i></button>
+            </div>
             <button class="btn" onclick="loginWithPin()">Login</button>
             <button class="btn btn-secondary" onclick="backToLicense()">← Change License</button>
             <p id="pinError" class="error"></p>
@@ -1548,7 +1652,11 @@
     <div id="appContainer" class="app-container">
         <!-- Top Bar -->
         <div class="top-bar">
-            <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+            <button class="menu-toggle" id="menuToggleBtn" onclick="toggleSidebar()">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
             <div class="restaurant-name" style="position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap;">VentureRush P.O.S</div>
         </div>
 
@@ -1895,11 +2003,21 @@
 
             <!-- Active Orders Page -->
             <div id="activeOrders" class="page">
-                <div class="section-card">
+                <div class="section-card" style="background: #ff9800;">
                     <div class="section-header">
-                        <span class="section-title">Active Orders</span>
+                        <span class="section-title" style="color: white;">Active Orders</span>
+                        <div class="view-toggle-takeorder">
+                          <button class="view-btn-takeorder active" id="activeOrdersGridViewBtn" onclick="setActiveOrdersViewMode('grid')"><i class="fas fa-th"></i> Grid</button>
+                          <button class="view-btn-takeorder" id="activeOrdersListViewBtn" onclick="setActiveOrdersViewMode('list')"><i class="fas fa-list"></i> List</button>
+                        </div>
                     </div>
-                    <div id="activeOrdersList"></div>
+                    <div class="category-bar-takeorder" id="activeOrdersFilterBar" style="margin-bottom: 20px;">
+                        <button class="category-btn-takeorder active" onclick="setActiveOrdersFilter('All')">All</button>
+                        <button class="category-btn-takeorder" onclick="setActiveOrdersFilter('active')">Active</button>
+                        <button class="category-btn-takeorder" onclick="setActiveOrdersFilter('preparing')">Preparing</button>
+                        <button class="category-btn-takeorder" onclick="setActiveOrdersFilter('cancelled')">Cancelled</button>
+                    </div>
+                    <div id="activeOrdersList" class="active-orders-container active-orders-grid"></div>
                 </div>
             </div>
 
@@ -2485,6 +2603,9 @@
         let activeLocationTakeOrder = 'All';
         let locationsTakeOrder = [];
         let currentMenuObjTakeOrder = null;
+        let activeOrdersViewMode = 'grid';
+        let activeOrdersStatusFilter = 'All';
+        let unsubActiveOrders = null;
         let currentSelectedVariantsTakeOrder = [];
         let currentSelectedModifiersTakeOrder = [];
         let notesEditIndexTakeOrder = null;
@@ -2530,6 +2651,17 @@
             } catch (e) { errorEl.textContent = e.message; }
         };
 
+        window.pressPinKey = function(k) {
+            const input = document.getElementById('pinInput');
+            if (k === 'C') {
+                input.value = input.value.slice(0, -1);
+            } else {
+                if (input.value.length < 6) {
+                    input.value += k;
+                }
+            }
+        };
+
         window.backToLicense = function() {
             document.getElementById('pinScreen').style.display = 'none';
             document.getElementById('licenseScreen').style.display = 'flex';
@@ -2563,6 +2695,7 @@
                 // Open sidebar by default on Tablet/PC
                 if (window.innerWidth >= 768) {
                     document.getElementById('sidebar').classList.add('open');
+                    document.getElementById('menuToggleBtn').classList.add('active');
                 }
 
                 document.getElementById('staffNameTop').textContent = currentStaff.name;
@@ -2607,7 +2740,10 @@
 
         // ========== SIDEBAR & NAVIGATION ==========
         window.toggleSidebar = function() {
-            document.getElementById('sidebar').classList.toggle('open');
+            const sidebar = document.getElementById('sidebar');
+            const toggleBtn = document.getElementById('menuToggleBtn');
+            sidebar.classList.toggle('open');
+            toggleBtn.classList.toggle('active');
         };
 
         window.toggleOrdersPanelTakeOrder = function() {
@@ -5205,26 +5341,101 @@ window.openSearchModalTakeOrder = function() {
         
        
         // ========== ACTIVE ORDERS ==========
+        window.setActiveOrdersViewMode = function(mode) {
+            activeOrdersViewMode = mode;
+            document.getElementById('activeOrdersGridViewBtn').classList.toggle('active', mode === 'grid');
+            document.getElementById('activeOrdersListViewBtn').classList.toggle('active', mode === 'list');
+            const container = document.getElementById('activeOrdersList');
+            container.className = `active-orders-container active-orders-${mode}`;
+        };
+
+        window.setActiveOrdersFilter = function(status) {
+            activeOrdersStatusFilter = status;
+            const buttons = document.querySelectorAll('#activeOrdersFilterBar .category-btn-takeorder');
+            buttons.forEach(btn => {
+                btn.classList.toggle('active', btn.innerText.toLowerCase() === status.toLowerCase() || (status === 'All' && btn.innerText === 'All'));
+            });
+            loadActiveOrders();
+        };
+
         function loadActiveOrders() {
+            if (unsubActiveOrders) unsubActiveOrders();
+
             const ref = collection(db, 'licenses', currentClientId, 'orders');
-            const q = query(ref, where('status', 'in', ['active', 'preparing']));
+            let q;
+            if (activeOrdersStatusFilter === 'All') {
+                q = query(ref, where('status', 'in', ['active', 'preparing', 'served']));
+            } else {
+                q = query(ref, where('status', '==', activeOrdersStatusFilter));
+            }
             
-            onSnapshot(q, (snapshot) => {
+            unsubActiveOrders = onSnapshot(q, async (snapshot) => {
                 const container = document.getElementById('activeOrdersList');
                 let html = '';
-                snapshot.forEach(doc => {
-                    const o = doc.data();
-                    html += `<div style="padding:15px;background:white;border-radius:10px;margin-bottom:10px;">
-                        <div style="display:flex;justify-content:space-between;">
-                            <b>${o.orderNumber}</b>
-                            <span>Table: ${o.orderType === 'delivery' ? 'Delivery' : (o.tableId?.toUpperCase() || 'Takeaway')}</span>
-                        </div>
-                        <div>Total: RM ${o.total}</div>
-                        <div>Status: ${o.status}</div>
-                        <button class="btn-small" onclick="updateOrderStatus('${doc.id}', 'completed')">Mark Complete</button>
-                        <button class="btn-small" style="background:#e53e3e;" onclick="updateOrderStatus('${doc.id}', 'cancelled')">Cancel</button>
-                    </div>`;
-                });
+
+                // Sort orders by timestamp ascending (Oldest first at the top)
+                const sortedDocs = snapshot.docs.sort((a, b) => (a.data().createdAt?.toDate() || 0) - (b.data().createdAt?.toDate() || 0));
+
+                for (const orderDoc of sortedDocs) {
+                    const o = orderDoc.data();
+                    const orderId = orderDoc.id;
+                    const timestamp = o.createdAt?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) || 'N/A';
+                    
+                    // Fetch items for each order
+                    const itemsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderId, 'items'));
+                    let itemsHtml = '';
+                    for (const itemDoc of itemsSnap.docs) {
+                        const item = itemDoc.data();
+                        const variantsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderId, 'items', itemDoc.id, 'selectedVariants'));
+                        const modifiersSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderId, 'items', itemDoc.id, 'selectedModifiers'));
+                        
+                        let selections = [];
+                        variantsSnap.forEach(v => selections.push(v.data().optionName));
+                        modifiersSnap.forEach(m => selections.push(m.data().optionName));
+                        
+                        itemsHtml += `
+                            <div style="padding: 10px; background: #f8fafc; border-radius: 12px; margin-bottom: 8px; border: 1px solid #f1f5f9;">
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
+                                    <b style="color: #1e293b; font-size: 0.9rem;">${item.name}</b>
+                                    <span style="background: #e2e8f0; color: #475569; padding: 2px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: bold;">x${item.qty}</span>
+                                </div>
+                                ${selections.length ? `<div style="color:#64748b; font-size:0.75rem; line-height: 1.4;"><i class="fas fa-check-circle" style="font-size: 0.65rem;"></i> ${selections.join(', ')}</div>` : ''}
+                                ${item.notes ? `<div style="color:#764ba2; font-size:0.75rem; font-style:italic; margin-top: 4px; padding-left: 8px; border-left: 2px solid #764ba2;">"${item.notes}"</div>` : ''}
+                            </div>`;
+                    }
+
+                    html += `
+                        <div class="order-detail-card" style="margin-bottom:0; display:flex; flex-direction:column; justify-content:space-between; height: 100%;">
+                            <div>
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                                    <span style="font-size:0.75rem; color:#666;"><i class="fas fa-clock"></i> ${timestamp}</span>
+                                    <span class="status-badge status-${o.status}">${o.status}</span>
+                                </div>
+                                <div style="font-weight:800; margin-bottom:12px; font-size: 1.1rem; background: #764ba2; padding: 6px 14px; border-radius: 12px; display: inline-block; color: #fff; box-shadow: 0 2px 4px rgba(118,75,162,0.2);"># ${o.orderNumber}</div>
+                                <div style="font-size:0.9rem; color:#475569; font-weight: 600; margin-bottom:12px;">
+                                    <i class="fas fa-chair" style="color: #764ba2;"></i> Table: ${o.orderType === 'delivery' ? 'Delivery' : (o.tableId?.toUpperCase() || 'Takeaway')}
+                                </div>
+                                <div style="margin-bottom:15px;">
+                                    ${itemsHtml}
+                                </div>
+                            </div>
+                            <div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-top: 10px; border-top: 1px solid #f1f5f9;">
+                                    <span style="color: #64748b; font-size: 0.85rem; font-weight: 600;">Total</span>
+                                    <span style="font-weight:800; color:#764ba2; font-size: 1.1rem;">RM ${o.total}</span>
+                                </div>
+                                <div class="action-buttons" style="gap:5px;">
+                                    <select onchange="updateOrderStatus('${orderId}', this.value)" style="width:100%; padding:8px; border-radius:8px; border:1px solid #ddd; font-size:0.8rem; background:#f8fafc;">
+                                        <option value="" disabled selected>Change Status...</option>
+                                        <option value="active">Active</option>
+                                        <option value="preparing">Preparing</option>
+                                        <option value="served">Served</option>
+                                        <option value="cancelled">Cancelled</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>`;
+                }
                 container.innerHTML = html || '<div class="loading">No active orders</div>';
             });
         }
@@ -5329,6 +5540,7 @@ window.openSearchModalTakeOrder = function() {
             // Open sidebar by default on Tablet/PC
             if (window.innerWidth >= 768) {
                 document.getElementById('sidebar').classList.add('open');
+                document.getElementById('menuToggleBtn').classList.add('active');
             }
 
             document.getElementById('staffNameTop').textContent = currentStaff.name;
