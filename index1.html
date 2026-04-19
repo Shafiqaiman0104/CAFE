@@ -166,7 +166,8 @@
         .menu-section-title {
             padding: 10px 20px;
             font-size: 12px;
-            color: #999;
+            color: black;
+            font-weight: 500;
             text-transform: uppercase;
             letter-spacing: 1px;
         }
@@ -1466,6 +1467,7 @@
             background: #f8fafc;
         }
         .menu-toggle-icon {
+            color: #ff9800;
             transition: transform 0.3s ease;
         }
         .menu-toggle-icon.rotated {
@@ -1476,6 +1478,41 @@
             overflow: hidden;
             transition: max-height 0.3s ease-out;
             display: block; /* Ensure it's block for max-height transition to work */
+        }
+
+        /* Long-press selection styles */
+        .order-card-selectable {
+            transition: all 0.2s ease;
+            cursor: pointer;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .order-card-selected {
+            border: 2px solid #764ba2 !important;
+            background-color: #f0e6ff !important;
+            transform: scale(0.98);
+        }
+
+        /* Checkout Item selection styles */
+        .checkout-item-row {
+            transition: all 0.2s ease;
+            border: 1px solid transparent;
+            margin-top: 8px;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 12px;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .checkout-item-selected {
+            background-color: #f0e6ff !important;
+            border: 1px solid #764ba2 !important;
+        }
+        .checkout-item-row i {
+            color: #764ba2;
+            margin-right: 10px;
+            width: 20px;
+            text-align: center;
         }
     </style>
 </head>
@@ -1512,16 +1549,19 @@
         <!-- Top Bar -->
         <div class="top-bar">
             <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
-            <span class="restaurant-name" id="appRestaurantName"></span>
-            <div class="staff-info">
-                <span id="staffNameTop"></span>
-                <span id="staffRoleTop" class="role-badge"></span>
-                <button class="btn-small" onclick="logout()" style="margin-left: 10px;">Logout</button>
-            </div>
+            <div class="restaurant-name" style="position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap;">VentureRush P.O.S</div>
         </div>
 
         <!-- Sidebar -->
         <div class="sidebar" id="sidebar">
+            <div class="sidebar-header" style="padding: 24px; text-align: center; border-bottom: 1px solid rgba(0,0,0,0.05);">
+                <img src="https://venturerush-tech.netlify.app/vrLogo.png" alt="Logo" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; margin-bottom: 15px; border: 3px solid #764ba2; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+                <div class="restaurant-name" id="appRestaurantName" style="font-size: 20px; margin-bottom: 10px;"></div>
+                <div style="font-size: 14px; color: #555; margin-bottom: 15px;">
+                    <span id="staffNameTop" style="font-weight: 600;"></span> | <span id="staffRoleTop" class="role-badge"></span>
+                </div>
+                <button class="btn-small" onclick="logout()" style="width: 100%; padding: 10px; border-radius: 12px; cursor: pointer;">Logout</button>
+            </div>
             <div class="sidebar-menu">
                 <!-- OPERATIONS Section -->
                 <div class="menu-section" id="staffMenu">
@@ -2269,7 +2309,7 @@
         <div class="modal-content" style="max-width:500px;">
             <div class="modal-header"><h3>Search Menu</h3><button class="modal-close" onclick="closeSearchModalTakeOrder()">&times;</button></div>
             <input type="text" id="searchInputTakeOrder" placeholder="Type item name..." style="width:100%;padding:12px;border-radius:40px;border:1px solid #ddd;margin-bottom:15px;">
-            <div id="searchResultsTakeOrder" class="search-results"></div>
+            <div id="searchResultsTakeOrder" class="search-results" style="position: static; max-height: 400px; border: none; box-shadow: none;"></div>
         </div>
     </div>
 
@@ -2308,12 +2348,12 @@
     <!-- Table Details Modal (Occupied Table) -->
     <div id="tableDetailsModalTakeOrder" class="modal">
         <div class="modal-content">
-            <div class="modal-header"><h3><i class="fas fa-info-circle"></i> Table Details: <span id="detailsTableNumTakeOrder"></span></h3><button class="modal-close" onclick="closeModal('tableDetailsModalTakeOrder')">&times;</button></div>
+            <div class="modal-header"><h3><i class="fas fa-info-circle"></i> Table Details: <span id="detailsTableNumTakeOrder"></span> <span id="orderSelectionCounterTakeOrder" style="font-size: 0.9rem; font-weight: normal; color: #666;"></span></h3><button class="modal-close" onclick="closeModal('tableDetailsModalTakeOrder')">&times;</button></div>
             <div id="tableDetailsBodyTakeOrder" style="margin-bottom: 20px; max-height: 400px; overflow-y: auto;"></div>
             <div class="action-buttons">
-                <button class="primary-btn" onclick="openChangeTableModalTakeOrder(null, 'available')"><i class="fas fa-exchange-alt"></i> Move All</button>
-                <button class="primary-btn" onclick="addItemsToOccupiedTable()"><i class="fas fa-plus"></i> Add</button>
-                <button class="secondary-btn" onclick="closeModal('tableDetailsModalTakeOrder')">Back</button>
+                <button class="primary-btn" style="background:#667eea;" onclick="openChangeTableModalTakeOrder(null, 'available')"><i class="fas fa-exchange-alt"></i> Move</button>
+                <button class="primary-btn" style="background:#ed8936;" onclick="openChangeTableModalTakeOrder(null, 'occupied')"><i class="fas fa-object-group"></i> Merge</button>
+                <button class="primary-btn" id="addBtnTableDetailsTakeOrder" onclick="addItemsToOccupiedTable()"><i class="fas fa-plus"></i> Add</button>
                 <button class="primary-btn" style="background:#38a169;" onclick="openCheckoutFromTable()"><i class="fas fa-check-double"></i> Complete</button>
             </div>
         </div>
@@ -2453,6 +2493,11 @@
         let checkoutReceivedInput = "0";
         let checkoutPayMethod = "cash";
         let checkoutOrdersToProcess = [];
+        
+        let selectedOrderIdsForCheckout = [];
+        let totalOrdersInTableTakeOrder = 0;
+        let holdTimerTakeOrder = null;
+        let selectedCheckoutItems = []; // Array of {orderId, itemId, price}
 
         // ========== LICENSE CHECK ==========
         window.checkLicense = async function() {
@@ -4005,6 +4050,8 @@
         async function showTableDetailsTakeOrder(tableId, tableNumber) {
             selectedTableIdTakeOrder = tableId;
             selectedTableNumberTakeOrder = tableNumber;
+            selectedOrderIdsForCheckout = []; // Reset selection when opening
+
             document.getElementById('detailsTableNumTakeOrder').innerText = tableNumber;
             const body = document.getElementById('tableDetailsBodyTakeOrder');
             body.innerHTML = '<div class="loading">Fetching order details...</div>';
@@ -4014,6 +4061,9 @@
                 const q = query(collection(db, 'licenses', currentClientId, 'orders'), where('tableId', '==', tableId), where('status', '==', 'active'));
                 const snap = await getDocs(q);
                 
+                totalOrdersInTableTakeOrder = snap.size;
+                updateOrderSelectionUI();
+
                 if (snap.empty) {
                     body.innerHTML = '<div style="text-align:center;padding:20px;">No active orders found for this table.</div>';
                     return;
@@ -4027,6 +4077,9 @@
                     let itemsHtml = '';
                     for (const itemDoc of itemsSnap.docs) {
                         const item = itemDoc.data();
+                        const isItemPaid = item.isPaid === true;
+                        const strikeStyle = isItemPaid ? 'text-decoration: line-through; opacity: 0.6;' : '';
+                        
                         const variantsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderDoc.id, 'items', itemDoc.id, 'selectedVariants'));
                         const modifiersSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderDoc.id, 'items', itemDoc.id, 'selectedModifiers'));
                         
@@ -4038,25 +4091,30 @@
                         let notesHtml = item.notes ? `<div style="font-size:11px; color:#764ba2; margin-left:12px; font-style:italic;">Request: ${item.notes}</div>` : '';
                         
                         itemsHtml += `
-                            <div style="margin-bottom:8px;">
-                                <div style="font-weight:600;">${item.name} (x${item.qty})</div>
+                            <div style="margin-bottom:8px; ${strikeStyle}">
+                                <div style="font-weight:600;">
+                                    ${item.name} (x${item.qty}) 
+                                    ${isItemPaid ? '<span style="font-size:0.7rem; color:#38a169; text-decoration: none; display: inline-block;">(Paid)</span>' : ''}
+                                </div>
                                 ${selectionHtml}
                                 ${notesHtml}
                             </div>
                         `;
                     }
                     
+                    const isSelected = selectedOrderIdsForCheckout.includes(orderDoc.id);
+
                     html += `
-                        <div style="background:white; padding:15px; border-radius:12px; margin-bottom:10px; border-left:4px solid #764ba2; box-shadow:0 2px 5px rgba(0,0,0,0.05);">
+                        <div id="order-card-${orderDoc.id}" 
+                             class="order-card-selectable ${isSelected ? 'order-card-selected' : ''}"
+                             onmousedown="startOrderHoldTakeOrder('${orderDoc.id}')" onmouseup="clearOrderHoldTakeOrder()" onmouseleave="clearOrderHoldTakeOrder()"
+                             ontouchstart="startOrderHoldTakeOrder('${orderDoc.id}')" ontouchend="clearOrderHoldTakeOrder()"
+                             style="background:white; padding:15px; border-radius:12px; margin-bottom:10px; border-left:4px solid #764ba2; box-shadow:0 2px 5px rgba(0,0,0,0.05);">
                             <div style="display:flex; justify-content:space-between; font-weight:bold; margin-bottom:5px;">
                                 <span>ID: ${order.orderNumber} <span style="background:#e9ecef; color:#666; font-size:10px; padding:2px 6px; border-radius:10px; margin-left:5px; text-transform:uppercase; vertical-align:middle;">${(order.orderType || 'dine-in').replace('-', ' ')}</span></span>
                                 <span style="color:#764ba2;">RM ${order.total}</span>
                             </div>
                             <div style="font-size:0.85rem; color:#444; border-bottom: 1px dashed #eee; padding-bottom: 10px;">${itemsHtml}</div>
-                            <div class="action-buttons" style="margin-top:10px;">
-                                <button class="btn-small" style="flex:1; background:#667eea; height:32px;" onclick="openChangeTableModalTakeOrder('${orderDoc.id}', 'available')"><i class="fas fa-exchange-alt"></i> Move</button>
-                                <button class="btn-small" style="flex:1; background:#ed8936; height:32px;" onclick="openChangeTableModalTakeOrder('${orderDoc.id}', 'occupied')"><i class="fas fa-object-group"></i> Merge</button>
-                            </div>
                         </div>
                     `;
                 }
@@ -4066,14 +4124,59 @@
             }
         }
 
+        window.startOrderHoldTakeOrder = function(orderId) {
+            holdTimerTakeOrder = setTimeout(() => {
+                toggleOrderSelectionTakeOrder(orderId);
+            }, 1000);
+        };
+
+        window.clearOrderHoldTakeOrder = function() {
+            clearTimeout(holdTimerTakeOrder);
+        };
+
+        window.toggleOrderSelectionTakeOrder = function(orderId) {
+            const index = selectedOrderIdsForCheckout.indexOf(orderId);
+            const card = document.getElementById(`order-card-${orderId}`);
+            
+            if (index > -1) {
+                selectedOrderIdsForCheckout.splice(index, 1);
+                if (card) card.classList.remove('order-card-selected');
+            } else {
+                selectedOrderIdsForCheckout.push(orderId);
+                if (card) card.classList.add('order-card-selected');
+            }
+            updateOrderSelectionUI();
+        };
+
+        function updateOrderSelectionUI() {
+            const counterEl = document.getElementById('orderSelectionCounterTakeOrder');
+            if (!counterEl) return;
+            const selectedCount = selectedOrderIdsForCheckout.length;
+            // If none are selected, we show total/total because the buttons will "Move All"
+            const displayCount = selectedCount === 0 ? totalOrdersInTableTakeOrder : selectedCount;
+            counterEl.innerText = `(${displayCount}/${totalOrdersInTableTakeOrder})`;
+
+            // Disable Add button if any order is selected
+            const addBtn = document.getElementById('addBtnTableDetailsTakeOrder');
+            if (addBtn) {
+                addBtn.disabled = selectedCount > 0;
+                addBtn.style.opacity = selectedCount > 0 ? "0.5" : "1";
+                addBtn.style.cursor = selectedCount > 0 ? "not-allowed" : "pointer";
+            }
+        }
+
         window.openCheckoutFromTable = async function() {
             const tableId = selectedTableIdTakeOrder;
             document.getElementById('checkoutTableNum').innerText = selectedTableNumberTakeOrder;
             const itemsContainer = document.getElementById('checkoutOrderItems');
             const totalsContainer = document.getElementById('checkoutTotals');
-            
+
             itemsContainer.innerHTML = '<div class="loading">Loading orders...</div>';
-            
+            selectedCheckoutItems = []; // Reset previous selection
+
+            // Use specific selected orders if any, otherwise get all for the table
+            const hasSelection = selectedOrderIdsForCheckout.length > 0;
+
             try {
                 const q = query(collection(db, 'licenses', currentClientId, 'orders'), where('tableId', '==', tableId), where('status', '==', 'active'));
                 const snap = await getDocs(q);
@@ -4081,47 +4184,61 @@
                 if (snap.empty) { alert('No active orders found'); return; }
                 
                 checkoutOrdersToProcess = snap.docs;
-                let totalSum = 0;
                 let html = '';
                 
                 for (const orderDoc of snap.docs) {
+                    // Skip if user made a selection and this order isn't in it
+                    if (hasSelection && !selectedOrderIdsForCheckout.includes(orderDoc.id)) continue;
+
                     const order = orderDoc.data();
-                    totalSum += parseFloat(order.total);
                     const itemsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderDoc.id, 'items'));
                     
-                    html += `<div style="margin-bottom:15px; background:white; padding:10px; border-radius:8px; border:1px solid #eee;">
-                        <div style="font-weight:bold; font-size:0.8rem; color:#888;">Order ID: ${order.orderNumber}</div>`;
+                    let orderItemsHtml = '';
+                    let hasUnpaidItems = false;
                     
                     for (const itemDoc of itemsSnap.docs) {
                         const item = itemDoc.data();
+                        if (item.isPaid) continue; // Skip items already paid in previous split sessions
+                        
+                        hasUnpaidItems = true;
+                        const itemPrice = parseFloat(item.total);
+                        // Select by default
+                        selectedCheckoutItems.push({ orderId: orderDoc.id, itemId: itemDoc.id, price: itemPrice });
+
                         const variantsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderDoc.id, 'items', itemDoc.id, 'selectedVariants'));
                         const modifiersSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderDoc.id, 'items', itemDoc.id, 'selectedModifiers'));
                         
                         let subHtml = '';
-                        variantsSnap.forEach(v => subHtml += `<div style="font-size:10px; color:#666; margin-left:12px;">• ${v.data().optionName}</div>`);
-                        modifiersSnap.forEach(m => subHtml += `<div style="font-size:10px; color:#666; margin-left:12px;">• ${m.data().optionName}</div>`);
-                        if (item.notes) subHtml += `<div style="font-size:10px; color:#764ba2; margin-left:12px; font-style:italic;">Note: ${item.notes}</div>`;
+                        variantsSnap.forEach(v => subHtml += `<div style="font-size:10px; color:#666; margin-left:30px;">• ${v.data().optionName}</div>`);
+                        modifiersSnap.forEach(m => subHtml += `<div style="font-size:10px; color:#666; margin-left:30px;">• ${m.data().optionName}</div>`);
+                        if (item.notes) subHtml += `<div style="font-size:10px; color:#764ba2; margin-left:30px; font-style:italic;">Note: ${item.notes}</div>`;
 
-                        html += `
-                            <div style="margin-top:8px;">
-                                <div style="display:flex; justify-content:space-between; font-size:0.9rem;">
-                                    <span style="font-weight:600;">${item.name} x ${item.qty}</span>
-                                    <span>RM ${parseFloat(item.total).toFixed(2)}</span>
+                        orderItemsHtml += `
+                            <div id="chk-item-${itemDoc.id}" class="checkout-item-row checkout-item-selected" 
+                                 onclick="toggleItemSelectionCheckout('${orderDoc.id}', '${itemDoc.id}', ${itemPrice})">
+                                <div style="display:flex; justify-content:space-between; font-size:0.9rem; align-items:center;">
+                                    <span style="font-weight:600; display:flex; align-items:center;">
+                                        <i id="icon-item-${itemDoc.id}" class="fas fa-check-circle"></i>
+                                        ${item.name} x ${item.qty}
+                                    </span>
+                                    <span>RM ${itemPrice.toFixed(2)}</span>
                                 </div>
                                 ${subHtml}
                             </div>
                         `;
                     }
                     
-                    html += `</div>`;
+                    if (hasUnpaidItems) {
+                        html += `
+                            <div style="margin-bottom:15px; background:white; padding:12px; border-radius:18px; border:1px solid #f1f5f9; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                                <div style="font-weight:bold; font-size:0.8rem; color:#94a3b8; border-bottom:1px solid #f8fafc; padding-bottom:8px; margin-bottom:8px;">Order Ref: ${order.orderNumber}</div>
+                                ${orderItemsHtml}
+                            </div>`;
+                    }
                 }
                 
-                checkoutTotalTakeOrder = totalSum;
-                itemsContainer.innerHTML = html;
-                document.getElementById('checkoutTotalDue').innerText = `RM ${totalSum.toFixed(2)}`;
-                totalsContainer.innerHTML = `<div style="display:flex; justify-content:space-between; font-weight:bold; font-size:1.2rem;">
-                    <span>Grand Total:</span><span>RM ${totalSum.toFixed(2)}</span>
-                </div>`;
+                itemsContainer.innerHTML = html || '<div style="text-align:center;padding:40px;color:#94a3b8;"><i class="fas fa-check-circle" style="font-size:2rem;margin-bottom:10px;display:block;"></i>No unpaid items.</div>';
+                recalculateCheckoutTotals();
                 
                 checkoutReceivedInput = "0";
                 updateCheckoutDisplay();
@@ -4133,6 +4250,43 @@
                 alert('Checkout error: ' + e.message);
             }
         };
+
+        window.toggleItemSelectionCheckout = function(orderId, itemId, price) {
+            const index = selectedCheckoutItems.findIndex(i => i.itemId === itemId);
+            const el = document.getElementById(`chk-item-${itemId}`);
+            const icon = document.getElementById(`icon-item-${itemId}`);
+
+            if (index > -1) {
+                selectedCheckoutItems.splice(index, 1);
+                if (el) el.classList.remove('checkout-item-selected');
+                if (icon) { icon.classList.remove('fa-check-circle'); icon.classList.add('fa-circle'); icon.style.opacity = "0.3"; }
+            } else {
+                selectedCheckoutItems.push({ orderId, itemId, price });
+                if (el) el.classList.add('checkout-item-selected');
+                if (icon) { icon.classList.remove('fa-circle'); icon.classList.add('fa-check-circle'); icon.style.opacity = "1"; }
+            }
+            recalculateCheckoutTotals();
+        };
+
+        function recalculateCheckoutTotals() {
+            let subtotal = selectedCheckoutItems.reduce((acc, curr) => acc + curr.price, 0);
+            const tax = taxActive ? subtotal * (currentTaxRate / 100) : 0;
+            checkoutTotalTakeOrder = subtotal + tax;
+            
+            document.getElementById('checkoutTotalDue').innerText = `RM ${checkoutTotalTakeOrder.toFixed(2)}`;
+            const totalsContainer = document.getElementById('checkoutTotals');
+            totalsContainer.innerHTML = `
+                <div style="display:flex; justify-content:space-between; font-size:0.85rem; color:#64748b; margin-bottom:4px;">
+                    <span>Selected Subtotal:</span><span>RM ${subtotal.toFixed(2)}</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; font-size:0.85rem; color:#64748b; margin-bottom:10px; display: ${taxActive ? 'flex' : 'none'};">
+                    <span>Tax (${currentTaxRate}%):</span><span>RM ${tax.toFixed(2)}</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:1.3rem; border-top:2px solid #f1f5f9; padding-top:10px; color:#1e293b;">
+                    <span>Grand Total:</span><span>RM ${checkoutTotalTakeOrder.toFixed(2)}</span>
+                </div>`;
+            updateCheckoutDisplay();
+        }
 
         function updateCheckoutDisplay() {
             const received = parseFloat(checkoutReceivedInput) || 0;
@@ -4173,21 +4327,48 @@
         window.submitCheckoutPayment = async function() {
             const received = parseFloat(checkoutReceivedInput);
             if (received < checkoutTotalTakeOrder) { alert('Insufficient amount received'); return; }
+            if (selectedCheckoutItems.length === 0) { alert('Please select at least one item to pay'); return; }
 
-            for (const orderDoc of checkoutOrdersToProcess) {
-                await updateDoc(orderDoc.ref, { status: 'completed', cashierBy: currentStaff.name });
-                await addDoc(collection(db, 'licenses', currentClientId, 'transactions'), {
-                    orderId: orderDoc.id,
-                    amount: orderDoc.data().total,
-                    paymentMethod: checkoutPayMethod,
-                    status: 'completed',
-                    type: 'payment',
-                    createdAt: Timestamp.now()
-                });
+            // Mark only selected items as paid in the database
+            for (const item of selectedCheckoutItems) {
+                await updateDoc(doc(db, 'licenses', currentClientId, 'orders', item.orderId, 'items', item.itemId), { isPaid: true });
             }
-            await updateDoc(doc(db, 'licenses', currentClientId, 'tables', selectedTableIdTakeOrder), { status: 'available' });
+
+            // Record transaction for the specific amount paid
+            await addDoc(collection(db, 'licenses', currentClientId, 'transactions'), {
+                tableId: selectedTableIdTakeOrder,
+                amount: checkoutTotalTakeOrder.toFixed(2),
+                paymentMethod: checkoutPayMethod,
+                status: 'completed',
+                type: 'payment',
+                isSplitBill: true,
+                createdAt: Timestamp.now()
+            });
+
+            // Check each order to see if it is now fully paid
+            for (const orderDoc of checkoutOrdersToProcess) {
+                const itemsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderDoc.id, 'items'));
+                const allPaid = itemsSnap.docs.every(d => d.data().isPaid === true);
+                if (allPaid) {
+                    await updateDoc(orderDoc.ref, { status: 'completed', cashierBy: currentStaff.name });
+                }
+            }
+
+            // Check if there are any remaining active orders for this table
+            const qActive = query(collection(db, 'licenses', currentClientId, 'orders'), 
+                                 where('tableId', '==', selectedTableIdTakeOrder), 
+                                 where('status', '==', 'active'));
+            const activeSnap = await getDocs(qActive);
+            
+            if (activeSnap.empty) {
+                await updateDoc(doc(db, 'licenses', currentClientId, 'tables', selectedTableIdTakeOrder), { status: 'available' });
+            }
+
             alert(`Payment success! Change: RM ${(received - checkoutTotalTakeOrder).toFixed(2)}`);
-            location.reload();
+            closeModal('checkoutModalTakeOrder');
+            selectedOrderIdsForCheckout = [];
+            await loadTablesTakeOrder();
+            showTableSectionTakeOrder();
         };
 
         window.openChangeTableModalTakeOrder = function(orderId = null, filterStatus = 'available') {
@@ -4217,41 +4398,43 @@
         };
 
         window.confirmChangeTableTakeOrder = async function(newTableId, newTableNum) {
-            const isSingleMove = !!selectedOrderIdToMoveTakeOrder;
+            const oldTableId = selectedTableIdTakeOrder;
             const destTable = tablesListTakeOrder.find(t => t.id === newTableId);
             const isMerging = destTable && destTable.status === 'occupied';
             
+            // Identify targeted orders: Specific selection or parameter, otherwise All active
+            let targetOrderIds = [];
+            if (selectedOrderIdToMoveTakeOrder) {
+                targetOrderIds = [selectedOrderIdToMoveTakeOrder];
+            } else if (selectedOrderIdsForCheckout && selectedOrderIdsForCheckout.length > 0) {
+                targetOrderIds = [...selectedOrderIdsForCheckout];
+            }
+
+            const isSpecificMove = targetOrderIds.length > 0;
             const actionText = isMerging ? "Merge" : "Move";
-            const targetText = isSingleMove ? "this specific order" : "all orders";
+            const targetText = isSpecificMove ? `the selected ${targetOrderIds.length} order(s)` : "all orders";
+            
             if (!confirm(`${actionText} ${targetText} from Table ${selectedTableNumberTakeOrder} to Table ${newTableNum}?`)) return;
             
-            const oldTableId = selectedTableIdTakeOrder;
+            const q = query(collection(db, 'licenses', currentClientId, 'orders'), where('tableId', '==', oldTableId), where('status', '==', 'active'));
+            const snap = await getDocs(q);
             
-            if (isSingleMove) {
-                // Move specific order
-                await updateDoc(doc(db, 'licenses', currentClientId, 'orders', selectedOrderIdToMoveTakeOrder), { tableId: newTableId });
-                // Set new table to occupied
-                if (!isMerging) {
-                    await updateDoc(doc(db, 'licenses', currentClientId, 'tables', newTableId), { status: 'occupied' });
-                }
-                // Check if old table still has other active orders
-                const q = query(collection(db, 'licenses', currentClientId, 'orders'), where('tableId', '==', oldTableId), where('status', '==', 'active'));
-                const snap = await getDocs(q);
-                if (snap.empty) {
-                    await updateDoc(doc(db, 'licenses', currentClientId, 'tables', oldTableId), { status: 'available' });
-                }
-            } else {
-                // Move all orders
-                await updateDoc(doc(db, 'licenses', currentClientId, 'tables', oldTableId), { status: 'available' });
-                if (!isMerging) {
-                    await updateDoc(doc(db, 'licenses', currentClientId, 'tables', newTableId), { status: 'occupied' });
-                }
-                
-                const q = query(collection(db, 'licenses', currentClientId, 'orders'), where('tableId', '==', oldTableId), where('status', '==', 'active'));
-                const snap = await getDocs(q);
-                for (const orderDoc of snap.docs) {
+            for (const orderDoc of snap.docs) {
+                // If specific orders are selected, only update those. Otherwise update all active orders.
+                if (!isSpecificMove || targetOrderIds.includes(orderDoc.id)) {
                     await updateDoc(orderDoc.ref, { tableId: newTableId });
                 }
+            }
+
+            if (!isMerging) {
+                await updateDoc(doc(db, 'licenses', currentClientId, 'tables', newTableId), { status: 'occupied' });
+            }
+
+            // Free up the old table only if it no longer has active orders
+            const qRemaining = query(collection(db, 'licenses', currentClientId, 'orders'), where('tableId', '==', oldTableId), where('status', '==', 'active'));
+            const snapRemaining = await getDocs(qRemaining);
+            if (snapRemaining.empty) {
+                await updateDoc(doc(db, 'licenses', currentClientId, 'tables', oldTableId), { status: 'available' });
             }
 
             alert(`Order(s) successfully ${isMerging ? 'merged' : 'moved'}.`);
@@ -4442,7 +4625,6 @@
     }
     
     html += `
-        <div class="form-group"><label>Quantity:</label><input type="number" id="itemQtyModalTakeOrder" value="1" min="1" style="width:100%;padding:12px;border-radius:16px;"></div>
         <div class="form-group"><label>Special Request:</label><textarea id="itemNotesModalTakeOrder" rows="2" placeholder="Special instructions..."></textarea></div>
     `;
     
@@ -4525,7 +4707,7 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
                 }
             }
             
-            const qty = parseInt(document.getElementById('itemQtyModalTakeOrder')?.value || 1);
+            const qty = 1;
             const notes = document.getElementById('itemNotesModalTakeOrder')?.value || '';
             
             const basePrice = parseFloat(currentMenuObjTakeOrder.price);
@@ -4866,19 +5048,26 @@ window.openSearchModalTakeOrder = function() {
                 return; 
             }
             const results = menuItemsTakeOrder.filter(item => 
-                item.name.toLowerCase().includes(term) || 
-                (item.categoryId && item.categoryId.toLowerCase().includes(term))
+                    item.name.toLowerCase().includes(term) ||
+                    (categoryMapTakeOrder[item.categoryId] && 
+                     categoryMapTakeOrder[item.categoryId].toLowerCase().includes(term))
             );
             if (!results.length) { 
                 container.innerHTML = '<div style="text-align:center;padding:20px;">No items found</div>'; 
                 return; 
             }
-            container.innerHTML = results.map(item => `
-                <div class="search-result-item" onclick="openItemModalTakeOrder('${item.id}');closeSearchModalTakeOrder();">
-                    <strong>${item.name}</strong><br>
-                    <small>${item.categoryId || ''} | RM ${parseFloat(item.price).toFixed(2)}</small>
-                </div>
-            `).join('');
+                container.innerHTML = results.map(item => {
+                    const imageUrl = item.image || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=300&h=300&fit=crop';
+                    return `
+                        <div class="search-result-item" onclick="openItemModalTakeOrder('${item.id}');closeSearchModalTakeOrder();" style="display: flex; align-items: center; gap: 12px;">
+                            <img src="${imageUrl}" style="width: 50px; height: 50px; border-radius: 8px; object-fit: cover;" onerror="this.src='https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=300&h=300&fit=crop'">
+                            <div>
+                                <strong>${item.name}</strong><br>
+                                <small>${categoryMapTakeOrder[item.categoryId] || 'No Category'} | RM ${parseFloat(item.price).toFixed(2)}</small>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
         });
     }
 };
