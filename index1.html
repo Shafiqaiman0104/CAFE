@@ -1918,6 +1918,9 @@
                 <div id="tableSectionTakeOrder" class="table-section-takeorder">
                     <div class="category-header-takeorder">
                         <h2><i class="fas fa-chair"></i> Select Table</h2>
+                        <div class="search-icon-takeorder" onclick="openSearchOrderByMenuModal()" title="Search order by menu" style="margin: 0 auto; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3);">
+                            <i class="fas fa-search-location"></i>
+                        </div>
                         <div class="view-toggle-takeorder">
                             <button class="view-btn-takeorder active" id="gridViewBtnTakeOrder" onclick="setViewModeTakeOrder('grid')"><i class="fas fa-th"></i> Grid</button>
                             <button class="view-btn-takeorder" id="listViewBtnTakeOrder" onclick="setViewModeTakeOrder('list')"><i class="fas fa-list"></i> List</button>
@@ -1933,6 +1936,9 @@
                         <div class="status-indicator"><span class="status-dot orange"></span><span>Occupied</span></div>
                     </div>
                     
+                    <!-- Persistent Counter Table -->
+                    <div id="counterTableContainerTakeOrder" style="padding: 0 4px 12px 4px;"></div>
+
                     <div id="tableGridTakeOrder" class="table-grid-takeorder">
                         <div style="text-align:center;padding:40px;color:white;">Loading tables...</div>
                     </div>
@@ -2487,7 +2493,13 @@
             <div class="checkout-main-container" style="display: flex; flex: 1; overflow: hidden;">
                 <!-- Left: Order Details -->
                 <div class="checkout-left-panel" style="flex: 1; border-right: 1px solid #eee; padding: 20px; overflow-y: auto; background: #fafafa;">
-                    <h4 style="margin-bottom:15px; border-bottom: 2px solid #764ba2; padding-bottom:5px; color:#764ba2;">Order Details</h4>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 2px solid #764ba2; padding-bottom: 5px;">
+                        <h4 style="color:#764ba2; margin: 0;">Order Details</h4>
+                        <div class="view-toggle-takeorder" style="background: #e2e8f0;">
+                            <button class="view-btn-takeorder active" id="btnCheckoutFull" onclick="setCheckoutMode('full')" style="padding: 4px 10px; font-size: 0.75rem; color: #475569;">Full</button>
+                            <button class="view-btn-takeorder" id="btnCheckoutSplit" onclick="setCheckoutMode('split')" style="padding: 4px 10px; font-size: 0.75rem; color: #475569;">Split</button>
+                        </div>
+                    </div>
                     <div id="checkoutOrderItems"></div>
                     <div id="checkoutTotals" style="margin-top: 20px; border-top: 2px solid #ddd; padding-top: 15px;"></div>
                 </div>
@@ -2509,7 +2521,7 @@
                             <div style="font-size: 0.8rem; opacity: 0.7;">TOTAL DUE</div>
                             <div id="checkoutTotalDue" style="font-size: 1.8rem; font-weight: bold;">RM 0.00</div>
                         </div>
-                        <div style="background: #f0f0f0; padding: 15px; border-radius: 12px; text-align: right; border: 2px solid #ddd;">
+                        <div id="checkoutReceivedBox" style="background: #f0f0f0; padding: 15px; border-radius: 12px; text-align: right; border: 2px solid #ddd;">
                             <div style="font-size: 0.8rem; color: #666;">AMOUNT RECEIVED</div>
                             <div id="checkoutReceivedDisplay" style="font-size: 1.8rem; font-weight: bold; color: #764ba2;">0.00</div>
                             <div id="checkoutChangeDisplay" style="font-size: 0.9rem; font-weight: 600; margin-top: 4px; color: #e53e3e;">Change: RM 0.00</div>
@@ -2518,7 +2530,21 @@
                             <div class="type-option-takeorder selected" id="chkPayCash" onclick="setCheckoutPayMethod('cash')"><i class="fas fa-money-bill"></i> Cash</div>
                             <div class="type-option-takeorder" id="chkPayCard" onclick="setCheckoutPayMethod('card')"><i class="fas fa-credit-card"></i> Card</div>
                             <div class="type-option-takeorder" id="chkPayWallet" onclick="setCheckoutPayMethod('ewallet')"><i class="fas fa-wallet"></i> E-Wallet</div>
+                            <div class="type-option-takeorder" id="chkPayMixed" onclick="setCheckoutPayMethod('mixed')"><i class="fas fa-layer-group"></i></div>
                         </div>
+                        <div id="checkoutMixedInputs" style="display:none; flex-direction:column; gap:12px; background:#fff; padding:15px; border-radius:12px; border:1px solid #ddd;">
+                            <div style="display:flex; gap:8px;">
+                                <select id="mixedTypeSelector" style="flex:1; padding:8px; border-radius:8px; border:1px solid #ccc; font-size:0.85rem;">
+                                    <option value="cash">Cash</option>
+                                    <option value="card">Card</option>
+                                    <option value="ewallet">E-Wallet</option>
+                                </select>
+                                <button class="btn-small" style="padding:0 15px;" onclick="addMixedPaymentRow()">Add</button>
+                            </div>
+                            <div id="mixedPaymentRowsContainer" style="display:flex; flex-direction:column; gap:8px;"></div>
+                            <div id="mixedChangeStatus" style="padding-top:10px; border-top:1px solid #eee; text-align:right; font-weight:700; font-size:0.9rem;"></div>
+                        </div>
+                        <div id="checkoutSingleInputView" style="display: contents;">
                         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; flex: 1;">
                             <button class="btn-numpad secondary-btn" onclick="pressCheckoutKey('7')">7</button>
                             <button class="btn-numpad secondary-btn" onclick="pressCheckoutKey('8')">8</button>
@@ -2532,6 +2558,7 @@
                             <button class="btn-numpad secondary-btn" onclick="pressCheckoutKey('0')">0</button>
                             <button class="btn-numpad secondary-btn" onclick="pressCheckoutKey('.')">.</button>
                             <button class="btn-numpad secondary-btn" style="color:#e53e3e;" onclick="pressCheckoutKey('C')"><i class="fas fa-backspace"></i></button>
+                        </div>
                         </div>
                         <button class="primary-btn" style="padding: 18px; font-size: 1.2rem; box-shadow: 0 4px 15px rgba(118,75,162,0.4);" onclick="submitCheckoutPayment()"><i class="fas fa-print"></i> PAY & COMPLETE</button>
                     </div>
@@ -2555,6 +2582,27 @@
             <div class="action-buttons" style="margin-top: 15px;">
                 <button class="btn-delete" style="width: 100%; padding: 12px;" onclick="clearAllWaitingListsTakeOrder()">Clear All Lists</button>
             </div>
+        </div>
+    </div>
+
+    <div id="searchOrderByMenuModal" class="modal">
+        <div class="modal-content" style="max-width:550px;">
+            <div class="modal-header"><h3><i class="fas fa-search"></i> Search Table by Menu</h3><button class="modal-close" onclick="closeModal('searchOrderByMenuModal')">&times;</button></div>
+            
+            <div style="display: flex; gap: 10px; margin-bottom: 15px; background: #f1f5f9; padding: 5px; border-radius: 14px;">
+                <button id="btnSearchModeText" onclick="setSearchByMenuMode('search')" style="flex:1; border-radius:10px; border:none; padding:10px; font-weight:600; cursor:pointer;">Search</button>
+                <button id="btnSearchModeClick" onclick="setSearchByMenuMode('click')" style="flex:1; border-radius:10px; border:none; padding:10px; font-weight:600; cursor:pointer;">Click</button>
+            </div>
+
+            <input type="text" id="searchOrderByMenuInput" placeholder="Type menu item (e.g. Nasi)..." style="width:100%;padding:15px;border-radius:40px;border:2px solid #764ba2;margin-bottom:15px; font-size: 1rem;" oninput="refreshSearchOrderByMenuResults()">
+            
+            <div id="searchOrderByMenuVisual" style="display:none; margin-bottom:15px; background: #f8fafc; padding: 15px; border-radius: 20px; border: 1px solid #eee;">
+                <div id="searchMenuCategories" style="display:flex; overflow-x:auto; gap:8px; margin-bottom:12px; padding-bottom:8px; scrollbar-width: none;"></div>
+                <div id="searchMenuItemsGrid" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:8px; max-height:180px; overflow-y:auto; padding:2px;"></div>
+                <div id="selectedSearchTags" style="display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; border-top: 1px dashed #ddd; padding-top: 10px;"></div>
+            </div>
+
+            <div id="searchOrderByMenuResults" style="max-height: 400px; overflow-y: auto; padding: 5px;"></div>
         </div>
     </div>
 
@@ -2610,6 +2658,10 @@
         let currentSelectedModifiersTakeOrder = [];
         let notesEditIndexTakeOrder = null;
         let selectedOrderIdToMoveTakeOrder = null;
+        let allActiveOrdersWithItems = [];
+        let searchByMenuMode = 'search';
+        let selectedSearchMenuItems = [];
+        let isCounterSummaryFlow = false;
         let checkoutTotalTakeOrder = 0;
         let checkoutReceivedInput = "0";
         let checkoutPayMethod = "cash";
@@ -2618,6 +2670,7 @@
         let selectedOrderIdsForCheckout = [];
         let totalOrdersInTableTakeOrder = 0;
         let holdTimerTakeOrder = null;
+        let holdTriggeredTakeOrder = false;
         let selectedCheckoutItems = []; // Array of {orderId, itemId, price}
 
         // ========== LICENSE CHECK ==========
@@ -3970,9 +4023,12 @@
                     let orderNumber = 'N/A';
                     if (trans.orderId) {
                         try {
-                            const orderSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', trans.orderId));
+                            // Split by comma in case of multiple order IDs and take the first one for display
+                            const firstOrderId = trans.orderId.split(',')[0].trim();
+                            const orderSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', firstOrderId));
                             if (orderSnap.exists()) {
-                                orderNumber = orderSnap.data().orderNumber || trans.orderId.slice(0,8);
+                                orderNumber = orderSnap.data().orderNumber || firstOrderId.slice(0,8);
+                                if (trans.orderId.includes(',')) orderNumber += '...';
                             }
                         } catch (e) {}
                     }
@@ -4144,14 +4200,41 @@
 
         function renderTableGridTakeOrder() {
             const grid = document.getElementById('tableGridTakeOrder');
+            const counterContainer = document.getElementById('counterTableContainerTakeOrder');
+            
+            // Render persistent Counter table at the top
+            const counterTable = tablesListTakeOrder.find(t => t.id.toLowerCase() === 'counter');
+            if (counterTable) {
+                const isOccupied = counterTable.status === 'occupied';
+                counterContainer.innerHTML = `
+                    <div class="table-card-takeorder ${isOccupied ? 'occupied' : ''}" 
+                         style="width: 100%; flex-direction: row; justify-content: space-between; padding: 15px 30px; margin-bottom: 0;"
+                         onclick="selectTableTakeOrder('${counterTable.id}', 'Counter')">
+                        <div style="display: flex; align-items: center; gap: 15px;">
+                            <i class="fas fa-desktop" style="font-size: 1.5rem;"></i>
+                            <div class="table-number-takeorder" style="margin-bottom: 0; font-size: 1.4rem;">COUNTER</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div class="capacity-takeorder" style="margin-top: 0;"><i class="fas fa-user"></i> Walk-in</div>
+                            <div style="font-size:0.75rem; text-transform: uppercase; font-weight: 800; letter-spacing: 0.5px;">${counterTable.status || 'available'}</div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                counterContainer.innerHTML = `<div style="background: rgba(255,255,255,0.1); border: 2px dashed rgba(255,255,255,0.2); border-radius: 20px; padding: 15px; text-align: center; color: white; font-size: 0.8rem;">Note: Add a table with ID "counter" in Management to enable the Counter view.</div>`;
+            }
+
             let filteredTables = activeLocationTakeOrder === 'All' 
                 ? tablesListTakeOrder 
                 : tablesListTakeOrder.filter(t => t.location === activeLocationTakeOrder);
             
+            // Filter out 'counter' from the main grid since it has its own persistent spot
+            filteredTables = filteredTables.filter(t => t.id.toLowerCase() !== 'counter');
+
             grid.className = `table-grid-takeorder ${viewModeTakeOrder === 'list' ? 'list-view' : ''}`;
             
             if (!filteredTables.length) {
-                grid.innerHTML = '<div style="text-align:center;padding:40px;color:white;">No tables found.</div>';
+                grid.innerHTML = '<div style="text-align:center;padding:40px;color:white;grid-column: span 3;">No other tables found in this location.</div>';
                 return;
             }
             
@@ -4245,6 +4328,7 @@
                              class="order-card-selectable ${isSelected ? 'order-card-selected' : ''}"
                              onmousedown="startOrderHoldTakeOrder('${orderDoc.id}')" onmouseup="clearOrderHoldTakeOrder()" onmouseleave="clearOrderHoldTakeOrder()"
                              ontouchstart="startOrderHoldTakeOrder('${orderDoc.id}')" ontouchend="clearOrderHoldTakeOrder()"
+                             onclick="handleOrderCardClickTakeOrder('${orderDoc.id}')"
                              style="background:white; padding:15px; border-radius:12px; margin-bottom:10px; border-left:4px solid #764ba2; box-shadow:0 2px 5px rgba(0,0,0,0.05);">
                             <div style="display:flex; justify-content:space-between; font-weight:bold; margin-bottom:5px;">
                                 <span>ID: ${order.orderNumber} <span style="background:#e9ecef; color:#666; font-size:10px; padding:2px 6px; border-radius:10px; margin-left:5px; text-transform:uppercase; vertical-align:middle;">${(order.orderType || 'dine-in').replace('-', ' ')}</span></span>
@@ -4261,13 +4345,26 @@
         }
 
         window.startOrderHoldTakeOrder = function(orderId) {
+            holdTriggeredTakeOrder = false;
+            if (selectedOrderIdsForCheckout.length > 0) return;
             holdTimerTakeOrder = setTimeout(() => {
                 toggleOrderSelectionTakeOrder(orderId);
+                holdTriggeredTakeOrder = true;
             }, 1000);
         };
 
         window.clearOrderHoldTakeOrder = function() {
             clearTimeout(holdTimerTakeOrder);
+        };
+
+        window.handleOrderCardClickTakeOrder = function(orderId) {
+            if (holdTriggeredTakeOrder) {
+                holdTriggeredTakeOrder = false;
+                return;
+            }
+            if (selectedOrderIdsForCheckout.length > 0) {
+                toggleOrderSelectionTakeOrder(orderId);
+            }
         };
 
         window.toggleOrderSelectionTakeOrder = function(orderId) {
@@ -4350,7 +4447,8 @@
                         if (item.notes) subHtml += `<div style="font-size:10px; color:#764ba2; margin-left:30px; font-style:italic;">Note: ${item.notes}</div>`;
 
                         orderItemsHtml += `
-                            <div id="chk-item-${itemDoc.id}" class="checkout-item-row checkout-item-selected" 
+                            <div id="chk-item-${itemDoc.id}" class="checkout-item-row checkout-item-selected"
+                                 data-order-id="${orderDoc.id}" data-price="${itemPrice}"
                                  onclick="toggleItemSelectionCheckout('${orderDoc.id}', '${itemDoc.id}', ${itemPrice})">
                                 <div style="display:flex; justify-content:space-between; font-size:0.9rem; align-items:center;">
                                     <span style="font-weight:600; display:flex; align-items:center;">
@@ -4374,7 +4472,8 @@
                 }
                 
                 itemsContainer.innerHTML = html || '<div style="text-align:center;padding:40px;color:#94a3b8;"><i class="fas fa-check-circle" style="font-size:2rem;margin-bottom:10px;display:block;"></i>No unpaid items.</div>';
-                recalculateCheckoutTotals();
+                
+                setCheckoutMode('full');
                 
                 checkoutReceivedInput = "0";
                 updateCheckoutDisplay();
@@ -4401,6 +4500,42 @@
                 if (el) el.classList.add('checkout-item-selected');
                 if (icon) { icon.classList.remove('fa-circle'); icon.classList.add('fa-check-circle'); icon.style.opacity = "1"; }
             }
+            recalculateCheckoutTotals();
+        };
+
+        window.setCheckoutMode = function(mode) {
+            const isFull = mode === 'full';
+            
+            document.getElementById('btnCheckoutFull').classList.toggle('active', isFull);
+            document.getElementById('btnCheckoutSplit').classList.toggle('active', !isFull);
+            
+            selectedCheckoutItems = [];
+            const itemRows = document.querySelectorAll('.checkout-item-row');
+            
+            itemRows.forEach(row => {
+                const itemId = row.id.replace('chk-item-', '');
+                const icon = document.getElementById(`icon-item-${itemId}`);
+                
+                if (isFull) {
+                    const orderId = row.getAttribute('data-order-id');
+                    const price = parseFloat(row.getAttribute('data-price'));
+                    selectedCheckoutItems.push({ orderId, itemId, price });
+                    row.classList.add('checkout-item-selected');
+                    row.style.pointerEvents = 'none'; // Disable clicking/unselecting
+                    if (icon) {
+                        icon.style.display = 'none'; // Hide the check menu icon
+                    }
+                } else {
+                    row.classList.remove('checkout-item-selected');
+                    row.style.pointerEvents = 'auto'; // Enable manual selection
+                    if (icon) {
+                        icon.style.display = 'inline-block';
+                        icon.classList.remove('fa-check-circle');
+                        icon.classList.add('fa-circle');
+                        icon.style.opacity = "0.3";
+                    }
+                }
+            });
             recalculateCheckoutTotals();
         };
 
@@ -4448,21 +4583,112 @@
         };
 
         window.addQuickAmountCheckout = function(val) {
-            let current = parseFloat(checkoutReceivedInput) || 0;
-            checkoutReceivedInput = (current + val).toString();
-            updateCheckoutDisplay();
+            if (checkoutPayMethod === 'mixed') {
+                const rows = document.querySelectorAll('.mixed-payment-row');
+                if (rows.length > 0) {
+                    // Update the input of the most recently added row
+                    const lastRow = rows[rows.length - 1];
+                    const input = lastRow.querySelector('.mixed-amount-input');
+                    if (input) {
+                        let currentVal = parseFloat(input.value) || 0;
+                        input.value = (currentVal + val).toFixed(2);
+                        updateMixedPaymentTotals();
+                    }
+                }
+            } else {
+                let current = parseFloat(checkoutReceivedInput) || 0;
+                checkoutReceivedInput = (current + val).toString();
+                updateCheckoutDisplay();
+            }
         };
 
         window.setCheckoutPayMethod = function(method) {
             checkoutPayMethod = method;
             document.querySelectorAll('#checkoutModalTakeOrder .type-option-takeorder').forEach(btn => btn.classList.remove('selected'));
-            const mapping = { 'cash': 'chkPayCash', 'card': 'chkPayCard', 'ewallet': 'chkPayWallet' };
+            const mapping = { 'cash': 'chkPayCash', 'card': 'chkPayCard', 'ewallet': 'chkPayWallet', 'mixed': 'chkPayMixed' };
             document.getElementById(mapping[method]).classList.add('selected');
+
+            const mixedContainer = document.getElementById('checkoutMixedInputs');
+            const singleView = document.getElementById('checkoutSingleInputView');
+            const receivedBox = document.getElementById('checkoutReceivedBox');
+
+            if (method === 'mixed') {
+                mixedContainer.style.display = 'flex';
+                document.getElementById('mixedPaymentRowsContainer').innerHTML = '';
+                updateMixedPaymentTotals();
+                singleView.style.display = 'none';
+                receivedBox.style.display = 'none';
+            } else {
+                mixedContainer.style.display = 'none';
+                singleView.style.display = 'grid';
+                receivedBox.style.display = 'block';
+                if (method === 'card' || method === 'ewallet') {
+                    checkoutReceivedInput = checkoutTotalTakeOrder.toFixed(2);
+                } else if (method === 'cash') {
+                    checkoutReceivedInput = "0";
+                }
+                updateCheckoutDisplay();
+            }
+        };
+
+        window.addMixedPaymentRow = function() {
+            const container = document.getElementById('mixedPaymentRowsContainer');
+            const type = document.getElementById('mixedTypeSelector').value;
+            const typeLabel = type.charAt(0).toUpperCase() + type.slice(1);
+            
+            const rowId = 'mixed-row-' + Date.now();
+            const rowHtml = `
+                <div id="${rowId}" class="mixed-payment-row" data-type="${type}" style="display:flex; align-items:center; justify-content:space-between; background:#f8fafc; padding:8px; border-radius:8px; border:1px solid #edf2f7;">
+                    <label style="font-size:0.75rem; font-weight:700; color:#475569;">${typeLabel} RM:</label>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <input type="number" class="mixed-amount-input" value="0.00" step="0.01" 
+                               oninput="updateMixedPaymentTotals()" 
+                               style="width:100px; padding:5px; border-radius:5px; border:1px solid #cbd5e0; text-align:right; font-weight:600;">
+                        <button onclick="this.closest('.mixed-payment-row').remove(); updateMixedPaymentTotals();" 
+                                style="background:none; border:none; color:#e53e3e; cursor:pointer; padding:5px;"><i class="fas fa-times-circle"></i></button>
+                    </div>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', rowHtml);
+            updateMixedPaymentTotals();
+        };
+
+        window.updateMixedPaymentTotals = function() {
+            let totalReceived = 0;
+            const inputs = document.querySelectorAll('.mixed-amount-input');
+            inputs.forEach(input => {
+                totalReceived += parseFloat(input.value) || 0;
+            });
+
+            const statusEl = document.getElementById('mixedChangeStatus');
+            const difference = totalReceived - checkoutTotalTakeOrder;
+
+            if (difference < 0) {
+                statusEl.innerHTML = `Remaining: <span style="color:#e53e3e;">RM ${Math.abs(difference).toFixed(2)}</span>`;
+            } else {
+                statusEl.innerHTML = `Change: <span style="color:#38a169;">RM ${difference.toFixed(2)}</span>`;
+            }
         };
 
         window.submitCheckoutPayment = async function() {
-            const received = parseFloat(checkoutReceivedInput);
-            if (received < checkoutTotalTakeOrder) { alert('Insufficient amount received'); return; }
+            let totalReceived = 0;
+            let paymentRecords = [];
+
+            if (checkoutPayMethod === 'mixed') {
+                const rows = document.querySelectorAll('.mixed-payment-row');
+                rows.forEach(row => {
+                    const amount = parseFloat(row.querySelector('.mixed-amount-input').value) || 0;
+                    if (amount > 0) {
+                        totalReceived += amount;
+                        paymentRecords.push({ amount: amount, method: row.dataset.type });
+                    }
+                });
+            } else {
+                totalReceived = parseFloat(checkoutReceivedInput);
+                paymentRecords.push({ amount: checkoutTotalTakeOrder, method: checkoutPayMethod });
+            }
+
+            if (totalReceived < (checkoutTotalTakeOrder - 0.01)) { alert('Insufficient amount received'); return; }
             if (selectedCheckoutItems.length === 0) { alert('Please select at least one item to pay'); return; }
 
             // Mark only selected items as paid in the database
@@ -4470,16 +4696,22 @@
                 await updateDoc(doc(db, 'licenses', currentClientId, 'orders', item.orderId, 'items', item.itemId), { isPaid: true });
             }
 
-            // Record transaction for the specific amount paid
-            await addDoc(collection(db, 'licenses', currentClientId, 'transactions'), {
-                tableId: selectedTableIdTakeOrder,
-                amount: checkoutTotalTakeOrder.toFixed(2),
-                paymentMethod: checkoutPayMethod,
-                status: 'completed',
-                type: 'payment',
-                isSplitBill: true,
-                createdAt: Timestamp.now()
-            });
+            // Determine if Split or Full mode was active
+            const isSplitMode = document.getElementById('btnCheckoutSplit').classList.contains('active');
+            const involvedOrderIds = [...new Set(selectedCheckoutItems.map(i => i.orderId))];
+
+            // Record transactions for each payment method used
+            for (const record of paymentRecords) {
+                await addDoc(collection(db, 'licenses', currentClientId, 'transactions'), {
+                    tableId: selectedTableIdTakeOrder,
+                    amount: record.amount.toFixed(2),
+                    paymentMethod: record.method,
+                    status: 'completed',
+                    type: isSplitMode ? "Split payment" : "Full payment",
+                    orderId: involvedOrderIds.join(', '),
+                    createdAt: Timestamp.now()
+                });
+            }
 
             // Check each order to see if it is now fully paid
             for (const orderDoc of checkoutOrdersToProcess) {
@@ -4500,7 +4732,7 @@
                 await updateDoc(doc(db, 'licenses', currentClientId, 'tables', selectedTableIdTakeOrder), { status: 'available' });
             }
 
-            alert(`Payment success! Change: RM ${(received - checkoutTotalTakeOrder).toFixed(2)}`);
+            alert(`Payment success! Change: RM ${(totalReceived - checkoutTotalTakeOrder).toFixed(2)}`);
             closeModal('checkoutModalTakeOrder');
             selectedOrderIdsForCheckout = [];
             await loadTablesTakeOrder();
@@ -4574,7 +4806,10 @@
             }
 
             alert(`Order(s) successfully ${isMerging ? 'merged' : 'moved'}.`);
-            location.reload(); // Simplest way to refresh all grid states
+            closeModal('changeTableModalTakeOrder');
+            closeModal('tableDetailsModalTakeOrder');
+            selectedOrderIdsForCheckout = []; // Clear selection after move/merge
+            await loadTablesTakeOrder(); // Refresh the main table grid
         };
 
         window.addItemsToOccupiedTable = function() {
@@ -4584,8 +4819,6 @@
             document.getElementById('menuSectionTakeOrder').style.display = 'block';
             document.getElementById('bottomActionBarTakeOrder').style.display = 'flex';
             document.getElementById('selectedTableDisplayTakeOrder').innerText = `Table ${selectedTableNumberTakeOrder}`;
-            document.querySelectorAll('.type-option-takeorder').forEach(opt => opt.classList.remove('selected'));
-            document.querySelector('.type-option-takeorder[data-type="dine-in"]').classList.add('selected');
         };
         
 
@@ -4610,6 +4843,19 @@
             document.querySelectorAll(`.type-option-takeorder[data-type="${type}"]`).forEach(el => el.classList.add('selected'));
             const deliveryFields = document.getElementById('deliveryFieldsTakeOrder');
             if (deliveryFields) deliveryFields.style.display = type === 'delivery' ? 'block' : 'none';
+
+            const label = document.getElementById('summaryTableLabelTakeOrder');
+            const select = document.getElementById('summaryTableSelectTakeOrder');
+            if (label && select) {
+                const showDropdown = isCounterSummaryFlow && (type === 'dine-in' || type === 'takeaway');
+                label.style.display = showDropdown ? 'none' : 'inline';
+                select.style.display = showDropdown ? 'inline-block' : 'none';
+                if (type === 'delivery') {
+                    label.innerText = isCounterSummaryFlow ? 'Counter' : 'N/A';
+                } else {
+                    label.innerText = selectedTableNumberTakeOrder || 'N/A';
+                }
+            }
         };
 
         window.setViewModeTakeOrder = function(mode) {
@@ -5008,6 +5254,11 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
                 }
             });
 
+            isCounterSummaryFlow = selectedTableIdTakeOrder && selectedTableIdTakeOrder.toLowerCase() === 'counter';
+            const tableOptionsHtml = tablesListTakeOrder.map(t => 
+                `<option value="${t.id}" ${t.id === selectedTableIdTakeOrder ? 'selected' : ''}>${t.id.toLowerCase() === 'counter' ? 'Counter' : t.id.toUpperCase()}</option>`
+            ).join('');
+
             let itemsHtml = '';
             cartTakeOrder.forEach(item => {
                 let details = '';
@@ -5034,19 +5285,29 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
 
             const summaryHtml = `
                 <div style="background:#f8f9fa; padding:15px; border-radius:12px; margin-bottom:15px;">
-                    <div style="margin-bottom:12px;"><strong>Table:</strong> ${(selectedOrderTypeTakeOrder === 'dine-in' || selectedOrderTypeTakeOrder === 'takeaway') ? (selectedTableNumberTakeOrder || 'N/A') : 'N/A'}</div>
+                    <div style="margin-bottom:12px;">
+                        <strong>Table:</strong> 
+                        <span id="summaryTableLabelTakeOrder">${(selectedOrderTypeTakeOrder === 'dine-in' || selectedOrderTypeTakeOrder === 'takeaway') ? (selectedTableNumberTakeOrder || 'N/A') : 'N/A'}</span>
+                        <select id="summaryTableSelectTakeOrder" onchange="updateSummaryTableSelection(this.value)" style="display:none; margin-left: 5px; padding: 2px 5px; border-radius: 8px; border: 1px solid #ccc; font-size: 0.85rem;">
+                            ${tableOptionsHtml}
+                        </select>
+                    </div>
                     <div class="form-group">
                         <label><strong>Order Type:</strong></label>
                         <div class="order-type-switch-takeorder" style="background:#e9ecef; margin-top:5px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);">
+                            <!-- Dine In and Takeaway are always available -->
                             <div class="type-option-takeorder ${selectedOrderTypeTakeOrder === 'dine-in' ? 'selected' : ''}" data-type="dine-in" onclick="selectOrderTypeTakeOrder('dine-in')">
                                 <i class="fas fa-utensils"></i> Dine In
                             </div>
                             <div class="type-option-takeorder ${selectedOrderTypeTakeOrder === 'takeaway' ? 'selected' : ''}" data-type="takeaway" onclick="selectOrderTypeTakeOrder('takeaway')">
                                 <i class="fas fa-bag-shopping"></i> Takeaway
                             </div>
-                            <div class="type-option-takeorder ${selectedOrderTypeTakeOrder === 'delivery' ? 'selected' : ''}" data-type="delivery" onclick="selectOrderTypeTakeOrder('delivery')">
-                                <i class="fas fa-motorcycle"></i> Delivery
-                            </div>
+                            <!-- Delivery is ONLY available if starting from the Counter -->
+                            ${isCounterSummaryFlow ? `
+                                <div class="type-option-takeorder ${selectedOrderTypeTakeOrder === 'delivery' ? 'selected' : ''}" data-type="delivery" onclick="selectOrderTypeTakeOrder('delivery')">
+                                    <i class="fas fa-motorcycle"></i> Delivery
+                                </div>
+                            ` : ''}
                         </div>
                     </div>
                     <div id="deliveryFieldsTakeOrder" class="delivery-fields-takeorder" style="display:${selectedOrderTypeTakeOrder === 'delivery' ? 'block' : 'none'}; background:white; padding:15px; margin-top:10px; border-radius:12px; border: 1px solid #e0e0e0;">
@@ -5080,6 +5341,8 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
 
             document.getElementById('orderSummaryBodyTakeOrder').innerHTML = summaryHtml;
             document.getElementById('orderSummaryModalTakeOrder').style.display = 'flex';
+
+            if (isCounterSummaryFlow) selectOrderTypeTakeOrder(selectedOrderTypeTakeOrder);
         };
 
         window.confirmAndSubmitOrderTakeOrder = async function() {
@@ -5100,7 +5363,7 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
                 staffId: currentStaff.id,
                 staffName: currentStaff.name,
                 status: 'active',
-                tableId: (selectedOrderTypeTakeOrder === 'dine-in' || selectedOrderTypeTakeOrder === 'takeaway') ? selectedTableIdTakeOrder : null,
+                tableId: (selectedOrderTypeTakeOrder === 'dine-in' || selectedOrderTypeTakeOrder === 'takeaway' || (selectedOrderTypeTakeOrder === 'delivery' && isCounterSummaryFlow)) ? selectedTableIdTakeOrder : null,
                 orderType: selectedOrderTypeTakeOrder,
                 customerName: selectedOrderTypeTakeOrder === 'delivery' ? (document.getElementById('customerNameTakeOrder')?.value || null) : null,
                 customerPhone: selectedOrderTypeTakeOrder === 'delivery' ? (document.getElementById('customerPhoneTakeOrder')?.value || null) : null,
@@ -5144,7 +5407,7 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
                 }
                 
                 closeModal('orderSummaryModalTakeOrder');
-                if (selectedTableIdTakeOrder && (selectedOrderTypeTakeOrder === 'dine-in' || selectedOrderTypeTakeOrder === 'takeaway')) {
+                if (selectedTableIdTakeOrder && (selectedOrderTypeTakeOrder === 'dine-in' || selectedOrderTypeTakeOrder === 'takeaway' || (selectedOrderTypeTakeOrder === 'delivery' && isCounterSummaryFlow))) {
                     await updateDoc(doc(db, 'licenses', currentClientId, 'tables', selectedTableIdTakeOrder), { status: 'occupied' });
                 }
                 
@@ -5163,6 +5426,11 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
                 submitBtn.disabled = false;
                 submitBtn.innerText = originalText;
             }
+        };
+
+        window.updateSummaryTableSelection = function(val) {
+            selectedTableIdTakeOrder = val;
+            selectedTableNumberTakeOrder = val.toLowerCase() === 'counter' ? 'Counter' : val.toUpperCase();
         };
 
 // Add this after the openSearchModalTakeOrder function
@@ -5337,6 +5605,179 @@ window.openSearchModalTakeOrder = function() {
             openWaitingListModalTakeOrder();
         };
 
+        window.openSearchOrderByMenuModal = async function() {
+            document.getElementById('searchOrderByMenuModal').style.display = 'flex';
+            document.getElementById('searchOrderByMenuInput').value = '';
+            selectedSearchMenuItems = [];
+            setSearchByMenuMode('search');
+            const resultsContainer = document.getElementById('searchOrderByMenuResults');
+            resultsContainer.innerHTML = '<div class="loading">Pre-loading active orders data...</div>';
+            
+            try {
+                const q = query(collection(db, 'licenses', currentClientId, 'orders'), where('status', '==', 'active'));
+                const snap = await getDocs(q);
+                
+                allActiveOrdersWithItems = [];
+                for (const orderDoc of snap.docs) {
+                    const o = orderDoc.data();
+                    const itemsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderDoc.id, 'items'));
+                    
+                    let items = [];
+                    for (const itemDoc of itemsSnap.docs) {
+                        const itemData = itemDoc.data();
+                        const vSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderDoc.id, 'items', itemDoc.id, 'selectedVariants'));
+                        const mSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderDoc.id, 'items', itemDoc.id, 'selectedModifiers'));
+                        
+                        let selections = [];
+                        vSnap.forEach(v => selections.push(v.data().optionName));
+                        mSnap.forEach(m => selections.push(m.data().optionName));
+
+                        items.push({
+                            name: itemData.name,
+                            qty: itemData.qty,
+                            notes: itemData.notes,
+                            selections: selections
+                        });
+                    }
+                    allActiveOrdersWithItems.push({
+                        id: orderDoc.id,
+                        orderNumber: o.orderNumber,
+                        tableId: o.tableId,
+                        orderType: o.orderType || 'dine-in',
+                        items: items
+                    });
+                }
+                
+                resultsContainer.innerHTML = '<div style="text-align:center;padding:20px;color:#666;">Data ready! Use search or click items above.</div>';
+                document.getElementById('searchOrderByMenuInput').focus();
+            } catch (e) {
+                resultsContainer.innerHTML = '<div style="color:red;padding:20px;">Error loading orders: ' + e.message + '</div>';
+            }
+        };
+
+        window.setSearchByMenuMode = function(mode) {
+            searchByMenuMode = mode;
+            const btnSearch = document.getElementById('btnSearchModeText');
+            const btnClick = document.getElementById('btnSearchModeClick');
+            const input = document.getElementById('searchOrderByMenuInput');
+            const visual = document.getElementById('searchOrderByMenuVisual');
+            
+            if (mode === 'search') {
+                btnSearch.style.background = '#764ba2'; btnSearch.style.color = 'white';
+                btnClick.style.background = 'transparent'; btnClick.style.color = '#475569';
+                input.style.display = 'block';
+                visual.style.display = 'none';
+            } else {
+                btnClick.style.background = '#764ba2'; btnClick.style.color = 'white';
+                btnSearch.style.background = 'transparent'; btnSearch.style.color = '#475569';
+                input.style.display = 'none';
+                visual.style.display = 'block';
+                renderSearchMenuCategories();
+                renderSelectedSearchTags();
+            }
+            refreshSearchOrderByMenuResults();
+        };
+
+        window.renderSearchMenuCategories = function() {
+            const container = document.getElementById('searchMenuCategories');
+            if (!container) return;
+            container.innerHTML = categoriesTakeOrder.map(catId => {
+                const displayName = catId === 'All' ? 'All' : (categoryMapTakeOrder[catId] || catId);
+                return `<button onclick="renderSearchMenuItems('${catId}')" style="padding: 6px 12px; border-radius: 20px; border: 1px solid #ddd; background: white; font-size: 0.7rem; font-weight: 600; cursor: pointer; color: #555; white-space: nowrap;">${displayName}</button>`;
+            }).join('');
+            renderSearchMenuItems('All');
+        };
+
+        window.renderSearchMenuItems = function(catId) {
+            const container = document.getElementById('searchMenuItemsGrid');
+            if (!container) return;
+            const filtered = catId === 'All' ? menuItemsTakeOrder : menuItemsTakeOrder.filter(i => i.categoryId === catId);
+            container.innerHTML = filtered.map(item => `
+                <div onclick="toggleSearchMenuItem('${item.name}')" style="background:white; padding:8px; border-radius:10px; font-size:0.7rem; text-align:center; cursor:pointer; border:1px solid #edf2f7; box-shadow: 0 1px 3px rgba(0,0,0,0.05); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:500;" title="${item.name}">
+                    ${item.name}
+                </div>
+            `).join('');
+        };
+
+        window.toggleSearchMenuItem = function(itemName) {
+            const idx = selectedSearchMenuItems.indexOf(itemName);
+            if (idx > -1) {
+                selectedSearchMenuItems.splice(idx, 1);
+            } else {
+                selectedSearchMenuItems.push(itemName);
+            }
+            renderSelectedSearchTags();
+            refreshSearchOrderByMenuResults();
+        };
+
+        window.renderSelectedSearchTags = function() {
+            const container = document.getElementById('selectedSearchTags');
+            if (!container) return;
+            container.innerHTML = selectedSearchMenuItems.map(name => `
+                <span style="background:#f0e6ff; color:#764ba2; padding:4px 10px; border-radius:20px; font-size:0.65rem; font-weight:700; border:1px solid #764ba2; display:flex; align-items:center; gap:5px;">
+                    ${name} <i class="fas fa-times" onclick="toggleSearchMenuItem('${name}')" style="cursor:pointer;"></i>
+                </span>
+            `).join('');
+        };
+
+        window.refreshSearchOrderByMenuResults = function() {
+            const resultsContainer = document.getElementById('searchOrderByMenuResults');
+            let filtered = [];
+            
+            if (searchByMenuMode === 'search') {
+                const term = document.getElementById('searchOrderByMenuInput').value.trim().toLowerCase();
+                if (!term || term.length < 2) {
+                    resultsContainer.innerHTML = '<div style="text-align:center;padding:20px;color:#666;">Type at least 2 characters...</div>';
+                    return;
+                }
+                filtered = allActiveOrdersWithItems.filter(order => 
+                    order.items.some(item => item.name.toLowerCase().includes(term))
+                );
+            } else {
+                if (selectedSearchMenuItems.length === 0) {
+                    resultsContainer.innerHTML = '<div style="text-align:center;padding:20px;color:#666;">Select menu items above to see which tables ordered them.</div>';
+                    return;
+                }
+                filtered = allActiveOrdersWithItems.filter(order => 
+                    selectedSearchMenuItems.every(selectedName => 
+                        order.items.some(it => it.name === selectedName)
+                    )
+                );
+            }
+
+            if (filtered.length === 0) {
+                resultsContainer.innerHTML = `<div style="text-align:center;padding:20px;color:#666;">No active orders found matching criteria.</div>`;
+                return;
+            }
+
+            resultsContainer.innerHTML = filtered.map(order => {
+                const tableNum = order.tableId ? order.tableId.toUpperCase() : 'N/A';
+                const itemsHtml = order.items.map(it => `
+                    <div style="margin-bottom:8px; font-size: 0.85rem; border-bottom: 1px dashed #eee; padding-bottom: 5px;">
+                        <div><b>${it.name} x ${it.qty}</b></div>
+                        ${it.selections.length ? `<div style="font-size:0.75rem; color:#666; margin-left:10px;">• ${it.selections.join(', ')}</div>` : ''}
+                        ${it.notes ? `<div style="font-size:0.75rem; color:#764ba2; margin-left:10px; font-style:italic;">Request: ${it.notes}</div>` : ''}
+                    </div>
+                `).join('');
+
+                return `
+                    <div class="order-detail-card" style="cursor:pointer; border-left: 6px solid #764ba2;" onclick="selectOrderFromSearch('${order.id}', '${order.tableId}', '${tableNum}')">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:10px; align-items:center;">
+                            <span style="font-weight:bold; color:#764ba2;">Order: ${order.orderNumber} <span style="background:#e2e8f0; color:#475569; font-size:10px; padding:2px 6px; border-radius:10px; margin-left:5px; text-transform:uppercase; vertical-align:middle;">${order.orderType.replace('-', ' ')}</span></span>
+                            <span style="background:#ff9800; color:white; padding:4px 12px; border-radius:20px; font-size:0.8rem; font-weight:bold;">Table ${tableNum}</span>
+                        </div>
+                        <div style="background:#f8fafc; padding:10px; border-radius:10px;">${itemsHtml}</div>
+                        <div style="text-align:center; margin-top:10px; font-size:0.75rem; color:#999; font-weight:600;">CLICK TO SELECT TABLE</div>
+                    </div>
+                `;
+            }).join('');
+        };
+
+        window.selectOrderFromSearch = function(orderId, tableId, tableNumber) {
+            closeModal('searchOrderByMenuModal');
+            showTableDetailsTakeOrder(tableId, tableNumber);
+        };
+
         
         
        
@@ -5413,7 +5854,7 @@ window.openSearchModalTakeOrder = function() {
                                 </div>
                                 <div style="font-weight:800; margin-bottom:12px; font-size: 1.1rem; background: #764ba2; padding: 6px 14px; border-radius: 12px; display: inline-block; color: #fff; box-shadow: 0 2px 4px rgba(118,75,162,0.2);"># ${o.orderNumber}</div>
                                 <div style="font-size:0.9rem; color:#475569; font-weight: 600; margin-bottom:12px;">
-                                    <i class="fas fa-chair" style="color: #764ba2;"></i> Table: ${o.orderType === 'delivery' ? 'Delivery' : (o.tableId?.toUpperCase() || 'Takeaway')}
+                                    <i class="fas fa-chair" style="color: #764ba2;"></i> Table: ${o.tableId ? (o.tableId.toLowerCase() === 'counter' ? 'Counter' : o.tableId.toUpperCase()) : (o.orderType === 'delivery' ? 'Delivery' : 'Takeaway')}
                                 </div>
                                 <div style="margin-bottom:15px;">
                                     ${itemsHtml}
@@ -5587,6 +6028,14 @@ window.openSearchModalTakeOrder = function() {
         window.fetchWaitingListTakeOrder = fetchWaitingListTakeOrder;
         window.removeWaitingListTakeOrder = removeWaitingListTakeOrder;
         window.clearAllWaitingListsTakeOrder = clearAllWaitingListsTakeOrder;
+        window.openSearchOrderByMenuModal = openSearchOrderByMenuModal;
+        window.setSearchByMenuMode = setSearchByMenuMode;
+        window.renderSearchMenuCategories = renderSearchMenuCategories;
+        window.renderSearchMenuItems = renderSearchMenuItems;
+        window.refreshSearchOrderByMenuResults = refreshSearchOrderByMenuResults;
+        window.selectOrderFromSearch = selectOrderFromSearch;
+        window.showTableDetailsTakeOrder = showTableDetailsTakeOrder;
+        window.updateSummaryTableSelection = updateSummaryTableSelection;
     </script>
 </body>
 </html>
