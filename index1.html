@@ -3914,9 +3914,10 @@
             
             for (const itemDoc of itemsSnap.docs) {
                 const item = itemDoc.data();
+                const isCancelled = item.status === 'cancelled';
                 itemCount++;
-                itemsHtml += `<div class="order-item-detail">
-                    <span>${item.name} x ${item.qty}</span>
+                itemsHtml += `<div class="order-item-detail" style="${isCancelled ? 'text-decoration: line-through; opacity: 0.6; color: #e53e3e;' : ''}">
+                    <span>${item.name} x ${item.qty} ${isCancelled ? '(Cancelled)' : ''}</span>
                     <span>RM ${item.total || (parseFloat(item.basePrice) * parseInt(item.qty)).toFixed(2)}</span>
                 </div>`;
                 
@@ -4757,11 +4758,14 @@
                 });
             }
 
-            // Check each order to see if it is now fully paid
+            // Check each order to see if it is now fully paid or remaining items are cancelled
             for (const orderDoc of checkoutOrdersToProcess) {
                 const itemsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderDoc.id, 'items'));
-                const allPaid = itemsSnap.docs.every(d => d.data().isPaid === true);
-                if (allPaid) {
+                const allDone = itemsSnap.docs.every(d => {
+                    const itemData = d.data();
+                    return itemData.isPaid === true || itemData.status === 'cancelled';
+                });
+                if (allDone) {
                     await updateDoc(orderDoc.ref, { status: 'completed', cashierBy: currentStaff.name });
                 }
             }
