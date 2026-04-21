@@ -801,7 +801,7 @@
             transition: all 0.3s ease;
         }
         .active-orders-grid {
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(2, 1fr);
         }
         .active-orders-list {
             grid-template-columns: 1fr;
@@ -809,6 +809,38 @@
         @media (min-width: 768px) {
             .active-orders-grid {
                 grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            }
+        }
+
+        /* Mobile refinements for Order Cards */
+        @media (max-width: 767px) {
+            .order-detail-card {
+                padding: 12px !important;
+                border-radius: 16px !important;
+            }
+            .order-detail-card [style*="font-size: 1.1rem"] {
+                font-size: 0.9rem !important;
+                padding: 4px 10px !important;
+                margin-bottom: 8px !important;
+            }
+            .order-detail-card [style*="font-size:0.9rem"] {
+                font-size: 0.75rem !important;
+                margin-bottom: 8px !important;
+            }
+            .order-detail-card b[style*="font-size: 0.9rem"] {
+                font-size: 0.8rem !important;
+            }
+            .order-detail-card .status-badge {
+                padding: 2px 6px !important;
+                font-size: 10px !important;
+            }
+            .order-detail-card [style*="padding: 10px"] {
+                padding: 6px !important;
+                margin-bottom: 5px !important;
+            }
+            .order-detail-card select {
+                padding: 6px !important;
+                font-size: 0.75rem !important;
             }
         }
 
@@ -1682,7 +1714,7 @@
                             <i class="fas fa-pen"></i> Take Order
                         </div>
                         <div class="menu-item" onclick="showPage('activeOrders')">
-                            <i class="fas fa-clock"></i> Active Orders
+                            <i class="fas fa-clock"></i> Orders
                         </div>
                         <div class="menu-item" onclick="showPage('cashier')">
                             <i class="fas fa-cash-register"></i> Cashier
@@ -2009,9 +2041,9 @@
 
             <!-- Active Orders Page -->
             <div id="activeOrders" class="page">
-                <div class="section-card" style="background: #ff9800;">
+                <div class="section-card" style="background: #cacaca3b;">
                     <div class="section-header">
-                        <span class="section-title" style="color: white;">Active Orders</span>
+                        <span class="section-title" style="color: white;">Order Management System</span>
                         <div class="view-toggle-takeorder">
                           <button class="view-btn-takeorder active" id="activeOrdersGridViewBtn" onclick="setActiveOrdersViewMode('grid')"><i class="fas fa-th"></i> Grid</button>
                           <button class="view-btn-takeorder" id="activeOrdersListViewBtn" onclick="setActiveOrdersViewMode('list')"><i class="fas fa-list"></i> List</button>
@@ -5852,7 +5884,10 @@ window.openSearchModalTakeOrder = function() {
                                     <span style="font-size:0.75rem; color:#666;"><i class="fas fa-clock"></i> ${timestamp}</span>
                                     <span class="status-badge status-${o.status}">${o.status}</span>
                                 </div>
-                                <div style="font-weight:800; margin-bottom:12px; font-size: 1.1rem; background: #764ba2; padding: 6px 14px; border-radius: 12px; display: inline-block; color: #fff; box-shadow: 0 2px 4px rgba(118,75,162,0.2);"># ${o.orderNumber}</div>
+                                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
+                                    <div style="font-weight:800; font-size: 1.1rem; background: #764ba2; padding: 6px 14px; border-radius: 12px; display: inline-block; color: #fff; box-shadow: 0 2px 4px rgba(118,75,162,0.2);"># ${o.orderNumber}</div>
+                                    <span style="background:#e2e8f0; color:#475569; font-size:10px; padding:4px 8px; border-radius:10px; text-transform:uppercase; font-weight:700; vertical-align: middle;">${(o.orderType || 'dine-in').replace('-', ' ')}</span>
+                                </div>
                                 <div style="font-size:0.9rem; color:#475569; font-weight: 600; margin-bottom:12px;">
                                     <i class="fas fa-chair" style="color: #764ba2;"></i> Table: ${o.tableId ? (o.tableId.toLowerCase() === 'counter' ? 'Counter' : o.tableId.toUpperCase()) : (o.orderType === 'delivery' ? 'Delivery' : 'Takeaway')}
                                 </div>
