@@ -2693,6 +2693,9 @@
         let allActiveOrdersWithItems = [];
         let searchByMenuMode = 'search';
         let selectedSearchMenuItems = [];
+        let activeEditItemIdOrdersTab = null;
+        let holdTimerOrdersTab = null;
+        let holdTriggeredOrdersTab = false;
         let isCounterSummaryFlow = false;
         let checkoutTotalTakeOrder = 0;
         let checkoutReceivedInput = "0";
@@ -4309,7 +4312,7 @@
             document.getElementById('tableDetailsModalTakeOrder').style.display = 'flex';
 
             try {
-                const q = query(collection(db, 'licenses', currentClientId, 'orders'), where('tableId', '==', tableId), where('status', 'in', ['active', 'preparing', 'served', 'cancelled']));
+                const q = query(collection(db, 'licenses', currentClientId, 'orders'), where('tableId', '==', tableId), where('status', 'in', ['active', 'preparing', 'served']));
                 const snap = await getDocs(q);
                 
                 totalOrdersInTableTakeOrder = snap.size;
@@ -4323,16 +4326,17 @@
                 let html = '';
                 for (const orderDoc of snap.docs) {
                     const order = orderDoc.data();
-                    const isOrderCancelled = order.status === 'cancelled';
+                    const isOrderCancelledGlobal = order.status === 'cancelled';
                     const itemsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderDoc.id, 'items'));
                     
                     let itemsHtml = '';
                     for (const itemDoc of itemsSnap.docs) {
                         const item = itemDoc.data();
                         const isItemPaid = item.isPaid === true;
+                        const isItemCancelled = item.status === 'cancelled';
                         
                         let itemStyles = '';
-                        if (isOrderCancelled) {
+                        if (isOrderCancelledGlobal || isItemCancelled) {
                             itemStyles = 'color: #e53e3e; text-decoration: line-through;';
                         } else if (isItemPaid) {
                             itemStyles = 'text-decoration: line-through; opacity: 0.6;';
@@ -4353,7 +4357,7 @@
                                 <div style="font-weight:600;">
                                     ${item.name} (x${item.qty}) 
                                     ${isItemPaid ? '<span style="font-size:0.7rem; color:#38a169; text-decoration: none; display: inline-block;">(Paid)</span>' : ''}
-                                    ${isOrderCancelled ? '<span style="font-size:0.7rem; font-weight:bold; text-decoration: none; display: inline-block;">(Cancelled)</span>' : ''}
+                                    ${(isOrderCancelledGlobal || isItemCancelled) ? '<span style="font-size:0.7rem; font-weight:bold; text-decoration: none; display: inline-block;">(Cancelled)</span>' : ''}
                                 </div>
                                 ${selectionHtml}
                                 ${notesHtml}
@@ -4451,7 +4455,7 @@
             const hasSelection = selectedOrderIdsForCheckout.length > 0;
 
             try {
-                const q = query(collection(db, 'licenses', currentClientId, 'orders'), where('tableId', '==', tableId), where('status', 'in', ['active', 'preparing', 'served', 'cancelled']));
+                const q = query(collection(db, 'licenses', currentClientId, 'orders'), where('tableId', '==', tableId), where('status', 'in', ['active', 'preparing', 'served']));
                 const snap = await getDocs(q);
                 
                 if (snap.empty) { alert('No active orders found'); return; }
@@ -4471,7 +4475,7 @@
                     
                     for (const itemDoc of itemsSnap.docs) {
                         const item = itemDoc.data();
-                        if (item.isPaid) continue; // Skip items already paid in previous split sessions
+                        if (item.isPaid || item.status === 'cancelled') continue; // Skip paid or cancelled items
                         
                         hasUnpaidItems = true;
                         const itemPrice = parseFloat(item.total);
@@ -4765,7 +4769,7 @@
             // Check if there are any remaining active orders for this table
             const qActive = query(collection(db, 'licenses', currentClientId, 'orders'), 
                                  where('tableId', '==', selectedTableIdTakeOrder), 
-                                 where('status', 'in', ['active', 'preparing', 'served', 'cancelled']));
+                                 where('status', 'in', ['active', 'preparing', 'served']));
             const activeSnap = await getDocs(qActive);
             
             if (activeSnap.empty) {
@@ -4824,7 +4828,7 @@
             
             if (!confirm(`${actionText} ${targetText} from Table ${selectedTableNumberTakeOrder} to Table ${newTableNum}?`)) return;
             
-            const q = query(collection(db, 'licenses', currentClientId, 'orders'), where('tableId', '==', oldTableId), where('status', 'in', ['active', 'preparing', 'served', 'cancelled']));
+            const q = query(collection(db, 'licenses', currentClientId, 'orders'), where('tableId', '==', oldTableId), where('status', 'in', ['active', 'preparing', 'served']));
             const snap = await getDocs(q);
             
             for (const orderDoc of snap.docs) {
@@ -4839,7 +4843,7 @@
             }
 
             // Free up the old table only if it no longer has active orders
-            const qRemaining = query(collection(db, 'licenses', currentClientId, 'orders'), where('tableId', '==', oldTableId), where('status', 'in', ['active', 'preparing', 'served', 'cancelled']));
+            const qRemaining = query(collection(db, 'licenses', currentClientId, 'orders'), where('tableId', '==', oldTableId), where('status', 'in', ['active', 'preparing', 'served']));
             const snapRemaining = await getDocs(qRemaining);
             if (snapRemaining.empty) {
                 await updateDoc(doc(db, 'licenses', currentClientId, 'tables', oldTableId), { status: 'available' });
@@ -5839,7 +5843,7 @@ window.openSearchModalTakeOrder = function() {
             loadActiveOrders();
         };
 
-        function loadActiveOrders() {
+        window.loadActiveOrders = function() {
             if (unsubActiveOrders) unsubActiveOrders();
 
             const ref = collection(db, 'licenses', currentClientId, 'orders');
@@ -5867,6 +5871,10 @@ window.openSearchModalTakeOrder = function() {
                     let itemsHtml = '';
                     for (const itemDoc of itemsSnap.docs) {
                         const item = itemDoc.data();
+                        const isEditingThis = activeEditItemIdOrdersTab === itemDoc.id;
+                        const itemStatus = item.status || 'pending';
+                        const isItemCancelled = itemStatus === 'cancelled';
+                        
                         const variantsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderId, 'items', itemDoc.id, 'selectedVariants'));
                         const modifiersSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderId, 'items', itemDoc.id, 'selectedModifiers'));
                         
@@ -5875,13 +5883,32 @@ window.openSearchModalTakeOrder = function() {
                         modifiersSnap.forEach(m => selections.push(m.data().optionName));
                         
                         itemsHtml += `
-                            <div style="padding: 10px; background: #f8fafc; border-radius: 12px; margin-bottom: 8px; border: 1px solid #f1f5f9;">
+                            <div id="item-card-orders-${itemDoc.id}" 
+                                 onmousedown="startItemHoldOrdersTab('${orderId}', '${itemDoc.id}')" onmouseup="clearItemHoldOrdersTab()" onmouseleave="clearItemHoldOrdersTab()"
+                                 ontouchstart="startItemHoldOrdersTab('${orderId}', '${itemDoc.id}')" ontouchend="clearItemHoldOrdersTab()"
+                                 onclick="handleItemClickOrdersTab('${orderId}', '${itemDoc.id}')"
+                                 style="padding: 10px; background: ${isItemCancelled ? '#fff5f5' : (isEditingThis ? '#f0e6ff' : '#f8fafc')}; border-radius: 12px; margin-bottom: 8px; border: 1px solid ${isItemCancelled ? '#feb2b2' : (isEditingThis ? '#764ba2' : '#f1f5f9')}; cursor: pointer; user-select: none; opacity: ${isItemCancelled ? '0.8' : '1'};">
                                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
-                                    <b style="color: #1e293b; font-size: 0.9rem;">${item.name}</b>
+                                    <b style="color: ${isItemCancelled ? '#e53e3e' : '#1e293b'}; font-size: 0.9rem; ${isItemCancelled ? 'text-decoration: line-through;' : ''}">
+                                        ${item.name}
+                                        ${isItemCancelled ? `<span style="font-size: 10px; color: #e53e3e; text-transform: uppercase; font-weight: 800;">(${itemStatus})</span>` : ''}
+                                    </b>
                                     <span style="background: #e2e8f0; color: #475569; padding: 2px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: bold;">x${item.qty}</span>
                                 </div>
                                 ${selections.length ? `<div style="color:#64748b; font-size:0.75rem; line-height: 1.4;"><i class="fas fa-check-circle" style="font-size: 0.65rem;"></i> ${selections.join(', ')}</div>` : ''}
                                 ${item.notes ? `<div style="color:#764ba2; font-size:0.75rem; font-style:italic; margin-top: 4px; padding-left: 8px; border-left: 2px solid #764ba2;">"${item.notes}"</div>` : ''}
+                                ${isEditingThis ? `
+                                    <div style="margin-top: 10px; display: flex; gap: 8px;">
+                                        <button onclick="event.stopPropagation(); updateItemStatusOrdersTab('${orderId}', '${itemDoc.id}', '${isItemCancelled ? 'pending' : 'cancelled'}')"
+                                                style="flex: 1; padding: 10px; border-radius: 10px; border: none; background: ${isItemCancelled ? '#38a169' : '#e53e3e'}; color: white; font-weight: 800; font-size: 0.7rem; cursor: pointer;">
+                                            <i class="fas fa-${isItemCancelled ? 'undo' : 'ban'}"></i> ${isItemCancelled ? 'UNCANCEL' : 'CANCEL ITEM'}
+                                        </button>
+                                        <button onclick="event.stopPropagation(); closeItemEditOrdersTab();" 
+                                                style="padding: 10px; width: 40px; border-radius: 10px; border: none; background: #e2e8f0; color: #475569; cursor: pointer;">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                ` : ''}
                             </div>`;
                     }
 
@@ -5925,13 +5952,95 @@ window.openSearchModalTakeOrder = function() {
         }
 
         window.updateOrderStatus = async function(orderId, status) {
-            await updateDoc(doc(db, 'licenses', currentClientId, 'orders', orderId), { status });
-            const orderSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', orderId));
+            const orderRef = doc(db, 'licenses', currentClientId, 'orders', orderId);
+            await updateDoc(orderRef, { status });
+
+            const orderSnap = await getDoc(orderRef);
             const tableId = orderSnap.data()?.tableId;
-            if (tableId && status === 'completed') {
-                await updateDoc(doc(db, 'licenses', currentClientId, 'tables', tableId), { status: 'available' });
+
+            // If order becomes active/preparing/served, ensure table is occupied
+            if (tableId && ['active', 'preparing', 'served'].includes(status)) {
+                await updateDoc(doc(db, 'licenses', currentClientId, 'tables', tableId), { status: 'occupied' });
+            }
+
+            // If status is cancelled, set all items to cancelled too
+            if (status === 'cancelled') {
+                const itemsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderId, 'items'));
+                for (const itDoc of itemsSnap.docs) {
+                    await updateDoc(itDoc.ref, { status: 'cancelled' });
+                }
+            }
+
+            // Sync non-cancelled items to Preparing or Served
+            if (['preparing', 'served'].includes(status)) {
+                const itemsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderId, 'items'));
+                for (const itDoc of itemsSnap.docs) {
+                    if (itDoc.data().status !== 'cancelled') {
+                        await updateDoc(itDoc.ref, { status: status });
+                    }
+                }
+            }
+
+            if (tableId && (status === 'completed' || status === 'cancelled')) {
+                // Check if there are any remaining active/preparing/served orders for this table
+                const qRemaining = query(collection(db, 'licenses', currentClientId, 'orders'), 
+                                     where('tableId', '==', tableId), 
+                                     where('status', 'in', ['active', 'preparing', 'served']));
+                const snapRemaining = await getDocs(qRemaining);
+                if (snapRemaining.empty) {
+                    await updateDoc(doc(db, 'licenses', currentClientId, 'tables', tableId), { status: 'available' });
+                }
             }
             alert('Order status updated!');
+        };
+
+        window.startItemHoldOrdersTab = function(orderId, itemId) {
+            holdTriggeredOrdersTab = false;
+            holdTimerOrdersTab = setTimeout(() => {
+                holdTriggeredOrdersTab = true;
+                activeEditItemIdOrdersTab = itemId;
+                loadActiveOrders();
+            }, 1000);
+        };
+
+        window.clearItemHoldOrdersTab = function() {
+            clearTimeout(holdTimerOrdersTab);
+        };
+
+        window.handleItemClickOrdersTab = function(orderId, itemId) {
+            if (holdTriggeredOrdersTab) {
+                holdTriggeredOrdersTab = false;
+                return;
+            }
+            if (activeEditItemIdOrdersTab) {
+                activeEditItemIdOrdersTab = null;
+                loadActiveOrders();
+            }
+        };
+
+        window.closeItemEditOrdersTab = function() {
+            activeEditItemIdOrdersTab = null;
+            loadActiveOrders();
+        };
+
+        window.updateItemStatusOrdersTab = async function(orderId, itemId, newStatus) {
+            if (newStatus === 'cancelled' && !confirm('Are you sure you want to cancel this item?')) return;
+            await updateDoc(doc(db, 'licenses', currentClientId, 'orders', orderId, 'items', itemId), { status: newStatus });
+
+            // Check if all items in the order are now cancelled
+            if (newStatus === 'cancelled') {
+                const itemsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderId, 'items'));
+                const allItemsCancelled = itemsSnap.docs.every(itemDoc => itemDoc.data().status === 'cancelled');
+                
+                if (allItemsCancelled) {
+                    activeEditItemIdOrdersTab = null;
+                    await updateOrderStatus(orderId, 'cancelled');
+                    return;
+                }
+            }
+
+            activeEditItemIdOrdersTab = null;
+            loadActiveOrders();
         };
 
         // ========== CASHIER ==========
