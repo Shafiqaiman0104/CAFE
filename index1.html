@@ -6043,7 +6043,6 @@ window.openSearchModalTakeOrder = function() {
                     await updateDoc(doc(db, 'licenses', currentClientId, 'tables', tableId), { status: 'available' });
                 }
             }
-            alert('Order status updated!');
         };
 
         window.startItemHoldOrdersTab = function(orderId, itemId) {
@@ -6081,38 +6080,54 @@ window.openSearchModalTakeOrder = function() {
 
             // Recalculate order total whenever an item is cancelled/uncancelled
             const itemsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderId, 'items'));
-            let subtotal = 0;
-            itemsSnap.forEach(d => {
-                if (d.data().status !== 'cancelled') {
-                    subtotal += parseFloat(d.data().total);
-                }
-            });
+            const items = itemsSnap.docs.map(d => d.data());
+            let subtotal = items.reduce((acc, it) => it.status !== 'cancelled' ? acc + parseFloat(it.total) : acc, 0);
+            
             const tax = taxActive ? subtotal * (currentTaxRate / 100) : 0;
             const total = subtotal + tax;
-            await updateDoc(doc(db, 'licenses', currentClientId, 'orders', orderId), { subtotal: subtotal.toFixed(2), tax: tax.toFixed(2), total: total.toFixed(2) });
 
-            // Check if all items in the order are now handled (cancelled or paid)
+            // Determine if the order should change status (e.g. all cancelled or all handled)
+            const orderRef = doc(db, 'licenses', currentClientId, 'orders', orderId);
+            const orderSnap = await getDoc(orderRef);
+            const orderData = orderSnap.data();
+            let targetStatus = orderData.status;
+
             if (newStatus === 'cancelled') {
-                const itemsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderId, 'items'));
-                const items = itemsSnap.docs.map(d => d.data());
-                
                 const allCancelled = items.every(it => it.status === 'cancelled');
-                if (allCancelled) {
-                    activeEditItemIdOrdersTab = null;
-                    await updateOrderStatus(orderId, 'cancelled');
-                    return;
-                }
-
                 const allHandled = items.every(it => it.status === 'cancelled' || it.isPaid === true);
-                if (allHandled) {
-                    activeEditItemIdOrdersTab = null;
-                    await updateOrderStatus(orderId, 'completed');
-                    return;
+                
+                if (allCancelled) {
+                    targetStatus = 'cancelled';
+                } else if (allHandled) {
+                    targetStatus = 'completed';
+                }
+            } else if (newStatus === 'pending') {
+                // If we uncancelled an item, and the order was cancelled/completed, move it back to active
+                if (orderData.status === 'cancelled' || orderData.status === 'completed') {
+                    targetStatus = 'active';
+                }
+            }
+
+            // Perform single update to the Order document to prevent multiple snapshot triggers (flicker)
+            await updateDoc(orderRef, { 
+                subtotal: subtotal.toFixed(2), 
+                tax: tax.toFixed(2), 
+                total: total.toFixed(2),
+                status: targetStatus
+            });
+
+            // Handle table availability if the status changed to finished
+            if (orderData.tableId && (targetStatus === 'completed' || targetStatus === 'cancelled')) {
+                const qRemaining = query(collection(db, 'licenses', currentClientId, 'orders'), 
+                                     where('tableId', '==', orderData.tableId), 
+                                     where('status', 'in', ['active', 'preparing', 'served']));
+                const snapRemaining = await getDocs(qRemaining);
+                if (snapRemaining.empty) {
+                    await updateDoc(doc(db, 'licenses', currentClientId, 'tables', orderData.tableId), { status: 'available' });
                 }
             }
 
             activeEditItemIdOrdersTab = null;
-            loadActiveOrders();
         };
 
         // ========== CASHIER ==========
