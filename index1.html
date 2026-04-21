@@ -4309,7 +4309,7 @@
             document.getElementById('tableDetailsModalTakeOrder').style.display = 'flex';
 
             try {
-                const q = query(collection(db, 'licenses', currentClientId, 'orders'), where('tableId', '==', tableId), where('status', '==', 'active'));
+                const q = query(collection(db, 'licenses', currentClientId, 'orders'), where('tableId', '==', tableId), where('status', 'in', ['active', 'preparing', 'served', 'cancelled']));
                 const snap = await getDocs(q);
                 
                 totalOrdersInTableTakeOrder = snap.size;
@@ -4323,13 +4323,20 @@
                 let html = '';
                 for (const orderDoc of snap.docs) {
                     const order = orderDoc.data();
+                    const isOrderCancelled = order.status === 'cancelled';
                     const itemsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderDoc.id, 'items'));
                     
                     let itemsHtml = '';
                     for (const itemDoc of itemsSnap.docs) {
                         const item = itemDoc.data();
                         const isItemPaid = item.isPaid === true;
-                        const strikeStyle = isItemPaid ? 'text-decoration: line-through; opacity: 0.6;' : '';
+                        
+                        let itemStyles = '';
+                        if (isOrderCancelled) {
+                            itemStyles = 'color: #e53e3e; text-decoration: line-through;';
+                        } else if (isItemPaid) {
+                            itemStyles = 'text-decoration: line-through; opacity: 0.6;';
+                        }
                         
                         const variantsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderDoc.id, 'items', itemDoc.id, 'selectedVariants'));
                         const modifiersSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderDoc.id, 'items', itemDoc.id, 'selectedModifiers'));
@@ -4342,10 +4349,11 @@
                         let notesHtml = item.notes ? `<div style="font-size:11px; color:#764ba2; margin-left:12px; font-style:italic;">Request: ${item.notes}</div>` : '';
                         
                         itemsHtml += `
-                            <div style="margin-bottom:8px; ${strikeStyle}">
+                            <div style="margin-bottom:8px; ${itemStyles}">
                                 <div style="font-weight:600;">
                                     ${item.name} (x${item.qty}) 
                                     ${isItemPaid ? '<span style="font-size:0.7rem; color:#38a169; text-decoration: none; display: inline-block;">(Paid)</span>' : ''}
+                                    ${isOrderCancelled ? '<span style="font-size:0.7rem; font-weight:bold; text-decoration: none; display: inline-block;">(Cancelled)</span>' : ''}
                                 </div>
                                 ${selectionHtml}
                                 ${notesHtml}
@@ -4443,7 +4451,7 @@
             const hasSelection = selectedOrderIdsForCheckout.length > 0;
 
             try {
-                const q = query(collection(db, 'licenses', currentClientId, 'orders'), where('tableId', '==', tableId), where('status', '==', 'active'));
+                const q = query(collection(db, 'licenses', currentClientId, 'orders'), where('tableId', '==', tableId), where('status', 'in', ['active', 'preparing', 'served', 'cancelled']));
                 const snap = await getDocs(q);
                 
                 if (snap.empty) { alert('No active orders found'); return; }
@@ -4757,7 +4765,7 @@
             // Check if there are any remaining active orders for this table
             const qActive = query(collection(db, 'licenses', currentClientId, 'orders'), 
                                  where('tableId', '==', selectedTableIdTakeOrder), 
-                                 where('status', '==', 'active'));
+                                 where('status', 'in', ['active', 'preparing', 'served', 'cancelled']));
             const activeSnap = await getDocs(qActive);
             
             if (activeSnap.empty) {
@@ -4816,7 +4824,7 @@
             
             if (!confirm(`${actionText} ${targetText} from Table ${selectedTableNumberTakeOrder} to Table ${newTableNum}?`)) return;
             
-            const q = query(collection(db, 'licenses', currentClientId, 'orders'), where('tableId', '==', oldTableId), where('status', '==', 'active'));
+            const q = query(collection(db, 'licenses', currentClientId, 'orders'), where('tableId', '==', oldTableId), where('status', 'in', ['active', 'preparing', 'served', 'cancelled']));
             const snap = await getDocs(q);
             
             for (const orderDoc of snap.docs) {
@@ -4831,7 +4839,7 @@
             }
 
             // Free up the old table only if it no longer has active orders
-            const qRemaining = query(collection(db, 'licenses', currentClientId, 'orders'), where('tableId', '==', oldTableId), where('status', '==', 'active'));
+            const qRemaining = query(collection(db, 'licenses', currentClientId, 'orders'), where('tableId', '==', oldTableId), where('status', 'in', ['active', 'preparing', 'served', 'cancelled']));
             const snapRemaining = await getDocs(qRemaining);
             if (snapRemaining.empty) {
                 await updateDoc(doc(db, 'licenses', currentClientId, 'tables', oldTableId), { status: 'available' });
@@ -5837,7 +5845,7 @@ window.openSearchModalTakeOrder = function() {
             const ref = collection(db, 'licenses', currentClientId, 'orders');
             let q;
             if (activeOrdersStatusFilter === 'All') {
-                q = query(ref, where('status', 'in', ['active', 'preparing', 'served']));
+                q = query(ref, where('status', 'in', ['active', 'preparing', 'served', 'cancelled']));
             } else {
                 q = query(ref, where('status', '==', activeOrdersStatusFilter));
             }
@@ -5920,7 +5928,7 @@ window.openSearchModalTakeOrder = function() {
             await updateDoc(doc(db, 'licenses', currentClientId, 'orders', orderId), { status });
             const orderSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', orderId));
             const tableId = orderSnap.data()?.tableId;
-            if (tableId && (status === 'completed' || status === 'cancelled')) {
+            if (tableId && status === 'completed') {
                 await updateDoc(doc(db, 'licenses', currentClientId, 'tables', tableId), { status: 'available' });
             }
             alert('Order status updated!');
