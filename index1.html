@@ -2734,7 +2734,7 @@
             <div style="font-size: 3rem; color: #ff9800; margin-bottom: 20px;"><i class="fas fa-exclamation-circle"></i></div>
             <p id="checkoutStatusWarningText" style="font-size: 1rem; color: #1e293b; line-height: 1.5; margin-bottom: 25px;"></p>
             <div style="display: flex; gap: 10px;">
-                <button class="primary-btn" onclick="alert('Coming soon')">Early Payment</button>
+                <button class="primary-btn" onclick="triggerEarlyPaymentMode()">Early Payment</button>
                 <button class="secondary-btn" onclick="closeModal('checkoutStatusWarningModal')">Cancel</button>
             </div>
         </div>
@@ -2820,6 +2820,7 @@
         let holdTriggeredTakeOrder = false;
         let selectedCheckoutItems = []; // Array of {orderId, itemId, price}
         let activeOrdersSnapshotTakeOrder = [];
+        let isEarlyPaymentMode = false;
         let isVoidModeTakeOrder = false;
 
         // ========== LICENSE CHECK ==========
@@ -4042,6 +4043,7 @@
             for (const item of itemsData) {
                 const isCancelled = item.status === 'cancelled';
                 const isPaid = item.isPaid === true;
+                const isPaidEarly = item.isPaidEarly === true;
                 itemCount += parseInt(item.qty) || 0;
 
                 if (!isCancelled) {
@@ -4053,6 +4055,9 @@
                 if (isCancelled) {
                     itemStyle = 'text-decoration: line-through; opacity: 0.6; color: #e53e3e;';
                     remark = '(Cancelled)';
+                } else if (isPaidEarly) {
+                    itemStyle = 'text-decoration: line-through; color: #004fa6;';
+                    remark = '(Paid Early)';
                 } else if (isPaid) {
                     itemStyle = 'text-decoration: line-through; opacity: 0.8; color: #38a169;';
                     remark = '(Paid)';
@@ -4517,16 +4522,27 @@
                     const order = orderDoc.data();
                     const isOrderCancelledGlobal = order.status === 'cancelled';
                     
+                    // Logic for specific "Completed" button when Served orders have Paid Early items
+                    const hasPaidEarlyItems = itemsData.some(it => it.isPaidEarly === true);
+                    const allItemsHandled = itemsData.every(it => it.isPaidEarly === true || it.isPaid === true || it.status === 'cancelled');
+                    const showQuickCompleteBtn = order.status === 'served' && hasPaidEarlyItems && allItemsHandled;
+
                     let itemsHtml = '';
                     for (const item of itemsData) {
                         const isItemPaid = item.isPaid === true;
+                        const isItemPaidEarly = item.isPaidEarly === true;
                         const isItemCancelled = item.status === 'cancelled';
                         
                         let itemStyles = '';
+                        let paidText = '';
                         if (isOrderCancelledGlobal || isItemCancelled) {
                             itemStyles = 'color: #e53e3e; text-decoration: line-through;';
+                        } else if (isItemPaidEarly) {
+                            itemStyles = 'text-decoration: line-through; color: #004fa6;';
+                            paidText = '<span style="font-size:0.7rem; color:#004fa6; text-decoration: none; display: inline-block;">(Paid Early)</span>';
                         } else if (isItemPaid) {
                             itemStyles = 'text-decoration: line-through; opacity: 0.6;';
+                            paidText = '<span style="font-size:0.7rem; color:#38a169; text-decoration: none; display: inline-block;">(Paid)</span>';
                         }
                         
                         const variantsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderDoc.id, 'items', item.docId, 'selectedVariants'));
@@ -4543,8 +4559,7 @@
                             <div style="margin-bottom:8px; ${itemStyles}">
                                 <div style="font-weight:600;">
                                     ${item.name} (x${item.qty}) 
-                                    ${isItemPaid ? '<span style="font-size:0.7rem; color:#38a169; text-decoration: none; display: inline-block;">(Paid)</span>' : ''}
-                                    ${(isOrderCancelledGlobal || isItemCancelled) ? '<span style="font-size:0.7rem; font-weight:bold; text-decoration: none; display: inline-block;">(Cancelled)</span>' : ''}
+                                    ${paidText}${(isOrderCancelledGlobal || isItemCancelled) ? '<span style="font-size:0.7rem; font-weight:bold; text-decoration: none; display: inline-block;">(Cancelled)</span>' : ''}
                                 </div>
                                 ${selectionHtml}
                                 ${notesHtml}
@@ -4566,6 +4581,12 @@
                                 <span style="color:#764ba2;">RM ${order.total}</span>
                             </div>
                             <div style="font-size:0.85rem; color:#444; border-bottom: 1px dashed #eee; padding-bottom: 10px;">${itemsHtml}</div>
+                            ${showQuickCompleteBtn ? `
+                                <button onclick="event.stopPropagation(); completeOrderFromTableDetails('${orderDoc.id}')" 
+                                        style="width: 100%; padding: 12px; margin-top: 10px; border-radius: 12px; border: none; background: #38a169; color: white; font-weight: 800; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 6px rgba(56, 161, 105, 0.1);">
+                                    <i class="fas fa-check-double"></i> COMPLETED
+                                </button>
+                            ` : ''}
                         </div>
                     `;
                 }
@@ -4658,6 +4679,28 @@
             showPage('activeOrders', true);
         };
 
+        window.completeOrderFromTableDetails = async function(orderId) {
+            if (!confirm('Finalize this order and mark as completed?')) return;
+            
+            const tableId = selectedTableIdTakeOrder;
+            const tableNum = selectedTableNumberTakeOrder;
+            
+            await updateOrderStatus(orderId, 'completed');
+            
+            // Re-check remaining active orders for this table to decide if popup stays open
+            const q = query(collection(db, 'licenses', currentClientId, 'orders'), 
+                          where('tableId', '==', tableId), 
+                          where('status', 'in', ['active', 'preparing', 'served']));
+            const snap = await getDocs(q);
+            
+            if (snap.empty) {
+                closeModal('tableDetailsModalTakeOrder');
+            } else {
+                showTableDetailsTakeOrder(tableId, tableNum);
+            }
+            await loadTablesTakeOrder(); // Smooth background update
+        };
+
         window.openCheckoutFromTable = async function() {
             const tableId = selectedTableIdTakeOrder;
             document.getElementById('checkoutTableNum').innerText = selectedTableNumberTakeOrder;
@@ -4678,6 +4721,13 @@
                 
                 checkoutOrdersToProcess = snap.docs;
 
+                isEarlyPaymentMode = false;
+                const payBtn = document.querySelector('#checkoutModalTakeOrder .primary-btn[onclick*="submitCheckoutPayment"]');
+                if (payBtn) {
+                    payBtn.innerHTML = '<i class="fas fa-print"></i> PAY & COMPLETE';
+                    payBtn.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+                }
+
                 isVoidModeTakeOrder = false;
                 document.getElementById('btnVoidOn').classList.remove('active');
                 document.getElementById('btnVoidOff').classList.add('active');
@@ -4696,7 +4746,7 @@
                     
                     for (const itemDoc of itemsSnap.docs) {
                         const item = itemDoc.data();
-                        if (item.isPaid || item.status === 'cancelled') continue; // Skip paid or cancelled items
+                        if (item.isPaid || item.isPaidEarly || item.status === 'cancelled') continue; // Skip paid or cancelled items
                         
                         hasUnpaidItems = true;
                         const itemPrice = parseFloat(item.total);
@@ -4842,6 +4892,16 @@
             });
         };
 
+        window.triggerEarlyPaymentMode = function() {
+            isEarlyPaymentMode = true;
+            closeModal('checkoutStatusWarningModal');
+            const payBtn = document.querySelector('#checkoutModalTakeOrder .primary-btn[onclick*="submitCheckoutPayment"]');
+            if (payBtn) {
+                payBtn.innerHTML = '<i class="fas fa-print"></i> PAY EARLY';
+                payBtn.style.background = 'linear-gradient(135deg, #d90000 0%, #cb8b23 100%)';
+            }
+        };
+
         window.voidItemFromCheckout = async function(orderId, itemId, price) {
             if (!confirm('Are you sure you want to cancel this item?')) return;
             
@@ -4861,10 +4921,13 @@
                 let targetStatus = orderData.status;
 
                 const allCancelled = items.every(it => it.status === 'cancelled');
-                const allHandled = items.every(it => it.status === 'cancelled' || it.isPaid === true);
+                const allHandled = items.every(it => it.status === 'cancelled' || it.isPaid === true || it.isPaidEarly === true);
                 
                 if (allCancelled) targetStatus = 'cancelled';
-                else if (allHandled) targetStatus = 'completed';
+                else if (allHandled) {
+                    const hasPaidEarly = items.some(it => it.isPaidEarly === true);
+                    if (!hasPaidEarly || orderData.status === 'served') targetStatus = 'completed';
+                }
 
                 await updateDoc(orderRef, { 
                     subtotal: subtotal.toFixed(2), 
@@ -5040,7 +5103,7 @@
                 const orderDoc = checkoutOrdersToProcess.find(d => d.id === orderId);
                 const status = orderDoc ? (orderDoc.data().status || '').toLowerCase() : '';
                 
-                if (status !== 'served' && status !== 'completed') {
+                if (status !== 'served' && status !== 'completed' && !isEarlyPaymentMode) {
                     const displayStatus = status.charAt(0).toUpperCase() + status.slice(1);
                     document.getElementById('checkoutStatusWarningText').innerText = `Order Id status (${displayStatus}) please change the status to Served if you want to proceed, Otherwise if customer want to make an early payment please click early payment below.`;
                     document.getElementById('checkoutStatusWarningModal').style.display = 'flex';
@@ -5050,7 +5113,8 @@
 
             // Mark only selected items as paid in the database
             for (const item of selectedCheckoutItems) {
-                await updateDoc(doc(db, 'licenses', currentClientId, 'orders', item.orderId, 'items', item.itemId), { isPaid: true });
+                const updateData = isEarlyPaymentMode ? { isPaidEarly: true } : { isPaid: true };
+                await updateDoc(doc(db, 'licenses', currentClientId, 'orders', item.orderId, 'items', item.itemId), updateData);
             }
 
             // Determine if Split or Full mode was active
@@ -5076,13 +5140,18 @@
 
             // Check each order to see if it is now fully paid or remaining items are cancelled
             for (const orderDoc of checkoutOrdersToProcess) {
+                const orderData = orderDoc.data();
                 const itemsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderDoc.id, 'items'));
                 const allDone = itemsSnap.docs.every(d => {
                     const itemData = d.data();
-                    return itemData.isPaid === true || itemData.status === 'cancelled';
+                    return itemData.isPaid === true || itemData.isPaidEarly === true || itemData.status === 'cancelled';
                 });
                 if (allDone) {
-                    await updateDoc(orderDoc.ref, { status: 'completed' });
+                    const items = itemsSnap.docs.map(d => d.data());
+                    const hasPaidEarly = items.some(it => it.isPaidEarly === true);
+                    if (!hasPaidEarly || orderData.status === 'served') {
+                        await updateDoc(orderDoc.ref, { status: 'completed' });
+                    }
                 }
             }
 
@@ -6243,12 +6312,18 @@ window.openSearchModalTakeOrder = function() {
                         }
                     }
 
+                    // Logic for specific "Completed" button when Served orders have Paid Early items
+                    const hasPaidEarlyItems = itemsData.some(it => it.isPaidEarly === true);
+                    const allItemsHandled = itemsData.every(it => it.isPaidEarly === true || it.isPaid === true || it.status === 'cancelled');
+                    const showQuickCompleteBtn = o.status === 'served' && hasPaidEarlyItems && allItemsHandled;
+
                     let itemsHtml = '';
                     for (const item of itemsData) {
                         const isEditingThis = activeEditItemIdOrdersTab === item.docId;
                         const itemStatus = item.status || 'pending';
                         const isItemCancelled = itemStatus === 'cancelled';
                         const isItemPaid = item.isPaid === true;
+                        const isItemPaidEarly = item.isPaidEarly === true;
                         
                         const variantsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderId, 'items', item.docId, 'selectedVariants'));
                         const modifiersSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderId, 'items', item.docId, 'selectedModifiers'));
@@ -6259,17 +6334,18 @@ window.openSearchModalTakeOrder = function() {
                         
                         itemsHtml += `
                             <div id="item-card-orders-${item.docId}" 
-                                 ${isItemPaid ? '' : `
+                                 ${(isItemPaid || isItemPaidEarly) ? '' : `
                                  onmousedown="startItemHoldOrdersTab('${orderId}', '${item.docId}')" onmouseup="clearItemHoldOrdersTab()" onmouseleave="clearItemHoldOrdersTab()"
                                  ontouchstart="startItemHoldOrdersTab('${orderId}', '${item.docId}')" ontouchend="clearItemHoldOrdersTab()"
                                  onclick="handleItemClickOrdersTab('${orderId}', '${item.docId}')"
                                  `}
-                                 style="padding: 10px; background: ${isItemCancelled ? '#fff5f5' : (isItemPaid ? '#f0fff4' : (isEditingThis ? '#f0e6ff' : '#f8fafc'))}; border-radius: 12px; margin-bottom: 8px; border: 1px solid ${isItemCancelled ? '#feb2b2' : (isItemPaid ? '#38a169' : (isEditingThis ? '#764ba2' : '#f1f5f9'))}; cursor: ${isItemPaid ? 'default' : 'pointer'}; user-select: none; opacity: ${(isItemCancelled || isItemPaid) ? '0.8' : '1'};">
+                                 style="padding: 10px; background: ${isItemCancelled ? '#fff5f5' : (isItemPaid ? '#f0fff4' : (isItemPaidEarly ? '#e0f2fe' : (isEditingThis ? '#f0e6ff' : '#f8fafc')))}; border-radius: 12px; margin-bottom: 8px; border: 1px solid ${isItemCancelled ? '#feb2b2' : (isItemPaid ? '#38a169' : (isItemPaidEarly ? '#004fa6' : (isEditingThis ? '#764ba2' : '#f1f5f9')))}; cursor: ${(isItemPaid || isItemPaidEarly) ? 'default' : 'pointer'}; user-select: none; opacity: ${(isItemCancelled || isItemPaid || isItemPaidEarly) ? '0.8' : '1'};">
                                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
-                                    <b style="color: ${isItemCancelled ? '#e53e3e' : (isItemPaid ? '#38a169' : '#1e293b')}; font-size: 0.9rem; ${(isItemCancelled || isItemPaid) ? 'text-decoration: line-through;' : ''}">
+                                    <b style="color: ${isItemCancelled ? '#e53e3e' : (isItemPaid ? '#38a169' : (isItemPaidEarly ? '#004fa6' : '#1e293b'))}; font-size: 0.9rem; ${(isItemCancelled || isItemPaid || isItemPaidEarly) ? 'text-decoration: line-through;' : ''}">
                                         ${item.name}
                                         ${isItemCancelled ? `<span style="font-size: 10px; color: #e53e3e; text-transform: uppercase; font-weight: 800;">(${itemStatus})</span>` : ''}
                                         ${isItemPaid ? `<span style="font-size: 10px; color: #38a169; text-transform: uppercase; font-weight: 800;">(Paid)</span>` : ''}
+                                        ${isItemPaidEarly ? `<span style="font-size: 10px; color: #004fa6; text-transform: uppercase; font-weight: 800;">(Paid Early)</span>` : ''}
                                     </b>
                                     <span style="background: #e2e8f0; color: #475569; padding: 2px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: bold;">x${item.qty}</span>
                                 </div>
@@ -6313,6 +6389,12 @@ window.openSearchModalTakeOrder = function() {
                                     <span style="color: #64748b; font-size: 0.85rem; font-weight: 600;">Total</span>
                                     <span style="font-weight:800; color:#764ba2; font-size: 1.1rem;">RM ${o.total}</span>
                                 </div>
+                                ${showQuickCompleteBtn ? `
+                                    <button onclick="updateOrderStatus('${orderId}', 'completed')" 
+                                            style="width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 12px; border: none; background: #38a169; color: white; font-weight: 800; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 6px rgba(56, 161, 105, 0.1);">
+                                        <i class="fas fa-check-double"></i> COMPLETED
+                                    </button>
+                                ` : ''}
                                 <div class="action-buttons" style="gap:5px;">
                                     <select onchange="updateOrderStatus('${orderId}', this.value)" style="width:100%; padding:8px; border-radius:8px; border:1px solid #ddd; font-size:0.8rem; background:#f8fafc;">
                                         <option value="" disabled selected>Change Status...</option>
@@ -6362,7 +6444,7 @@ window.openSearchModalTakeOrder = function() {
             const orderRef = doc(db, 'licenses', currentClientId, 'orders', orderId);
             const itemsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderId, 'items'));
             const itemsDocs = itemsSnap.docs;
-            const hasPaidItems = itemsDocs.some(d => d.data().isPaid === true);
+            const hasPaidItems = itemsDocs.some(d => d.data().isPaid === true || d.data().isPaidEarly === true);
             const originalIntent = status;
             let targetStatus = status;
 
@@ -6385,7 +6467,7 @@ window.openSearchModalTakeOrder = function() {
                 let subtotal = 0;
                 for (const itDoc of itemsDocs) {
                     const itData = itDoc.data();
-                    if (!itData.isPaid) {
+                    if (!itData.isPaid && !itData.isPaidEarly) {
                         await updateDoc(itDoc.ref, { status: 'cancelled' });
                     } else {
                         subtotal += parseFloat(itData.total);
@@ -6401,10 +6483,18 @@ window.openSearchModalTakeOrder = function() {
             if (['preparing', 'served'].includes(targetStatus)) {
                 for (const itDoc of itemsDocs) {
                     const itData = itDoc.data();
-                    if (itData.status !== 'cancelled' && !itData.isPaid) {
+                    if (itData.status !== 'cancelled' && !itData.isPaid && !itData.isPaidEarly) {
                         await updateDoc(itDoc.ref, { status: targetStatus });
                     }
                 }
+            }
+
+            if (targetStatus === 'served') {
+                const allDone = itemsDocs.every(d => {
+                    const itData = d.data();
+                    return itData.isPaid === true || itData.isPaidEarly === true || itData.status === 'cancelled';
+                });
+                if (allDone) targetStatus = 'completed';
             }
 
             if (tableId && (targetStatus === 'completed' || targetStatus === 'cancelled')) {
@@ -6468,12 +6558,15 @@ window.openSearchModalTakeOrder = function() {
 
             if (newStatus === 'cancelled') {
                 const allCancelled = items.every(it => it.status === 'cancelled');
-                const allHandled = items.every(it => it.status === 'cancelled' || it.isPaid === true);
+                const allHandled = items.every(it => it.status === 'cancelled' || it.isPaid === true || it.isPaidEarly === true);
                 
                 if (allCancelled) {
                     targetStatus = 'cancelled';
                 } else if (allHandled) {
-                    targetStatus = 'completed';
+                    const hasPaidEarly = items.some(it => it.isPaidEarly === true);
+                    if (!hasPaidEarly || orderData.status === 'served') {
+                        targetStatus = 'completed';
+                    }
                 }
             } else if (newStatus === 'pending') {
                 // If we uncancelled an item, and the order was cancelled/completed, move it back to active
@@ -6650,6 +6743,7 @@ window.openSearchModalTakeOrder = function() {
         window.showTableDetailsTakeOrder = showTableDetailsTakeOrder;
         window.updateSummaryTableSelection = updateSummaryTableSelection;
         window.navigateToOrderEdit = navigateToOrderEdit;
+        window.completeOrderFromTableDetails = completeOrderFromTableDetails;
         window.toggleActiveOrdersSort = toggleActiveOrdersSort;
         window.toggleActiveOrdersSearch = toggleActiveOrdersSearch;
         window.handleActiveOrdersSearchInput = handleActiveOrdersSearchInput;
