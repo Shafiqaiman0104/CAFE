@@ -2119,6 +2119,19 @@
                             <button class="category-btn-takeorder" onclick="setActiveOrdersFilter('served')">Served</button>
                             <button class="category-btn-takeorder" onclick="setActiveOrdersFilter('cancelled')">Cancelled</button>
                         </div>
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 10px; padding: 0 5px;">
+                            <div style="display: flex; gap: 15px; align-items: center;">
+                                <div id="activeOrdersSortBtn" onclick="toggleActiveOrdersSort()" style="color: white; cursor: pointer; font-size: 1.1rem; width: 30px; text-align: center;" title="Toggle Sort Order">
+                                    <i class="fas fa-arrow-up"></i>
+                                </div>
+                                <div onclick="toggleActiveOrdersSearch()" style="color: white; cursor: pointer; font-size: 1rem;" title="Search Orders">
+                                    <i class="fas fa-search"></i>
+                                </div>
+                            </div>
+                            <div id="activeOrdersSearchContainer" style="display: none; flex: 1; margin-left: 15px;">
+                                <input type="text" id="activeOrdersSearchInput" placeholder="Search menu, order ID, table..." style="width: 100%; padding: 8px 15px; border-radius: 20px; border: none; font-size: 0.85rem;" oninput="handleActiveOrdersSearchInput(this.value)">
+                            </div>
+                        </div>
                     </div>
                     <div id="activeOrdersList" class="active-orders-container active-orders-grid"></div>
                 </div>
@@ -2597,6 +2610,13 @@
                 <div class="checkout-left-panel" style="flex: 1; border-right: 1px solid #eee; padding: 20px; overflow-y: auto; background: #fafafa;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 2px solid #764ba2; padding-bottom: 5px;">
                         <h4 style="color:#764ba2; margin: 0;">Order Details</h4>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 0.75rem; font-weight: bold; color: #64748b;">VOID</span>
+                            <div class="view-toggle-takeorder" style="background: #e2e8f0; margin: 0;">
+                                <button class="view-btn-takeorder active" id="btnVoidOff" onclick="setVoidModeTakeOrder(false)" style="padding: 4px 10px; font-size: 0.75rem; color: #475569;">Off</button>
+                                <button class="view-btn-takeorder" id="btnVoidOn" onclick="setVoidModeTakeOrder(true)" style="padding: 4px 10px; font-size: 0.75rem; color: #475569;">On</button>
+                            </div>
+                        </div>
                         <div class="view-toggle-takeorder" style="background: #e2e8f0;">
                             <button class="view-btn-takeorder active" id="btnCheckoutFull" onclick="setCheckoutMode('full')" style="padding: 4px 10px; font-size: 0.75rem; color: #475569;">Full</button>
                             <button class="view-btn-takeorder" id="btnCheckoutSplit" onclick="setCheckoutMode('split')" style="padding: 4px 10px; font-size: 0.75rem; color: #475569;">Split</button>
@@ -2708,6 +2728,18 @@
         </div>
     </div>
 
+    <!-- Checkout Status Warning Modal -->
+    <div id="checkoutStatusWarningModal" class="modal" style="z-index: 10001; align-items: center; justify-content: center;">
+        <div class="modal-content" style="max-width: 400px; border-radius: 24px; text-align: center; padding: 30px; margin-bottom: 10vh;">
+            <div style="font-size: 3rem; color: #ff9800; margin-bottom: 20px;"><i class="fas fa-exclamation-circle"></i></div>
+            <p id="checkoutStatusWarningText" style="font-size: 1rem; color: #1e293b; line-height: 1.5; margin-bottom: 25px;"></p>
+            <div style="display: flex; gap: 10px;">
+                <button class="primary-btn" onclick="alert('Coming soon')">Early Payment</button>
+                <button class="secondary-btn" onclick="closeModal('checkoutStatusWarningModal')">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Searching Order Overlay -->
     <div id="searchingOrderOverlay">
         <div class="loading-popup">
@@ -2781,11 +2813,14 @@
         let checkoutOrdersToProcess = [];
         
         let selectedOrderIdsForCheckout = [];
+        let activeOrdersSortDirection = 'asc'; // oldest first
+        let activeOrdersSearchTerm = '';
         let totalOrdersInTableTakeOrder = 0;
         let holdTimerTakeOrder = null;
         let holdTriggeredTakeOrder = false;
         let selectedCheckoutItems = []; // Array of {orderId, itemId, price}
         let activeOrdersSnapshotTakeOrder = [];
+        let isVoidModeTakeOrder = false;
 
         // ========== LICENSE CHECK ==========
         window.checkLicense = async function() {
@@ -4604,6 +4639,10 @@
             if (selectedOrderIdsForCheckout.length !== 1) return;
             const orderId = selectedOrderIdsForCheckout[0];
             
+            // Find the order to get its current status for auto-filtering
+            const orderObj = activeOrdersSnapshotTakeOrder.find(o => o.id === orderId);
+            const orderStatus = orderObj ? orderObj.status : 'All';
+
             // Show animated loading overlay
             const overlay = document.getElementById('searchingOrderOverlay');
             if (overlay) {
@@ -4611,7 +4650,7 @@
             }
             
             closeModal('tableDetailsModalTakeOrder');
-            setActiveOrdersFilter('All'); // Reset filters to ensure the order is visible
+            setActiveOrdersFilter(orderStatus); // Auto-select the status filter
             
             // Mark this ID for highlighting once the Orders tab data loads
             window.pendingOrderHighlightId = orderId;
@@ -4638,6 +4677,11 @@
                 if (snap.empty) { alert('No active orders found'); return; }
                 
                 checkoutOrdersToProcess = snap.docs;
+
+                isVoidModeTakeOrder = false;
+                document.getElementById('btnVoidOn').classList.remove('active');
+                document.getElementById('btnVoidOff').classList.add('active');
+
                 let html = '';
                 
                 for (const orderDoc of snap.docs) {
@@ -4672,11 +4716,16 @@
                                  data-order-id="${orderDoc.id}" data-price="${itemPrice}"
                                  onclick="toggleItemSelectionCheckout('${orderDoc.id}', '${itemDoc.id}', ${itemPrice})">
                                 <div style="display:flex; justify-content:space-between; font-size:0.9rem; align-items:center;">
-                                    <span style="font-weight:600; display:flex; align-items:center;">
+                                    <div style="display: flex; align-items: center; gap: 8px;">
                                         <i id="icon-item-${itemDoc.id}" class="fas fa-check-circle"></i>
-                                        ${item.name} x ${item.qty}
-                                    </span>
-                                    <span>RM ${itemPrice.toFixed(2)}</span>
+                                        <span style="font-weight:600;">${item.name} x ${item.qty}</span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 10px;">
+                                        <span>RM ${itemPrice.toFixed(2)}</span>
+                                        <i class="fas fa-trash-alt checkout-void-icon" 
+                                           style="color: #e53e3e; display: none; cursor: pointer; padding: 5px; position: relative; z-index: 10; pointer-events: auto;"
+                                           onclick="event.stopPropagation(); voidItemFromCheckout('${orderDoc.id}', '${itemDoc.id}', ${itemPrice})"></i>
+                                    </div>
                                 </div>
                                 ${subHtml}
                             </div>
@@ -4686,7 +4735,10 @@
                     if (hasUnpaidItems) {
                         html += `
                             <div style="margin-bottom:15px; background:white; padding:12px; border-radius:18px; border:1px solid #f1f5f9; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
-                                <div style="font-weight:bold; font-size:0.8rem; color:#94a3b8; border-bottom:1px solid #f8fafc; padding-bottom:8px; margin-bottom:8px;">Order Ref: ${order.orderNumber}</div>
+                                <div style="font-weight:bold; font-size:0.8rem; color:#94a3b8; border-bottom:1px solid #f8fafc; padding-bottom:8px; margin-bottom:8px; display: flex; justify-content: space-between; align-items: center;">
+                                    <span>Order Id: ${order.orderNumber}</span>
+                                    <span class="status-badge status-${order.status}">${order.status}</span>
+                                </div>
                                 ${orderItemsHtml}
                             </div>`;
                     }
@@ -4708,6 +4760,7 @@
         };
 
         window.toggleItemSelectionCheckout = function(orderId, itemId, price) {
+            if (document.getElementById('btnCheckoutFull').classList.contains('active')) return;
             const index = selectedCheckoutItems.findIndex(i => i.itemId === itemId);
             const el = document.getElementById(`chk-item-${itemId}`);
             const icon = document.getElementById(`icon-item-${itemId}`);
@@ -4742,13 +4795,11 @@
                     const price = parseFloat(row.getAttribute('data-price'));
                     selectedCheckoutItems.push({ orderId, itemId, price });
                     row.classList.add('checkout-item-selected');
-                    row.style.pointerEvents = 'none'; // Disable clicking/unselecting
                     if (icon) {
                         icon.style.display = 'none'; // Hide the check menu icon
                     }
                 } else {
                     row.classList.remove('checkout-item-selected');
-                    row.style.pointerEvents = 'auto'; // Enable manual selection
                     if (icon) {
                         icon.style.display = 'inline-block';
                         icon.classList.remove('fa-check-circle');
@@ -4779,6 +4830,75 @@
                 </div>`;
             updateCheckoutDisplay();
         }
+
+        window.setVoidModeTakeOrder = function(on) {
+            isVoidModeTakeOrder = on;
+            document.getElementById('btnVoidOn').classList.toggle('active', on);
+            document.getElementById('btnVoidOff').classList.toggle('active', !on);
+            
+            const icons = document.querySelectorAll('.checkout-void-icon');
+            icons.forEach(icon => {
+                icon.style.display = on ? 'inline-block' : 'none';
+            });
+        };
+
+        window.voidItemFromCheckout = async function(orderId, itemId, price) {
+            if (!confirm('Are you sure you want to cancel this item?')) return;
+            
+            try {
+                await updateDoc(doc(db, 'licenses', currentClientId, 'orders', orderId, 'items', itemId), { status: 'cancelled' });
+
+                const itemsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderId, 'items'));
+                const items = itemsSnap.docs.map(d => d.data());
+                let subtotal = items.reduce((acc, it) => it.status !== 'cancelled' ? acc + parseFloat(it.total) : acc, 0);
+                
+                const tax = taxActive ? subtotal * (currentTaxRate / 100) : 0;
+                const total = subtotal + tax;
+
+                const orderRef = doc(db, 'licenses', currentClientId, 'orders', orderId);
+                const orderSnap = await getDoc(orderRef);
+                const orderData = orderSnap.data();
+                let targetStatus = orderData.status;
+
+                const allCancelled = items.every(it => it.status === 'cancelled');
+                const allHandled = items.every(it => it.status === 'cancelled' || it.isPaid === true);
+                
+                if (allCancelled) targetStatus = 'cancelled';
+                else if (allHandled) targetStatus = 'completed';
+
+                await updateDoc(orderRef, { 
+                    subtotal: subtotal.toFixed(2), 
+                    tax: tax.toFixed(2), 
+                    total: total.toFixed(2),
+                    status: targetStatus
+                });
+
+                if (orderData.tableId && (targetStatus === 'completed' || targetStatus === 'cancelled')) {
+                    const qRemaining = query(collection(db, 'licenses', currentClientId, 'orders'), 
+                                         where('tableId', '==', orderData.tableId), 
+                                         where('status', 'in', ['active', 'preparing', 'served']));
+                    const snapRemaining = await getDocs(qRemaining);
+                    if (snapRemaining.empty) {
+                        await updateDoc(doc(db, 'licenses', currentClientId, 'tables', orderData.tableId), { status: 'available' });
+                    }
+                }
+
+                const row = document.getElementById(`chk-item-${itemId}`);
+                if (row) row.remove();
+                
+                selectedCheckoutItems = selectedCheckoutItems.filter(i => i.itemId !== itemId);
+                recalculateCheckoutTotals();
+
+                if (document.querySelectorAll('.checkout-item-row').length === 0) {
+                    alert('All items voided.');
+                    closeModal('checkoutModalTakeOrder');
+                    await loadTablesTakeOrder(); // Refresh tables to reflect status change
+                    showTableSectionTakeOrder(); // Navigate back to table selection
+                }
+            } catch (e) {
+                alert('Error voiding item: ' + e.message);
+            }
+        };
 
         function updateCheckoutDisplay() {
             const received = parseFloat(checkoutReceivedInput) || 0;
@@ -4912,6 +5032,22 @@
             if (totalReceived < (checkoutTotalTakeOrder - 0.01)) { alert('Insufficient amount received'); return; }
             if (selectedCheckoutItems.length === 0) { alert('Please select at least one item to pay'); return; }
 
+            // Identify unique orders involved in this payment
+            const involvedOrderIds = [...new Set(selectedCheckoutItems.map(i => i.orderId))];
+
+            // Validation: Ensure all selected orders are in 'served' status BEFORE updating database
+            for (const orderId of involvedOrderIds) {
+                const orderDoc = checkoutOrdersToProcess.find(d => d.id === orderId);
+                const status = orderDoc ? (orderDoc.data().status || '').toLowerCase() : '';
+                
+                if (status !== 'served' && status !== 'completed') {
+                    const displayStatus = status.charAt(0).toUpperCase() + status.slice(1);
+                    document.getElementById('checkoutStatusWarningText').innerText = `Order Id status (${displayStatus}) please change the status to Served if you want to proceed, Otherwise if customer want to make an early payment please click early payment below.`;
+                    document.getElementById('checkoutStatusWarningModal').style.display = 'flex';
+                    return; // Stop here and do not mark as paid
+                }
+            }
+
             // Mark only selected items as paid in the database
             for (const item of selectedCheckoutItems) {
                 await updateDoc(doc(db, 'licenses', currentClientId, 'orders', item.orderId, 'items', item.itemId), { isPaid: true });
@@ -4919,7 +5055,6 @@
 
             // Determine if Split or Full mode was active
             const isSplitMode = document.getElementById('btnCheckoutSplit').classList.contains('active');
-            const involvedOrderIds = [...new Set(selectedCheckoutItems.map(i => i.orderId))];
 
             // Always update the cashier identity on the order as soon as a payment is made
             for (const orderId of involvedOrderIds) {
@@ -6030,6 +6165,30 @@ window.openSearchModalTakeOrder = function() {
             loadActiveOrders();
         };
 
+        window.toggleActiveOrdersSort = function() {
+            activeOrdersSortDirection = activeOrdersSortDirection === 'asc' ? 'desc' : 'asc';
+            const icon = document.querySelector('#activeOrdersSortBtn i');
+            icon.className = activeOrdersSortDirection === 'asc' ? 'fas fa-arrow-up' : 'fas fa-arrow-down';
+            loadActiveOrders();
+        };
+
+        window.toggleActiveOrdersSearch = function() {
+            const container = document.getElementById('activeOrdersSearchContainer');
+            const input = document.getElementById('activeOrdersSearchInput');
+            const isHidden = container.style.display === 'none';
+            container.style.display = isHidden ? 'block' : 'none';
+            if (!isHidden) {
+                input.value = '';
+                activeOrdersSearchTerm = '';
+                loadActiveOrders();
+            } else { input.focus(); }
+        };
+
+        window.handleActiveOrdersSearchInput = function(val) {
+            activeOrdersSearchTerm = val.toLowerCase().trim();
+            loadActiveOrders();
+        };
+
         window.loadActiveOrders = function() {
             if (unsubActiveOrders) unsubActiveOrders();
 
@@ -6045,13 +6204,17 @@ window.openSearchModalTakeOrder = function() {
                 const container = document.getElementById('activeOrdersList');
                 let html = '';
 
-                // Sort orders by timestamp ascending (Oldest first at the top)
-                const sortedDocs = snapshot.docs.sort((a, b) => (a.data().createdAt?.toDate() || 0) - (b.data().createdAt?.toDate() || 0));
+                // Sort orders based on selected direction
+                const sortedDocs = snapshot.docs.sort((a, b) => {
+                    const timeA = a.data().createdAt?.toDate() || 0;
+                    const timeB = b.data().createdAt?.toDate() || 0;
+                    return activeOrdersSortDirection === 'asc' ? timeA - timeB : timeB - timeA;
+                });
 
                 for (const orderDoc of sortedDocs) {
                     const o = orderDoc.data();
                     const orderId = orderDoc.id;
-                    const timestamp = o.createdAt?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) || 'N/A';
+                    const timestamp = o.createdAt?.toDate().toLocaleString([], { day:'2-digit', month:'2-digit', year:'numeric', hour: '2-digit', minute: '2-digit' }) || 'N/A';
                     
                     // Fetch items for each order
                     const itemsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderId, 'items'));
@@ -6066,6 +6229,19 @@ window.openSearchModalTakeOrder = function() {
 
                     // Sort: non-beverages first, beverages last
                     itemsData.sort((a, b) => a.isBeverage - b.isBeverage);
+
+                    // Apply search filtering
+                    if (activeOrdersSearchTerm) {
+                        const orderNum = (o.orderNumber || '').toLowerCase();
+                        const tableId = (o.tableId || '').toLowerCase();
+                        const matchesItems = itemsData.some(it => it.name.toLowerCase().includes(activeOrdersSearchTerm));
+                        
+                        if (!orderNum.includes(activeOrdersSearchTerm) && 
+                            !tableId.includes(activeOrdersSearchTerm) && 
+                            !matchesItems) {
+                            continue;
+                        }
+                    }
 
                     let itemsHtml = '';
                     for (const item of itemsData) {
@@ -6474,6 +6650,11 @@ window.openSearchModalTakeOrder = function() {
         window.showTableDetailsTakeOrder = showTableDetailsTakeOrder;
         window.updateSummaryTableSelection = updateSummaryTableSelection;
         window.navigateToOrderEdit = navigateToOrderEdit;
+        window.toggleActiveOrdersSort = toggleActiveOrdersSort;
+        window.toggleActiveOrdersSearch = toggleActiveOrdersSearch;
+        window.handleActiveOrdersSearchInput = handleActiveOrdersSearchInput;
+        window.setVoidModeTakeOrder = setVoidModeTakeOrder;
+        window.voidItemFromCheckout = voidItemFromCheckout;
     </script>
 </body>
 </html>
