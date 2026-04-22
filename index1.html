@@ -1112,6 +1112,11 @@
     color: white;
     box-shadow: 0 10px 15px -3px rgba(255, 152, 0, 0.25);
 }
+        .table-card-takeorder.served {
+            background: #004fa6;
+            color: white;
+            box-shadow: 0 10px 15px -3px rgba(0, 79, 166, 0.25);
+        }
 
 .table-card-takeorder .capacity-takeorder {
     font-size: 0.8rem;
@@ -1155,6 +1160,7 @@
 
 .status-dot.white { background: white; }
 .status-dot.orange { background: #ff9800; }
+.status-dot.ready { background: #004fa6; }
 
 .location-filter-bar {
     display: flex;
@@ -1636,6 +1642,61 @@
             width: 20px;
             text-align: center;
         }
+
+        /* Enhanced Highlight & Focus Styles */
+        .active-orders-container.dimmed-context .order-detail-card:not(.highlight-focus) {
+            opacity: 0.4;
+            filter: blur(1.5px);
+            pointer-events: none;
+            transition: all 0.5s ease;
+        }
+        .order-detail-card.highlight-focus {
+            outline: 5px solid #ff9800 !important;
+            box-shadow: 0 0 40px 10px rgba(255, 152, 0, 0.5) !important;
+            z-index: 10;
+            position: relative;
+            transform: scale(1.03);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        /* Searching Order Overlay Styles */
+        #searchingOrderOverlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            z-index: 99999;
+            align-items: center;
+            justify-content: center;
+        }
+        .loading-popup {
+            background: white;
+            padding: 30px 40px;
+            border-radius: 24px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+        .loading-circle-orange {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #1e293b; /* Dark track circle */
+            border-top: 5px solid #ff9800; /* Orange progress color */
+            border-radius: 50%;
+            animation: spin-orange 1s linear infinite;
+        }
+        @keyframes spin-orange {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
@@ -1695,7 +1756,7 @@
         <!-- Sidebar -->
         <div class="sidebar" id="sidebar">
             <div class="sidebar-header" style="padding: 24px; text-align: center; border-bottom: 1px solid rgba(0,0,0,0.05);">
-                <img src="https://venturerush-tech.netlify.app/vrLogo.png" alt="Logo" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; margin-bottom: 15px; border: 3px solid #764ba2; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+                <img src="https://venturerush-tech.netlify.app/vrLogo.png" alt="Logo" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; margin-bottom: 15px; border: 3px solid #0273e61a; box-shadow: 0 4px 10px rgb(15,103,208);">
                 <div class="restaurant-name" id="appRestaurantName" style="font-size: 20px; margin-bottom: 10px;"></div>
                 <div style="font-size: 14px; color: #555; margin-bottom: 15px;">
                     <span id="staffNameTop" style="font-weight: 600;"></span> | <span id="staffRoleTop" class="role-badge"></span>
@@ -1966,6 +2027,7 @@
                     <div class="table-status-info">
                         <div class="status-indicator"><span class="status-dot white"></span><span>Available</span></div>
                         <div class="status-indicator"><span class="status-dot orange"></span><span>Occupied</span></div>
+                        <div class="status-indicator"><span class="status-dot ready"></span><span>Ready</span></div>
                     </div>
                     
                     <!-- Persistent Counter Table -->
@@ -2042,18 +2104,21 @@
             <!-- Active Orders Page -->
             <div id="activeOrders" class="page">
                 <div class="section-card" style="background: #cacaca3b;">
-                    <div class="section-header">
-                        <span class="section-title" style="color: white;">Order Management System</span>
-                        <div class="view-toggle-takeorder">
-                          <button class="view-btn-takeorder active" id="activeOrdersGridViewBtn" onclick="setActiveOrdersViewMode('grid')"><i class="fas fa-th"></i> Grid</button>
-                          <button class="view-btn-takeorder" id="activeOrdersListViewBtn" onclick="setActiveOrdersViewMode('list')"><i class="fas fa-list"></i> List</button>
+                    <div style="position: sticky; top: 60px; z-index: 50; background: linear-gradient(135deg, #667eea, #764ba2); margin: -24px -24px 20px -24px; padding: 24px 24px 10px 24px; border-radius: 24px 24px 0 0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
+                        <div class="section-header" style="margin-bottom: 15px;">
+                            <span class="section-title" style="color: white;">Order Management</span>
+                            <div class="view-toggle-takeorder">
+                              <button class="view-btn-takeorder active" id="activeOrdersGridViewBtn" onclick="setActiveOrdersViewMode('grid')"><i class="fas fa-th"></i> Grid</button>
+                              <button class="view-btn-takeorder" id="activeOrdersListViewBtn" onclick="setActiveOrdersViewMode('list')"><i class="fas fa-list"></i> List</button>
+                            </div>
                         </div>
-                    </div>
-                    <div class="category-bar-takeorder" id="activeOrdersFilterBar" style="margin-bottom: 20px;">
-                        <button class="category-btn-takeorder active" onclick="setActiveOrdersFilter('All')">All</button>
-                        <button class="category-btn-takeorder" onclick="setActiveOrdersFilter('active')">Active</button>
-                        <button class="category-btn-takeorder" onclick="setActiveOrdersFilter('preparing')">Preparing</button>
-                        <button class="category-btn-takeorder" onclick="setActiveOrdersFilter('cancelled')">Cancelled</button>
+                        <div class="category-bar-takeorder" id="activeOrdersFilterBar" style="margin-bottom: 0; padding-bottom: 5px;">
+                            <button class="category-btn-takeorder active" onclick="setActiveOrdersFilter('All')">All</button>
+                            <button class="category-btn-takeorder" onclick="setActiveOrdersFilter('active')">Active</button>
+                            <button class="category-btn-takeorder" onclick="setActiveOrdersFilter('preparing')">Preparing</button>
+                            <button class="category-btn-takeorder" onclick="setActiveOrdersFilter('served')">Served</button>
+                            <button class="category-btn-takeorder" onclick="setActiveOrdersFilter('cancelled')">Cancelled</button>
+                        </div>
                     </div>
                     <div id="activeOrdersList" class="active-orders-container active-orders-grid"></div>
                 </div>
@@ -2504,7 +2569,12 @@
     <!-- Table Details Modal (Occupied Table) -->
     <div id="tableDetailsModalTakeOrder" class="modal">
         <div class="modal-content">
-            <div class="modal-header"><h3><i class="fas fa-info-circle"></i> Table Details: <span id="detailsTableNumTakeOrder"></span> <span id="orderSelectionCounterTakeOrder" style="font-size: 0.9rem; font-weight: normal; color: #666;"></span></h3><button class="modal-close" onclick="closeModal('tableDetailsModalTakeOrder')">&times;</button></div>
+            <div class="modal-header">
+                <h3><i class="fas fa-info-circle"></i> Table Details: <span id="detailsTableNumTakeOrder"></span> 
+                    <span id="orderSelectionCounterTakeOrder" style="font-size: 0.9rem; font-weight: normal; color: #666;"></span>
+                    <button id="editStatusBtnTableDetails" onclick="navigateToOrderEdit()" style="display:none; margin-left:10px; padding:6px 12px; font-size:0.75rem; border-radius:10px; background:linear-gradient(135deg, #667eea, #764ba2); color:white; border:none; cursor:pointer; font-weight:bold; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"><i class="fas fa-external-link-alt"></i> Edit Status</button>
+                </h3>
+                <button class="modal-close" onclick="closeModal('tableDetailsModalTakeOrder')">&times;</button></div>
             <div id="tableDetailsBodyTakeOrder" style="margin-bottom: 20px; max-height: 400px; overflow-y: auto;"></div>
             <div class="action-buttons">
                 <button class="primary-btn" style="background:#667eea;" onclick="openChangeTableModalTakeOrder(null, 'available')"><i class="fas fa-exchange-alt"></i> Move</button>
@@ -2638,6 +2708,14 @@
         </div>
     </div>
 
+    <!-- Searching Order Overlay -->
+    <div id="searchingOrderOverlay">
+        <div class="loading-popup">
+            <div class="loading-circle-orange"></div>
+            <div style="color: #000; font-weight: 800; font-size: 1.1rem; text-transform: uppercase; letter-spacing: 1px;">Searching Order Id</div>
+        </div>
+    </div>
+
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
         import { 
@@ -2707,6 +2785,7 @@
         let holdTimerTakeOrder = null;
         let holdTriggeredTakeOrder = false;
         let selectedCheckoutItems = []; // Array of {orderId, itemId, price}
+        let activeOrdersSnapshotTakeOrder = [];
 
         // ========== LICENSE CHECK ==========
         window.checkLicense = async function() {
@@ -2852,7 +2931,7 @@
             }
         };
 
-        window.showPage = function(pageId) {
+        window.showPage = function(pageId, skipSidebar = false) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.getElementById(pageId).classList.add('active');
             document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
@@ -2877,7 +2956,7 @@
                     if (icon) icon.classList.add('rotated');
                 }
             }
-            if (window.innerWidth < 768) toggleSidebar();
+            if (!skipSidebar && window.innerWidth < 768) toggleSidebar();
             // Handle body class for take order page
             if (pageId === 'takeOrder') {
                 document.body.classList.add('take-order-page');
@@ -3909,12 +3988,23 @@
             const itemsRef = collection(db, 'licenses', currentClientId, 'orders', orderId, 'items');
             const itemsSnap = await getDocs(itemsRef);
             
+            const itemsData = [];
+            for (const doc of itemsSnap.docs) {
+                const data = doc.data();
+                data.docId = doc.id;
+                const catId = data.categoryId || (menuItemsTakeOrder.find(m => m.name === data.name)?.categoryId);
+                data.isBeverage = (catId && categoryMapTakeOrder[catId] && categoryMapTakeOrder[catId].toLowerCase().includes('beverage'));
+                itemsData.push(data);
+            }
+
+            // Sort items: Non-beverages first, Beverages last
+            itemsData.sort((a, b) => a.isBeverage - b.isBeverage);
+
             let itemsHtml = '';
             let itemCount = 0;
             let runningSubtotal = 0;
             
-            for (const itemDoc of itemsSnap.docs) {
-                const item = itemDoc.data();
+            for (const item of itemsData) {
                 const isCancelled = item.status === 'cancelled';
                 const isPaid = item.isPaid === true;
                 itemCount += parseInt(item.qty) || 0;
@@ -3942,14 +4032,14 @@
                     itemsHtml += `<div style="font-size:12px;color:#764ba2;padding-left:15px;"><strong>Special Request:</strong> ${item.notes}</div>`;
                 }
                 
-                const variantsRef = collection(db, 'licenses', currentClientId, 'orders', orderId, 'items', itemDoc.id, 'selectedVariants');
+                const variantsRef = collection(db, 'licenses', currentClientId, 'orders', orderId, 'items', item.docId, 'selectedVariants');
                 const variantsSnap = await getDocs(variantsRef);
                 variantsSnap.forEach(v => {
                     const vData = v.data();
                     itemsHtml += `<div style="font-size:12px;color:#666;padding-left:15px;">+ ${vData.optionName} (RM ${vData.priceAdjustment || '0'})</div>`;
                 });
                 
-                const modifiersRef = collection(db, 'licenses', currentClientId, 'orders', orderId, 'items', itemDoc.id, 'selectedModifiers');
+                const modifiersRef = collection(db, 'licenses', currentClientId, 'orders', orderId, 'items', item.docId, 'selectedModifiers');
                 const modifiersSnap = await getDocs(modifiersRef);
                 modifiersSnap.forEach(m => {
                     const mData = m.data();
@@ -4212,6 +4302,16 @@
                 // ========== TAKE ORDER - NEW DESIGN ==========
         async function loadTakeOrderPage() {
             document.body.classList.add('take-order-page');
+            
+            // Listen to active orders globally for the table grid logic (determines "Ready" color)
+            if (unsubscribers['takeOrderOrders']) unsubscribers['takeOrderOrders']();
+            const ordersRef = collection(db, 'licenses', currentClientId, 'orders');
+            const q = query(ordersRef, where('status', 'in', ['active', 'preparing', 'served']));
+            unsubscribers['takeOrderOrders'] = onSnapshot(q, (snap) => {
+                activeOrdersSnapshotTakeOrder = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                renderTableGridTakeOrder(); 
+            });
+
             await loadTablesTakeOrder();
             await loadMenuItemsTakeOrder();
             
@@ -4262,8 +4362,18 @@
             const counterTable = tablesListTakeOrder.find(t => t.id.toLowerCase() === 'counter');
             if (counterTable) {
                 const isOccupied = counterTable.status === 'occupied';
+                
+                let isServed = false;
+                if (isOccupied) {
+                    const ordersForTable = activeOrdersSnapshotTakeOrder.filter(o => o.tableId === counterTable.id);
+                    if (ordersForTable.length > 0 && ordersForTable.every(o => o.status === 'served')) {
+                        isServed = true;
+                    }
+                }
+                const cardClass = isServed ? 'served' : (isOccupied ? 'occupied' : '');
+
                 counterContainer.innerHTML = `
-                    <div class="table-card-takeorder ${isOccupied ? 'occupied' : ''}" 
+                    <div class="table-card-takeorder ${cardClass}" 
                          style="width: 100%; flex-direction: row; justify-content: space-between; padding: 15px 30px; margin-bottom: 0;"
                          onclick="selectTableTakeOrder('${counterTable.id}', 'Counter')">
                         <div style="display: flex; align-items: center; gap: 15px;">
@@ -4272,7 +4382,7 @@
                         </div>
                         <div style="text-align: right;">
                             <div class="capacity-takeorder" style="margin-top: 0;"><i class="fas fa-user"></i> Walk-in</div>
-                            <div style="font-size:0.75rem; text-transform: uppercase; font-weight: 800; letter-spacing: 0.5px;">${counterTable.status || 'available'}</div>
+                            <div style="font-size:0.75rem; text-transform: uppercase; font-weight: 800; letter-spacing: 0.5px;">${isServed ? 'ready' : (counterTable.status || 'available')}</div>
                         </div>
                     </div>
                 `;
@@ -4296,11 +4406,21 @@
             
             grid.innerHTML = filteredTables.map(table => {
                 const isOccupied = table.status === 'occupied';
+                
+                let isServed = false;
+                if (isOccupied) {
+                    const ordersForTable = activeOrdersSnapshotTakeOrder.filter(o => o.tableId === table.id);
+                    if (ordersForTable.length > 0 && ordersForTable.every(o => o.status === 'served')) {
+                        isServed = true;
+                    }
+                }
+                const cardClass = isServed ? 'served' : (isOccupied ? 'occupied' : '');
+
                 return `
-                    <div class="table-card-takeorder ${isOccupied ? 'occupied' : ''}" onclick="selectTableTakeOrder('${table.id}', '${table.id.toUpperCase()}')">
+                    <div class="table-card-takeorder ${cardClass}" onclick="selectTableTakeOrder('${table.id}', '${table.id.toUpperCase()}')">
                         <div class="table-number-takeorder">${table.id.toUpperCase()}</div>
                         <div class="capacity-takeorder"><i class="fas fa-user"></i> ${table.capacity || 4} pax</div>
-                        <div style="font-size:0.7rem;margin-top:3px;">${table.status || 'available'}</div>
+                        <div style="font-size:0.7rem;margin-top:3px;">${isServed ? 'ready' : (table.status || 'available')}</div>
                     </div>
                 `;
             }).join('');
@@ -4345,14 +4465,25 @@
                 }
 
                 let html = '';
+                const orderItemsList = [];
                 for (const orderDoc of snap.docs) {
+                    const itemsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderDoc.id, 'items'));
+                    const itemsData = [];
+                    for (const itDoc of itemsSnap.docs) {
+                        const it = itDoc.data();
+                        it.docId = itDoc.id;
+                        const catId = it.categoryId || (menuItemsTakeOrder.find(m => m.name === it.name)?.categoryId);
+                        it.isBeverage = (catId && categoryMapTakeOrder[catId] && categoryMapTakeOrder[catId].toLowerCase().includes('beverage'));
+                        itemsData.push(it);
+                    }
+                    // Sort: non-beverages (false/0) first, beverages (true/1) last
+                    itemsData.sort((a, b) => a.isBeverage - b.isBeverage);
+
                     const order = orderDoc.data();
                     const isOrderCancelledGlobal = order.status === 'cancelled';
-                    const itemsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderDoc.id, 'items'));
                     
                     let itemsHtml = '';
-                    for (const itemDoc of itemsSnap.docs) {
-                        const item = itemDoc.data();
+                    for (const item of itemsData) {
                         const isItemPaid = item.isPaid === true;
                         const isItemCancelled = item.status === 'cancelled';
                         
@@ -4363,8 +4494,8 @@
                             itemStyles = 'text-decoration: line-through; opacity: 0.6;';
                         }
                         
-                        const variantsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderDoc.id, 'items', itemDoc.id, 'selectedVariants'));
-                        const modifiersSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderDoc.id, 'items', itemDoc.id, 'selectedModifiers'));
+                        const variantsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderDoc.id, 'items', item.docId, 'selectedVariants'));
+                        const modifiersSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderDoc.id, 'items', item.docId, 'selectedModifiers'));
                         
                         let selections = [];
                         variantsSnap.forEach(v => selections.push(v.data().optionName));
@@ -4454,6 +4585,12 @@
             const displayCount = selectedCount === 0 ? totalOrdersInTableTakeOrder : selectedCount;
             counterEl.innerText = `(${displayCount}/${totalOrdersInTableTakeOrder})`;
 
+            // Show/Hide Edit Status button only when exactly 1 order is selected
+            const editBtn = document.getElementById('editStatusBtnTableDetails');
+            if (editBtn) {
+                editBtn.style.display = selectedCount === 1 ? 'inline-block' : 'none';
+            }
+
             // Disable Add button if any order is selected
             const addBtn = document.getElementById('addBtnTableDetailsTakeOrder');
             if (addBtn) {
@@ -4462,6 +4599,25 @@
                 addBtn.style.cursor = selectedCount > 0 ? "not-allowed" : "pointer";
             }
         }
+
+        window.navigateToOrderEdit = function() {
+            if (selectedOrderIdsForCheckout.length !== 1) return;
+            const orderId = selectedOrderIdsForCheckout[0];
+            
+            // Show animated loading overlay
+            const overlay = document.getElementById('searchingOrderOverlay');
+            if (overlay) {
+                overlay.style.display = 'flex';
+            }
+            
+            closeModal('tableDetailsModalTakeOrder');
+            setActiveOrdersFilter('All'); // Reset filters to ensure the order is visible
+            
+            // Mark this ID for highlighting once the Orders tab data loads
+            window.pendingOrderHighlightId = orderId;
+            
+            showPage('activeOrders', true);
+        };
 
         window.openCheckoutFromTable = async function() {
             const tableId = selectedTableIdTakeOrder;
@@ -5172,6 +5328,7 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
             
             cartTakeOrder.push({
                 id: currentMenuObjTakeOrder.id,
+                categoryId: currentMenuObjTakeOrder.categoryId,
                 name: currentMenuObjTakeOrder.name,
                 basePrice,
                 qty,
@@ -5453,6 +5610,7 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
                 for (const item of cartTakeOrder) {
                     const itemRef = await addDoc(collection(db, 'licenses', currentClientId, 'orders', orderRef.id, 'items'), {
                         name: item.name,
+                        categoryId: item.categoryId || '',
                         basePrice: item.basePrice.toString(),
                         qty: item.qty.toString(),
                         total: item.total.toFixed(2),
@@ -5897,27 +6055,38 @@ window.openSearchModalTakeOrder = function() {
                     
                     // Fetch items for each order
                     const itemsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderId, 'items'));
+                    const itemsData = [];
+                    for (const doc of itemsSnap.docs) {
+                        const d = doc.data();
+                        d.docId = doc.id;
+                        const catId = d.categoryId || (menuItemsTakeOrder.find(m => m.name === d.name)?.categoryId);
+                        d.isBeverage = (catId && categoryMapTakeOrder[catId] && categoryMapTakeOrder[catId].toLowerCase().includes('beverage'));
+                        itemsData.push(d);
+                    }
+
+                    // Sort: non-beverages first, beverages last
+                    itemsData.sort((a, b) => a.isBeverage - b.isBeverage);
+
                     let itemsHtml = '';
-                    for (const itemDoc of itemsSnap.docs) {
-                        const item = itemDoc.data();
-                        const isEditingThis = activeEditItemIdOrdersTab === itemDoc.id;
+                    for (const item of itemsData) {
+                        const isEditingThis = activeEditItemIdOrdersTab === item.docId;
                         const itemStatus = item.status || 'pending';
                         const isItemCancelled = itemStatus === 'cancelled';
                         const isItemPaid = item.isPaid === true;
                         
-                        const variantsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderId, 'items', itemDoc.id, 'selectedVariants'));
-                        const modifiersSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderId, 'items', itemDoc.id, 'selectedModifiers'));
+                        const variantsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderId, 'items', item.docId, 'selectedVariants'));
+                        const modifiersSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderId, 'items', item.docId, 'selectedModifiers'));
                         
                         let selections = [];
                         variantsSnap.forEach(v => selections.push(v.data().optionName));
                         modifiersSnap.forEach(m => selections.push(m.data().optionName));
                         
                         itemsHtml += `
-                            <div id="item-card-orders-${itemDoc.id}" 
+                            <div id="item-card-orders-${item.docId}" 
                                  ${isItemPaid ? '' : `
-                                 onmousedown="startItemHoldOrdersTab('${orderId}', '${itemDoc.id}')" onmouseup="clearItemHoldOrdersTab()" onmouseleave="clearItemHoldOrdersTab()"
-                                 ontouchstart="startItemHoldOrdersTab('${orderId}', '${itemDoc.id}')" ontouchend="clearItemHoldOrdersTab()"
-                                 onclick="handleItemClickOrdersTab('${orderId}', '${itemDoc.id}')"
+                                 onmousedown="startItemHoldOrdersTab('${orderId}', '${item.docId}')" onmouseup="clearItemHoldOrdersTab()" onmouseleave="clearItemHoldOrdersTab()"
+                                 ontouchstart="startItemHoldOrdersTab('${orderId}', '${item.docId}')" ontouchend="clearItemHoldOrdersTab()"
+                                 onclick="handleItemClickOrdersTab('${orderId}', '${item.docId}')"
                                  `}
                                  style="padding: 10px; background: ${isItemCancelled ? '#fff5f5' : (isItemPaid ? '#f0fff4' : (isEditingThis ? '#f0e6ff' : '#f8fafc'))}; border-radius: 12px; margin-bottom: 8px; border: 1px solid ${isItemCancelled ? '#feb2b2' : (isItemPaid ? '#38a169' : (isEditingThis ? '#764ba2' : '#f1f5f9'))}; cursor: ${isItemPaid ? 'default' : 'pointer'}; user-select: none; opacity: ${(isItemCancelled || isItemPaid) ? '0.8' : '1'};">
                                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
@@ -5932,7 +6101,7 @@ window.openSearchModalTakeOrder = function() {
                                 ${item.notes ? `<div style="color:#764ba2; font-size:0.75rem; font-style:italic; margin-top: 4px; padding-left: 8px; border-left: 2px solid #764ba2;">"${item.notes}"</div>` : ''}
                                 ${isEditingThis ? `
                                     <div style="margin-top: 10px; display: flex; gap: 8px;">
-                                        <button onclick="event.stopPropagation(); updateItemStatusOrdersTab('${orderId}', '${itemDoc.id}', '${isItemCancelled ? 'pending' : 'cancelled'}')"
+                                        <button onclick="event.stopPropagation(); updateItemStatusOrdersTab('${orderId}', '${item.docId}', '${isItemCancelled ? 'pending' : 'cancelled'}')"
                                                 style="flex: 1; padding: 10px; border-radius: 10px; border: none; background: ${isItemCancelled ? '#38a169' : '#e53e3e'}; color: white; font-weight: 800; font-size: 0.7rem; cursor: pointer;">
                                             <i class="fas fa-${isItemCancelled ? 'undo' : 'ban'}"></i> ${isItemCancelled ? 'UNCANCEL' : 'CANCEL ITEM'}
                                         </button>
@@ -5946,7 +6115,7 @@ window.openSearchModalTakeOrder = function() {
                     }
 
                     html += `
-                        <div class="order-detail-card" style="margin-bottom:0; display:flex; flex-direction:column; justify-content:space-between; height: 100%;">
+                        <div id="active-order-card-${orderId}" class="order-detail-card" style="margin-bottom:0; display:flex; flex-direction:column; justify-content:space-between; height: 100%;">
                             <div>
                                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                                     <span style="font-size:0.75rem; color:#666;"><i class="fas fa-clock"></i> ${timestamp}</span>
@@ -5981,6 +6150,35 @@ window.openSearchModalTakeOrder = function() {
                         </div>`;
                 }
                 container.innerHTML = html || '<div class="loading">No active orders</div>';
+
+                // Check if we need to highlight a specific order (triggered by navigation)
+                if (window.pendingOrderHighlightId) {
+                    const targetId = window.pendingOrderHighlightId;
+                    const targetCard = document.getElementById(`active-order-card-${targetId}`);
+                    
+                    if (targetCard) {
+                        window.pendingOrderHighlightId = null; // Clear to prevent re-triggering on data updates
+                        
+                        // Hide searching overlay immediately when found
+                        const overlay = document.getElementById('searchingOrderOverlay');
+                        if (overlay) overlay.style.display = 'none';
+                        
+                        setTimeout(() => {
+                            targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            container.classList.add('dimmed-context');
+                            targetCard.classList.add('highlight-focus');
+
+                            // Keep the focus for 3 seconds, then fade out
+                            setTimeout(() => {
+                                container.classList.remove('dimmed-context');
+                                targetCard.style.transition = "all 1s ease";
+                                targetCard.classList.remove('highlight-focus');
+                                // Clean up transition after fade
+                                setTimeout(() => { targetCard.style.transition = ""; }, 1000);
+                            }, 3000);
+                        }, 300); // Small delay to ensure browser layout is ready
+                    }
+                }
             });
         }
 
@@ -6275,6 +6473,7 @@ window.openSearchModalTakeOrder = function() {
         window.selectOrderFromSearch = selectOrderFromSearch;
         window.showTableDetailsTakeOrder = showTableDetailsTakeOrder;
         window.updateSummaryTableSelection = updateSummaryTableSelection;
+        window.navigateToOrderEdit = navigateToOrderEdit;
     </script>
 </body>
 </html>
