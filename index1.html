@@ -2954,6 +2954,7 @@
         let totalOrdersInTableTakeOrder = 0;
         let holdTimerTakeOrder = null;
         let holdTriggeredTakeOrder = false;
+        let activeBluetoothDevice = null;
         let selectedCheckoutItems = []; // Array of {orderId, itemId, price}
         let activeOrdersSnapshotTakeOrder = [];
         let isEarlyPaymentMode = false;
@@ -7057,6 +7058,7 @@ window.openSearchModalTakeOrder = function() {
                     document.getElementById('printerNameField').value = device.name || "Unnamed Printer";
                     // We store the device ID in a hidden attribute to help with reconnection logic later
                     document.getElementById('printerNameField').setAttribute('data-bt-id', device.id);
+                    activeBluetoothDevice = device;
                     showPrinterStatusPopup("Connected!", (device.name || "Unnamed Printer") + " selected.", true);
                 }
             } catch (error) {
@@ -7069,8 +7071,81 @@ window.openSearchModalTakeOrder = function() {
             }
         };
 
-        window.printTestPage = function() {
-            alert('Connecting and printing test page to: ' + document.getElementById('printerNameField').value);
+        window.printTestPage = async function() {
+            const printerName = document.getElementById('printerNameField').value;
+            if (!activeBluetoothDevice) {
+                showPrinterStatusPopup("No Printer", "Please scan and select a printer first.", false);
+                return;
+            }
+
+            try {
+                const server = await activeBluetoothDevice.gatt.connect();
+                
+                // Common Thermal Printer Service and Characteristic UUIDs
+                const SERVICE_UUID = '000018f0-0000-1000-8000-00805f9b34fb';
+                const CHARACTERISTIC_UUID = '00002af1-0000-1000-8000-00805f9b34fb';
+                
+                const service = await server.getPrimaryService(SERVICE_UUID);
+                const characteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
+
+                const now = new Date().toLocaleString();
+                const deptName = "TEST DEPARTMENT";
+                
+                // Build ESC/POS payload
+                let commands = "";
+                commands += "\x1B\x40"; // Initialize printer
+                commands += "\x1B\x61\x01"; // Center align
+                commands += `\x1B\x45\x01${deptName}\x1B\x45\x00\n`; // Bold Department
+                
+                commands += "\x1B\x61\x00"; // Left align
+                commands += `ORDER ID: TEST\n`;
+                commands += `Order: ${now}\n`;
+                commands += "--------------------------------\n";
+                commands += "Items:\n";
+                
+                // Test Item with Checkbox
+                commands += "[   ] Nasi Lemak Special   x1\n";
+                commands += "      + Extra Spicy (Variant)\n";
+                commands += "      + Fried Egg (Modifier)\n";
+                commands += "      * Req: No cucumber please\n";
+                
+                commands += "--------------------------------\n";
+                commands += `Print Time: ${now}\n`;
+                
+                commands += "\x1B\x61\x01"; // Center align
+                commands += `${deptName}\n`;
+                
+                commands += "\n\n\n\n"; // Feed lines
+                commands += "\x1D\x56\x41\x03"; // Cut paper command (if supported)
+
+                // Encode and send to printer
+                const encoder = new TextEncoder();
+                const data = encoder.encode(commands);
+                
+                // BLE MTU limitations: Send in chunks of 20 bytes for maximum compatibility
+                const CHUNK_SIZE = 20;
+                for (let i = 0; i < data.length; i += CHUNK_SIZE) {
+                    const chunk = data.slice(i, i + CHUNK_SIZE);
+                    await characteristic.writeValue(chunk);
+                }
+
+                showPrinterStatusPopup("Print Success", "Test page sent to " + printerName, true);
+                
+                // Disconnect to save battery/connection slot
+                activeBluetoothDevice.gatt.disconnect();
+
+            } catch (error) {
+                console.error("Printing Error:", error);
+                let errorMsg = error.message;
+                
+                if (errorMsg.includes("GATT")) {
+                    errorMsg = "Ensure printer is ON and within range.";
+                } else if (errorMsg.includes("service")) {
+                    errorMsg = "Printer service not found. Try scanning again.";
+                }
+                
+                showPrinterStatusPopup("Print Failed", errorMsg, false);
+            }
         };
 
         // ========== UTILITIES ==========
