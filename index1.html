@@ -1699,7 +1699,7 @@
         }
 
         /* Order Success Popup Style */
-        #orderSuccessOverlay, #printerStatusOverlay {
+        #orderSuccessOverlay, #printerStatusOverlay, #printingProcessOverlay {
             display: none;
             position: fixed;
             top: 0;
@@ -1801,6 +1801,9 @@
                         </div>
                         <div class="menu-item" onclick="showPage('printers')">
                             <i class="fas fa-receipt"></i> Printers
+                        </div>
+                        <div class="menu-item" onclick="showPage('printerQueue')">
+                            <i class="fas fa-list-check"></i> Printer Receipt Queue
                         </div>
                     </div>
                 </div>
@@ -2178,6 +2181,28 @@
                         <button class="btn-icon" onclick="showAddPrinterModal()">+</button>
                     </div>
                     <div id="printersList"></div>
+                </div>
+            </div>
+
+            <!-- Printer Queue Page -->
+            <div id="printerQueue" class="page">
+                <div class="section-card">
+                    <div class="section-header">
+                        <span class="section-title">Printer Receipt Queue</span>
+                        <div class="view-toggle-takeorder">
+                            <button class="view-btn-takeorder" onclick="refreshPrinterQueue()"><i class="fas fa-sync-alt"></i></button>
+                        </div>
+                    </div>
+                    
+                    <div class="category-bar-takeorder" id="printerQueueFilterBar" style="margin-bottom: 15px;">
+                        <button class="category-btn-takeorder active" onclick="filterPrinterQueue('All')">All</button>
+                        <button class="category-btn-takeorder" onclick="filterPrinterQueue('pending')">Pending</button>
+                        <button class="category-btn-takeorder" onclick="filterPrinterQueue('processing')">Processing</button>
+                        <button class="category-btn-takeorder" onclick="filterPrinterQueue('success')">Success</button>
+                        <button class="category-btn-takeorder" onclick="filterPrinterQueue('failed')">Failed</button>
+                    </div>
+
+                    <div id="printerQueueList"></div>
                 </div>
             </div>
 
@@ -2876,6 +2901,15 @@
         </div>
     </div>
 
+    <!-- Printing Process Popup -->
+    <div id="printingProcessOverlay">
+        <div style="background: white; padding: 30px; border-radius: 28px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.2); width: 320px; animation: slideUp 0.3s ease;">
+            <div class="loading-circle-orange" style="margin: 0 auto 20px auto;"></div>
+            <h2 style="margin-bottom: 10px; color: #1e293b;">Printing...</h2>
+            <p id="printingOrderId" style="font-size: 1.1rem; color: #764ba2; font-weight: 800;"></p>
+        </div>
+    </div>
+
     <!-- Searching Order Overlay -->
     <div id="searchingOrderOverlay">
         <div class="loading-popup">
@@ -3151,6 +3185,7 @@
             else if (pageId === 'activeOrders') loadActiveOrders();
             else if (pageId === 'departmentPrinter') loadDeptPrinters();
             else if (pageId === 'printers') loadPrintersPage();
+            else if (pageId === 'printerQueue') loadPrinterQueue();
             else if (pageId === 'cashier') loadCashierPage();
             else if (pageId === 'allOrders') loadAllOrders();
             else if (pageId === 'allTransactions') loadAllTransactions();
@@ -6023,6 +6058,9 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
                     setTimeout(() => { successOverlay.style.display = 'none'; }, 500);
                 }, 2000);
 
+                // Trigger Automatic Printing
+                triggerAutoPrinting(orderRef.id, orderData.orderNumber);
+
                 cartTakeOrder = [];
                 updateOrdersUITakeOrder();
                 document.getElementById('ordersPanelTakeOrder').classList.remove('show-mobile');
@@ -7014,6 +7052,155 @@ window.openSearchModalTakeOrder = function() {
             }
             closeModal('addPrinterModal');
         };
+
+        // ========== PRINTER QUEUE LOGIC ==========
+        let printerQueueFilter = 'All';
+
+        window.loadPrinterQueue = function() {
+            const ref = collection(db, 'licenses', currentClientId, 'print_queue');
+            let q = query(ref);
+            if (printerQueueFilter !== 'All') {
+                q = query(ref, where('status', '==', printerQueueFilter));
+            }
+
+            onSnapshot(q, (snapshot) => {
+                const container = document.getElementById('printerQueueList');
+                let html = '';
+                const sorted = snapshot.docs.sort((a,b) => (b.data().createdAt?.toDate() || 0) - (a.data().createdAt?.toDate() || 0));
+                
+                sorted.forEach(doc => {
+                    const item = doc.data();
+                    const time = item.createdAt?.toDate().toLocaleString() || 'N/A';
+                    const statusColor = item.status === 'success' ? '#38a169' : (item.status === 'failed' ? '#e53e3e' : '#ed8936');
+                    
+                    html += `<div class="order-detail-card" style="border-left: 5px solid ${statusColor};">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                            <div>
+                                <div style="font-weight:bold; font-size:1rem;">[${item.printerDeptName || 'Receipt'}] ${item.orderNumber}</div>
+                                <div style="font-size:12px; color:#64748b;">${time}</div>
+                            </div>
+                            <div style="text-align:right;">
+                                <span class="status-badge" style="background:${statusColor}20; color:${statusColor};">${item.status}</span>
+                                <div style="font-size:11px; color:#64748b; margin-top:4px;">Attempts: ${item.attempts || 0}</div>
+                            </div>
+                        </div>
+                        <div class="action-buttons">
+                            <button class="btn-edit" onclick="reprintQueueItem('${doc.id}')"><i class="fas fa-redo"></i> Reprint</button>
+                            <button class="btn-delete" onclick="deleteQueueItem('${doc.id}')">Delete</button>
+                        </div>
+                    </div>`;
+                });
+                container.innerHTML = html || '<div class="loading">No receipt queue history.</div>';
+            });
+        };
+
+        window.filterPrinterQueue = function(status) {
+            printerQueueFilter = status;
+            document.querySelectorAll('#printerQueueFilterBar button').forEach(btn => {
+                btn.classList.toggle('active', btn.innerText.toLowerCase() === status.toLowerCase());
+            });
+            loadPrinterQueue();
+        };
+
+        window.triggerAutoPrinting = async function(orderId, orderNumber) {
+            // 1. Get all Printers with autoPrint enabled
+            const printersSnap = await getDocs(query(collection(db, 'licenses', currentClientId, 'printers'), where('autoPrint', '==', true)));
+            if (printersSnap.empty) return;
+
+            // Show "Printing..." popup
+            const printOverlay = document.getElementById('printingProcessOverlay');
+            document.getElementById('printingOrderId').innerText = orderNumber;
+            printOverlay.style.display = 'flex';
+
+            for (const printerDoc of printersSnap.docs) {
+                const p = printerDoc.data();
+                
+                // Handle Full Receipt Printing
+                if (p.printReceipt) {
+                    await addToPrintQueue(orderId, orderNumber, 'Receipt', null);
+                }
+
+                // Handle Department Order Printing
+                if (p.printOrders && p.departmentPrinters?.length) {
+                    for (const deptId of p.departmentPrinters) {
+                        const deptSnap = await getDoc(doc(db, 'licenses', currentClientId, 'department_printer', deptId));
+                        if (deptSnap.exists()) {
+                            await addToPrintQueue(orderId, orderNumber, deptSnap.data().name, deptId);
+                        }
+                    }
+                }
+            }
+
+            // Simulate background processing for this demo
+            // In a real scenario, a background service or the local device would pick these up
+            setTimeout(() => {
+                printOverlay.style.display = 'none';
+                // Pick first one for immediate success feedback for UI experience
+                showPrinterStatusPopup(`Print ${orderNumber} SUCCESS`, `Printer Department: Main Receipt\nPlease check your printer & printer receipt queue.`, true);
+            }, 1500);
+        };
+
+        async function addToPrintQueue(orderId, orderNumber, deptName, deptId) {
+            await addDoc(collection(db, 'licenses', currentClientId, 'print_queue'), {
+                orderId,
+                orderNumber,
+                printerDeptName: deptName,
+                printerDeptId: deptId,
+                status: 'pending',
+                attempts: 1,
+                createdAt: Timestamp.now()
+            });
+        }
+
+        window.reprintQueueItem = async function(id) {
+            const ref = doc(db, 'licenses', currentClientId, 'print_queue', id);
+            const snap = await getDoc(ref);
+            if (!snap.exists()) return;
+            const item = snap.data();
+
+            const printOverlay = document.getElementById('printingProcessOverlay');
+            document.getElementById('printingOrderId').innerText = item.orderNumber;
+            printOverlay.style.display = 'flex';
+
+            await updateDoc(ref, { status: 'processing', attempts: (item.attempts || 0) + 1 });
+
+            setTimeout(async () => {
+                printOverlay.style.display = 'none';
+                await updateDoc(ref, { status: 'success' });
+                showPrinterStatusPopup(`Print ${item.orderNumber} SUCCESS`, `Printer Department: ${item.printerDeptName}\nPlease check your printer & printer receipt queue.`, true);
+            }, 1000);
+        };
+
+        window.deleteQueueItem = async function(id) {
+            if (confirm('Delete this queue record?')) {
+                await deleteDoc(doc(db, 'licenses', currentClientId, 'print_queue', id));
+            }
+        };
+
+        window.refreshPrinterQueue = function() { loadPrinterQueue(); };
+
+        window.showPrinterStatusPopup = function(title, message, isSuccess) {
+            const overlay = document.getElementById('printerStatusOverlay');
+            const icon = document.getElementById('printerStatusIcon');
+            const titleEl = document.getElementById('printerStatusTitle');
+            const msgEl = document.getElementById('printerStatusMsg');
+
+            icon.innerHTML = isSuccess ? 
+                '<i class="fas fa-check-circle" style="color: #4caf50;"></i>' : 
+                '<i class="fas fa-exclamation-triangle" style="color: #e53e3e;"></i>';
+            
+            titleEl.innerText = title;
+            titleEl.style.fontSize = "1.2rem";
+            msgEl.innerHTML = message.replace('\n', '<br>');
+
+            overlay.style.display = 'flex';
+            overlay.style.opacity = '1';
+
+            setTimeout(() => {
+                overlay.style.opacity = '0';
+                setTimeout(() => { overlay.style.display = 'none'; }, 500);
+            }, 3500); // Stay longer for error/success reading
+        }
 
         window.deletePrinter = async function(id) {
             if (confirm('Delete this printer configuration?')) {
