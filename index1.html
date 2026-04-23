@@ -1697,6 +1697,22 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+
+        /* Order Success Popup Style */
+        #orderSuccessOverlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(8px);
+            z-index: 20000;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.5s ease;
+        }
     </style>
 </head>
 <body>
@@ -2736,6 +2752,18 @@
             <div style="display: flex; gap: 10px;">
                 <button class="primary-btn" onclick="triggerEarlyPaymentMode()">Early Payment</button>
                 <button class="secondary-btn" onclick="closeModal('checkoutStatusWarningModal')">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Order Success Popup HTML -->
+    <div id="orderSuccessOverlay">
+        <div style="background: white; padding: 30px; border-radius: 28px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.2); width: 320px; animation: slideUp 0.3s ease;">
+            <div style="color: #4caf50; font-size: 4rem; margin-bottom: 15px;"><i class="fas fa-check-circle"></i></div>
+            <h2 style="margin-bottom: 20px; color: #1e293b;">Order Placed!!!</h2>
+            <div style="text-align: left; font-size: 1rem; color: #475569; background: #f8fafc; padding: 15px; border-radius: 16px; border: 1px solid #e2e8f0;">
+                <p style="margin-bottom: 8px;"><strong>Order ID :</strong> <span id="successOrderId" style="color: #764ba2; font-weight: 800;"></span></p>
+                <p><strong>Table :</strong> <span id="successTableNum" style="color: #1e293b; font-weight: 800;"></span></p>
             </div>
         </div>
     </div>
@@ -4568,6 +4596,7 @@
                     }
                     
                     const isSelected = selectedOrderIdsForCheckout.includes(orderDoc.id);
+                    const orderTime = order.createdAt?.toDate().toLocaleString([], { day:'2-digit', month:'2-digit', year:'numeric', hour: '2-digit', minute: '2-digit' }) || 'N/A';
 
                     html += `
                         <div id="order-card-${orderDoc.id}" 
@@ -4576,8 +4605,11 @@
                              ontouchstart="startOrderHoldTakeOrder('${orderDoc.id}')" ontouchend="clearOrderHoldTakeOrder()"
                              onclick="handleOrderCardClickTakeOrder('${orderDoc.id}')"
                              style="background:white; padding:15px; border-radius:12px; margin-bottom:10px; border-left:4px solid #764ba2; box-shadow:0 2px 5px rgba(0,0,0,0.05);">
-                            <div style="display:flex; justify-content:space-between; font-weight:bold; margin-bottom:5px;">
-                                <span>ID: ${order.orderNumber} <span style="background:#e9ecef; color:#666; font-size:10px; padding:2px 6px; border-radius:10px; margin-left:5px; text-transform:uppercase; vertical-align:middle;">${(order.orderType || 'dine-in').replace('-', ' ')}</span></span>
+                            <div style="display:flex; justify-content:space-between; font-weight:bold; margin-bottom:8px; align-items: flex-start;">
+                                <div>
+                                    <span>ID: ${order.orderNumber} <span style="background:#e9ecef; color:#666; font-size:10px; padding:2px 6px; border-radius:10px; margin-left:5px; text-transform:uppercase; vertical-align:middle;">${(order.orderType || 'dine-in').replace('-', ' ')}</span></span>
+                                    <div style="font-size: 11px; color: #666; font-weight: normal; margin-top: 3px;"><i class="fas fa-clock"></i> ${orderTime}</div>
+                                </div>
                                 <span style="color:#764ba2;">RM ${order.total}</span>
                             </div>
                             <div style="font-size:0.85rem; color:#444; border-bottom: 1px dashed #eee; padding-bottom: 10px;">${itemsHtml}</div>
@@ -5188,12 +5220,33 @@
             if (!filteredTables.length) {
                 grid.innerHTML = `<div style="text-align:center;padding:20px;grid-column:span 3;color:#666;">No ${filterStatus} tables found.</div>`;
             } else {
-                grid.innerHTML = filteredTables.map(t => `
+                // Separate counter table from other tables to show it at the top
+                const counterTable = filteredTables.find(t => t.id.toLowerCase() === 'counter');
+                const otherTables = filteredTables.filter(t => t.id.toLowerCase() !== 'counter');
+
+                let html = '';
+                if (counterTable) {
+                    html += `
+                        <div class="table-card-takeorder" 
+                             style="grid-column: span 3; width: 100%; flex-direction: row; justify-content: space-between; padding: 15px 30px; margin-bottom: 10px;"
+                             onclick="confirmChangeTableTakeOrder('${counterTable.id}', 'Counter')">
+                            <div style="display: flex; align-items: center; gap: 15px;">
+                                <i class="fas fa-desktop" style="font-size: 1.2rem; color: #764ba2;"></i>
+                                <div class="table-number-takeorder" style="margin-bottom: 0; font-size: 1.2rem;">COUNTER</div>
+                            </div>
+                            <div class="capacity-takeorder" style="margin-top: 0;"><i class="fas fa-user"></i> Walk-in</div>
+                        </div>
+                    `;
+                }
+
+                html += otherTables.map(t => `
                     <div class="table-card-takeorder" onclick="confirmChangeTableTakeOrder('${t.id}', '${t.id.toUpperCase()}')">
                         <div class="table-number-takeorder">${t.id.toUpperCase()}</div>
                         <div class="capacity-takeorder"><i class="fas fa-user"></i> ${t.capacity}</div>
                     </div>
                 `).join('');
+
+                grid.innerHTML = html;
             }
             document.getElementById('changeTableModalTakeOrder').style.display = 'flex';
         };
@@ -5846,8 +5899,19 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
                     await updateDoc(doc(db, 'licenses', currentClientId, 'tables', selectedTableIdTakeOrder), { status: 'occupied' });
                 }
                 
-                alert('Order placed successfully!');
+                // Custom Success Popup Logic
+                const successOverlay = document.getElementById('orderSuccessOverlay');
+                document.getElementById('successOrderId').innerText = orderData.orderNumber;
+                document.getElementById('successTableNum').innerText = (selectedOrderTypeTakeOrder === 'delivery') ? 'Delivery' : (selectedTableNumberTakeOrder || 'N/A');
                 
+                successOverlay.style.display = 'flex';
+                successOverlay.style.opacity = '1';
+                
+                setTimeout(() => {
+                    successOverlay.style.opacity = '0';
+                    setTimeout(() => { successOverlay.style.display = 'none'; }, 500);
+                }, 2000);
+
                 cartTakeOrder = [];
                 updateOrdersUITakeOrder();
                 document.getElementById('ordersPanelTakeOrder').classList.remove('show-mobile');
