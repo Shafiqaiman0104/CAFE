@@ -1699,7 +1699,7 @@
         }
 
         /* Order Success Popup Style */
-        #orderSuccessOverlay {
+        #orderSuccessOverlay, #printerStatusOverlay {
             display: none;
             position: fixed;
             top: 0;
@@ -1795,6 +1795,12 @@
                         </div>
                         <div class="menu-item" onclick="showPage('cashier')">
                             <i class="fas fa-cash-register"></i> Cashier
+                        </div>
+                        <div class="menu-item" onclick="showPage('departmentPrinter')">
+                            <i class="fas fa-print"></i> Department Printer
+                        </div>
+                        <div class="menu-item" onclick="showPage('printers')">
+                            <i class="fas fa-receipt"></i> Printers
                         </div>
                     </div>
                 </div>
@@ -2153,6 +2159,28 @@
                 </div>
             </div>
 
+            <!-- Department Printer Page -->
+            <div id="departmentPrinter" class="page">
+                <div class="section-card">
+                    <div class="section-header">
+                        <span class="section-title">Department Printers</span>
+                        <button class="btn-icon" onclick="showAddDeptPrinterModal()">+</button>
+                    </div>
+                    <div id="deptPrintersList"></div>
+                </div>
+            </div>
+
+            <!-- Printers Page -->
+            <div id="printers" class="page">
+                <div class="section-card">
+                    <div class="section-header">
+                        <span class="section-title">Printers</span>
+                        <button class="btn-icon" onclick="showAddPrinterModal()">+</button>
+                    </div>
+                    <div id="printersList"></div>
+                </div>
+            </div>
+
             <!-- Cashier Page -->
             <div id="cashier" class="page">
                 <div class="section-card">
@@ -2240,6 +2268,77 @@
                 <button type="button" class="btn-small" onclick="showModifierSelector()">+ Add Modifier</button>
             </div>
             <button class="btn" onclick="saveMenuItem()">Save</button>
+        </div>
+    </div>
+
+    <!-- Add Department Printer Modal -->
+    <div id="addDeptPrinterModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title" id="deptPrinterModalTitle">Add Department Printer</span>
+                <button class="modal-close" onclick="closeModal('addDeptPrinterModal')">&times;</button>
+            </div>
+            <input type="hidden" id="editingDeptPrinterId">
+            <div class="form-group">
+                <label>Name</label>
+                <input type="text" id="deptPrinterName" placeholder="e.g. Kitchen Printer">
+            </div>
+            <div class="form-group">
+                <label>Categories (Select which menu categories go to this printer)</label>
+                <div id="deptPrinterCategoriesCheckboxes" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 10px; background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0;"></div>
+            </div>
+            <button class="btn" onclick="saveDeptPrinter()">Save</button>
+        </div>
+    </div>
+
+    <!-- Add Printer Modal -->
+    <div id="addPrinterModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title" id="printerModalTitle">Add Printer</span>
+                <button class="modal-close" onclick="closeModal('addPrinterModal')">&times;</button>
+            </div>
+            <input type="hidden" id="editingPrinterId">
+            <div class="form-group">
+                <label>Printer Name</label>
+                <input type="text" id="printerNameField" placeholder="Counter Bluetooth Printer">
+            </div>
+            
+            <button class="btn btn-secondary" style="margin-bottom: 15px; background: #e0e7ff; color: #4338ca;" onclick="scanBluetoothPrinters()">
+                <i class="fab fa-bluetooth"></i> Scan for Bluetooth Printer
+            </button>
+            
+            <div class="form-group">
+                <label>Paper Width</label>
+                <select id="printerPaperWidth">
+                    <option value="58">58mm</option>
+                    <option value="80">80mm</option>
+                </select>
+            </div>
+
+            <div class="checkbox-group" style="margin-bottom: 12px;">
+                <input type="checkbox" id="printReceiptBills">
+                <label>Print Receipt & Bills</label>
+            </div>
+            <div class="checkbox-group" style="margin-bottom: 12px;">
+                <input type="checkbox" id="autoPrintReceipt">
+                <label>Automatically Print Receipt</label>
+            </div>
+            <div class="checkbox-group" style="margin-bottom: 12px;">
+                <input type="checkbox" id="printOrdersToggle" onchange="togglePrinterDeptList(this.checked)">
+                <label>Print Orders</label>
+            </div>
+
+            <div id="printerDeptListContainer" style="display: none; background: #f1f5f9; padding: 15px; border-radius: 16px; margin-bottom: 15px; border: 1px solid #cbd5e0;">
+                <label style="font-size: 11px; font-weight: 700; color: #475569; margin-bottom: 8px; display: block; text-transform: uppercase;">Select Department Printers:</label>
+                <div id="printerDeptCheckboxes" style="display: grid; grid-template-columns: 1fr; gap: 8px;"></div>
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+                <button class="secondary-btn" onclick="closeModal('addPrinterModal')">Cancel</button>
+                <button class="primary-btn" onclick="savePrinter()">Save</button>
+            </div>
+            <button class="btn btn-secondary" style="margin-top: 10px;" onclick="printTestPage()">Print Test</button>
         </div>
     </div>
 
@@ -2768,6 +2867,15 @@
         </div>
     </div>
 
+    <!-- Printer Status Popup HTML -->
+    <div id="printerStatusOverlay">
+        <div style="background: white; padding: 30px; border-radius: 28px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.2); width: 320px; animation: slideUp 0.3s ease;">
+            <div id="printerStatusIcon" style="font-size: 4rem; margin-bottom: 15px;"></div>
+            <h2 id="printerStatusTitle" style="margin-bottom: 10px; color: #1e293b;"></h2>
+            <p id="printerStatusMsg" style="font-size: 1rem; color: #475569;"></p>
+        </div>
+    </div>
+
     <!-- Searching Order Overlay -->
     <div id="searchingOrderOverlay">
         <div class="loading-popup">
@@ -3040,6 +3148,8 @@
             else if (pageId === 'reports') loadReportsPage();
             else if (pageId === 'takeOrder') loadTakeOrderPage();
             else if (pageId === 'activeOrders') loadActiveOrders();
+            else if (pageId === 'departmentPrinter') loadDeptPrinters();
+            else if (pageId === 'printers') loadPrintersPage();
             else if (pageId === 'cashier') loadCashierPage();
             else if (pageId === 'allOrders') loadAllOrders();
             else if (pageId === 'allTransactions') loadAllTransactions();
@@ -6721,6 +6831,246 @@ window.openSearchModalTakeOrder = function() {
             
             alert('Payment processed! Change: RM ' + (received - total).toFixed(2));
             loadCashierPage();
+        };
+
+        // ========== DEPARTMENT PRINTERS ==========
+        window.loadDeptPrinters = function() {
+            const ref = collection(db, 'licenses', currentClientId, 'department_printer');
+            onSnapshot(ref, (snapshot) => {
+                const container = document.getElementById('deptPrintersList');
+                let html = '';
+                snapshot.forEach(doc => {
+                    const dp = doc.data();
+                    const deps = Array.isArray(dp.department) ? dp.department.join(', ') : dp.department;
+                    html += `<div style="padding:15px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center; background:white; margin-bottom:8px; border-radius:12px;">
+                        <div>
+                            <div style="font-weight:bold; color:#1e293b;">${dp.name}</div>
+                            <div style="font-size:12px; color:#64748b;">Categories: ${deps || 'None'}</div>
+                        </div>
+                        <div class="action-buttons">
+                            <button class="btn-edit" onclick="editDeptPrinter('${doc.id}')">Edit</button>
+                            <button class="btn-delete" onclick="deleteDeptPrinter('${doc.id}')">Delete</button>
+                        </div>
+                    </div>`;
+                });
+                container.innerHTML = html || '<div class="loading">No department printers added yet.</div>';
+            });
+        };
+
+        window.showAddDeptPrinterModal = async function() {
+            document.getElementById('deptPrinterModalTitle').innerText = 'Add Department Printer';
+            document.getElementById('editingDeptPrinterId').value = '';
+            document.getElementById('deptPrinterName').value = '';
+            
+            // Load categories to show checkboxes
+            const catsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'menu_categories'));
+            const container = document.getElementById('deptPrinterCategoriesCheckboxes');
+            container.innerHTML = '';
+            catsSnap.forEach(d => {
+                const cat = d.data();
+                container.innerHTML += `<div class="checkbox-group">
+                    <input type="checkbox" name="deptCat" value="${cat.name}">
+                    <label style="font-size:13px;">${cat.name}</label>
+                </div>`;
+            });
+            
+            document.getElementById('addDeptPrinterModal').style.display = 'flex';
+        };
+
+        window.editDeptPrinter = async function(id) {
+            const snap = await getDoc(doc(db, 'licenses', currentClientId, 'department_printer', id));
+            if (!snap.exists()) return;
+            const dp = snap.data();
+            
+            await showAddDeptPrinterModal();
+            document.getElementById('deptPrinterModalTitle').innerText = 'Edit Department Printer';
+            document.getElementById('editingDeptPrinterId').value = id;
+            document.getElementById('deptPrinterName').value = dp.name;
+            
+            const savedDeps = dp.department || [];
+            const checkboxes = document.querySelectorAll('input[name="deptCat"]');
+            checkboxes.forEach(cb => {
+                if (savedDeps.includes(cb.value)) cb.checked = true;
+            });
+        };
+
+        window.saveDeptPrinter = async function() {
+            const id = document.getElementById('editingDeptPrinterId').value;
+            const name = document.getElementById('deptPrinterName').value.trim();
+            const selectedCats = Array.from(document.querySelectorAll('input[name="deptCat"]:checked')).map(cb => cb.value);
+            
+            if (!name) { alert('Please enter a name'); return; }
+            
+            const data = { name, department: selectedCats, updatedAt: Timestamp.now() };
+            if (id) {
+                await updateDoc(doc(db, 'licenses', currentClientId, 'department_printer', id), data);
+            } else {
+                data.createdAt = Timestamp.now();
+                await addDoc(collection(db, 'licenses', currentClientId, 'department_printer'), data);
+            }
+            closeModal('addDeptPrinterModal');
+        };
+
+        window.deleteDeptPrinter = async function(id) {
+            if (confirm('Delete this department printer?')) {
+                await deleteDoc(doc(db, 'licenses', currentClientId, 'department_printer', id));
+            }
+        };
+
+        // ========== PRINTERS CONFIGURATION ==========
+        window.loadPrintersPage = function() {
+            const ref = collection(db, 'licenses', currentClientId, 'printers');
+            onSnapshot(ref, (snapshot) => {
+                const container = document.getElementById('printersList');
+                let html = '';
+                snapshot.forEach(doc => {
+                    const p = doc.data();
+                    html += `<div style="padding:15px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center; background:white; margin-bottom:8px; border-radius:12px;">
+                        <div>
+                            <div style="font-weight:bold; color:#1e293b;">${p.name} (${p.paperWidth}mm)</div>
+                            <div style="font-size:11px; color:#64748b;">
+                                Receipt: ${p.printReceipt ? '✅' : '❌'} | Auto: ${p.autoPrint ? '✅' : '❌'} | Orders: ${p.printOrders ? '✅' : '❌'}
+                            </div>
+                        </div>
+                        <div class="action-buttons">
+                            <button class="btn-edit" onclick="editPrinter('${doc.id}')">Edit</button>
+                            <button class="btn-delete" onclick="deletePrinter('${doc.id}')">Delete</button>
+                        </div>
+                    </div>`;
+                });
+                container.innerHTML = html || '<div class="loading">No printers configured.</div>';
+            });
+        };
+
+        window.showAddPrinterModal = async function() {
+            document.getElementById('printerModalTitle').innerText = 'Add Printer';
+            document.getElementById('editingPrinterId').value = '';
+            document.getElementById('printerNameField').value = '';
+            document.getElementById('printerPaperWidth').value = '58';
+            document.getElementById('printReceiptBills').checked = false;
+            document.getElementById('autoPrintReceipt').checked = false;
+            document.getElementById('printOrdersToggle').checked = false;
+            togglePrinterDeptList(false);
+            
+            // Load department printers for checkboxes
+            const deptSnap = await getDocs(collection(db, 'licenses', currentClientId, 'department_printer'));
+            const container = document.getElementById('printerDeptCheckboxes');
+            container.innerHTML = '';
+            deptSnap.forEach(d => {
+                const dp = d.data();
+                container.innerHTML += `<div class="checkbox-group">
+                    <input type="checkbox" name="printerDeptItem" value="${d.id}">
+                    <label style="font-size:13px;">${dp.name}</label>
+                </div>`;
+            });
+
+            document.getElementById('addPrinterModal').style.display = 'flex';
+        };
+
+        window.editPrinter = async function(id) {
+            const snap = await getDoc(doc(db, 'licenses', currentClientId, 'printers', id));
+            if (!snap.exists()) return;
+            const p = snap.data();
+            
+            await showAddPrinterModal();
+            document.getElementById('printerModalTitle').innerText = 'Edit Printer';
+            document.getElementById('editingPrinterId').value = id;
+            document.getElementById('printerNameField').value = p.name;
+            document.getElementById('printerPaperWidth').value = p.paperWidth || '58';
+            document.getElementById('printReceiptBills').checked = p.printReceipt || false;
+            document.getElementById('autoPrintReceipt').checked = p.autoPrint || false;
+            document.getElementById('printOrdersToggle').checked = p.printOrders || false;
+            togglePrinterDeptList(p.printOrders || false);
+            
+            const savedDepts = p.departmentPrinters || [];
+            const checkboxes = document.querySelectorAll('input[name="printerDeptItem"]');
+            checkboxes.forEach(cb => {
+                if (savedDepts.includes(cb.value)) cb.checked = true;
+            });
+        };
+
+        window.togglePrinterDeptList = function(show) {
+            document.getElementById('printerDeptListContainer').style.display = show ? 'block' : 'none';
+        };
+
+        window.savePrinter = async function() {
+            const id = document.getElementById('editingPrinterId').value;
+            const name = document.getElementById('printerNameField').value.trim();
+            const paperWidth = document.getElementById('printerPaperWidth').value;
+            const printReceipt = document.getElementById('printReceiptBills').checked;
+            const autoPrint = document.getElementById('autoPrintReceipt').checked;
+            const printOrders = document.getElementById('printOrdersToggle').checked;
+            const departmentPrinters = Array.from(document.querySelectorAll('input[name="printerDeptItem"]:checked')).map(cb => cb.value);
+
+            if (!name) { alert('Please enter printer name'); return; }
+
+            const data = { name, paperWidth, printReceipt, autoPrint, printOrders, departmentPrinters, updatedAt: Timestamp.now() };
+            if (id) {
+                await updateDoc(doc(db, 'licenses', currentClientId, 'printers', id), data);
+            } else {
+                data.createdAt = Timestamp.now();
+                await addDoc(collection(db, 'licenses', currentClientId, 'printers'), data);
+            }
+            closeModal('addPrinterModal');
+        };
+
+        window.deletePrinter = async function(id) {
+            if (confirm('Delete this printer configuration?')) {
+                await deleteDoc(doc(db, 'licenses', currentClientId, 'printers', id));
+            }
+        };
+
+        function showPrinterStatusPopup(title, message, isSuccess) {
+            const overlay = document.getElementById('printerStatusOverlay');
+            const icon = document.getElementById('printerStatusIcon');
+            const titleEl = document.getElementById('printerStatusTitle');
+            const msgEl = document.getElementById('printerStatusMsg');
+
+            icon.innerHTML = isSuccess ? '<i class="fas fa-check-circle" style="color: #4caf50;"></i>' : '<i class="fas fa-times-circle" style="color: #e53e3e;"></i>';
+            titleEl.innerText = title;
+            msgEl.innerText = message;
+
+            overlay.style.display = 'flex';
+            overlay.style.opacity = '1';
+
+            setTimeout(() => {
+                overlay.style.opacity = '0';
+                setTimeout(() => { overlay.style.display = 'none'; }, 500);
+            }, 2000);
+        }
+
+        window.scanBluetoothPrinters = async function() {
+            if (!navigator.bluetooth) {
+                showPrinterStatusPopup("Not Supported", "Web Bluetooth is not supported in this browser.", false);
+                return;
+            }
+
+            try {
+                // We search for all devices to ensure compatibility with generic thermal printers.
+                // We include common thermal printer UUIDs in optionalServices so we can access them later.
+                const device = await navigator.bluetooth.requestDevice({
+                    acceptAllDevices: true,
+                    optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb', 'e7e11001-49d2-4cc6-a973-108ca0926c04']
+                });
+
+                if (device) {
+                    document.getElementById('printerNameField').value = device.name || "Unnamed Printer";
+                    // We store the device ID in a hidden attribute to help with reconnection logic later
+                    document.getElementById('printerNameField').setAttribute('data-bt-id', device.id);
+                    showPrinterStatusPopup("Connected!", (device.name || "Unnamed Printer") + " selected.", true);
+                }
+            } catch (error) {
+                console.error("Bluetooth Scan Error:", error);
+                if (error.name !== 'NotFoundError') {
+                    showPrinterStatusPopup("Error", error.message, false);
+                } else {
+                    showPrinterStatusPopup("Cancelled", "No device was selected.", false);
+                }
+            }
+        };
+
+        window.printTestPage = function() {
+            alert('Connecting and printing test page to: ' + document.getElementById('printerNameField').value);
         };
 
         // ========== UTILITIES ==========
