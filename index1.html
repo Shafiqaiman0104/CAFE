@@ -7118,10 +7118,26 @@ window.openSearchModalTakeOrder = function() {
             const printersSnap = await getDocs(query(collection(db, 'licenses', currentClientId, 'printers'), where('autoPrint', '==', true)));
             if (printersSnap.empty) return;
 
+            // Fetch order items with their variants and modifiers
+            const itemsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderId, 'items'));
+            const fullItemsList = [];
+            for (const itDoc of itemsSnap.docs) {
+                const itData = itDoc.data();
+                const vSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderId, 'items', itDoc.id, 'selectedVariants'));
+                const mSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderId, 'items', itDoc.id, 'selectedModifiers'));
+                fullItemsList.push({
+                    ...itData,
+                    variants: vSnap.docs.map(v => v.data()),
+                    modifiers: mSnap.docs.map(m => m.data())
+                });
+            }
+
             // Show "Printing..." popup
             const printOverlay = document.getElementById('printingProcessOverlay');
             document.getElementById('printingOrderId').innerText = orderNumber;
             printOverlay.style.display = 'flex';
+
+            let printActions = [];
 
             for (const printerDoc of printersSnap.docs) {
                 const p = printerDoc.data();
@@ -7129,6 +7145,11 @@ window.openSearchModalTakeOrder = function() {
                 // Handle Full Receipt Printing
                 if (p.printReceipt) {
                     await addToPrintQueue(orderId, orderNumber, 'Receipt', null);
+                    if (activeBluetoothDevice) {
+                        const commands = generateReceiptCommands(orderNumber, fullItemsList, 'Main Receipt');
+                        const success = await sendToBluetoothPrinter(commands);
+                        printActions.push({ label: 'Main Receipt', success });
+                    }
                 }
 
                 // Handle Department Order Printing
@@ -7136,19 +7157,36 @@ window.openSearchModalTakeOrder = function() {
                     for (const deptId of p.departmentPrinters) {
                         const deptSnap = await getDoc(doc(db, 'licenses', currentClientId, 'department_printer', deptId));
                         if (deptSnap.exists()) {
-                            await addToPrintQueue(orderId, orderNumber, deptSnap.data().name, deptId);
+                            const dept = deptSnap.data();
+                            // Filter items belonging to this department's categories
+                            const deptItems = fullItemsList.filter(it => {
+                                const catName = categoryMapTakeOrder[it.categoryId];
+                                return dept.department && dept.department.includes(catName);
+                            });
+                            if (deptItems.length > 0) {
+                                await addToPrintQueue(orderId, orderNumber, dept.name, deptId);
+                                if (activeBluetoothDevice) {
+                                    const commands = generateReceiptCommands(orderNumber, deptItems, dept.name);
+                                    const success = await sendToBluetoothPrinter(commands);
+                                    printActions.push({ label: dept.name, success });
+                                }
+                            }
                         }
                     }
                 }
             }
 
-            // Simulate background processing for this demo
-            // In a real scenario, a background service or the local device would pick these up
-            setTimeout(() => {
-                printOverlay.style.display = 'none';
-                // Pick first one for immediate success feedback for UI experience
-                showPrinterStatusPopup(`Print ${orderNumber} SUCCESS`, `Printer Department: Main Receipt\nPlease check your printer & printer receipt queue.`, true);
-            }, 1500);
+            if (activeBluetoothDevice && activeBluetoothDevice.gatt.connected) {
+                activeBluetoothDevice.gatt.disconnect();
+            }
+            printOverlay.style.display = 'none';
+            if (printActions.length > 0) {
+                const allSuccess = printActions.every(a => a.success);
+                const details = printActions.map(a => `${a.label}: ${a.success ? 'OK' : 'FAIL'}`).join('\n');
+                showPrinterStatusPopup(allSuccess ? "Printing Success" : "Print Warning", details, allSuccess);
+            } else if (!activeBluetoothDevice) {
+                showPrinterStatusPopup("Queued", "No printer connected. Receipts added to queue.", true);
+            }
         };
 
         async function addToPrintQueue(orderId, orderNumber, deptName, deptId) {
@@ -7175,11 +7213,42 @@ window.openSearchModalTakeOrder = function() {
 
             await updateDoc(ref, { status: 'processing', attempts: (item.attempts || 0) + 1 });
 
-            setTimeout(async () => {
-                printOverlay.style.display = 'none';
+            const itemsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', item.orderId, 'items'));
+            let itemsToPrint = [];
+            for (const itDoc of itemsSnap.docs) {
+                const itData = itDoc.data();
+                if (item.printerDeptId) {
+                    const deptSnap = await getDoc(doc(db, 'licenses', currentClientId, 'department_printer', item.printerDeptId));
+                    if (deptSnap.exists()) {
+                        const dept = deptSnap.data();
+                        const catName = categoryMapTakeOrder[itData.categoryId];
+                        if (!dept.department || !dept.department.includes(catName)) continue;
+                    }
+                }
+                const vSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', item.orderId, 'items', itDoc.id, 'selectedVariants'));
+                const mSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', item.orderId, 'items', itDoc.id, 'selectedModifiers'));
+                itemsToPrint.push({
+                    ...itData,
+                    variants: vSnap.docs.map(v => v.data()),
+                    modifiers: mSnap.docs.map(m => m.data())
+                });
+            }
+
+            let printSuccess = false;
+            if (activeBluetoothDevice && itemsToPrint.length > 0) {
+                const commands = generateReceiptCommands(item.orderNumber, itemsToPrint, item.printerDeptName || 'Receipt');
+                printSuccess = await sendToBluetoothPrinter(commands);
+                if (activeBluetoothDevice.gatt.connected) activeBluetoothDevice.gatt.disconnect();
+            }
+
+            printOverlay.style.display = 'none';
+            if (printSuccess) {
                 await updateDoc(ref, { status: 'success' });
-                showPrinterStatusPopup(`Print ${item.orderNumber} SUCCESS`, `Printer Department: ${item.printerDeptName}\nPlease check your printer & printer receipt queue.`, true);
-            }, 1000);
+                showPrinterStatusPopup(`Print ${item.orderNumber} SUCCESS`, `Printer Department: ${item.printerDeptName}\nReprint completed.`, true);
+            } else {
+                await updateDoc(ref, { status: 'failed' });
+                showPrinterStatusPopup(`Print ${item.orderNumber} FAILED`, `Reprint failed. Ensure printer is connected.`, false);
+            }
         };
 
         window.deleteQueueItem = async function(id) {
@@ -7189,6 +7258,78 @@ window.openSearchModalTakeOrder = function() {
         };
 
         window.refreshPrinterQueue = function() { loadPrinterQueue(); };
+
+        // Helper to send data to Bluetooth Printer
+        async function sendToBluetoothPrinter(commands) {
+            if (!activeBluetoothDevice) return false;
+            let server = activeBluetoothDevice.gatt;
+            if (!server.connected) {
+                try {
+                    await server.connect();
+                } catch (e) {
+                    console.error("Bluetooth connection failed", e);
+                    return false;
+                }
+            }
+            try {
+                const SERVICE_UUID = '000018f0-0000-1000-8000-00805f9b34fb';
+                const CHARACTERISTIC_UUID = '00002af1-0000-1000-8000-00805f9b34fb';
+                const service = await server.getPrimaryService(SERVICE_UUID);
+                const characteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
+                const encoder = new TextEncoder();
+                const data = encoder.encode(commands);
+                const CHUNK_SIZE = 20;
+                for (let i = 0; i < data.length; i += CHUNK_SIZE) {
+                    const chunk = data.slice(i, i + CHUNK_SIZE);
+                    await characteristic.writeValue(chunk);
+                }
+                return true;
+            } catch (error) {
+                console.error("Bluetooth write error:", error);
+                return false;
+            }
+        }
+
+        // Helper to generate ESC/POS commands in the requested format
+        function generateReceiptCommands(orderNumber, items, headerTitle) {
+            const now = new Date().toLocaleString();
+            let commands = "";
+            commands += "\x1B\x40"; // Initialize printer
+            commands += "\x1B\x61\x01"; // Center align
+            commands += `\x1B\x45\x01${headerTitle.toUpperCase()}\x1B\x45\x00\n`; // Bold Title
+            
+            commands += "\x1B\x61\x00"; // Left align
+            commands += `ORDER ID: ${orderNumber}\n`;
+            commands += `Order: ${now}\n`;
+            commands += "--------------------------------\n";
+            commands += "Items:\n";
+            
+            items.forEach(item => {
+                commands += `[   ] ${item.name}   x${item.qty}\n`;
+                if (item.variants && item.variants.length) {
+                    item.variants.forEach(v => {
+                        commands += `      + ${v.optionName} (Variant)\n`;
+                    });
+                }
+                if (item.modifiers && item.modifiers.length) {
+                    item.modifiers.forEach(m => {
+                        commands += `      + ${m.optionName} (Modifier)\n`;
+                    });
+                }
+                if (item.notes) {
+                    commands += `      * Req: ${item.notes}\n`;
+                }
+                commands += "\n";
+            });
+            
+            commands += "--------------------------------\n";
+            commands += `Print Time: ${now}\n`;
+            commands += "\x1B\x61\x01"; // Center align
+            commands += `${headerTitle.toUpperCase()}\n`;
+            commands += "\n\n\n\n"; // Feed lines
+            commands += "\x1D\x56\x41\x03"; // Cut paper command
+            return commands;
+        }
 
         window.showPrinterStatusPopup = function(title, message, isSuccess) {
             const overlay = document.getElementById('printerStatusOverlay');
