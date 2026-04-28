@@ -7170,7 +7170,7 @@ window.openSearchModalTakeOrder = function() {
                 if (p.printReceipt) {
                     const qId = await addToPrintQueue(orderId, orderNumber, tableNumber, 'Receipt', null);
                     if (device) {
-                        const commands = generateReceiptCommands(orderNumber, tableNumber, fullItemsList, 'Main Receipt', orderTime);
+                        const commands = generateReceiptCommands(orderNumber, tableNumber, fullItemsList, 'Main Receipt', orderTime, "AUTO PRINT");
                         const success = await sendToBluetoothPrinter(device, commands);
                         await updateDoc(doc(db, 'licenses', currentClientId, 'print_queue', qId), { status: success ? 'success' : 'failed' });
                         printActions.push({ label: 'Main Receipt', success });
@@ -7191,7 +7191,7 @@ window.openSearchModalTakeOrder = function() {
                             if (deptItems.length > 0) {
                                 const qId = await addToPrintQueue(orderId, orderNumber, tableNumber, dept.name, deptId);
                                 if (device) {
-                                    const commands = generateReceiptCommands(orderNumber, tableNumber, deptItems, dept.name, orderTime);
+                                    const commands = generateReceiptCommands(orderNumber, tableNumber, deptItems, dept.name, orderTime, "AUTO PRINT");
                                     const success = await sendToBluetoothPrinter(device, commands);
                                     await updateDoc(doc(db, 'licenses', currentClientId, 'print_queue', qId), { status: success ? 'success' : 'failed' });
                                     printActions.push({ label: dept.name, success });
@@ -7236,6 +7236,10 @@ window.openSearchModalTakeOrder = function() {
             if (!snap.exists()) return;
             const item = snap.data();
 
+            // Determine manual print label based on current attempts recorded before incrementing
+            const currentAttempts = item.attempts || 1;
+            const statusLabel = `MANUAL PRINT ${currentAttempts}`;
+
             // Fetch order time
             const orderSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', item.orderId));
             const orderTime = orderSnap.exists() ? orderSnap.data().createdAt?.toDate().toLocaleString() : 'N/A';
@@ -7244,7 +7248,7 @@ window.openSearchModalTakeOrder = function() {
             document.getElementById('printingOrderId').innerText = item.orderNumber;
             printOverlay.style.display = 'flex';
 
-            await updateDoc(ref, { status: 'processing', attempts: (item.attempts || 0) + 1 });
+            await updateDoc(ref, { status: 'processing', attempts: currentAttempts + 1 });
 
             const itemsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', item.orderId, 'items'));
             let itemsToPrint = [];
@@ -7274,7 +7278,7 @@ window.openSearchModalTakeOrder = function() {
 
             let printSuccess = false;
             if (device && itemsToPrint.length > 0) {
-                const commands = generateReceiptCommands(item.orderNumber, item.tableNumber || 'N/A', itemsToPrint, item.printerDeptName || 'Receipt', orderTime);
+                const commands = generateReceiptCommands(item.orderNumber, item.tableNumber || 'N/A', itemsToPrint, item.printerDeptName || 'Receipt', orderTime, statusLabel);
                 printSuccess = await sendToBluetoothPrinter(device, commands);
                 if (device.gatt.connected) device.gatt.disconnect();
             }
@@ -7329,7 +7333,7 @@ window.openSearchModalTakeOrder = function() {
         }
 
         // Helper to generate ESC/POS commands in the requested format
-        function generateReceiptCommands(orderNumber, tableNumber, items, headerTitle, orderTime) {
+        function generateReceiptCommands(orderNumber, tableNumber, items, headerTitle, orderTime, statusLabel) {
             const printTime = new Date().toLocaleString();
             let commands = "";
             commands += "\x1B\x40"; // Initialize printer
@@ -7362,7 +7366,8 @@ window.openSearchModalTakeOrder = function() {
             });
             
             commands += "--------------------------------\n";
-            commands += `Print Time: ${printTime}\n`;
+            commands += `Print: ${printTime}\n`;
+            commands += `Status: ${statusLabel}\n`;
             commands += "\x1B\x61\x01"; // Center align
             commands += `${headerTitle.toUpperCase()}\n`;
             commands += "\n\n\n\n"; // Feed lines
