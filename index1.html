@@ -7114,6 +7114,10 @@ window.openSearchModalTakeOrder = function() {
         };
 
         window.triggerAutoPrinting = async function(orderId, orderNumber) {
+            // Get table number from order
+            const orderSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', orderId));
+            const tableNumber = orderSnap.exists() ? (orderSnap.data().tableId || 'N/A').toUpperCase() : 'N/A';
+
             // 1. Get all Printers with autoPrint enabled
             const printersSnap = await getDocs(query(collection(db, 'licenses', currentClientId, 'printers'), where('autoPrint', '==', true)));
             if (printersSnap.empty) return;
@@ -7144,10 +7148,11 @@ window.openSearchModalTakeOrder = function() {
                 
                 // Handle Full Receipt Printing
                 if (p.printReceipt) {
-                    await addToPrintQueue(orderId, orderNumber, 'Receipt', null);
+                    const qId = await addToPrintQueue(orderId, orderNumber, tableNumber, 'Receipt', null);
                     if (activeBluetoothDevice) {
-                        const commands = generateReceiptCommands(orderNumber, fullItemsList, 'Main Receipt');
+                        const commands = generateReceiptCommands(orderNumber, tableNumber, fullItemsList, 'Main Receipt');
                         const success = await sendToBluetoothPrinter(commands);
+                        await updateDoc(doc(db, 'licenses', currentClientId, 'print_queue', qId), { status: success ? 'success' : 'failed' });
                         printActions.push({ label: 'Main Receipt', success });
                     }
                 }
@@ -7164,10 +7169,11 @@ window.openSearchModalTakeOrder = function() {
                                 return dept.department && dept.department.includes(catName);
                             });
                             if (deptItems.length > 0) {
-                                await addToPrintQueue(orderId, orderNumber, dept.name, deptId);
+                                const qId = await addToPrintQueue(orderId, orderNumber, tableNumber, dept.name, deptId);
                                 if (activeBluetoothDevice) {
-                                    const commands = generateReceiptCommands(orderNumber, deptItems, dept.name);
+                                    const commands = generateReceiptCommands(orderNumber, tableNumber, deptItems, dept.name);
                                     const success = await sendToBluetoothPrinter(commands);
+                                    await updateDoc(doc(db, 'licenses', currentClientId, 'print_queue', qId), { status: success ? 'success' : 'failed' });
                                     printActions.push({ label: dept.name, success });
                                 }
                             }
@@ -7185,20 +7191,22 @@ window.openSearchModalTakeOrder = function() {
                 const details = printActions.map(a => `${a.label}: ${a.success ? 'OK' : 'FAIL'}`).join('\n');
                 showPrinterStatusPopup(allSuccess ? "Printing Success" : "Print Warning", details, allSuccess);
             } else if (!activeBluetoothDevice) {
-                showPrinterStatusPopup("Queued", "No printer connected. Receipts added to queue.", true);
+                showPrinterStatusPopup("Queued", "No printer connected. Receipts added to queue.", 'warning');
             }
         };
 
-        async function addToPrintQueue(orderId, orderNumber, deptName, deptId) {
-            await addDoc(collection(db, 'licenses', currentClientId, 'print_queue'), {
+        async function addToPrintQueue(orderId, orderNumber, tableNumber, deptName, deptId) {
+            const docRef = await addDoc(collection(db, 'licenses', currentClientId, 'print_queue'), {
                 orderId,
                 orderNumber,
+                tableNumber,
                 printerDeptName: deptName,
                 printerDeptId: deptId,
                 status: 'pending',
                 attempts: 1,
                 createdAt: Timestamp.now()
             });
+            return docRef.id;
         }
 
         window.reprintQueueItem = async function(id) {
@@ -7236,7 +7244,7 @@ window.openSearchModalTakeOrder = function() {
 
             let printSuccess = false;
             if (activeBluetoothDevice && itemsToPrint.length > 0) {
-                const commands = generateReceiptCommands(item.orderNumber, itemsToPrint, item.printerDeptName || 'Receipt');
+                const commands = generateReceiptCommands(item.orderNumber, item.tableNumber || 'N/A', itemsToPrint, item.printerDeptName || 'Receipt');
                 printSuccess = await sendToBluetoothPrinter(commands);
                 if (activeBluetoothDevice.gatt.connected) activeBluetoothDevice.gatt.disconnect();
             }
@@ -7291,7 +7299,7 @@ window.openSearchModalTakeOrder = function() {
         }
 
         // Helper to generate ESC/POS commands in the requested format
-        function generateReceiptCommands(orderNumber, items, headerTitle) {
+        function generateReceiptCommands(orderNumber, tableNumber, items, headerTitle) {
             const now = new Date().toLocaleString();
             let commands = "";
             commands += "\x1B\x40"; // Initialize printer
@@ -7300,6 +7308,7 @@ window.openSearchModalTakeOrder = function() {
             
             commands += "\x1B\x61\x00"; // Left align
             commands += `ORDER ID: ${orderNumber}\n`;
+            commands += `TABLE: ${tableNumber}\n`;
             commands += `Order: ${now}\n`;
             commands += "--------------------------------\n";
             commands += "Items:\n";
@@ -7331,18 +7340,21 @@ window.openSearchModalTakeOrder = function() {
             return commands;
         }
 
-        window.showPrinterStatusPopup = function(title, message, isSuccess) {
+        window.showPrinterStatusPopup = function(title, message, status) {
             const overlay = document.getElementById('printerStatusOverlay');
             const icon = document.getElementById('printerStatusIcon');
             const titleEl = document.getElementById('printerStatusTitle');
             const msgEl = document.getElementById('printerStatusMsg');
 
-            icon.innerHTML = isSuccess ? 
-                '<i class="fas fa-check-circle" style="color: #4caf50;"></i>' : 
-                '<i class="fas fa-exclamation-triangle" style="color: #e53e3e;"></i>';
+            if (status === 'success' || status === true) {
+                icon.innerHTML = '<i class="fas fa-check-circle" style="color: #4caf50;"></i>';
+            } else if (status === 'warning') {
+                icon.innerHTML = '<i class="fas fa-exclamation-triangle" style="color: #e53e3e;"></i>';
+            } else { // false, error, failed
+                icon.innerHTML = '<i class="fas fa-times-circle" style="color: #e53e3e;"></i>';
+            }
             
             titleEl.innerText = title;
-            titleEl.style.fontSize = "1.2rem";
             msgEl.innerHTML = message.replace('\n', '<br>');
 
             overlay.style.display = 'flex';
@@ -7352,31 +7364,6 @@ window.openSearchModalTakeOrder = function() {
                 overlay.style.opacity = '0';
                 setTimeout(() => { overlay.style.display = 'none'; }, 500);
             }, 3500); // Stay longer for error/success reading
-        }
-
-        window.deletePrinter = async function(id) {
-            if (confirm('Delete this printer configuration?')) {
-                await deleteDoc(doc(db, 'licenses', currentClientId, 'printers', id));
-            }
-        };
-
-        function showPrinterStatusPopup(title, message, isSuccess) {
-            const overlay = document.getElementById('printerStatusOverlay');
-            const icon = document.getElementById('printerStatusIcon');
-            const titleEl = document.getElementById('printerStatusTitle');
-            const msgEl = document.getElementById('printerStatusMsg');
-
-            icon.innerHTML = isSuccess ? '<i class="fas fa-check-circle" style="color: #4caf50;"></i>' : '<i class="fas fa-times-circle" style="color: #e53e3e;"></i>';
-            titleEl.innerText = title;
-            msgEl.innerText = message;
-
-            overlay.style.display = 'flex';
-            overlay.style.opacity = '1';
-
-            setTimeout(() => {
-                overlay.style.opacity = '0';
-                setTimeout(() => { overlay.style.display = 'none'; }, 500);
-            }, 2000);
         }
 
         window.scanBluetoothPrinters = async function() {
@@ -7438,6 +7425,7 @@ window.openSearchModalTakeOrder = function() {
                 
                 commands += "\x1B\x61\x00"; // Left align
                 commands += `ORDER ID: TEST\n`;
+                commands += `TABLE: TEST\n`;
                 commands += `Order: ${now}\n`;
                 commands += "--------------------------------\n";
                 commands += "Items:\n";
