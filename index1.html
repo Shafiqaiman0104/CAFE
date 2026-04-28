@@ -7122,7 +7122,9 @@ window.openSearchModalTakeOrder = function() {
         window.triggerAutoPrinting = async function(orderId, orderNumber) {
             // Get table number from order
             const orderSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', orderId));
-            const tableNumber = orderSnap.exists() ? (orderSnap.data().tableId || 'N/A').toUpperCase() : 'N/A';
+            const orderData = orderSnap.exists() ? orderSnap.data() : null;
+            const tableNumber = orderData ? (orderData.tableId || 'N/A').toUpperCase() : 'N/A';
+            const orderTime = orderData?.createdAt ? orderData.createdAt.toDate().toLocaleString() : new Date().toLocaleString();
 
             // 1. Get all Printers with autoPrint enabled
             const printersSnap = await getDocs(query(collection(db, 'licenses', currentClientId, 'printers'), where('autoPrint', '==', true)));
@@ -7156,7 +7158,7 @@ window.openSearchModalTakeOrder = function() {
                 if (p.printReceipt) {
                     const qId = await addToPrintQueue(orderId, orderNumber, tableNumber, 'Receipt', null);
                     if (activeBluetoothDevice) {
-                        const commands = generateReceiptCommands(orderNumber, tableNumber, fullItemsList, 'Main Receipt');
+                        const commands = generateReceiptCommands(orderNumber, tableNumber, fullItemsList, 'Main Receipt', orderTime);
                         const success = await sendToBluetoothPrinter(commands);
                         await updateDoc(doc(db, 'licenses', currentClientId, 'print_queue', qId), { status: success ? 'success' : 'failed' });
                         printActions.push({ label: 'Main Receipt', success });
@@ -7177,7 +7179,7 @@ window.openSearchModalTakeOrder = function() {
                             if (deptItems.length > 0) {
                                 const qId = await addToPrintQueue(orderId, orderNumber, tableNumber, dept.name, deptId);
                                 if (activeBluetoothDevice) {
-                                    const commands = generateReceiptCommands(orderNumber, tableNumber, deptItems, dept.name);
+                                    const commands = generateReceiptCommands(orderNumber, tableNumber, deptItems, dept.name, orderTime);
                                     const success = await sendToBluetoothPrinter(commands);
                                     await updateDoc(doc(db, 'licenses', currentClientId, 'print_queue', qId), { status: success ? 'success' : 'failed' });
                                     printActions.push({ label: dept.name, success });
@@ -7221,6 +7223,10 @@ window.openSearchModalTakeOrder = function() {
             if (!snap.exists()) return;
             const item = snap.data();
 
+            // Fetch order time
+            const orderSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', item.orderId));
+            const orderTime = orderSnap.exists() ? orderSnap.data().createdAt?.toDate().toLocaleString() : 'N/A';
+
             const printOverlay = document.getElementById('printingProcessOverlay');
             document.getElementById('printingOrderId').innerText = item.orderNumber;
             printOverlay.style.display = 'flex';
@@ -7250,7 +7256,7 @@ window.openSearchModalTakeOrder = function() {
 
             let printSuccess = false;
             if (activeBluetoothDevice && itemsToPrint.length > 0) {
-                const commands = generateReceiptCommands(item.orderNumber, item.tableNumber || 'N/A', itemsToPrint, item.printerDeptName || 'Receipt');
+                const commands = generateReceiptCommands(item.orderNumber, item.tableNumber || 'N/A', itemsToPrint, item.printerDeptName || 'Receipt', orderTime);
                 printSuccess = await sendToBluetoothPrinter(commands);
                 if (activeBluetoothDevice.gatt.connected) activeBluetoothDevice.gatt.disconnect();
             }
@@ -7305,8 +7311,8 @@ window.openSearchModalTakeOrder = function() {
         }
 
         // Helper to generate ESC/POS commands in the requested format
-        function generateReceiptCommands(orderNumber, tableNumber, items, headerTitle) {
-            const now = new Date().toLocaleString();
+        function generateReceiptCommands(orderNumber, tableNumber, items, headerTitle, orderTime) {
+            const printTime = new Date().toLocaleString();
             let commands = "";
             commands += "\x1B\x40"; // Initialize printer
             commands += "\x1B\x61\x01"; // Center align
@@ -7315,7 +7321,7 @@ window.openSearchModalTakeOrder = function() {
             commands += "\x1B\x61\x00"; // Left align
             commands += `ORDER ID: ${orderNumber}\n`;
             commands += `TABLE: ${tableNumber}\n`;
-            commands += `Order: ${now}\n`;
+            commands += `Order: ${orderTime}\n`;
             commands += "--------------------------------\n";
             commands += "Items:\n";
             
@@ -7323,12 +7329,12 @@ window.openSearchModalTakeOrder = function() {
                 commands += `[   ] ${item.name}   x${item.qty}\n`;
                 if (item.variants && item.variants.length) {
                     item.variants.forEach(v => {
-                        commands += `      + ${v.optionName} (Variant)\n`;
+                        commands += `      + ${v.optionName}\n`;
                     });
                 }
                 if (item.modifiers && item.modifiers.length) {
                     item.modifiers.forEach(m => {
-                        commands += `      + ${m.optionName} (Modifier)\n`;
+                        commands += `      + ${m.optionName}\n`;
                     });
                 }
                 if (item.notes) {
@@ -7338,7 +7344,7 @@ window.openSearchModalTakeOrder = function() {
             });
             
             commands += "--------------------------------\n";
-            commands += `Print Time: ${now}\n`;
+            commands += `Print Time: ${printTime}\n`;
             commands += "\x1B\x61\x01"; // Center align
             commands += `${headerTitle.toUpperCase()}\n`;
             commands += "\n\n\n\n"; // Feed lines
@@ -7438,8 +7444,8 @@ window.openSearchModalTakeOrder = function() {
                 
                 // Test Item with Checkbox
                 commands += "[   ] Nasi Lemak Special   x1\n";
-                commands += "      + Extra Spicy (Variant)\n";
-                commands += "      + Fried Egg (Modifier)\n";
+                commands += "      + Extra Spicy\n";
+                commands += "      + Fried Egg\n";
                 commands += "      * Req: No cucumber please\n";
                 
                 commands += "--------------------------------\n";
