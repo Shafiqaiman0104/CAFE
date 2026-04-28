@@ -306,7 +306,7 @@
         }
         
         .section-card {
-            background: white;
+            background: #cacaca3b;
             border-radius: 24px;
             padding: 24px;
             margin-bottom: 24px;
@@ -324,7 +324,7 @@
         .section-title {
             font-size: 18px;
             font-weight: bold;
-            color: #333;
+            color: white;
         }
         
         .btn-icon {
@@ -1697,6 +1697,30 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+
+        /* Notification Stack Container */
+        #notificationStack {
+            position: fixed;
+            top: 70px; /* Positioned below the top bar */
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 200000;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            align-items: center;
+            pointer-events: none;
+            width: 100%;
+        }
+
+        #orderSuccessOverlay, #printerStatusOverlay, #printingProcessOverlay {
+            display: none;
+            background: none !important;
+            backdrop-filter: none !important;
+            position: relative !important;
+            pointer-events: auto;
+            transition: opacity 0.5s ease;
+        }
     </style>
 </head>
 <body>
@@ -1779,6 +1803,15 @@
                         </div>
                         <div class="menu-item" onclick="showPage('cashier')">
                             <i class="fas fa-cash-register"></i> Cashier
+                        </div>
+                        <div class="menu-item" onclick="showPage('departmentPrinter')">
+                            <i class="fas fa-print"></i> Department Printer
+                        </div>
+                        <div class="menu-item" onclick="showPage('printers')">
+                            <i class="fas fa-receipt"></i> Printers
+                        </div>
+                        <div class="menu-item" onclick="showPage('printerQueue')">
+                            <i class="fas fa-list-check"></i> Printer Receipt Queue
                         </div>
                     </div>
                 </div>
@@ -2137,6 +2170,50 @@
                 </div>
             </div>
 
+            <!-- Department Printer Page -->
+            <div id="departmentPrinter" class="page">
+                <div class="section-card">
+                    <div class="section-header">
+                        <span class="section-title">Department Printers</span>
+                        <button class="btn-icon" onclick="showAddDeptPrinterModal()">+</button>
+                    </div>
+                    <div id="deptPrintersList"></div>
+                </div>
+            </div>
+
+            <!-- Printers Page -->
+            <div id="printers" class="page">
+                <div class="section-card">
+                    <div class="section-header">
+                        <span class="section-title">Printers</span>
+                        <button class="btn-icon" onclick="showAddPrinterModal()">+</button>
+                    </div>
+                    <div id="printersList"></div>
+                </div>
+            </div>
+
+            <!-- Printer Queue Page -->
+            <div id="printerQueue" class="page">
+                <div class="section-card">
+                    <div class="section-header">
+                        <span class="section-title">Printer Receipt Queue</span>
+                        <div class="view-toggle-takeorder">
+                            <button class="view-btn-takeorder" onclick="refreshPrinterQueue()"><i class="fas fa-sync-alt"></i></button>
+                        </div>
+                    </div>
+                    
+                    <div class="category-bar-takeorder" id="printerQueueFilterBar" style="margin-bottom: 15px;">
+                        <button class="category-btn-takeorder active" onclick="filterPrinterQueue('All')">All</button>
+                        <button class="category-btn-takeorder" onclick="filterPrinterQueue('pending')">Pending</button>
+                        <button class="category-btn-takeorder" onclick="filterPrinterQueue('processing')">Processing</button>
+                        <button class="category-btn-takeorder" onclick="filterPrinterQueue('success')">Success</button>
+                        <button class="category-btn-takeorder" onclick="filterPrinterQueue('failed')">Failed</button>
+                    </div>
+
+                    <div id="printerQueueList"></div>
+                </div>
+            </div>
+
             <!-- Cashier Page -->
             <div id="cashier" class="page">
                 <div class="section-card">
@@ -2224,6 +2301,77 @@
                 <button type="button" class="btn-small" onclick="showModifierSelector()">+ Add Modifier</button>
             </div>
             <button class="btn" onclick="saveMenuItem()">Save</button>
+        </div>
+    </div>
+
+    <!-- Add Department Printer Modal -->
+    <div id="addDeptPrinterModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title" id="deptPrinterModalTitle">Add Department Printer</span>
+                <button class="modal-close" onclick="closeModal('addDeptPrinterModal')">&times;</button>
+            </div>
+            <input type="hidden" id="editingDeptPrinterId">
+            <div class="form-group">
+                <label>Name</label>
+                <input type="text" id="deptPrinterName" placeholder="e.g. Kitchen Printer">
+            </div>
+            <div class="form-group">
+                <label>Categories (Select which menu categories go to this printer)</label>
+                <div id="deptPrinterCategoriesCheckboxes" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 10px; background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0;"></div>
+            </div>
+            <button class="btn" onclick="saveDeptPrinter()">Save</button>
+        </div>
+    </div>
+
+    <!-- Add Printer Modal -->
+    <div id="addPrinterModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title" id="printerModalTitle">Add Printer</span>
+                <button class="modal-close" onclick="closeModal('addPrinterModal')">&times;</button>
+            </div>
+            <input type="hidden" id="editingPrinterId">
+            <div class="form-group">
+                <label>Printer Name</label>
+                <input type="text" id="printerNameField" placeholder="Counter Bluetooth Printer">
+            </div>
+            
+            <button class="btn btn-secondary" style="margin-bottom: 15px; background: #e0e7ff; color: #4338ca;" onclick="scanBluetoothPrinters()">
+                <i class="fab fa-bluetooth"></i> Scan for Bluetooth Printer
+            </button>
+            
+            <div class="form-group">
+                <label>Paper Width</label>
+                <select id="printerPaperWidth">
+                    <option value="58">58mm</option>
+                    <option value="80">80mm</option>
+                </select>
+            </div>
+
+            <div class="checkbox-group" style="margin-bottom: 12px;">
+                <input type="checkbox" id="printReceiptBills">
+                <label>Print Receipt & Bills</label>
+            </div>
+            <div class="checkbox-group" style="margin-bottom: 12px;">
+                <input type="checkbox" id="autoPrintReceipt">
+                <label>Automatically Print Receipt</label>
+            </div>
+            <div class="checkbox-group" style="margin-bottom: 12px;">
+                <input type="checkbox" id="printOrdersToggle" onchange="togglePrinterDeptList(this.checked)">
+                <label>Print Orders</label>
+            </div>
+
+            <div id="printerDeptListContainer" style="display: none; background: #f1f5f9; padding: 15px; border-radius: 16px; margin-bottom: 15px; border: 1px solid #cbd5e0;">
+                <label style="font-size: 11px; font-weight: 700; color: #475569; margin-bottom: 8px; display: block; text-transform: uppercase;">Select Department Printers:</label>
+                <div id="printerDeptCheckboxes" style="display: grid; grid-template-columns: 1fr; gap: 8px;"></div>
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+                <button class="secondary-btn" onclick="closeModal('addPrinterModal')">Cancel</button>
+                <button class="primary-btn" onclick="savePrinter()">Save</button>
+            </div>
+            <button class="btn btn-secondary" style="margin-top: 10px;" onclick="printTestPage()">Print Test</button>
         </div>
     </div>
 
@@ -2740,6 +2888,39 @@
         </div>
     </div>
 
+    <!-- Notification Stack -->
+    <div id="notificationStack">
+        <!-- Order Success Popup HTML -->
+        <div id="orderSuccessOverlay">
+            <div style="background: white; padding: 30px; border-radius: 28px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.2); width: 320px; animation: slideUp 0.3s ease;">
+                <div style="color: #4caf50; font-size: 4rem; margin-bottom: 15px;"><i class="fas fa-check-circle"></i></div>
+                <h2 style="margin-bottom: 20px; color: #1e293b;">Order Placed!!!</h2>
+                <div style="text-align: left; font-size: 1rem; color: #475569; background: #f8fafc; padding: 15px; border-radius: 16px; border: 1px solid #e2e8f0;">
+                    <p style="margin-bottom: 8px;"><strong>Order ID :</strong> <span id="successOrderId" style="color: #764ba2; font-weight: 800;"></span></p>
+                    <p><strong>Table :</strong> <span id="successTableNum" style="color: #1e293b; font-weight: 800;"></span></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Printing Process Popup -->
+        <div id="printingProcessOverlay">
+            <div style="background: white; padding: 30px; border-radius: 28px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.2); width: 320px; animation: slideUp 0.3s ease;">
+                <div class="loading-circle-orange" style="margin: 0 auto 20px auto;"></div>
+                <h2 style="margin-bottom: 10px; color: #1e293b;">Printing...</h2>
+                <p id="printingOrderId" style="font-size: 1.1rem; color: #764ba2; font-weight: 800;"></p>
+            </div>
+        </div>
+
+        <!-- Printer Status Popup HTML -->
+        <div id="printerStatusOverlay">
+            <div style="background: white; padding: 30px; border-radius: 28px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.2); width: 320px; animation: slideUp 0.3s ease;">
+                <div id="printerStatusIcon" style="font-size: 4rem; margin-bottom: 15px;"></div>
+                <h2 id="printerStatusTitle" style="margin-bottom: 10px; color: #1e293b;"></h2>
+                <p id="printerStatusMsg" style="font-size: 1rem; color: #475569;"></p>
+            </div>
+        </div>
+    </div>
+
     <!-- Searching Order Overlay -->
     <div id="searchingOrderOverlay">
         <div class="loading-popup">
@@ -2818,6 +2999,7 @@
         let totalOrdersInTableTakeOrder = 0;
         let holdTimerTakeOrder = null;
         let holdTriggeredTakeOrder = false;
+        let connectedBluetoothDevices = {}; // Map of ID -> BluetoothDevice object
         let selectedCheckoutItems = []; // Array of {orderId, itemId, price}
         let activeOrdersSnapshotTakeOrder = [];
         let isEarlyPaymentMode = false;
@@ -2912,6 +3094,13 @@
                 }
                 document.getElementById('staffMenu').style.display = 'block'; // Operations is always visible
                 
+                // Re-sync previously paired Bluetooth devices if supported
+                if (navigator.bluetooth && navigator.bluetooth.getDevices) {
+                    navigator.bluetooth.getDevices().then(devices => {
+                        devices.forEach(d => connectedBluetoothDevices[d.id] = d);
+                    });
+                }
+
                 await loadTaxRate();
                 await loadGlobalVariants();
                 await loadGlobalModifiers();
@@ -3012,6 +3201,9 @@
             else if (pageId === 'reports') loadReportsPage();
             else if (pageId === 'takeOrder') loadTakeOrderPage();
             else if (pageId === 'activeOrders') loadActiveOrders();
+            else if (pageId === 'departmentPrinter') loadDeptPrinters();
+            else if (pageId === 'printers') loadPrintersPage();
+            else if (pageId === 'printerQueue') loadPrinterQueue();
             else if (pageId === 'cashier') loadCashierPage();
             else if (pageId === 'allOrders') loadAllOrders();
             else if (pageId === 'allTransactions') loadAllTransactions();
@@ -4568,6 +4760,7 @@
                     }
                     
                     const isSelected = selectedOrderIdsForCheckout.includes(orderDoc.id);
+                    const orderTime = order.createdAt?.toDate().toLocaleString([], { day:'2-digit', month:'2-digit', year:'numeric', hour: '2-digit', minute: '2-digit' }) || 'N/A';
 
                     html += `
                         <div id="order-card-${orderDoc.id}" 
@@ -4576,8 +4769,11 @@
                              ontouchstart="startOrderHoldTakeOrder('${orderDoc.id}')" ontouchend="clearOrderHoldTakeOrder()"
                              onclick="handleOrderCardClickTakeOrder('${orderDoc.id}')"
                              style="background:white; padding:15px; border-radius:12px; margin-bottom:10px; border-left:4px solid #764ba2; box-shadow:0 2px 5px rgba(0,0,0,0.05);">
-                            <div style="display:flex; justify-content:space-between; font-weight:bold; margin-bottom:5px;">
-                                <span>ID: ${order.orderNumber} <span style="background:#e9ecef; color:#666; font-size:10px; padding:2px 6px; border-radius:10px; margin-left:5px; text-transform:uppercase; vertical-align:middle;">${(order.orderType || 'dine-in').replace('-', ' ')}</span></span>
+                            <div style="display:flex; justify-content:space-between; font-weight:bold; margin-bottom:8px; align-items: flex-start;">
+                                <div>
+                                    <span>ID: ${order.orderNumber} <span style="background:#e9ecef; color:#666; font-size:10px; padding:2px 6px; border-radius:10px; margin-left:5px; text-transform:uppercase; vertical-align:middle;">${(order.orderType || 'dine-in').replace('-', ' ')}</span></span>
+                                    <div style="font-size: 11px; color: #666; font-weight: normal; margin-top: 3px;"><i class="fas fa-clock"></i> ${orderTime}</div>
+                                </div>
                                 <span style="color:#764ba2;">RM ${order.total}</span>
                             </div>
                             <div style="font-size:0.85rem; color:#444; border-bottom: 1px dashed #eee; padding-bottom: 10px;">${itemsHtml}</div>
@@ -5138,6 +5334,18 @@
                 });
             }
 
+            // Trigger Automatic Printing for Main Receipt after payment
+            for (const orderId of involvedOrderIds) {
+                const orderDoc = checkoutOrdersToProcess.find(d => d.id === orderId);
+                const orderNum = orderDoc ? orderDoc.data().orderNumber : 'N/A';
+                const payDetails = {
+                    method: checkoutPayMethod === 'mixed' ? 'Mixed' : checkoutPayMethod,
+                    itemsPaid: selectedCheckoutItems.filter(i => i.orderId === orderId),
+                    isEarly: isEarlyPaymentMode
+                };
+                triggerAutoPrinting(orderId, orderNum, 'payment', payDetails);
+            }
+
             // Check each order to see if it is now fully paid or remaining items are cancelled
             for (const orderDoc of checkoutOrdersToProcess) {
                 const orderData = orderDoc.data();
@@ -5188,12 +5396,33 @@
             if (!filteredTables.length) {
                 grid.innerHTML = `<div style="text-align:center;padding:20px;grid-column:span 3;color:#666;">No ${filterStatus} tables found.</div>`;
             } else {
-                grid.innerHTML = filteredTables.map(t => `
+                // Separate counter table from other tables to show it at the top
+                const counterTable = filteredTables.find(t => t.id.toLowerCase() === 'counter');
+                const otherTables = filteredTables.filter(t => t.id.toLowerCase() !== 'counter');
+
+                let html = '';
+                if (counterTable) {
+                    html += `
+                        <div class="table-card-takeorder" 
+                             style="grid-column: span 3; width: 100%; flex-direction: row; justify-content: space-between; padding: 15px 30px; margin-bottom: 10px;"
+                             onclick="confirmChangeTableTakeOrder('${counterTable.id}', 'Counter')">
+                            <div style="display: flex; align-items: center; gap: 15px;">
+                                <i class="fas fa-desktop" style="font-size: 1.2rem; color: #764ba2;"></i>
+                                <div class="table-number-takeorder" style="margin-bottom: 0; font-size: 1.2rem;">COUNTER</div>
+                            </div>
+                            <div class="capacity-takeorder" style="margin-top: 0;"><i class="fas fa-user"></i> Walk-in</div>
+                        </div>
+                    `;
+                }
+
+                html += otherTables.map(t => `
                     <div class="table-card-takeorder" onclick="confirmChangeTableTakeOrder('${t.id}', '${t.id.toUpperCase()}')">
                         <div class="table-number-takeorder">${t.id.toUpperCase()}</div>
                         <div class="capacity-takeorder"><i class="fas fa-user"></i> ${t.capacity}</div>
                     </div>
                 `).join('');
+
+                grid.innerHTML = html;
             }
             document.getElementById('changeTableModalTakeOrder').style.display = 'flex';
         };
@@ -5846,8 +6075,22 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
                     await updateDoc(doc(db, 'licenses', currentClientId, 'tables', selectedTableIdTakeOrder), { status: 'occupied' });
                 }
                 
-                alert('Order placed successfully!');
+                // Custom Success Popup Logic
+                const successOverlay = document.getElementById('orderSuccessOverlay');
+                document.getElementById('successOrderId').innerText = orderData.orderNumber;
+                document.getElementById('successTableNum').innerText = (selectedOrderTypeTakeOrder === 'delivery') ? 'Delivery' : (selectedTableNumberTakeOrder || 'N/A');
                 
+                successOverlay.style.display = 'flex';
+                successOverlay.style.opacity = '1';
+                
+                setTimeout(() => {
+                    successOverlay.style.opacity = '0';
+                    setTimeout(() => { successOverlay.style.display = 'none'; }, 500);
+                }, 2000);
+
+                // Trigger Automatic Printing for Kitchen/Department only on new order
+                triggerAutoPrinting(orderRef.id, orderData.orderNumber, 'order');
+
                 cartTakeOrder = [];
                 updateOrdersUITakeOrder();
                 document.getElementById('ordersPanelTakeOrder').classList.remove('show-mobile');
@@ -6657,6 +6900,704 @@ window.openSearchModalTakeOrder = function() {
             
             alert('Payment processed! Change: RM ' + (received - total).toFixed(2));
             loadCashierPage();
+        };
+
+        // ========== DEPARTMENT PRINTERS ==========
+        window.loadDeptPrinters = function() {
+            const ref = collection(db, 'licenses', currentClientId, 'department_printer');
+            onSnapshot(ref, (snapshot) => {
+                const container = document.getElementById('deptPrintersList');
+                let html = '';
+                snapshot.forEach(doc => {
+                    const dp = doc.data();
+                    const deps = Array.isArray(dp.department) ? dp.department.join(', ') : dp.department;
+                    html += `<div style="padding:15px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center; background:white; margin-bottom:8px; border-radius:12px;">
+                        <div>
+                            <div style="font-weight:bold; color:#1e293b;">${dp.name}</div>
+                            <div style="font-size:12px; color:#64748b;">Categories: ${deps || 'None'}</div>
+                        </div>
+                        <div class="action-buttons">
+                            <button class="btn-edit" onclick="editDeptPrinter('${doc.id}')">Edit</button>
+                            <button class="btn-delete" onclick="deleteDeptPrinter('${doc.id}')">Delete</button>
+                        </div>
+                    </div>`;
+                });
+                container.innerHTML = html || '<div class="loading">No department printers added yet.</div>';
+            });
+        };
+
+        window.showAddDeptPrinterModal = async function() {
+            document.getElementById('deptPrinterModalTitle').innerText = 'Add Department Printer';
+            document.getElementById('editingDeptPrinterId').value = '';
+            document.getElementById('deptPrinterName').value = '';
+            
+            // Load categories to show checkboxes
+            const catsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'menu_categories'));
+            const container = document.getElementById('deptPrinterCategoriesCheckboxes');
+            container.innerHTML = '';
+            catsSnap.forEach(d => {
+                const cat = d.data();
+                container.innerHTML += `<div class="checkbox-group">
+                    <input type="checkbox" name="deptCat" value="${cat.name}">
+                    <label style="font-size:13px;">${cat.name}</label>
+                </div>`;
+            });
+            
+            document.getElementById('addDeptPrinterModal').style.display = 'flex';
+        };
+
+        window.editDeptPrinter = async function(id) {
+            const snap = await getDoc(doc(db, 'licenses', currentClientId, 'department_printer', id));
+            if (!snap.exists()) return;
+            const dp = snap.data();
+            
+            await showAddDeptPrinterModal();
+            document.getElementById('deptPrinterModalTitle').innerText = 'Edit Department Printer';
+            document.getElementById('editingDeptPrinterId').value = id;
+            document.getElementById('deptPrinterName').value = dp.name;
+            
+            const savedDeps = dp.department || [];
+            const checkboxes = document.querySelectorAll('input[name="deptCat"]');
+            checkboxes.forEach(cb => {
+                if (savedDeps.includes(cb.value)) cb.checked = true;
+            });
+        };
+
+        window.saveDeptPrinter = async function() {
+            const id = document.getElementById('editingDeptPrinterId').value;
+            const name = document.getElementById('deptPrinterName').value.trim();
+            const selectedCats = Array.from(document.querySelectorAll('input[name="deptCat"]:checked')).map(cb => cb.value);
+            
+            if (!name) { alert('Please enter a name'); return; }
+            
+            const data = { name, department: selectedCats, updatedAt: Timestamp.now() };
+            if (id) {
+                await updateDoc(doc(db, 'licenses', currentClientId, 'department_printer', id), data);
+            } else {
+                data.createdAt = Timestamp.now();
+                await addDoc(collection(db, 'licenses', currentClientId, 'department_printer'), data);
+            }
+            closeModal('addDeptPrinterModal');
+        };
+
+        window.deleteDeptPrinter = async function(id) {
+            if (confirm('Delete this department printer?')) {
+                await deleteDoc(doc(db, 'licenses', currentClientId, 'department_printer', id));
+            }
+        };
+
+        // ========== PRINTERS CONFIGURATION ==========
+        window.loadPrintersPage = function() {
+            const ref = collection(db, 'licenses', currentClientId, 'printers');
+            onSnapshot(ref, (snapshot) => {
+                const container = document.getElementById('printersList');
+                let html = '';
+                snapshot.forEach(doc => {
+                    const p = doc.data();
+                    html += `<div style="padding:15px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center; background:white; margin-bottom:8px; border-radius:12px;">
+                        <div>
+                            <div style="font-weight:bold; color:#1e293b;">${p.name} (${p.paperWidth}mm)</div>
+                            <div style="font-size:11px; color:#64748b;">
+                                Receipt: ${p.printReceipt ? '✅' : '❌'} | Auto: ${p.autoPrint ? '✅' : '❌'} | Orders: ${p.printOrders ? '✅' : '❌'}
+                            </div>
+                        </div>
+                        <div class="action-buttons">
+                            <button class="btn-edit" onclick="editPrinter('${doc.id}')">Edit</button>
+                            <button class="btn-delete" onclick="deletePrinter('${doc.id}')">Delete</button>
+                        </div>
+                    </div>`;
+                });
+                container.innerHTML = html || '<div class="loading">No printers configured.</div>';
+            });
+        };
+
+        window.showAddPrinterModal = async function() {
+            document.getElementById('printerModalTitle').innerText = 'Add Printer';
+            document.getElementById('editingPrinterId').value = '';
+            document.getElementById('printerNameField').value = '';
+            document.getElementById('printerPaperWidth').value = '58';
+            document.getElementById('printReceiptBills').checked = false;
+            document.getElementById('autoPrintReceipt').checked = false;
+            document.getElementById('printOrdersToggle').checked = false;
+            togglePrinterDeptList(false);
+            
+            // Load department printers for checkboxes
+            const deptSnap = await getDocs(collection(db, 'licenses', currentClientId, 'department_printer'));
+            const container = document.getElementById('printerDeptCheckboxes');
+            container.innerHTML = '';
+            deptSnap.forEach(d => {
+                const dp = d.data();
+                container.innerHTML += `<div class="checkbox-group">
+                    <input type="checkbox" name="printerDeptItem" value="${d.id}">
+                    <label style="font-size:13px;">${dp.name}</label>
+                </div>`;
+            });
+
+            document.getElementById('addPrinterModal').style.display = 'flex';
+        };
+
+        window.editPrinter = async function(id) {
+            const snap = await getDoc(doc(db, 'licenses', currentClientId, 'printers', id));
+            if (!snap.exists()) return;
+            const p = snap.data();
+            
+            await showAddPrinterModal();
+            document.getElementById('printerModalTitle').innerText = 'Edit Printer';
+            document.getElementById('editingPrinterId').value = id;
+            document.getElementById('printerNameField').value = p.name;
+            document.getElementById('printerNameField').setAttribute('data-bt-id', p.bluetoothDeviceId || '');
+            document.getElementById('printerPaperWidth').value = p.paperWidth || '58';
+            document.getElementById('printReceiptBills').checked = p.printReceipt || false;
+            document.getElementById('autoPrintReceipt').checked = p.autoPrint || false;
+            document.getElementById('printOrdersToggle').checked = p.printOrders || false;
+            togglePrinterDeptList(p.printOrders || false);
+            
+            const savedDepts = p.departmentPrinters || [];
+            const checkboxes = document.querySelectorAll('input[name="printerDeptItem"]');
+            checkboxes.forEach(cb => {
+                if (savedDepts.includes(cb.value)) cb.checked = true;
+            });
+        };
+
+        window.togglePrinterDeptList = function(show) {
+            document.getElementById('printerDeptListContainer').style.display = show ? 'block' : 'none';
+        };
+
+        window.savePrinter = async function() {
+            const id = document.getElementById('editingPrinterId').value;
+            const name = document.getElementById('printerNameField').value.trim();
+            const paperWidth = document.getElementById('printerPaperWidth').value;
+            const printReceipt = document.getElementById('printReceiptBills').checked;
+            const autoPrint = document.getElementById('autoPrintReceipt').checked;
+            const printOrders = document.getElementById('printOrdersToggle').checked;
+            const bluetoothDeviceId = document.getElementById('printerNameField').getAttribute('data-bt-id') || '';
+            const departmentPrinters = Array.from(document.querySelectorAll('input[name="printerDeptItem"]:checked')).map(cb => cb.value);
+
+            if (!name) { alert('Please enter printer name'); return; }
+
+            const data = { name, paperWidth, printReceipt, autoPrint, printOrders, bluetoothDeviceId, departmentPrinters, updatedAt: Timestamp.now() };
+            if (id) {
+                await updateDoc(doc(db, 'licenses', currentClientId, 'printers', id), data);
+            } else {
+                data.createdAt = Timestamp.now();
+                await addDoc(collection(db, 'licenses', currentClientId, 'printers'), data);
+            }
+            closeModal('addPrinterModal');
+        };
+
+        window.deletePrinter = async function(id) {
+            if (confirm('Delete this printer?')) {
+                await deleteDoc(doc(db, 'licenses', currentClientId, 'printers', id));
+            }
+        };
+
+        // ========== PRINTER QUEUE LOGIC ==========
+        let printerQueueFilter = 'All';
+
+        window.loadPrinterQueue = function() {
+            const ref = collection(db, 'licenses', currentClientId, 'print_queue');
+            let q = query(ref);
+            if (printerQueueFilter !== 'All') {
+                q = query(ref, where('status', '==', printerQueueFilter));
+            }
+
+            onSnapshot(q, (snapshot) => {
+                const container = document.getElementById('printerQueueList');
+                let html = '';
+                const sorted = snapshot.docs.sort((a,b) => (b.data().createdAt?.toDate() || 0) - (a.data().createdAt?.toDate() || 0));
+                
+                sorted.forEach(doc => {
+                    const item = doc.data();
+                    const time = item.createdAt?.toDate().toLocaleString() || 'N/A';
+                    const statusColor = item.status === 'success' ? '#38a169' : (item.status === 'failed' ? '#e53e3e' : '#ed8936');
+                    
+                    html += `<div class="order-detail-card" style="border-left: 5px solid ${statusColor};">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                            <div>
+                                <div style="font-weight:bold; font-size:1rem;">[${item.printerDeptName || 'Receipt'}] ${item.orderNumber}</div>
+                                <div style="font-size:12px; color:#64748b;">${time}</div>
+                            </div>
+                            <div style="text-align:right;">
+                                <span class="status-badge" style="background:${statusColor}20; color:${statusColor};">${item.status}</span>
+                                <div style="font-size:11px; color:#64748b; margin-top:4px;">Attempts: ${item.attempts || 0}</div>
+                            </div>
+                        </div>
+                        <div class="action-buttons">
+                            <button class="btn-edit" onclick="reprintQueueItem('${doc.id}')"><i class="fas fa-redo"></i> Reprint</button>
+                            <button class="btn-delete" onclick="deleteQueueItem('${doc.id}')">Delete</button>
+                        </div>
+                    </div>`;
+                });
+                container.innerHTML = html || '<div class="loading">No receipt queue history.</div>';
+            });
+        };
+
+        window.filterPrinterQueue = function(status) {
+            printerQueueFilter = status;
+            document.querySelectorAll('#printerQueueFilterBar button').forEach(btn => {
+                btn.classList.toggle('active', btn.innerText.toLowerCase() === status.toLowerCase());
+            });
+            loadPrinterQueue();
+        };
+
+        window.triggerAutoPrinting = async function(orderId, orderNumber, type = 'order', paymentDetails = null) {
+            // Get table number from order
+            const orderSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', orderId));
+            const orderData = orderSnap.exists() ? orderSnap.data() : null;
+            const tableNumber = orderData ? (orderData.tableId || 'N/A').toUpperCase() : 'N/A';
+            const orderTime = orderData?.createdAt ? orderData.createdAt.toDate().toLocaleString() : new Date().toLocaleString();
+
+            // 1. Get all Printers with autoPrint enabled
+            const printersSnap = await getDocs(query(collection(db, 'licenses', currentClientId, 'printers'), where('autoPrint', '==', true)));
+            if (printersSnap.empty) return;
+
+            // Fetch order items with their variants and modifiers
+            const itemsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderId, 'items'));
+            const fullItemsList = [];
+            for (const itDoc of itemsSnap.docs) {
+                const itData = itDoc.data();
+                const vSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderId, 'items', itDoc.id, 'selectedVariants'));
+                const mSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderId, 'items', itDoc.id, 'selectedModifiers'));
+                fullItemsList.push({
+                    ...itData,
+                    variants: vSnap.docs.map(v => v.data()),
+                    modifiers: mSnap.docs.map(m => m.data())
+                });
+            }
+
+            // Show "Printing..." popup
+            const printOverlay = document.getElementById('printingProcessOverlay');
+            document.getElementById('printingOrderId').innerText = orderNumber;
+            printOverlay.style.display = 'flex';
+
+            let printActions = [];
+            const devicesToCleanup = new Set();
+
+            for (const printerDoc of printersSnap.docs) {
+                const p = printerDoc.data();
+                const device = connectedBluetoothDevices[p.bluetoothDeviceId];
+                if (device) devicesToCleanup.add(device);
+                
+                // Handle Full Receipt Printing (Only on payment or early pay)
+                if (p.printReceipt && type === 'payment') {
+                    const qId = await addToPrintQueue(orderId, orderNumber, tableNumber, 'Receipt', null);
+                    if (device) {
+                        // If split payment, we only show items just paid in the receipt
+                        let itemsToPrint = fullItemsList;
+                        if (paymentDetails && paymentDetails.itemsPaid) {
+                            const paidIds = paymentDetails.itemsPaid.map(ip => ip.itemId);
+                            itemsToPrint = fullItemsList.filter(it => paidIds.includes(it.docId));
+                        }
+                        
+                        const label = paymentDetails?.isEarly ? "EARLY PAYMENT" : "PAID";
+                        const commands = generateMainReceiptCommands(orderNumber, tableNumber, itemsToPrint, orderTime, paymentDetails?.method || 'N/A', label);
+                        const success = await sendToBluetoothPrinter(device, commands);
+                        await updateDoc(doc(db, 'licenses', currentClientId, 'print_queue', qId), { status: success ? 'success' : 'failed' });
+                        printActions.push({ label: 'Main Receipt', success });
+                    }
+                }
+
+                // Handle Department Order Printing (Only when order is initially placed)
+                if (p.printOrders && p.departmentPrinters?.length && type === 'order') {
+                    for (const deptId of p.departmentPrinters) {
+                        const deptSnap = await getDoc(doc(db, 'licenses', currentClientId, 'department_printer', deptId));
+                        if (deptSnap.exists()) {
+                            const dept = deptSnap.data();
+                            // Filter items belonging to this department's categories
+                            const deptItems = fullItemsList.filter(it => {
+                                const catName = categoryMapTakeOrder[it.categoryId];
+                                return dept.department && dept.department.includes(catName);
+                            });
+                            if (deptItems.length > 0) {
+                                const qId = await addToPrintQueue(orderId, orderNumber, tableNumber, dept.name, deptId);
+                                if (device) {
+                                    const commands = generateReceiptCommands(orderNumber, tableNumber, deptItems, dept.name, orderTime, "AUTO PRINT");
+                                    const success = await sendToBluetoothPrinter(device, commands);
+                                    await updateDoc(doc(db, 'licenses', currentClientId, 'print_queue', qId), { status: success ? 'success' : 'failed' });
+                                    printActions.push({ label: dept.name, success });
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            // Disconnect all physical devices used in this session once finished
+            for (const d of devicesToCleanup) {
+                if (d.gatt.connected) d.gatt.disconnect();
+            }
+
+            printOverlay.style.display = 'none';
+            if (printActions.length > 0) {
+                const allSuccess = printActions.every(a => a.success);
+                const details = printActions.map(a => `${a.label}: ${a.success ? 'OK' : 'FAIL'}`).join('\n');
+                showPrinterStatusPopup(allSuccess ? "Printing Success" : "Print Warning", details, allSuccess);
+            } else {
+                showPrinterStatusPopup("Queued", "No printer connected. Receipts added to queue.", 'warning');
+            }
+        };
+
+        async function addToPrintQueue(orderId, orderNumber, tableNumber, deptName, deptId) {
+            const docRef = await addDoc(collection(db, 'licenses', currentClientId, 'print_queue'), {
+                orderId,
+                orderNumber,
+                tableNumber,
+                printerDeptName: deptName,
+                printerDeptId: deptId,
+                status: 'pending',
+                attempts: 1,
+                createdAt: Timestamp.now()
+            });
+            return docRef.id;
+        }
+
+        function generateMainReceiptCommands(orderNumber, tableNumber, items, orderTime, payMethod, statusLabel) {
+            const restaurantName = localStorage.getItem('restaurantName') || 'VENTURERUSH RESTAURANT';
+            const settleTime = new Date().toLocaleString();
+            
+            let subtotal = 0;
+            items.forEach(it => subtotal += parseFloat(it.total) || 0);
+            const tax = taxActive ? subtotal * (currentTaxRate / 100) : 0;
+            const total = subtotal + tax;
+
+            let commands = "";
+            commands += "\x1B\x40"; // Initialize
+            commands += "\x1B\x61\x01"; // Center
+            commands += "\x1B\x45\x01 [COMPANY LOGO] \x1B\x45\x00\n";
+            commands += `\x1B\x21\x10${restaurantName.toUpperCase()}\x1B\x21\x00\n`; // Double height
+            commands += "123 VentureRush Way, Tech City\n"; // Placeholder address
+            commands += "--------------------------------\n";
+            
+            const now = new Date();
+            const dateStr = now.toLocaleDateString();
+            const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            
+            commands += "\x1B\x61\x00"; // Left
+            commands += `Date: ${dateStr}   Time: ${timeStr}\n`;
+            commands += `Receipt No: ${orderNumber}\n`;
+            commands += `Table: ${tableNumber}\n`;
+            commands += `Cashier: ${currentStaff?.name || 'N/A'}\n`;
+            commands += "--------------------------------\n";
+            commands += "Item            Qty       Amount\n";
+            
+            items.forEach(item => {
+                const nameStr = item.name.substring(0, 15).padEnd(16);
+                const qtyStr = item.qty.toString().padStart(3);
+                const amtStr = parseFloat(item.total).toFixed(2).padStart(10);
+                commands += `${nameStr}${qtyStr}${amtStr}\n`;
+                
+                if (item.variants?.length) {
+                    item.variants.forEach(v => commands += `  + ${v.optionName}\n`);
+                }
+                if (item.modifiers?.length) {
+                    item.modifiers.forEach(m => commands += `  + ${m.optionName}\n`);
+                }
+            });
+            
+            commands += "--------------------------------\n";
+            commands += `Subtotal:              RM ${subtotal.toFixed(2).padStart(8)}\n`;
+            if (taxActive) {
+                commands += `Tax (${currentTaxRate}%):            RM ${tax.toFixed(2).padStart(8)}\n`;
+            }
+            commands += `\x1B\x45\x01TOTAL AMOUNT:          RM ${total.toFixed(2).padStart(8)}\x1B\x45\x00\n`;
+            commands += `Payment by: ${payMethod.toUpperCase()}\n`;
+            commands += "--------------------------------\n";
+            
+            commands += "\x1B\x61\x01"; // Center
+            commands += "Thank You\n";
+            commands += "Please Come Again\n";
+            commands += `Settled at ${settleTime}\n`;
+            commands += `Status: ${statusLabel}\n\n`;
+            commands += "Powered By VentureRush Tech\n";
+            
+            commands += "\n\n\n\n";
+            commands += "\x1D\x56\x41\x03"; // Cut
+            return commands;
+        }
+
+        window.reprintQueueItem = async function(id) {
+            const ref = doc(db, 'licenses', currentClientId, 'print_queue', id);
+            const snap = await getDoc(ref);
+            if (!snap.exists()) return;
+            const item = snap.data();
+
+            // Determine manual print label based on current attempts recorded before incrementing
+            const currentAttempts = item.attempts || 1;
+            const statusLabel = item.printerDeptName === 'Receipt' ? 'REPRINT' : `MANUAL PRINT ${currentAttempts}`;
+
+            // Fetch order time
+            const orderSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', item.orderId));
+            const orderTime = orderSnap.exists() ? orderSnap.data().createdAt?.toDate().toLocaleString() : 'N/A';
+
+            const printOverlay = document.getElementById('printingProcessOverlay');
+            document.getElementById('printingOrderId').innerText = item.orderNumber;
+            printOverlay.style.display = 'flex';
+
+            await updateDoc(ref, { status: 'processing', attempts: currentAttempts + 1 });
+
+            const itemsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', item.orderId, 'items'));
+            let itemsToPrint = [];
+            for (const itDoc of itemsSnap.docs) {
+                const itData = itDoc.data();
+                if (item.printerDeptId) {
+                    const deptSnap = await getDoc(doc(db, 'licenses', currentClientId, 'department_printer', item.printerDeptId));
+                    if (deptSnap.exists()) {
+                        const dept = deptSnap.data();
+                        const catName = categoryMapTakeOrder[itData.categoryId];
+                        if (!dept.department || !dept.department.includes(catName)) continue;
+                    }
+                }
+                const vSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', item.orderId, 'items', itDoc.id, 'selectedVariants'));
+                const mSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', item.orderId, 'items', itDoc.id, 'selectedModifiers'));
+                itemsToPrint.push({
+                    ...itData,
+                    variants: vSnap.docs.map(v => v.data()),
+                    modifiers: mSnap.docs.map(m => m.data())
+                });
+            }
+
+            // Find which printer config uses this department/receipt
+            const printersSnap = await getDocs(collection(db, 'licenses', currentClientId, 'printers'));
+            const printerConfig = printersSnap.docs.find(d => d.data().bluetoothDeviceId && (item.printerDeptId ? d.data().departmentPrinters?.includes(item.printerDeptId) : d.data().printReceipt))?.data();
+            const device = printerConfig ? connectedBluetoothDevices[printerConfig.bluetoothDeviceId] : null;
+
+            let printSuccess = false;
+            if (device && itemsToPrint.length > 0) {
+                let commands = "";
+                if (item.printerDeptName === 'Receipt') {
+                    commands = generateMainReceiptCommands(item.orderNumber, item.tableNumber || 'N/A', itemsToPrint, orderTime, 'N/A', statusLabel);
+                } else {
+                    commands = generateReceiptCommands(item.orderNumber, item.tableNumber || 'N/A', itemsToPrint, item.printerDeptName || 'Receipt', orderTime, statusLabel);
+                }
+                printSuccess = await sendToBluetoothPrinter(device, commands);
+                if (device.gatt.connected) device.gatt.disconnect();
+            }
+
+            printOverlay.style.display = 'none';
+            if (printSuccess) {
+                await updateDoc(ref, { status: 'success' });
+                showPrinterStatusPopup(`Print ${item.orderNumber} SUCCESS`, `Printer Department: ${item.printerDeptName}\nReprint completed.`, true);
+            } else {
+                await updateDoc(ref, { status: 'failed' });
+                showPrinterStatusPopup(`Print ${item.orderNumber} FAILED`, `Reprint failed. Ensure printer is connected.`, false);
+            }
+        };
+
+        window.deleteQueueItem = async function(id) {
+            if (confirm('Delete this queue record?')) {
+                await deleteDoc(doc(db, 'licenses', currentClientId, 'print_queue', id));
+            }
+        };
+
+        window.refreshPrinterQueue = function() { loadPrinterQueue(); };
+
+        // Helper to send data to Bluetooth Printer
+        async function sendToBluetoothPrinter(device, commands) {
+            if (!device) return false;
+            let server = device.gatt;
+            if (!server.connected) {
+                try {
+                    await server.connect();
+                } catch (e) {
+                    console.error("Bluetooth connection failed", e);
+                    return false;
+                }
+            }
+            try {
+                const SERVICE_UUID = '000018f0-0000-1000-8000-00805f9b34fb';
+                const CHARACTERISTIC_UUID = '00002af1-0000-1000-8000-00805f9b34fb';
+                const service = await server.getPrimaryService(SERVICE_UUID);
+                const characteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
+                const encoder = new TextEncoder();
+                const data = encoder.encode(commands);
+                const CHUNK_SIZE = 20;
+                for (let i = 0; i < data.length; i += CHUNK_SIZE) {
+                    const chunk = data.slice(i, i + CHUNK_SIZE);
+                    await characteristic.writeValue(chunk);
+                }
+                return true;
+            } catch (error) {
+                console.error("Bluetooth write error:", error);
+                return false;
+            }
+        }
+
+        // Helper to generate ESC/POS commands in the requested format
+        function generateReceiptCommands(orderNumber, tableNumber, items, headerTitle, orderTime, statusLabel) {
+            const printTime = new Date().toLocaleString();
+            let commands = "";
+            commands += "\x1B\x40"; // Initialize printer
+            commands += "\x1B\x61\x01"; // Center align
+            commands += `\x1B\x45\x01${headerTitle.toUpperCase()}\x1B\x45\x00\n`; // Bold Title
+            
+            commands += "\x1B\x61\x00"; // Left align
+            commands += `ORDER ID: ${orderNumber}\n`;
+            commands += `TABLE: ${tableNumber}\n`;
+            commands += `Order: ${orderTime}\n`;
+            commands += "--------------------------------\n";
+            commands += "Items:\n";
+            
+            items.forEach(item => {
+                commands += `[   ] ${item.name}   x${item.qty}\n`;
+                if (item.variants && item.variants.length) {
+                    item.variants.forEach(v => {
+                        commands += `      + ${v.optionName}\n`;
+                    });
+                }
+                if (item.modifiers && item.modifiers.length) {
+                    item.modifiers.forEach(m => {
+                        commands += `      + ${m.optionName}\n`;
+                    });
+                }
+                if (item.notes) {
+                    commands += `      * Req: ${item.notes}\n`;
+                }
+                commands += "\n";
+            });
+            
+            commands += "--------------------------------\n";
+            commands += `Print: ${printTime}\n`;
+            commands += `Status: ${statusLabel}\n`;
+            commands += "\x1B\x61\x01"; // Center align
+            commands += `${headerTitle.toUpperCase()}\n`;
+            commands += "\n\n\n\n"; // Feed lines
+            commands += "\x1D\x56\x41\x03"; // Cut paper command
+            return commands;
+        }
+
+        window.showPrinterStatusPopup = function(title, message, status) {
+            const overlay = document.getElementById('printerStatusOverlay');
+            const icon = document.getElementById('printerStatusIcon');
+            const titleEl = document.getElementById('printerStatusTitle');
+            const msgEl = document.getElementById('printerStatusMsg');
+
+            if (status === 'success' || status === true) {
+                icon.innerHTML = '<i class="fas fa-check-circle" style="color: #4caf50;"></i>';
+            } else if (status === 'warning') {
+                icon.innerHTML = '<i class="fas fa-exclamation-triangle" style="color: #e53e3e;"></i>';
+            } else { // false, error, failed
+                icon.innerHTML = '<i class="fas fa-times-circle" style="color: #e53e3e;"></i>';
+            }
+            
+            titleEl.innerText = title;
+            msgEl.innerHTML = message.replace('\n', '<br>');
+
+            overlay.style.display = 'flex';
+            overlay.style.opacity = '1';
+
+            setTimeout(() => {
+                overlay.style.opacity = '0';
+                setTimeout(() => { overlay.style.display = 'none'; }, 500);
+            }, 3500); // Stay longer for error/success reading
+        }
+
+        window.scanBluetoothPrinters = async function() {
+            if (!navigator.bluetooth) {
+                showPrinterStatusPopup("Not Supported", "Web Bluetooth is not supported in this browser.", false);
+                return;
+            }
+
+            try {
+                // We search for all devices to ensure compatibility with generic thermal printers.
+                // We include common thermal printer UUIDs in optionalServices so we can access them later.
+                const device = await navigator.bluetooth.requestDevice({
+                    acceptAllDevices: true,
+                    optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb', 'e7e11001-49d2-4cc6-a973-108ca0926c04']
+                });
+
+                if (device) {
+                    document.getElementById('printerNameField').value = device.name || "Unnamed Printer";
+                    // We store the device ID in a hidden attribute to help with reconnection logic later
+                    document.getElementById('printerNameField').setAttribute('data-bt-id', device.id);
+                    connectedBluetoothDevices[device.id] = device;
+                    showPrinterStatusPopup("Connected!", (device.name || "Unnamed Printer") + " selected.", true);
+                }
+            } catch (error) {
+                console.error("Bluetooth Scan Error:", error);
+                if (error.name !== 'NotFoundError') {
+                    showPrinterStatusPopup("Error", error.message, false);
+                } else {
+                    showPrinterStatusPopup("Cancelled", "No device was selected.", false);
+                }
+            }
+        };
+
+        window.printTestPage = async function() {
+            const btId = document.getElementById('printerNameField').getAttribute('data-bt-id');
+            const device = connectedBluetoothDevices[btId];
+            if (!device) {
+                showPrinterStatusPopup("No Printer", "Please scan and select a printer first.", false);
+                return;
+            }
+
+            try {
+                const server = await device.gatt.connect();
+                
+                // Common Thermal Printer Service and Characteristic UUIDs
+                const SERVICE_UUID = '000018f0-0000-1000-8000-00805f9b34fb';
+                const CHARACTERISTIC_UUID = '00002af1-0000-1000-8000-00805f9b34fb';
+                
+                const service = await server.getPrimaryService(SERVICE_UUID);
+                const characteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
+
+                const now = new Date().toLocaleString();
+                const deptName = "TEST DEPARTMENT";
+                
+                // Build ESC/POS payload
+                let commands = "";
+                commands += "\x1B\x40"; // Initialize printer
+                commands += "\x1B\x61\x01"; // Center align
+                commands += `\x1B\x45\x01${deptName}\x1B\x45\x00\n`; // Bold Department
+                
+                commands += "\x1B\x61\x00"; // Left align
+                commands += `ORDER ID: TEST\n`;
+                commands += `TABLE: TEST\n`;
+                commands += `Order: ${now}\n`;
+                commands += "--------------------------------\n";
+                commands += "Items:\n";
+                
+                // Test Item with Checkbox
+                commands += "[   ] Nasi Lemak Special   x1\n";
+                commands += "      + Extra Spicy\n";
+                commands += "      + Fried Egg\n";
+                commands += "      * Req: No cucumber please\n";
+                
+                commands += "--------------------------------\n";
+                commands += `Print Time: ${now}\n`;
+                
+                commands += "\x1B\x61\x01"; // Center align
+                commands += `${deptName}\n`;
+                
+                commands += "\n\n\n\n"; // Feed lines
+                commands += "\x1D\x56\x41\x03"; // Cut paper command (if supported)
+
+                // Encode and send to printer
+                const encoder = new TextEncoder();
+                const data = encoder.encode(commands);
+                
+                // BLE MTU limitations: Send in chunks of 20 bytes for maximum compatibility
+                const CHUNK_SIZE = 20;
+                for (let i = 0; i < data.length; i += CHUNK_SIZE) {
+                    const chunk = data.slice(i, i + CHUNK_SIZE);
+                    await characteristic.writeValue(chunk);
+                }
+
+                showPrinterStatusPopup("Print Success", "Test page sent to " + (device.name || "Printer"), true);
+                
+                // Disconnect to save battery/connection slot
+                device.gatt.disconnect();
+
+            } catch (error) {
+                console.error("Printing Error:", error);
+                let errorMsg = error.message;
+                
+                if (errorMsg.includes("GATT")) {
+                    errorMsg = "Ensure printer is ON and within range.";
+                } else if (errorMsg.includes("service")) {
+                    errorMsg = "Printer service not found. Try scanning again.";
+                }
+                
+                showPrinterStatusPopup("Print Failed", errorMsg, false);
+            }
         };
 
         // ========== UTILITIES ==========
