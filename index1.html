@@ -2999,7 +2999,7 @@
         let totalOrdersInTableTakeOrder = 0;
         let holdTimerTakeOrder = null;
         let holdTriggeredTakeOrder = false;
-        let activeBluetoothDevice = null;
+        let connectedBluetoothDevices = {}; // Map of ID -> BluetoothDevice object
         let selectedCheckoutItems = []; // Array of {orderId, itemId, price}
         let activeOrdersSnapshotTakeOrder = [];
         let isEarlyPaymentMode = false;
@@ -3094,6 +3094,13 @@
                 }
                 document.getElementById('staffMenu').style.display = 'block'; // Operations is always visible
                 
+                // Re-sync previously paired Bluetooth devices if supported
+                if (navigator.bluetooth && navigator.bluetooth.getDevices) {
+                    navigator.bluetooth.getDevices().then(devices => {
+                        devices.forEach(d => connectedBluetoothDevices[d.id] = d);
+                    });
+                }
+
                 await loadTaxRate();
                 await loadGlobalVariants();
                 await loadGlobalModifiers();
@@ -7026,6 +7033,7 @@ window.openSearchModalTakeOrder = function() {
             document.getElementById('printerModalTitle').innerText = 'Edit Printer';
             document.getElementById('editingPrinterId').value = id;
             document.getElementById('printerNameField').value = p.name;
+            document.getElementById('printerNameField').setAttribute('data-bt-id', p.bluetoothDeviceId || '');
             document.getElementById('printerPaperWidth').value = p.paperWidth || '58';
             document.getElementById('printReceiptBills').checked = p.printReceipt || false;
             document.getElementById('autoPrintReceipt').checked = p.autoPrint || false;
@@ -7050,11 +7058,12 @@ window.openSearchModalTakeOrder = function() {
             const printReceipt = document.getElementById('printReceiptBills').checked;
             const autoPrint = document.getElementById('autoPrintReceipt').checked;
             const printOrders = document.getElementById('printOrdersToggle').checked;
+            const bluetoothDeviceId = document.getElementById('printerNameField').getAttribute('data-bt-id') || '';
             const departmentPrinters = Array.from(document.querySelectorAll('input[name="printerDeptItem"]:checked')).map(cb => cb.value);
 
             if (!name) { alert('Please enter printer name'); return; }
 
-            const data = { name, paperWidth, printReceipt, autoPrint, printOrders, departmentPrinters, updatedAt: Timestamp.now() };
+            const data = { name, paperWidth, printReceipt, autoPrint, printOrders, bluetoothDeviceId, departmentPrinters, updatedAt: Timestamp.now() };
             if (id) {
                 await updateDoc(doc(db, 'licenses', currentClientId, 'printers', id), data);
             } else {
@@ -7150,16 +7159,19 @@ window.openSearchModalTakeOrder = function() {
             printOverlay.style.display = 'flex';
 
             let printActions = [];
+            const devicesToCleanup = new Set();
 
             for (const printerDoc of printersSnap.docs) {
                 const p = printerDoc.data();
+                const device = connectedBluetoothDevices[p.bluetoothDeviceId];
+                if (device) devicesToCleanup.add(device);
                 
                 // Handle Full Receipt Printing
                 if (p.printReceipt) {
                     const qId = await addToPrintQueue(orderId, orderNumber, tableNumber, 'Receipt', null);
-                    if (activeBluetoothDevice) {
+                    if (device) {
                         const commands = generateReceiptCommands(orderNumber, tableNumber, fullItemsList, 'Main Receipt', orderTime);
-                        const success = await sendToBluetoothPrinter(commands);
+                        const success = await sendToBluetoothPrinter(device, commands);
                         await updateDoc(doc(db, 'licenses', currentClientId, 'print_queue', qId), { status: success ? 'success' : 'failed' });
                         printActions.push({ label: 'Main Receipt', success });
                     }
@@ -7178,9 +7190,9 @@ window.openSearchModalTakeOrder = function() {
                             });
                             if (deptItems.length > 0) {
                                 const qId = await addToPrintQueue(orderId, orderNumber, tableNumber, dept.name, deptId);
-                                if (activeBluetoothDevice) {
+                                if (device) {
                                     const commands = generateReceiptCommands(orderNumber, tableNumber, deptItems, dept.name, orderTime);
-                                    const success = await sendToBluetoothPrinter(commands);
+                                    const success = await sendToBluetoothPrinter(device, commands);
                                     await updateDoc(doc(db, 'licenses', currentClientId, 'print_queue', qId), { status: success ? 'success' : 'failed' });
                                     printActions.push({ label: dept.name, success });
                                 }
@@ -7189,16 +7201,17 @@ window.openSearchModalTakeOrder = function() {
                     }
                 }
             }
-
-            if (activeBluetoothDevice && activeBluetoothDevice.gatt.connected) {
-                activeBluetoothDevice.gatt.disconnect();
+            // Disconnect all physical devices used in this session once finished
+            for (const d of devicesToCleanup) {
+                if (d.gatt.connected) d.gatt.disconnect();
             }
+
             printOverlay.style.display = 'none';
             if (printActions.length > 0) {
                 const allSuccess = printActions.every(a => a.success);
                 const details = printActions.map(a => `${a.label}: ${a.success ? 'OK' : 'FAIL'}`).join('\n');
                 showPrinterStatusPopup(allSuccess ? "Printing Success" : "Print Warning", details, allSuccess);
-            } else if (!activeBluetoothDevice) {
+            } else {
                 showPrinterStatusPopup("Queued", "No printer connected. Receipts added to queue.", 'warning');
             }
         };
@@ -7254,11 +7267,16 @@ window.openSearchModalTakeOrder = function() {
                 });
             }
 
+            // Find which printer config uses this department/receipt
+            const printersSnap = await getDocs(collection(db, 'licenses', currentClientId, 'printers'));
+            const printerConfig = printersSnap.docs.find(d => d.data().bluetoothDeviceId && (item.printerDeptId ? d.data().departmentPrinters?.includes(item.printerDeptId) : d.data().printReceipt))?.data();
+            const device = printerConfig ? connectedBluetoothDevices[printerConfig.bluetoothDeviceId] : null;
+
             let printSuccess = false;
-            if (activeBluetoothDevice && itemsToPrint.length > 0) {
+            if (device && itemsToPrint.length > 0) {
                 const commands = generateReceiptCommands(item.orderNumber, item.tableNumber || 'N/A', itemsToPrint, item.printerDeptName || 'Receipt', orderTime);
-                printSuccess = await sendToBluetoothPrinter(commands);
-                if (activeBluetoothDevice.gatt.connected) activeBluetoothDevice.gatt.disconnect();
+                printSuccess = await sendToBluetoothPrinter(device, commands);
+                if (device.gatt.connected) device.gatt.disconnect();
             }
 
             printOverlay.style.display = 'none';
@@ -7280,9 +7298,9 @@ window.openSearchModalTakeOrder = function() {
         window.refreshPrinterQueue = function() { loadPrinterQueue(); };
 
         // Helper to send data to Bluetooth Printer
-        async function sendToBluetoothPrinter(commands) {
-            if (!activeBluetoothDevice) return false;
-            let server = activeBluetoothDevice.gatt;
+        async function sendToBluetoothPrinter(device, commands) {
+            if (!device) return false;
+            let server = device.gatt;
             if (!server.connected) {
                 try {
                     await server.connect();
@@ -7396,7 +7414,7 @@ window.openSearchModalTakeOrder = function() {
                     document.getElementById('printerNameField').value = device.name || "Unnamed Printer";
                     // We store the device ID in a hidden attribute to help with reconnection logic later
                     document.getElementById('printerNameField').setAttribute('data-bt-id', device.id);
-                    activeBluetoothDevice = device;
+                    connectedBluetoothDevices[device.id] = device;
                     showPrinterStatusPopup("Connected!", (device.name || "Unnamed Printer") + " selected.", true);
                 }
             } catch (error) {
@@ -7410,14 +7428,15 @@ window.openSearchModalTakeOrder = function() {
         };
 
         window.printTestPage = async function() {
-            const printerName = document.getElementById('printerNameField').value;
-            if (!activeBluetoothDevice) {
+            const btId = document.getElementById('printerNameField').getAttribute('data-bt-id');
+            const device = connectedBluetoothDevices[btId];
+            if (!device) {
                 showPrinterStatusPopup("No Printer", "Please scan and select a printer first.", false);
                 return;
             }
 
             try {
-                const server = await activeBluetoothDevice.gatt.connect();
+                const server = await device.gatt.connect();
                 
                 // Common Thermal Printer Service and Characteristic UUIDs
                 const SERVICE_UUID = '000018f0-0000-1000-8000-00805f9b34fb';
@@ -7468,10 +7487,10 @@ window.openSearchModalTakeOrder = function() {
                     await characteristic.writeValue(chunk);
                 }
 
-                showPrinterStatusPopup("Print Success", "Test page sent to " + printerName, true);
+                showPrinterStatusPopup("Print Success", "Test page sent to " + (device.name || "Printer"), true);
                 
                 // Disconnect to save battery/connection slot
-                activeBluetoothDevice.gatt.disconnect();
+                device.gatt.disconnect();
 
             } catch (error) {
                 console.error("Printing Error:", error);
