@@ -7064,6 +7064,12 @@ window.openSearchModalTakeOrder = function() {
             closeModal('addPrinterModal');
         };
 
+        window.deletePrinter = async function(id) {
+            if (confirm('Delete this printer?')) {
+                await deleteDoc(doc(db, 'licenses', currentClientId, 'printers', id));
+            }
+        };
+
         // ========== PRINTER QUEUE LOGIC ==========
         let printerQueueFilter = 'All';
 
