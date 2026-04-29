@@ -4162,8 +4162,12 @@
             await setDoc(doc(db, 'licenses', currentClientId, 'tax_settings', 'settings'), data, { merge: true });
             taxActive = active;
             currentTaxRate = active ? (parseFloat(rate) || 6) : 0;
-            document.getElementById('taxRateDisplay').textContent = currentTaxRate;
-            document.getElementById('taxRow').style.display = taxActive ? 'flex' : 'none';
+            
+const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder');
+            const taxRowTakeOrder = document.getElementById('taxRowTakeOrder');
+
+            if (taxRateDisplayTakeOrder) taxRateDisplayTakeOrder.textContent = currentTaxRate;
+            if (taxRowTakeOrder) taxRowTakeOrder.style.display = taxActive ? 'flex' : 'none';
             alert('Tax settings saved!');
         };
 
