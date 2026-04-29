@@ -2055,9 +2055,13 @@
                     <div class="receipt-settings-grid">
                         <div id="receiptSettingsForm">
                             <div class="form-group">
-                                <label>Restaurant Logo URL</label>
-                                <input type="text" id="receiptLogoUrl" placeholder="https://example.com/logo.png" oninput="updateReceiptPreview()">
-                                <small style="color: #cbd5e0; font-size: 11px;">Note: Thermal printers require specialized drivers to process URL images.</small>
+                                <label>Restaurant Logo</label>
+                                <div style="display: flex; gap: 10px; margin-bottom: 5px;">
+                                    <input type="text" id="receiptLogoUrl" placeholder="https://example.com/logo.png" style="flex: 1;" oninput="updateReceiptPreview()">
+                                    <button class="btn-small" onclick="document.getElementById('logoFileInput').click()" style="width: auto; padding: 0 15px; background: #764ba2; border-radius: 12px;"><i class="fas fa-upload"></i> Upload</button>
+                                </div>
+                                <input type="file" id="logoFileInput" style="display: none;" accept="image/*" onchange="handleLogoUpload(this)">
+                                <small style="color: #cbd5e0; font-size: 11px;">Use an uploaded file to avoid security (CORS) blocks. Thermal printers require processed image data.</small>
                             </div>
                             <div class="form-group">
                                 <label>Restaurant Name</label>
@@ -7064,7 +7068,7 @@ window.openSearchModalTakeOrder = function() {
 
             const mockItems = [{ name: 'Test Receipt', qty: '1', total: '0.00', variants: [], modifiers: [] }];
             const orderTime = new Date().toLocaleString();
-            const commands = generateMainReceiptCommands('TEST-PRINT', 'TEST', mockItems, orderTime, 'N/A', 'PREVIEW');
+            const commands = await generateMainReceiptCommands('TEST-PRINT', 'TEST', mockItems, orderTime, 'N/A', 'PREVIEW');
 
             let success = false;
             for (const printerDoc of printersSnap.docs) {
@@ -7372,7 +7376,7 @@ window.openSearchModalTakeOrder = function() {
                         }
                         
                         const label = paymentDetails?.isEarly ? "EARLY PAYMENT" : "PAID";
-                        const commands = generateMainReceiptCommands(orderNumber, tableNumber, itemsToPrint, orderTime, paymentDetails?.method || 'N/A', label);
+                        const commands = await generateMainReceiptCommands(orderNumber, tableNumber, itemsToPrint, orderTime, paymentDetails?.method || 'N/A', label);
                         const success = await sendToBluetoothPrinter(device, commands);
                         await updateDoc(doc(db, 'licenses', currentClientId, 'print_queue', qId), { status: success ? 'success' : 'failed' });
                         printActions.push({ label: 'Main Receipt', success });
@@ -7393,7 +7397,7 @@ window.openSearchModalTakeOrder = function() {
                             if (deptItems.length > 0) {
                                 const qId = await addToPrintQueue(orderId, orderNumber, tableNumber, dept.name, deptId);
                                 if (device) {
-                                    const commands = generateReceiptCommands(orderNumber, tableNumber, deptItems, dept.name, orderTime, "AUTO PRINT");
+                                    const commands = await generateReceiptCommands(orderNumber, tableNumber, deptItems, dept.name, orderTime, "AUTO PRINT");
                                     const success = await sendToBluetoothPrinter(device, commands);
                                     await updateDoc(doc(db, 'licenses', currentClientId, 'print_queue', qId), { status: success ? 'success' : 'failed' });
                                     printActions.push({ label: dept.name, success });
@@ -7432,9 +7436,10 @@ window.openSearchModalTakeOrder = function() {
             return docRef.id;
         }
 
-        function generateMainReceiptCommands(orderNumber, tableNumber, items, orderTime, payMethod, statusLabel) {
+        async function generateMainReceiptCommands(orderNumber, tableNumber, items, orderTime, payMethod, statusLabel) {
             const restaurantName = localStorage.getItem('restaurantName') || 'VENTURERUSH RESTAURANT';
             const restaurantAddress = localStorage.getItem('restaurantAddress') || '123 VentureRush Way, Tech City';
+            const restaurantLogo = localStorage.getItem('restaurantLogo');
             const receiptFooter = localStorage.getItem('receiptFooter') || 'Thank You\nPlease Come Again';
             const settleTime = new Date().toLocaleString();
             
@@ -7442,59 +7447,58 @@ window.openSearchModalTakeOrder = function() {
             items.forEach(it => subtotal += parseFloat(it.total) || 0);
             const tax = taxActive ? subtotal * (currentTaxRate / 100) : 0;
             const total = subtotal + tax;
-
-            let commands = "";
-            commands += "\x1B\x40"; // Initialize
-            commands += "\x1B\x61\x01"; // Center
-            commands += "\x1B\x45\x01 [COMPANY LOGO] \x1B\x45\x00\n";
-            commands += `\x1B\x21\x10${restaurantName.toUpperCase()}\x1B\x21\x00\n`; // Double height
-            commands += `${restaurantAddress}\n`;
-            commands += "--------------------------------\n";
             
             const now = new Date();
             const dateStr = now.toLocaleDateString();
             const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            
-            commands += "\x1B\x61\x00"; // Left
-            commands += `Date: ${dateStr}   Time: ${timeStr}\n`;
-            commands += `Receipt No: ${orderNumber}\n`;
-            commands += `Table: ${tableNumber}\n`;
-            commands += `Cashier: ${currentStaff?.name || 'N/A'}\n`;
-            commands += "--------------------------------\n";
-            commands += "Item            Qty       Amount\n";
-            
+
+            const logoBytes = await getLogoEscPos(restaurantLogo);
+
+            let itemsText = "";
             items.forEach(item => {
                 const nameStr = item.name.substring(0, 15).padEnd(16);
                 const qtyStr = item.qty.toString().padStart(3);
                 const amtStr = parseFloat(item.total).toFixed(2).padStart(10);
-                commands += `${nameStr}${qtyStr}${amtStr}\n`;
+                itemsText += `${nameStr}${qtyStr}${amtStr}\n`;
                 
                 if (item.variants?.length) {
-                    item.variants.forEach(v => commands += `  + ${v.optionName}\n`);
+                    item.variants.forEach(v => itemsText += `  + ${v.optionName}\n`);
                 }
                 if (item.modifiers?.length) {
-                    item.modifiers.forEach(m => commands += `  + ${m.optionName}\n`);
+                    item.modifiers.forEach(m => itemsText += `  + ${m.optionName}\n`);
                 }
             });
-            
-            commands += "--------------------------------\n";
-            commands += `Subtotal:              RM ${subtotal.toFixed(2).padStart(8)}\n`;
-            if (taxActive) {
-                commands += `Tax (${currentTaxRate}%):            RM ${tax.toFixed(2).padStart(8)}\n`;
-            }
-            commands += `\x1B\x45\x01TOTAL AMOUNT:          RM ${total.toFixed(2).padStart(8)}\x1B\x45\x00\n`;
-            commands += `Payment by: ${payMethod.toUpperCase()}\n`;
-            commands += "--------------------------------\n";
-            
-            commands += "\x1B\x61\x01"; // Center
-            commands += `${receiptFooter}\n`;
-            commands += `Settled at ${settleTime}\n`;
-            commands += `Status: ${statusLabel}\n\n`;
-            commands += "Powered By VentureRush Tech\n";
-            
-            commands += "\n\n\n\n";
-            commands += "\x1D\x56\x41\x03"; // Cut
-            return commands;
+
+            return combineCommands(
+                "\x1B\x40", // Initialize
+                "\x1B\x61\x01", // Center
+                logoBytes,
+                (logoBytes.length === 0) ? "\x1B\x45\x01 [COMPANY LOGO] \x1B\x45\x00\n" : "",
+                `\x1B\x21\x10${restaurantName.toUpperCase()}\x1B\x21\x00\n`, // Double height
+                `${restaurantAddress}\n`,
+                "--------------------------------\n",
+                "\x1B\x61\x00", // Left
+                `Date: ${dateStr}   Time: ${timeStr}\n`,
+                `Receipt No: ${orderNumber}\n`,
+                `Table: ${tableNumber}\n`,
+                `Cashier: ${currentStaff?.name || 'N/A'}\n`,
+                "--------------------------------\n",
+                "Item            Qty       Amount\n",
+                itemsText,
+                "--------------------------------\n",
+                `Subtotal:              RM ${subtotal.toFixed(2).padStart(8)}\n`,
+                taxActive ? `Tax (${currentTaxRate}%):            RM ${tax.toFixed(2).padStart(8)}\n` : "",
+                `\x1B\x45\x01TOTAL AMOUNT:          RM ${total.toFixed(2).padStart(8)}\x1B\x45\x00\n`,
+                `Payment by: ${payMethod.toUpperCase()}\n`,
+                "--------------------------------\n",
+                "\x1B\x61\x01", // Center
+                `${receiptFooter}\n`,
+                `Settled at ${settleTime}\n`,
+                `Status: ${statusLabel}\n\n`,
+                "Powered By VentureRush Tech\n",
+                "\n\n\n\n",
+                "\x1D\x56\x41\x03" // Cut
+            );
         }
 
         window.reprintQueueItem = async function(id) {
@@ -7545,11 +7549,11 @@ window.openSearchModalTakeOrder = function() {
 
             let printSuccess = false;
             if (device && itemsToPrint.length > 0) {
-                let commands = "";
+                let commands;
                 if (item.printerDeptName === 'Receipt') {
-                    commands = generateMainReceiptCommands(item.orderNumber, item.tableNumber || 'N/A', itemsToPrint, orderTime, 'N/A', statusLabel);
+                    commands = await generateMainReceiptCommands(item.orderNumber, item.tableNumber || 'N/A', itemsToPrint, orderTime, 'N/A', statusLabel);
                 } else {
-                    commands = generateReceiptCommands(item.orderNumber, item.tableNumber || 'N/A', itemsToPrint, item.printerDeptName || 'Receipt', orderTime, statusLabel);
+                    commands = await generateReceiptCommands(item.orderNumber, item.tableNumber || 'N/A', itemsToPrint, item.printerDeptName || 'Receipt', orderTime, statusLabel);
                 }
                 printSuccess = await sendToBluetoothPrinter(device, commands);
                 if (device.gatt.connected) device.gatt.disconnect();
@@ -7574,7 +7578,7 @@ window.openSearchModalTakeOrder = function() {
         window.refreshPrinterQueue = function() { loadPrinterQueue(); };
 
         // Helper to send data to Bluetooth Printer
-        async function sendToBluetoothPrinter(device, commands) {
+        async function sendToBluetoothPrinter(device, data) {
             if (!device) return false;
             let server = device.gatt;
             if (!server.connected) {
@@ -7590,11 +7594,13 @@ window.openSearchModalTakeOrder = function() {
                 const CHARACTERISTIC_UUID = '00002af1-0000-1000-8000-00805f9b34fb';
                 const service = await server.getPrimaryService(SERVICE_UUID);
                 const characteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
-                const encoder = new TextEncoder();
-                const data = encoder.encode(commands);
+                
+                // Encode if string, otherwise use bytes directly
+                const bytes = (typeof data === 'string') ? new TextEncoder().encode(data) : data;
+
                 const CHUNK_SIZE = 20;
-                for (let i = 0; i < data.length; i += CHUNK_SIZE) {
-                    const chunk = data.slice(i, i + CHUNK_SIZE);
+                for (let i = 0; i < bytes.length; i += CHUNK_SIZE) {
+                    const chunk = bytes.slice(i, i + CHUNK_SIZE);
                     await characteristic.writeValue(chunk);
                 }
                 return true;
@@ -7604,47 +7610,129 @@ window.openSearchModalTakeOrder = function() {
             }
         }
 
+        // Helper to combine strings and Uint8Arrays for binary-safe ESC/POS output
+        function combineCommands(...args) {
+            const encoder = new TextEncoder();
+            let totalLength = 0;
+            const chunks = args.map(arg => {
+                if (arg === null || arg === undefined || arg === "") return new Uint8Array(0);
+                const chunk = (typeof arg === 'string') ? encoder.encode(arg) : arg;
+                totalLength += chunk.length;
+                return chunk;
+            });
+            const result = new Uint8Array(totalLength);
+            let offset = 0;
+            chunks.forEach(chunk => {
+                result.set(chunk, offset);
+                offset += chunk.length;
+            });
+            return result;
+        }
+
+        // Helper to process image for ESC/POS bit-image command (GS v 0)
+        async function getLogoEscPos(url, maxWidth = 384) {
+            if (!url) return new Uint8Array(0);
+            return new Promise((resolve) => {
+                const img = new Image();
+                // Only trigger CORS check for external web URLs
+                if (url.startsWith('http')) {
+                    img.crossOrigin = "Anonymous";
+                    // Add cache buster to help with browser header caching
+                    img.src = url + (url.includes('?') ? '&' : '?') + 't=' + Date.now();
+                } else {
+                    img.src = url; // Data URLs (uploaded files) don't need CORS
+                }
+                
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    const width = Math.min(img.width, maxWidth);
+                    const scale = width / img.width;
+                    const height = Math.floor(img.height * scale);
+                    canvas.width = width;
+                    canvas.height = height;
+                    ctx.fillStyle = "white"; 
+                    ctx.fillRect(0, 0, width, height);
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    let imageData;
+                    try {
+                        imageData = ctx.getImageData(0, 0, width, height);
+                    } catch (e) {
+                        console.error("CORS block prevented reading logo pixels. Try uploading the file instead.", e);
+                        return resolve(new Uint8Array(0));
+                    }
+
+                    const pixels = imageData.data;
+                    const widthBytes = Math.ceil(width / 8);
+                    const data = new Uint8Array(8 + widthBytes * height);
+                    data.set([0x1D, 0x76, 0x30, 0x00, widthBytes & 0xFF, (widthBytes >> 8) & 0xFF, height & 0xFF, (height >> 8) & 0xFF]);
+                    let offset = 8;
+                    for (let y = 0; y < height; y++) {
+                        for (let x = 0; x < width; x++) {
+                            const i = (y * width + x) * 4;
+                            const brightness = 0.2126 * pixels[i] + 0.7152 * pixels[i+1] + 0.0722 * pixels[i+2];
+                            if (brightness < 128) data[offset + Math.floor(x / 8)] |= (0x80 >> (x % 8));
+                        }
+                        offset += widthBytes;
+                    }
+                    resolve(data);
+                };
+                img.onerror = () => resolve(new Uint8Array(0));
+            });
+        }
+
+        // Utility to handle logo file upload and convert to Base64
+        window.handleLogoUpload = function(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('receiptLogoUrl').value = e.target.result;
+                    updateReceiptPreview();
+                    alert("Logo uploaded successfully! Please click 'Save Settings' to apply changes.");
+                };
+                reader.onerror = () => alert("Failed to read the file.");
+                reader.readAsDataURL(input.files[0]);
+            }
+        };
+
         // Helper to generate ESC/POS commands in the requested format
-        function generateReceiptCommands(orderNumber, tableNumber, items, headerTitle, orderTime, statusLabel) {
+        async function generateReceiptCommands(orderNumber, tableNumber, items, headerTitle, orderTime, statusLabel) {
             const printTime = new Date().toLocaleString();
-            let commands = "";
-            commands += "\x1B\x40"; // Initialize printer
-            commands += "\x1B\x61\x01"; // Center align
-            commands += `\x1B\x45\x01${headerTitle.toUpperCase()}\x1B\x45\x00\n`; // Bold Title
-            
-            commands += "\x1B\x61\x00"; // Left align
-            commands += `ORDER ID: ${orderNumber}\n`;
-            commands += `TABLE: ${tableNumber}\n`;
-            commands += `Order: ${orderTime}\n`;
-            commands += "--------------------------------\n";
-            commands += "Items:\n";
-            
+            let itemsText = "";
             items.forEach(item => {
-                commands += `[   ] ${item.name}   x${item.qty}\n`;
+                itemsText += `[   ] ${item.name}   x${item.qty}\n`;
                 if (item.variants && item.variants.length) {
-                    item.variants.forEach(v => {
-                        commands += `      + ${v.optionName}\n`;
-                    });
+                    item.variants.forEach(v => itemsText += `      + ${v.optionName}\n`);
                 }
                 if (item.modifiers && item.modifiers.length) {
-                    item.modifiers.forEach(m => {
-                        commands += `      + ${m.optionName}\n`;
-                    });
+                    item.modifiers.forEach(m => itemsText += `      + ${m.optionName}\n`);
                 }
                 if (item.notes) {
-                    commands += `      * Req: ${item.notes}\n`;
+                    itemsText += `      * Req: ${item.notes}\n`;
                 }
-                commands += "\n";
+                itemsText += "\n";
             });
-            
-            commands += "--------------------------------\n";
-            commands += `Print: ${printTime}\n`;
-            commands += `Status: ${statusLabel}\n`;
-            commands += "\x1B\x61\x01"; // Center align
-            commands += `${headerTitle.toUpperCase()}\n`;
-            commands += "\n\n\n\n"; // Feed lines
-            commands += "\x1D\x56\x41\x03"; // Cut paper command
-            return commands;
+
+            return combineCommands(
+                "\x1B\x40", // Initialize printer
+                "\x1B\x61\x01", // Center align
+                `\x1B\x45\x01${headerTitle.toUpperCase()}\x1B\x45\x00\n`, // Bold Title
+                "\x1B\x61\x00", // Left align
+                `ORDER ID: ${orderNumber}\n`,
+                `TABLE: ${tableNumber}\n`,
+                `Order: ${orderTime}\n`,
+                "--------------------------------\n",
+                "Items:\n",
+                itemsText,
+                "--------------------------------\n",
+                `Print: ${printTime}\n`,
+                `Status: ${statusLabel}\n`,
+                "\x1B\x61\x01", // Center align
+                `${headerTitle.toUpperCase()}\n`,
+                "\n\n\n\n", // Feed lines
+                "\x1D\x56\x41\x03" // Cut paper command
+            );
         }
 
         window.showPrinterStatusPopup = function(title, message, status) {
