@@ -5334,6 +5334,18 @@
                 });
             }
 
+            // Trigger Automatic Printing for Main Receipt after payment
+            for (const orderId of involvedOrderIds) {
+                const orderDoc = checkoutOrdersToProcess.find(d => d.id === orderId);
+                const orderNum = orderDoc ? orderDoc.data().orderNumber : 'N/A';
+                const payDetails = {
+                    method: checkoutPayMethod === 'mixed' ? 'Mixed' : checkoutPayMethod,
+                    itemsPaid: selectedCheckoutItems.filter(i => i.orderId === orderId),
+                    isEarly: isEarlyPaymentMode
+                };
+                triggerAutoPrinting(orderId, orderNum, 'payment', payDetails);
+            }
+
             // Check each order to see if it is now fully paid or remaining items are cancelled
             for (const orderDoc of checkoutOrdersToProcess) {
                 const orderData = orderDoc.data();
@@ -6076,8 +6088,8 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
                     setTimeout(() => { successOverlay.style.display = 'none'; }, 500);
                 }, 2000);
 
-                // Trigger Automatic Printing
-                triggerAutoPrinting(orderRef.id, orderData.orderNumber);
+                // Trigger Automatic Printing for Kitchen/Department only on new order
+                triggerAutoPrinting(orderRef.id, orderData.orderNumber, 'order');
 
                 cartTakeOrder = [];
                 updateOrdersUITakeOrder();
@@ -7128,7 +7140,7 @@ window.openSearchModalTakeOrder = function() {
             loadPrinterQueue();
         };
 
-        window.triggerAutoPrinting = async function(orderId, orderNumber) {
+        window.triggerAutoPrinting = async function(orderId, orderNumber, type = 'order', paymentDetails = null) {
             // Get table number from order
             const orderSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', orderId));
             const orderData = orderSnap.exists() ? orderSnap.data() : null;
@@ -7166,19 +7178,27 @@ window.openSearchModalTakeOrder = function() {
                 const device = connectedBluetoothDevices[p.bluetoothDeviceId];
                 if (device) devicesToCleanup.add(device);
                 
-                // Handle Full Receipt Printing
-                if (p.printReceipt) {
+                // Handle Full Receipt Printing (Only on payment or early pay)
+                if (p.printReceipt && type === 'payment') {
                     const qId = await addToPrintQueue(orderId, orderNumber, tableNumber, 'Receipt', null);
                     if (device) {
-                        const commands = generateReceiptCommands(orderNumber, tableNumber, fullItemsList, 'Main Receipt', orderTime, "AUTO PRINT");
+                        // If split payment, we only show items just paid in the receipt
+                        let itemsToPrint = fullItemsList;
+                        if (paymentDetails && paymentDetails.itemsPaid) {
+                            const paidIds = paymentDetails.itemsPaid.map(ip => ip.itemId);
+                            itemsToPrint = fullItemsList.filter(it => paidIds.includes(it.docId));
+                        }
+                        
+                        const label = paymentDetails?.isEarly ? "EARLY PAYMENT" : "PAID";
+                        const commands = generateMainReceiptCommands(orderNumber, tableNumber, itemsToPrint, orderTime, paymentDetails?.method || 'N/A', label);
                         const success = await sendToBluetoothPrinter(device, commands);
                         await updateDoc(doc(db, 'licenses', currentClientId, 'print_queue', qId), { status: success ? 'success' : 'failed' });
                         printActions.push({ label: 'Main Receipt', success });
                     }
                 }
 
-                // Handle Department Order Printing
-                if (p.printOrders && p.departmentPrinters?.length) {
+                // Handle Department Order Printing (Only when order is initially placed)
+                if (p.printOrders && p.departmentPrinters?.length && type === 'order') {
                     for (const deptId of p.departmentPrinters) {
                         const deptSnap = await getDoc(doc(db, 'licenses', currentClientId, 'department_printer', deptId));
                         if (deptSnap.exists()) {
@@ -7230,6 +7250,70 @@ window.openSearchModalTakeOrder = function() {
             return docRef.id;
         }
 
+        function generateMainReceiptCommands(orderNumber, tableNumber, items, orderTime, payMethod, statusLabel) {
+            const restaurantName = localStorage.getItem('restaurantName') || 'VENTURERUSH RESTAURANT';
+            const settleTime = new Date().toLocaleString();
+            
+            let subtotal = 0;
+            items.forEach(it => subtotal += parseFloat(it.total) || 0);
+            const tax = taxActive ? subtotal * (currentTaxRate / 100) : 0;
+            const total = subtotal + tax;
+
+            let commands = "";
+            commands += "\x1B\x40"; // Initialize
+            commands += "\x1B\x61\x01"; // Center
+            commands += "\x1B\x45\x01 [COMPANY LOGO] \x1B\x45\x00\n";
+            commands += `\x1B\x21\x10${restaurantName.toUpperCase()}\x1B\x21\x00\n`; // Double height
+            commands += "123 VentureRush Way, Tech City\n"; // Placeholder address
+            commands += "--------------------------------\n";
+            
+            const now = new Date();
+            const dateStr = now.toLocaleDateString();
+            const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            
+            commands += "\x1B\x61\x00"; // Left
+            commands += `Date: ${dateStr}   Time: ${timeStr}\n`;
+            commands += `Receipt No: ${orderNumber}\n`;
+            commands += `Table: ${tableNumber}\n`;
+            commands += `Cashier: ${currentStaff?.name || 'N/A'}\n`;
+            commands += "--------------------------------\n";
+            commands += "Item            Qty       Amount\n";
+            
+            items.forEach(item => {
+                const nameStr = item.name.substring(0, 15).padEnd(16);
+                const qtyStr = item.qty.toString().padStart(3);
+                const amtStr = parseFloat(item.total).toFixed(2).padStart(10);
+                commands += `${nameStr}${qtyStr}${amtStr}\n`;
+                
+                if (item.variants?.length) {
+                    item.variants.forEach(v => commands += `  + ${v.optionName}\n`);
+                }
+                if (item.modifiers?.length) {
+                    item.modifiers.forEach(m => commands += `  + ${m.optionName}\n`);
+                }
+            });
+            
+            commands += "--------------------------------\n";
+            commands += `Subtotal:              RM ${subtotal.toFixed(2).padStart(8)}\n`;
+            if (taxActive) {
+                commands += `Tax (${currentTaxRate}%):            RM ${tax.toFixed(2).padStart(8)}\n`;
+            }
+            commands += `\x1B\x45\x01TOTAL AMOUNT:          RM ${total.toFixed(2).padStart(8)}\x1B\x45\x00\n`;
+            commands += `Payment by: ${payMethod.toUpperCase()}\n`;
+            commands += "--------------------------------\n";
+            
+            commands += "\x1B\x61\x01"; // Center
+            commands += "Thank You\n";
+            commands += "Please Come Again\n";
+            commands += `Settled at ${settleTime}\n`;
+            commands += `Status: ${statusLabel}\n\n`;
+            commands += "Powered By VentureRush Tech\n";
+            
+            commands += "\n\n\n\n";
+            commands += "\x1D\x56\x41\x03"; // Cut
+            return commands;
+        }
+
         window.reprintQueueItem = async function(id) {
             const ref = doc(db, 'licenses', currentClientId, 'print_queue', id);
             const snap = await getDoc(ref);
@@ -7238,7 +7322,7 @@ window.openSearchModalTakeOrder = function() {
 
             // Determine manual print label based on current attempts recorded before incrementing
             const currentAttempts = item.attempts || 1;
-            const statusLabel = `MANUAL PRINT ${currentAttempts}`;
+            const statusLabel = item.printerDeptName === 'Receipt' ? 'REPRINT' : `MANUAL PRINT ${currentAttempts}`;
 
             // Fetch order time
             const orderSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', item.orderId));
@@ -7278,7 +7362,12 @@ window.openSearchModalTakeOrder = function() {
 
             let printSuccess = false;
             if (device && itemsToPrint.length > 0) {
-                const commands = generateReceiptCommands(item.orderNumber, item.tableNumber || 'N/A', itemsToPrint, item.printerDeptName || 'Receipt', orderTime, statusLabel);
+                let commands = "";
+                if (item.printerDeptName === 'Receipt') {
+                    commands = generateMainReceiptCommands(item.orderNumber, item.tableNumber || 'N/A', itemsToPrint, orderTime, 'N/A', statusLabel);
+                } else {
+                    commands = generateReceiptCommands(item.orderNumber, item.tableNumber || 'N/A', itemsToPrint, item.printerDeptName || 'Receipt', orderTime, statusLabel);
+                }
                 printSuccess = await sendToBluetoothPrinter(device, commands);
                 if (device.gatt.connected) device.gatt.disconnect();
             }
