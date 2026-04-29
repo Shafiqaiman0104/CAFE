@@ -1721,6 +1721,32 @@
             pointer-events: auto;
             transition: opacity 0.5s ease;
         }
+
+        /* Receipt Settings Styles */
+        .receipt-settings-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 24px;
+        }
+        @media (min-width: 992px) {
+            .receipt-settings-grid {
+                grid-template-columns: 1fr 350px;
+            }
+        }
+        .receipt-preview-paper {
+            background: white;
+            width: 100%;
+            max-width: 300px;
+            margin: 0 auto;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            color: #333;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 12px;
+            line-height: 1.4;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
     </style>
 </head>
 <body>
@@ -1803,6 +1829,9 @@
                         </div>
                         <div class="menu-item" onclick="showPage('cashier')">
                             <i class="fas fa-cash-register"></i> Cashier
+                        </div>
+                        <div class="menu-item" onclick="showPage('receipt')">
+                            <i class="fas fa-file-invoice"></i> Receipt
                         </div>
                         <div class="menu-item" onclick="showPage('departmentPrinter')">
                             <i class="fas fa-print"></i> Department Printer
@@ -2014,6 +2043,46 @@
                         <button class="btn-icon" onclick="refreshAllTransactions()"><i class="fas fa-sync-alt"></i></button>
                     </div>
                     <div id="allTransactionsList"></div>
+                </div>
+            </div>
+
+            <!-- Receipt Settings Page -->
+            <div id="receipt" class="page">
+                <div class="section-card">
+                    <div class="section-header">
+                        <span class="section-title">Receipt Settings</span>
+                    </div>
+                    <div class="receipt-settings-grid">
+                        <div id="receiptSettingsForm">
+                            <div class="form-group">
+                                <label>Restaurant Logo URL</label>
+                                <input type="text" id="receiptLogoUrl" placeholder="https://example.com/logo.png" oninput="updateReceiptPreview()">
+                                <small style="color: #cbd5e0; font-size: 11px;">Note: Thermal printers require specialized drivers to process URL images.</small>
+                            </div>
+                            <div class="form-group">
+                                <label>Restaurant Name</label>
+                                <input type="text" id="receiptRestName" placeholder="Enter Restaurant Name" oninput="updateReceiptPreview()">
+                            </div>
+                            <div class="form-group">
+                                <label>Restaurant Address</label>
+                                <textarea id="receiptRestAddress" rows="3" placeholder="Enter Restaurant Address" oninput="updateReceiptPreview()"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>Receipt Footer</label>
+                                <textarea id="receiptFooter" rows="2" placeholder="Thank You Please Come Again" oninput="updateReceiptPreview()"></textarea>
+                            </div>
+                            <button class="btn" onclick="saveReceiptSettings()">Save Settings</button>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 20px;">
+                            <label style="display: block; margin-bottom: 15px; font-weight: bold; color: white; text-align: center;">RECEIPT PREVIEW</label>
+                            <div id="receiptPreview" class="receipt-preview-paper">
+                                <!-- Preview content injected here -->
+                            </div>
+                            <button class="btn btn-secondary" style="margin-top: 20px; background: white; color: #764ba2;" onclick="printTestReceipt()">
+                                <i class="fas fa-print"></i> TEST PRINT RECEIPT
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -3101,7 +3170,7 @@
                     });
                 }
 
-                await loadTaxRate();
+                await loadAllSettings();
                 await loadGlobalVariants();
                 await loadGlobalModifiers();
                 showPage('takeOrder');
@@ -3206,6 +3275,7 @@
             else if (pageId === 'printerQueue') loadPrinterQueue();
             else if (pageId === 'cashier') loadCashierPage();
             else if (pageId === 'allOrders') loadAllOrders();
+            else if (pageId === 'receipt') loadReceiptSettingsPage();
             else if (pageId === 'allTransactions') loadAllTransactions();
         };
 
@@ -6902,6 +6972,118 @@ window.openSearchModalTakeOrder = function() {
             loadCashierPage();
         };
 
+        // ========== RECEIPT SETTINGS ==========
+        window.loadReceiptSettingsPage = async function() {
+            const ref = doc(db, 'licenses', currentClientId, 'settings', 'receipt');
+            const snap = await getDoc(ref);
+            if (snap.exists()) {
+                const data = snap.data();
+                document.getElementById('receiptLogoUrl').value = data.restaurantLogo || '';
+                document.getElementById('receiptRestName').value = data.restaurantName || localStorage.getItem('restaurantName') || '';
+                document.getElementById('receiptRestAddress').value = data.restaurantAddress || '';
+                document.getElementById('receiptFooter').value = data.receiptFooter || 'Thank You\nPlease Come Again';
+            } else {
+                document.getElementById('receiptRestName').value = localStorage.getItem('restaurantName') || '';
+                document.getElementById('receiptFooter').value = 'Thank You\nPlease Come Again';
+            }
+            updateReceiptPreview();
+        };
+
+        window.updateReceiptPreview = function() {
+            const logoUrl = document.getElementById('receiptLogoUrl').value;
+            const name = document.getElementById('receiptRestName').value || 'RESTAURANT NAME';
+            const address = document.getElementById('receiptRestAddress').value || '123 Address Street, City';
+            const footer = document.getElementById('receiptFooter').value || 'Thank You\nPlease Come Again';
+            
+            const container = document.getElementById('receiptPreview');
+            container.innerHTML = `
+                <div style="text-align: center; margin-bottom: 10px;">
+                    ${logoUrl ? `<img src="${logoUrl}" style="max-width: 60px; display: block; margin: 0 auto 5px auto;">` : '<div style="border: 1px dashed #ccc; padding: 5px; margin-bottom: 5px; font-size: 10px;">[LOGO]</div>'}
+                    <div style="font-weight: bold; font-size: 14px; text-transform: uppercase;">${name}</div>
+                    <div style="font-size: 10px; white-space: pre-line;">${address}</div>
+                </div>
+                <div style="border-top: 1px dashed #333; margin: 10px 0;"></div>
+                <div style="display: flex; justify-content: space-between; font-size: 10px;">
+                    <span>Date: ${new Date().toLocaleDateString()}</span>
+                    <span>Time: ${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                </div>
+                <div style="font-size: 10px;">Receipt: ORD-SAMPLE</div>
+                <div style="font-size: 10px;">Table: T-PREVIEW</div>
+                <div style="border-top: 1px dashed #333; margin: 10px 0;"></div>
+                <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 10px;">
+                    <span>Item</span><span>Qty</span><span>Amt</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 10px; margin-top: 5px;">
+                    <span>Sample Product</span><span>1</span><span>10.00</span>
+                </div>
+                <div style="border-top: 1px dashed #333; margin: 10px 0;"></div>
+                <div style="display: flex; justify-content: space-between; font-size: 10px;">
+                    <span>Subtotal</span><span>RM 10.00</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 12px; margin-top: 5px;">
+                    <span>TOTAL DUE</span><span>RM 10.00</span>
+                </div>
+                <div style="border-top: 1px dashed #333; margin: 10px 0;"></div>
+                <div style="text-align: center; white-space: pre-line; font-size: 10px; margin-top: 10px;">${footer}</div>
+                <div style="text-align: center; font-size: 8px; margin-top: 10px; color: #999;">Powered by VentureRush Tech</div>
+            `;
+        };
+
+        window.saveReceiptSettings = async function() {
+            const data = {
+                restaurantLogo: document.getElementById('receiptLogoUrl').value,
+                restaurantName: document.getElementById('receiptRestName').value,
+                restaurantAddress: document.getElementById('receiptRestAddress').value,
+                receiptFooter: document.getElementById('receiptFooter').value,
+                updatedAt: Timestamp.now()
+            };
+            
+            try {
+                await setDoc(doc(db, 'licenses', currentClientId, 'settings', 'receipt'), data, { merge: true });
+                
+                localStorage.setItem('restaurantLogo', data.restaurantLogo);
+                localStorage.setItem('restaurantName', data.restaurantName);
+                localStorage.setItem('restaurantAddress', data.restaurantAddress);
+                localStorage.setItem('receiptFooter', data.receiptFooter);
+                
+                document.getElementById('appRestaurantName').textContent = data.restaurantName;
+                document.getElementById('restaurantNameDisplay').textContent = data.restaurantName;
+                
+                alert('Receipt settings saved successfully!');
+            } catch (e) {
+                alert('Error saving settings: ' + e.message);
+            }
+        };
+
+        window.printTestReceipt = async function() {
+            const printersSnap = await getDocs(query(collection(db, 'licenses', currentClientId, 'printers'), where('printReceipt', '==', true)));
+            if (printersSnap.empty) {
+                alert('No printer configured for Receipts. Please go to Printers tab.');
+                return;
+            }
+
+            const mockItems = [{ name: 'Test Receipt', qty: '1', total: '0.00', variants: [], modifiers: [] }];
+            const orderTime = new Date().toLocaleString();
+            const commands = generateMainReceiptCommands('TEST-PRINT', 'TEST', mockItems, orderTime, 'N/A', 'PREVIEW');
+
+            let success = false;
+            for (const printerDoc of printersSnap.docs) {
+                const p = printerDoc.data();
+                const device = connectedBluetoothDevices[p.bluetoothDeviceId];
+                if (device) {
+                    const ok = await sendToBluetoothPrinter(device, commands);
+                    if (ok) success = true;
+                    if (device.gatt.connected) device.gatt.disconnect();
+                }
+            }
+
+            if (success) {
+                showPrinterStatusPopup("Test Print", "Mock receipt sent to printer.", true);
+            } else {
+                showPrinterStatusPopup("Test Print Failed", "No connected printers found.", false);
+            }
+        };
+
         // ========== DEPARTMENT PRINTERS ==========
         window.loadDeptPrinters = function() {
             const ref = collection(db, 'licenses', currentClientId, 'department_printer');
@@ -7252,6 +7434,8 @@ window.openSearchModalTakeOrder = function() {
 
         function generateMainReceiptCommands(orderNumber, tableNumber, items, orderTime, payMethod, statusLabel) {
             const restaurantName = localStorage.getItem('restaurantName') || 'VENTURERUSH RESTAURANT';
+            const restaurantAddress = localStorage.getItem('restaurantAddress') || '123 VentureRush Way, Tech City';
+            const receiptFooter = localStorage.getItem('receiptFooter') || 'Thank You\nPlease Come Again';
             const settleTime = new Date().toLocaleString();
             
             let subtotal = 0;
@@ -7264,7 +7448,7 @@ window.openSearchModalTakeOrder = function() {
             commands += "\x1B\x61\x01"; // Center
             commands += "\x1B\x45\x01 [COMPANY LOGO] \x1B\x45\x00\n";
             commands += `\x1B\x21\x10${restaurantName.toUpperCase()}\x1B\x21\x00\n`; // Double height
-            commands += "123 VentureRush Way, Tech City\n"; // Placeholder address
+            commands += `${restaurantAddress}\n`;
             commands += "--------------------------------\n";
             
             const now = new Date();
@@ -7303,8 +7487,7 @@ window.openSearchModalTakeOrder = function() {
             commands += "--------------------------------\n";
             
             commands += "\x1B\x61\x01"; // Center
-            commands += "Thank You\n";
-            commands += "Please Come Again\n";
+            commands += `${receiptFooter}\n`;
             commands += `Settled at ${settleTime}\n`;
             commands += `Status: ${statusLabel}\n\n`;
             commands += "Powered By VentureRush Tech\n";
@@ -7611,6 +7794,26 @@ window.openSearchModalTakeOrder = function() {
             location.reload();
         };
 
+        async function loadAllSettings() {
+            await loadTaxRate();
+            
+            // Load Receipt Settings into localStorage
+            try {
+                const ref = doc(db, 'licenses', currentClientId, 'settings', 'receipt');
+                const snap = await getDoc(ref);
+                if (snap.exists()) {
+                    const data = snap.data();
+                    localStorage.setItem('restaurantLogo', data.restaurantLogo || '');
+                    localStorage.setItem('restaurantName', data.restaurantName || localStorage.getItem('restaurantName'));
+                    localStorage.setItem('restaurantAddress', data.restaurantAddress || '');
+                    localStorage.setItem('receiptFooter', data.receiptFooter || 'Thank You\nPlease Come Again');
+                    
+                    document.getElementById('appRestaurantName').textContent = localStorage.getItem('restaurantName');
+                    document.getElementById('restaurantNameDisplay').textContent = localStorage.getItem('restaurantName');
+                }
+            } catch (e) { console.warn("Could not load receipt settings", e); }
+        }
+
         // Check existing session
         const savedClientId = localStorage.getItem('clientId');
         const savedStaff = localStorage.getItem('currentStaff');
@@ -7636,7 +7839,7 @@ window.openSearchModalTakeOrder = function() {
             if (currentStaff.role === 'manager') document.getElementById('managerMenu').style.display = 'block';
             else document.getElementById('managerMenu').style.display = 'none';
             document.getElementById('staffMenu').style.display = 'block'; // Operations is always visible
-            loadTaxRate().then(() => {
+            loadAllSettings().then(() => {
                 loadGlobalVariants();
                 loadGlobalModifiers();
                 showPage('takeOrder');
