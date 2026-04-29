@@ -1800,13 +1800,16 @@
                 <span></span>
                 <span></span>
             </button>
-            <div class="restaurant-name" style="position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap;">VentureRush P.O.S</div>
+             <div style="position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap; display: flex; align-items: center; gap: 10px;">
+                <img src="https://venturerush-tech.netlify.app/vrLogo.png" alt="Logo" style="height: 35px; width: 35px; border-radius: 50%;">
+                <div class="restaurant-name">VentureRush P.O.S</div>
+            </div>
         </div>
 
         <!-- Sidebar -->
         <div class="sidebar" id="sidebar">
             <div class="sidebar-header" style="padding: 24px; text-align: center; border-bottom: 1px solid rgba(0,0,0,0.05);">
-                <img src="https://venturerush-tech.netlify.app/vrLogo.png" alt="Logo" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; margin-bottom: 15px; border: 3px solid #0273e61a; box-shadow: 0 4px 10px rgb(15,103,208);">
+                  <img id="sidebarLogo" src="https://venturerush-tech.netlify.app/vrLogo.png" alt="Logo" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; margin-bottom: 15px; border: 3px solid #0273e61a; box-shadow: 0 4px 10px rgb(15,103,208);">
                 <div class="restaurant-name" id="appRestaurantName" style="font-size: 20px; margin-bottom: 10px;"></div>
                 <div style="font-size: 14px; color: #555; margin-bottom: 15px;">
                     <span id="staffNameTop" style="font-weight: 600;"></span> | <span id="staffRoleTop" class="role-badge"></span>
@@ -8095,6 +8098,7 @@ window.openSearchModalTakeOrder = function() {
                     
                     document.getElementById('appRestaurantName').textContent = localStorage.getItem('restaurantName');
                     document.getElementById('restaurantNameDisplay').textContent = localStorage.getItem('restaurantName');
+                                                  if (data.restaurantLogo) document.getElementById('sidebarLogo').src = data.restaurantLogo;
                 }
             } catch (e) { console.warn("Could not load receipt settings", e); }
         }
