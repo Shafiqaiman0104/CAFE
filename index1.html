@@ -2064,6 +2064,16 @@
                                 <small style="color: #cbd5e0; font-size: 11px;">Use an uploaded file to avoid security (CORS) blocks. Thermal printers require processed image data.</small>
                             </div>
                             <div class="form-group">
+                                <label>Restaurant Logo Scale</label>
+                                <select id="receiptLogoScale" onchange="updateReceiptPreview()">
+                                    <option value="extra-small">Extra Small</option>
+                                    <option value="small">Small</option>
+                                    <option value="normal" selected>Normal (current image size)</option>
+                                    <option value="big">Big</option>
+                                    <option value="extra-big">Extra Big</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
                                 <label>Restaurant Name</label>
                                 <input type="text" id="receiptRestName" placeholder="Enter Restaurant Name" oninput="updateReceiptPreview()">
                             </div>
@@ -6983,6 +6993,7 @@ window.openSearchModalTakeOrder = function() {
             if (snap.exists()) {
                 const data = snap.data();
                 document.getElementById('receiptLogoUrl').value = data.restaurantLogo || '';
+                document.getElementById('receiptLogoScale').value = data.logoScale || 'normal';
                 document.getElementById('receiptRestName').value = data.restaurantName || localStorage.getItem('restaurantName') || '';
                 document.getElementById('receiptRestAddress').value = data.restaurantAddress || '';
                 document.getElementById('receiptFooter').value = data.receiptFooter || 'Thank You\nPlease Come Again';
@@ -6995,14 +7006,24 @@ window.openSearchModalTakeOrder = function() {
 
         window.updateReceiptPreview = function() {
             const logoUrl = document.getElementById('receiptLogoUrl').value;
+            const logoScale = document.getElementById('receiptLogoScale').value;
             const name = document.getElementById('receiptRestName').value || 'RESTAURANT NAME';
             const address = document.getElementById('receiptRestAddress').value || '123 Address Street, City';
             const footer = document.getElementById('receiptFooter').value || 'Thank You\nPlease Come Again';
             
+            const previewWidths = {
+                'extra-small': '30px',
+                'small': '45px',
+                'normal': '60px',
+                'big': '90px',
+                'extra-big': '120px'
+            };
+            const logoWidth = previewWidths[logoScale] || '60px';
+
             const container = document.getElementById('receiptPreview');
             container.innerHTML = `
                 <div style="text-align: center; margin-bottom: 10px;">
-                    ${logoUrl ? `<img src="${logoUrl}" style="max-width: 60px; display: block; margin: 0 auto 5px auto;">` : '<div style="border: 1px dashed #ccc; padding: 5px; margin-bottom: 5px; font-size: 10px;">[LOGO]</div>'}
+                    ${logoUrl ? `<img src="${logoUrl}" style="max-width: ${logoWidth}; display: block; margin: 0 auto 5px auto;">` : '<div style="border: 1px dashed #ccc; padding: 5px; margin-bottom: 5px; font-size: 10px;">[LOGO]</div>'}
                     <div style="font-weight: bold; font-size: 14px; text-transform: uppercase;">${name}</div>
                     <div style="font-size: 10px; white-space: pre-line;">${address}</div>
                 </div>
@@ -7036,6 +7057,7 @@ window.openSearchModalTakeOrder = function() {
         window.saveReceiptSettings = async function() {
             const data = {
                 restaurantLogo: document.getElementById('receiptLogoUrl').value,
+                logoScale: document.getElementById('receiptLogoScale').value,
                 restaurantName: document.getElementById('receiptRestName').value,
                 restaurantAddress: document.getElementById('receiptRestAddress').value,
                 receiptFooter: document.getElementById('receiptFooter').value,
@@ -7046,6 +7068,7 @@ window.openSearchModalTakeOrder = function() {
                 await setDoc(doc(db, 'licenses', currentClientId, 'settings', 'receipt'), data, { merge: true });
                 
                 localStorage.setItem('restaurantLogo', data.restaurantLogo);
+                localStorage.setItem('logoScale', data.logoScale);
                 localStorage.setItem('restaurantName', data.restaurantName);
                 localStorage.setItem('restaurantAddress', data.restaurantAddress);
                 localStorage.setItem('receiptFooter', data.receiptFooter);
@@ -7443,6 +7466,16 @@ window.openSearchModalTakeOrder = function() {
             const receiptFooter = localStorage.getItem('receiptFooter') || 'Thank You\nPlease Come Again';
             const settleTime = new Date().toLocaleString();
             
+            const logoScale = localStorage.getItem('logoScale') || 'normal';
+            const printWidths = {
+                'extra-small': 128,
+                'small': 256,
+                'normal': 384,
+                'big': 512,
+                'extra-big': 640
+            };
+            const logoMaxWidth = printWidths[logoScale] || 384;
+
             let subtotal = 0;
             items.forEach(it => subtotal += parseFloat(it.total) || 0);
             const tax = taxActive ? subtotal * (currentTaxRate / 100) : 0;
@@ -7452,7 +7485,7 @@ window.openSearchModalTakeOrder = function() {
             const dateStr = now.toLocaleDateString();
             const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-            const logoBytes = await getLogoEscPos(restaurantLogo);
+            const logoBytes = await getLogoEscPos(restaurantLogo, logoMaxWidth);
 
             let itemsText = "";
             items.forEach(item => {
@@ -7892,6 +7925,7 @@ window.openSearchModalTakeOrder = function() {
                 if (snap.exists()) {
                     const data = snap.data();
                     localStorage.setItem('restaurantLogo', data.restaurantLogo || '');
+                    localStorage.setItem('logoScale', data.logoScale || 'normal');
                     localStorage.setItem('restaurantName', data.restaurantName || localStorage.getItem('restaurantName'));
                     localStorage.setItem('restaurantAddress', data.restaurantAddress || '');
                     localStorage.setItem('receiptFooter', data.receiptFooter || 'Thank You\nPlease Come Again');
