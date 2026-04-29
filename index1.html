@@ -7369,6 +7369,7 @@ window.openSearchModalTakeOrder = function() {
                 const mSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderId, 'items', itDoc.id, 'selectedModifiers'));
                 fullItemsList.push({
                     ...itData,
+                    docId: itDoc.id, // Add docId here for filtering later
                     variants: vSnap.docs.map(v => v.data()),
                     modifiers: mSnap.docs.map(m => m.data())
                 });
