@@ -5033,9 +5033,11 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                         if (item.isPaid || item.isPaidEarly || item.status === 'cancelled') continue; // Skip paid or cancelled items
                         
                         hasUnpaidItems = true;
+                        const maxQty = parseInt(item.qty);
+                        const unitPrice = parseFloat(item.total) / maxQty;
                         const itemPrice = parseFloat(item.total);
                         // Select by default
-                        selectedCheckoutItems.push({ orderId: orderDoc.id, itemId: itemDoc.id, price: itemPrice });
+                        selectedCheckoutItems.push({ orderId: orderDoc.id, itemId: itemDoc.id, unitPrice, qtyToPay: maxQty, maxQty });
 
                         const variantsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderDoc.id, 'items', itemDoc.id, 'selectedVariants'));
                         const modifiersSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderDoc.id, 'items', itemDoc.id, 'selectedModifiers'));
@@ -5047,15 +5049,23 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
 
                         orderItemsHtml += `
                             <div id="chk-item-${itemDoc.id}" class="checkout-item-row checkout-item-selected"
-                                 data-order-id="${orderDoc.id}" data-price="${itemPrice}"
-                                 onclick="toggleItemSelectionCheckout('${orderDoc.id}', '${itemDoc.id}', ${itemPrice})">
+                                 data-order-id="${orderDoc.id}" data-price="${itemPrice}" data-max-qty="${maxQty}" data-unit-price="${unitPrice}"
+                                 onclick="toggleItemSelectionCheckout('${orderDoc.id}', '${itemDoc.id}')">
                                 <div style="display:flex; justify-content:space-between; font-size:0.9rem; align-items:center;">
                                     <div style="display: flex; align-items: center; gap: 8px;">
                                         <i id="icon-item-${itemDoc.id}" class="fas fa-check-circle"></i>
-                                        <span style="font-weight:600;">${item.name} x ${item.qty}</span>
+                                        <span style="font-weight:600;">${item.name}</span>
+                                        <div class="chk-qty-container" id="qty-ctrl-${itemDoc.id}" style="display:none; align-items:center; gap:8px; margin-left:10px; background:#f1f5f9; padding:2px 8px; border-radius:20px;">
+                                            <button onclick="event.stopPropagation(); updateCheckoutItemQty('${orderDoc.id}', '${itemDoc.id}', -1)" 
+                                                    style="border:none; background:none; cursor:pointer; padding:0 5px; font-weight:bold; color:#764ba2;">-</button>
+                                            <span id="chk-qty-val-${itemDoc.id}" style="font-size:0.8rem; font-weight:bold; min-width:15px; text-align:center;">${item.qty}</span>
+                                            <button onclick="event.stopPropagation(); updateCheckoutItemQty('${orderDoc.id}', '${itemDoc.id}', 1)" 
+                                                    style="border:none; background:none; cursor:pointer; padding:0 5px; font-weight:bold; color:#764ba2;">+</button>
+                                        </div>
+                                        <span id="chk-qty-label-${itemDoc.id}" style="font-weight:600;"> x ${item.qty}</span>
                                     </div>
                                     <div style="display: flex; align-items: center; gap: 10px;">
-                                        <span>RM ${itemPrice.toFixed(2)}</span>
+                                        <span id="chk-price-display-${itemDoc.id}">RM ${itemPrice.toFixed(2)}</span>
                                         <i class="fas fa-trash-alt checkout-void-icon" 
                                            style="color: #e53e3e; display: none; cursor: pointer; padding: 5px; position: relative; z-index: 10; pointer-events: auto;"
                                            onclick="event.stopPropagation(); voidItemFromCheckout('${orderDoc.id}', '${itemDoc.id}', ${itemPrice})"></i>
@@ -5093,20 +5103,27 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             }
         };
 
-        window.toggleItemSelectionCheckout = function(orderId, itemId, price) {
+        window.toggleItemSelectionCheckout = function(orderId, itemId) {
             if (document.getElementById('btnCheckoutFull').classList.contains('active')) return;
             const index = selectedCheckoutItems.findIndex(i => i.itemId === itemId);
             const el = document.getElementById(`chk-item-${itemId}`);
             const icon = document.getElementById(`icon-item-${itemId}`);
+            const maxQty = parseInt(el.getAttribute('data-max-qty'));
+            const unitPrice = parseFloat(el.getAttribute('data-unit-price'));
 
             if (index > -1) {
                 selectedCheckoutItems.splice(index, 1);
                 if (el) el.classList.remove('checkout-item-selected');
                 if (icon) { icon.classList.remove('fa-check-circle'); icon.classList.add('fa-circle'); icon.style.opacity = "0.3"; }
             } else {
-                selectedCheckoutItems.push({ orderId, itemId, price });
+                // Default to 1 qty when selecting in split mode
+                const qtyToPay = 1;
+                selectedCheckoutItems.push({ orderId, itemId, unitPrice, qtyToPay, maxQty });
                 if (el) el.classList.add('checkout-item-selected');
                 if (icon) { icon.classList.remove('fa-circle'); icon.classList.add('fa-check-circle'); icon.style.opacity = "1"; }
+                
+                document.getElementById(`chk-qty-val-${itemId}`).innerText = qtyToPay;
+                document.getElementById(`chk-price-display-${itemId}`).innerText = `RM ${(qtyToPay * unitPrice).toFixed(2)}`;
             }
             recalculateCheckoutTotals();
         };
@@ -5123,17 +5140,30 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             itemRows.forEach(row => {
                 const itemId = row.id.replace('chk-item-', '');
                 const icon = document.getElementById(`icon-item-${itemId}`);
+                const qtyCtrl = document.getElementById(`qty-ctrl-${itemId}`);
+                const qtyLabel = document.getElementById(`chk-qty-label-${itemId}`);
+                const maxQty = parseInt(row.getAttribute('data-max-qty'));
+                const unitPrice = parseFloat(row.getAttribute('data-unit-price'));
                 
                 if (isFull) {
                     const orderId = row.getAttribute('data-order-id');
-                    const price = parseFloat(row.getAttribute('data-price'));
-                    selectedCheckoutItems.push({ orderId, itemId, price });
+                    selectedCheckoutItems.push({ orderId, itemId, unitPrice, qtyToPay: maxQty, maxQty });
                     row.classList.add('checkout-item-selected');
-                    if (icon) {
-                        icon.style.display = 'none'; // Hide the check menu icon
-                    }
+                    if (icon) icon.style.display = 'none';
+                    if (qtyCtrl) qtyCtrl.style.display = 'none';
+                    if (qtyLabel) qtyLabel.style.display = 'inline';
+                    
+                    document.getElementById(`chk-qty-val-${itemId}`).innerText = maxQty;
+                    document.getElementById(`chk-price-display-${itemId}`).innerText = `RM ${(maxQty * unitPrice).toFixed(2)}`;
                 } else {
                     row.classList.remove('checkout-item-selected');
+                    if (qtyCtrl && maxQty > 1) {
+                        qtyCtrl.style.display = 'flex';
+                        qtyLabel.style.display = 'none';
+                    } else {
+                        if (qtyCtrl) qtyCtrl.style.display = 'none';
+                        if (qtyLabel) qtyLabel.style.display = 'inline';
+                    }
                     if (icon) {
                         icon.style.display = 'inline-block';
                         icon.classList.remove('fa-check-circle');
@@ -5145,8 +5175,28 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             recalculateCheckoutTotals();
         };
 
+        window.updateCheckoutItemQty = function(orderId, itemId, delta) {
+            const item = selectedCheckoutItems.find(i => i.itemId === itemId);
+            if (!item) return;
+            
+            let newQty = item.qtyToPay + delta;
+            if (newQty < 1) newQty = 1;
+            if (newQty > item.maxQty) newQty = item.maxQty;
+            
+            item.qtyToPay = newQty;
+            
+            // Update UI
+            const qtyVal = document.getElementById(`chk-qty-val-${itemId}`);
+            if (qtyVal) qtyVal.innerText = newQty;
+            
+            const priceDisp = document.getElementById(`chk-price-display-${itemId}`);
+            if (priceDisp) priceDisp.innerText = `RM ${(newQty * item.unitPrice).toFixed(2)}`;
+            
+            recalculateCheckoutTotals();
+        };
+
         function recalculateCheckoutTotals() {
-            let subtotal = selectedCheckoutItems.reduce((acc, curr) => acc + curr.price, 0);
+            let subtotal = selectedCheckoutItems.reduce((acc, curr) => acc + (curr.unitPrice * curr.qtyToPay), 0);
             const tax = taxActive ? subtotal * (currentTaxRate / 100) : 0;
             checkoutTotalTakeOrder = subtotal + tax;
             
@@ -5395,10 +5445,44 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                 }
             }
 
-            // Mark only selected items as paid in the database
+            // Mark selected items (or partial quantities) as paid in the database
             for (const item of selectedCheckoutItems) {
-                const updateData = isEarlyPaymentMode ? { isPaidEarly: true } : { isPaid: true };
-                await updateDoc(doc(db, 'licenses', currentClientId, 'orders', item.orderId, 'items', item.itemId), updateData);
+                const itemRef = doc(db, 'licenses', currentClientId, 'orders', item.orderId, 'items', item.itemId);
+                const itemSnap = await getDoc(itemRef);
+                const itemData = itemSnap.data();
+
+                if (item.qtyToPay < item.maxQty) {
+                    // Split the item: reduce qty of original document, create new paid document
+                    const remainingQty = item.maxQty - item.qtyToPay;
+                    await updateDoc(itemRef, {
+                        qty: remainingQty.toString(),
+                        total: (item.unitPrice * remainingQty).toFixed(2)
+                    });
+
+                    const newPaidItemData = {
+                        ...itemData,
+                        qty: item.qtyToPay.toString(),
+                        total: (item.unitPrice * item.qtyToPay).toFixed(2)
+                    };
+                    if (isEarlyPaymentMode) newPaidItemData.isPaidEarly = true;
+                    else newPaidItemData.isPaid = true;
+
+                    const newPaidItemRef = await addDoc(collection(db, 'licenses', currentClientId, 'orders', item.orderId, 'items'), newPaidItemData);
+
+                    // Copy sub-collections
+                    const vSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', item.orderId, 'items', item.itemId, 'selectedVariants'));
+                    for (const v of vSnap.docs) {
+                        await addDoc(collection(db, 'licenses', currentClientId, 'orders', item.orderId, 'items', newPaidItemRef.id, 'selectedVariants'), v.data());
+                    }
+                    const mSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', item.orderId, 'items', item.itemId, 'selectedModifiers'));
+                    for (const m of mSnap.docs) {
+                        await addDoc(collection(db, 'licenses', currentClientId, 'orders', item.orderId, 'items', newPaidItemRef.id, 'selectedModifiers'), m.data());
+                    }
+                } else {
+                    // Full quantity paid
+                    const updateData = isEarlyPaymentMode ? { isPaidEarly: true } : { isPaid: true };
+                    await updateDoc(itemRef, updateData);
+                }
             }
 
             // Determine if Split or Full mode was active
@@ -7399,8 +7483,18 @@ window.openSearchModalTakeOrder = function() {
                         // If split payment, we only show items just paid in the receipt
                         let itemsToPrint = fullItemsList;
                         if (paymentDetails && paymentDetails.itemsPaid) {
-                            const paidIds = paymentDetails.itemsPaid.map(ip => ip.itemId);
-                            itemsToPrint = fullItemsList.filter(it => paidIds.includes(it.docId));
+                            const paidItemsMap = {};
+                            paymentDetails.itemsPaid.forEach(p => paidItemsMap[p.itemId] = p.qtyToPay);
+                            
+                            itemsToPrint = fullItemsList.filter(it => paidItemsMap[it.docId] !== undefined).map(it => {
+                                const qtyToPay = paidItemsMap[it.docId];
+                                const unitPrice = parseFloat(it.total) / parseInt(it.qty);
+                                return {
+                                    ...it,
+                                    qty: qtyToPay.toString(),
+                                    total: (unitPrice * qtyToPay).toFixed(2)
+                                };
+                            });
                         }
                         
                         const label = paymentDetails?.isEarly ? "EARLY PAYMENT" : "PAID";
