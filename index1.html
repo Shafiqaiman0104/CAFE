@@ -2971,6 +2971,26 @@
         </div>
     </div>
 
+    <!-- Void Quantity Modal -->
+    <div id="voidQtyModalTakeOrder" class="modal" style="z-index: 10002; align-items: center; justify-content: center;">
+        <div class="modal-content" style="max-width: 400px; border-radius: 24px; text-align: center; padding: 30px;">
+            <div style="font-size: 2.5rem; color: #e53e3e; margin-bottom: 15px;"><i class="fas fa-trash-alt"></i></div>
+            <h3 style="margin-bottom: 10px;">Void Item Quantity</h3>
+            <p id="voidQtyItemName" style="font-weight: 600; color: #475569; margin-bottom: 20px;"></p>
+            
+            <div style="display: flex; align-items: center; justify-content: center; gap: 20px; margin-bottom: 30px;">
+                <button onclick="updateVoidModalQty(-1)" style="width: 45px; height: 45px; border-radius: 50%; border: 2px solid #e2e8f0; background: white; font-size: 1.5rem; cursor: pointer; color: #764ba2; display: flex; align-items: center; justify-content: center;">-</button>
+                <span id="voidModalQtyVal" style="font-size: 2rem; font-weight: 800; min-width: 50px;">1</span>
+                <button onclick="updateVoidModalQty(1)" style="width: 45px; height: 45px; border-radius: 50%; border: 2px solid #e2e8f0; background: white; font-size: 1.5rem; cursor: pointer; color: #764ba2; display: flex; align-items: center; justify-content: center;">+</button>
+            </div>
+            
+            <div style="display: flex; gap: 10px;">
+                <button class="primary-btn" style="background: #e53e3e;" onclick="confirmVoidQtyTakeOrder()">Confirm Void</button>
+                <button class="secondary-btn" onclick="closeModal('voidQtyModalTakeOrder')">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Notification Stack -->
     <div id="notificationStack">
         <!-- Order Success Popup HTML -->
@@ -3087,6 +3107,7 @@
         let activeOrdersSnapshotTakeOrder = [];
         let isEarlyPaymentMode = false;
         let isVoidModeTakeOrder = false;
+        let voidingItemData = null;
 
         // ========== LICENSE CHECK ==========
         window.checkLicense = async function() {
@@ -5236,64 +5257,107 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             }
         };
 
-        window.voidItemFromCheckout = async function(orderId, itemId, price) {
-            if (!confirm('Are you sure you want to cancel this item?')) return;
-            
+        window.updateVoidModalQty = function(delta) {
+            const valEl = document.getElementById('voidModalQtyVal');
+            let current = parseInt(valEl.innerText);
+            let next = current + delta;
+            if (next < 1) next = 1;
+            if (next > voidingItemData.maxQty) next = voidingItemData.maxQty;
+            valEl.innerText = next;
+        };
+
+        async function updateOrderTotals(orderId) {
+            const itemsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderId, 'items'));
+            const items = itemsSnap.docs.map(d => d.data());
+            let subtotal = items.reduce((acc, it) => it.status !== 'cancelled' ? acc + parseFloat(it.total) : acc, 0);
+            const tax = taxActive ? subtotal * (currentTaxRate / 100) : 0;
+            const total = subtotal + tax;
+            const orderRef = doc(db, 'licenses', currentClientId, 'orders', orderId);
+            const orderSnap = await getDoc(orderRef);
+            const orderData = orderSnap.data();
+            let targetStatus = orderData.status;
+            const allCancelled = items.every(it => it.status === 'cancelled');
+            const allHandled = items.every(it => it.status === 'cancelled' || it.isPaid === true || it.isPaidEarly === true);
+            if (allCancelled) targetStatus = 'cancelled';
+            else if (allHandled) {
+                const hasPaidEarly = items.some(it => it.isPaidEarly === true);
+                if (!hasPaidEarly || orderData.status === 'served') targetStatus = 'completed';
+            }
+            await updateDoc(orderRef, { subtotal: subtotal.toFixed(2), tax: tax.toFixed(2), total: total.toFixed(2), status: targetStatus });
+            if (orderData.tableId && (targetStatus === 'completed' || targetStatus === 'cancelled')) {
+                const qRemaining = query(collection(db, 'licenses', currentClientId, 'orders'), where('tableId', '==', orderData.tableId), where('status', 'in', ['active', 'preparing', 'served']));
+                const snapRemaining = await getDocs(qRemaining);
+                if (snapRemaining.empty) await updateDoc(doc(db, 'licenses', currentClientId, 'tables', orderData.tableId), { status: 'available' });
+            }
+        }
+
+        async function performFullVoidLogic(orderId, itemId) {
+            await updateDoc(doc(db, 'licenses', currentClientId, 'orders', orderId, 'items', itemId), { status: 'cancelled' });
+            await updateOrderTotals(orderId);
+            const row = document.getElementById(`chk-item-${itemId}`);
+            if (row) row.remove();
+            selectedCheckoutItems = selectedCheckoutItems.filter(i => i.orderId !== orderId || i.itemId !== itemId);
+            recalculateCheckoutTotals();
+            if (document.querySelectorAll('.checkout-item-row').length === 0) {
+                alert('All items voided.');
+                closeModal('checkoutModalTakeOrder');
+                await loadTablesTakeOrder();
+                showTableSectionTakeOrder();
+            }
+        }
+
+        window.confirmVoidQtyTakeOrder = async function() {
+            if (!voidingItemData) return;
+            const qtyToVoid = parseInt(document.getElementById('voidModalQtyVal').innerText);
+            const { orderId, itemId, maxQty, unitPrice } = voidingItemData;
             try {
-                await updateDoc(doc(db, 'licenses', currentClientId, 'orders', orderId, 'items', itemId), { status: 'cancelled' });
-
-                const itemsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderId, 'items'));
-                const items = itemsSnap.docs.map(d => d.data());
-                let subtotal = items.reduce((acc, it) => it.status !== 'cancelled' ? acc + parseFloat(it.total) : acc, 0);
-                
-                const tax = taxActive ? subtotal * (currentTaxRate / 100) : 0;
-                const total = subtotal + tax;
-
-                const orderRef = doc(db, 'licenses', currentClientId, 'orders', orderId);
-                const orderSnap = await getDoc(orderRef);
-                const orderData = orderSnap.data();
-                let targetStatus = orderData.status;
-
-                const allCancelled = items.every(it => it.status === 'cancelled');
-                const allHandled = items.every(it => it.status === 'cancelled' || it.isPaid === true || it.isPaidEarly === true);
-                
-                if (allCancelled) targetStatus = 'cancelled';
-                else if (allHandled) {
-                    const hasPaidEarly = items.some(it => it.isPaidEarly === true);
-                    if (!hasPaidEarly || orderData.status === 'served') targetStatus = 'completed';
-                }
-
-                await updateDoc(orderRef, { 
-                    subtotal: subtotal.toFixed(2), 
-                    tax: tax.toFixed(2), 
-                    total: total.toFixed(2),
-                    status: targetStatus
-                });
-
-                if (orderData.tableId && (targetStatus === 'completed' || targetStatus === 'cancelled')) {
-                    const qRemaining = query(collection(db, 'licenses', currentClientId, 'orders'), 
-                                         where('tableId', '==', orderData.tableId), 
-                                         where('status', 'in', ['active', 'preparing', 'served']));
-                    const snapRemaining = await getDocs(qRemaining);
-                    if (snapRemaining.empty) {
-                        await updateDoc(doc(db, 'licenses', currentClientId, 'tables', orderData.tableId), { status: 'available' });
+                if (qtyToVoid >= maxQty) {
+                    await performFullVoidLogic(orderId, itemId);
+                } else {
+                    const remainingQty = maxQty - qtyToVoid;
+                    const itemRef = doc(db, 'licenses', currentClientId, 'orders', orderId, 'items', itemId);
+                    const itemSnap = await getDoc(itemRef);
+                    const itemData = itemSnap.data();
+                    await updateDoc(itemRef, { qty: remainingQty.toString(), total: (unitPrice * remainingQty).toFixed(2) });
+                    const newCancelledItemData = { ...itemData, qty: qtyToVoid.toString(), total: (unitPrice * qtyToVoid).toFixed(2), status: 'cancelled' };
+                    const newCancelledItemRef = await addDoc(collection(db, 'licenses', currentClientId, 'orders', orderId, 'items'), newCancelledItemData);
+                    const vSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderId, 'items', itemId, 'selectedVariants'));
+                    for (const v of vSnap.docs) await addDoc(collection(db, 'licenses', currentClientId, 'orders', orderId, 'items', newCancelledItemRef.id, 'selectedVariants'), v.data());
+                    const mSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderId, 'items', itemId, 'selectedModifiers'));
+                    for (const m of mSnap.docs) await addDoc(collection(db, 'licenses', currentClientId, 'orders', orderId, 'items', newCancelledItemRef.id, 'selectedModifiers'), m.data());
+                    await updateOrderTotals(orderId);
+                    const row = document.getElementById(`chk-item-${itemId}`);
+                    if (row) {
+                        row.setAttribute('data-max-qty', remainingQty);
+                        row.setAttribute('data-price', (unitPrice * remainingQty).toFixed(2));
+                        const qtyValSpan = document.getElementById(`chk-qty-val-${itemId}`);
+                        if (qtyValSpan) qtyValSpan.innerText = remainingQty;
+                        const qtyLabelSpan = document.getElementById(`chk-qty-label-${itemId}`);
+                        if (qtyLabelSpan) qtyLabelSpan.innerText = ` x ${remainingQty}`;
+                        const priceDisp = document.getElementById(`chk-price-display-${itemId}`);
+                        if (priceDisp) priceDisp.innerText = `RM ${(unitPrice * remainingQty).toFixed(2)}`;
                     }
+                    const stateItem = selectedCheckoutItems.find(i => i.itemId === itemId);
+                    if (stateItem) { stateItem.maxQty = remainingQty; stateItem.qtyToPay = Math.min(stateItem.qtyToPay, remainingQty); }
+                    recalculateCheckoutTotals();
                 }
+                closeModal('voidQtyModalTakeOrder');
+            } catch (e) { alert('Void error: ' + e.message); }
+        };
 
-                const row = document.getElementById(`chk-item-${itemId}`);
-                if (row) row.remove();
-                
-                selectedCheckoutItems = selectedCheckoutItems.filter(i => i.itemId !== itemId);
-                recalculateCheckoutTotals();
-
-                if (document.querySelectorAll('.checkout-item-row').length === 0) {
-                    alert('All items voided.');
-                    closeModal('checkoutModalTakeOrder');
-                    await loadTablesTakeOrder(); // Refresh tables to reflect status change
-                    showTableSectionTakeOrder(); // Navigate back to table selection
-                }
-            } catch (e) {
-                alert('Error voiding item: ' + e.message);
+        window.voidItemFromCheckout = async function(orderId, itemId, price) {
+            const row = document.getElementById(`chk-item-${itemId}`);
+            const maxQty = parseInt(row.getAttribute('data-max-qty'));
+            const name = row.querySelector('span[style*="font-weight:600"]').innerText;
+            const unitPrice = parseFloat(row.getAttribute('data-unit-price'));
+            if (maxQty > 1) {
+                voidingItemData = { orderId, itemId, maxQty, unitPrice, name };
+                document.getElementById('voidQtyItemName').innerText = name;
+                document.getElementById('voidModalQtyVal').innerText = "1";
+                document.getElementById('voidQtyModalTakeOrder').style.display = 'flex';
+            } else {
+                if (!confirm('Are you sure you want to cancel this item?')) return;
+                await performFullVoidLogic(orderId, itemId);
             }
         };
 
@@ -8114,6 +8178,8 @@ window.openSearchModalTakeOrder = function() {
         window.handleActiveOrdersSearchInput = handleActiveOrdersSearchInput;
         window.setVoidModeTakeOrder = setVoidModeTakeOrder;
         window.voidItemFromCheckout = voidItemFromCheckout;
+        window.updateVoidModalQty = updateVoidModalQty;
+        window.confirmVoidQtyTakeOrder = confirmVoidQtyTakeOrder;
     </script>
 </body>
 </html>
