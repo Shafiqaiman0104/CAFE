@@ -3175,7 +3175,6 @@
         let isVoidModeTakeOrder = false;
         let voidingItemData = null;
         let isInitialLoadNotifications = true;
-        let isInitialLoadPrintQueue = true;
         
         // Takeover State
         let takeoverTargetPrinterId = null;
@@ -3282,7 +3281,6 @@
                 await loadGlobalVariants();
                 await loadGlobalModifiers();
                 setupOrderNotificationListener();
-                setupPrintQueueTakeoverListener();
                 showPage('takeOrder');
                 
             } catch (e) { errorEl.textContent = e.message; }
@@ -7678,13 +7676,43 @@ window.openSearchModalTakeOrder = function() {
             // Show "Printing..." popup
             const printOverlay = document.getElementById('printingProcessOverlay');
             document.getElementById('printingOrderId').innerText = orderNumber;
+            printOverlay.style.display = 'flex';
+
+            let printActions = [];
+            const devicesToCleanup = new Set();
 
             for (const printerDoc of printersSnap.docs) {
                 const p = printerDoc.data();
+                const device = connectedBluetoothDevices[p.bluetoothDeviceId];
+                if (device) devicesToCleanup.add(device);
                 
                 // Handle Full Receipt Printing (Only on payment or early pay)
                 if (p.printReceipt && type === 'payment') {
-                    await addToPrintQueue(orderId, orderNumber, tableNumber, 'Receipt', null, paymentDetails);
+                    const qId = await addToPrintQueue(orderId, orderNumber, tableNumber, 'Receipt', null);
+                    if (device) {
+                        // If split payment, we only show items just paid in the receipt
+                        let itemsToPrint = fullItemsList;
+                        if (paymentDetails && paymentDetails.itemsPaid) {
+                            const paidItemsMap = {};
+                            paymentDetails.itemsPaid.forEach(p => paidItemsMap[p.itemId] = p.qtyToPay);
+                            
+                            itemsToPrint = fullItemsList.filter(it => paidItemsMap[it.docId] !== undefined).map(it => {
+                                const qtyToPay = paidItemsMap[it.docId];
+                                const unitPrice = parseFloat(it.total) / parseInt(it.qty);
+                                return {
+                                    ...it,
+                                    qty: qtyToPay.toString(),
+                                    total: (unitPrice * qtyToPay).toFixed(2)
+                                };
+                            });
+                        }
+                        
+                        const label = paymentDetails?.isEarly ? "EARLY PAYMENT" : "PAID";
+                        const commands = await generateMainReceiptCommands(orderNumber, tableNumber, itemsToPrint, orderTime, paymentDetails?.method || 'N/A', label);
+                        const success = await sendToBluetoothPrinter(device, commands);
+                        await updateDoc(doc(db, 'licenses', currentClientId, 'print_queue', qId), { status: success ? 'success' : 'failed' });
+                        printActions.push({ label: 'Main Receipt', success });
+                    }
                 }
 
                 // Handle Department Order Printing (Only when order is initially placed)
@@ -7699,125 +7727,40 @@ window.openSearchModalTakeOrder = function() {
                                 return dept.department && dept.department.includes(catName);
                             });
                             if (deptItems.length > 0) {
-                                await addToPrintQueue(orderId, orderNumber, tableNumber, dept.name, deptId);
+                                const qId = await addToPrintQueue(orderId, orderNumber, tableNumber, dept.name, deptId);
+                                if (device) {
+                                    const commands = await generateReceiptCommands(orderNumber, tableNumber, deptItems, dept.name, orderTime, "AUTO PRINT");
+                                    const success = await sendToBluetoothPrinter(device, commands);
+                                    await updateDoc(doc(db, 'licenses', currentClientId, 'print_queue', qId), { status: success ? 'success' : 'failed' });
+                                    printActions.push({ label: dept.name, success });
+                                }
                             }
                         }
                     }
                 }
             }
-        };
-
-        // New Listener for "Device A" to monitor tasks
-        window.setupPrintQueueTakeoverListener = function() {
-            if (unsubscribers['printQueueListener']) unsubscribers['printQueueListener']();
-            isInitialLoadPrintQueue = true;
-
-            const q = query(collection(db, 'licenses', currentClientId, 'print_queue'), where('status', '==', 'pending'));
-            
-            unsubscribers['printQueueListener'] = onSnapshot(q, async (snapshot) => {
-                if (isInitialLoadPrintQueue) {
-                    isInitialLoadPrintQueue = false;
-                    return;
-                }
-
-                // Get printers taken over by THIS staff member
-                const printersSnap = await getDocs(query(collection(db, 'licenses', currentClientId, 'printers'), where('takenByStaffId', '==', currentStaff.id)));
-                if (printersSnap.empty) return;
-                const myPrinters = printersSnap.docs.map(d => ({id: d.id, ...d.data()}));
-
-                for (const change of snapshot.docChanges()) {
-                    if (change.type === "added") {
-                        const task = change.doc.data();
-                        const taskId = change.doc.id;
-
-                        // Check if any of MY printers should handle this task
-                        const targetPrinter = myPrinters.find(p => {
-                            if (task.printerDeptName === 'Receipt') return p.printReceipt === true;
-                            return p.printOrders === true && p.departmentPrinters?.includes(task.printerDeptId);
-                        });
-
-                        if (targetPrinter) {
-                            console.log("Takeover: Handling print task", taskId);
-                            // Mark as processing immediately to prevent race conditions
-                            await updateDoc(doc(db, 'licenses', currentClientId, 'print_queue', taskId), { status: 'processing' });
-                            
-                            // Trigger the actual physical print logic
-                            const success = await processPhysicalPrint(taskId, task, targetPrinter);
-                            await updateDoc(doc(db, 'licenses', currentClientId, 'print_queue', taskId), { 
-                                status: success ? 'success' : 'failed' 
-                            });
-                            
-                            if (success) {
-                                showPrinterStatusPopup("Auto Print", `Handled ${task.printerDeptName} for ${task.orderNumber}`, true);
-                            }
-                        }
-                    }
-                }
-            });
-        };
-
-        // Shared logic to execute the Bluetooth commands
-        async function processPhysicalPrint(taskId, task, printerConfig) {
-            const device = connectedBluetoothDevices[printerConfig.bluetoothDeviceId];
-            if (!device) return false;
-
-            try {
-                // Fetch order time and items
-                const orderSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', task.orderId));
-                const orderData = orderSnap.data();
-                const orderTime = orderData.createdAt?.toDate().toLocaleString() || 'N/A';
-
-                const itemsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', task.orderId, 'items'));
-                let itemsToPrint = [];
-                for (const itDoc of itemsSnap.docs) {
-                    const itData = itDoc.data();
-                    
-                    // Filter by department if applicable
-                    if (task.printerDeptId) {
-                        const deptSnap = await getDoc(doc(db, 'licenses', currentClientId, 'department_printer', task.printerDeptId));
-                        if (deptSnap.exists()) {
-                            const dept = deptSnap.data();
-                            const catName = categoryMapTakeOrder[itData.categoryId];
-                            if (!dept.department || !dept.department.includes(catName)) continue;
-                        }
-                    }
-
-                    const vSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', task.orderId, 'items', itDoc.id, 'selectedVariants'));
-                    const mSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', task.orderId, 'items', itDoc.id, 'selectedModifiers'));
-                    itemsToPrint.push({
-                        ...itData,
-                        variants: vSnap.docs.map(v => v.data()),
-                        modifiers: mSnap.docs.map(m => m.data())
-                    });
-                }
-
-                if (itemsToPrint.length === 0) return true;
-
-                let commands;
-                if (task.printerDeptName === 'Receipt') {
-                    const label = task.paymentDetails?.isEarly ? "EARLY PAYMENT" : "PAID";
-                    commands = await generateMainReceiptCommands(task.orderNumber, task.tableNumber || 'N/A', itemsToPrint, orderTime, task.paymentDetails?.method || 'N/A', label);
-                } else {
-                    commands = await generateReceiptCommands(task.orderNumber, task.tableNumber || 'N/A', itemsToPrint, task.printerDeptName, orderTime, "AUTO PRINT");
-                }
-
-                const ok = await sendToBluetoothPrinter(device, commands);
-                if (device.gatt.connected) device.gatt.disconnect();
-                return ok;
-            } catch (e) {
-                console.error("Physical print error:", e);
-                return false;
+            // Disconnect all physical devices used in this session once finished
+            for (const d of devicesToCleanup) {
+                if (d.gatt.connected) d.gatt.disconnect();
             }
-        }
 
-        async function addToPrintQueue(orderId, orderNumber, tableNumber, deptName, deptId, paymentDetails = null) {
+            printOverlay.style.display = 'none';
+            if (printActions.length > 0) {
+                const allSuccess = printActions.every(a => a.success);
+                const details = printActions.map(a => `${a.label}: ${a.success ? 'OK' : 'FAIL'}`).join('\n');
+                showPrinterStatusPopup(allSuccess ? "Printing Success" : "Print Warning", details, allSuccess);
+            } else {
+                showPrinterStatusPopup("Queued", "No printer connected. Receipts added to queue.", 'warning');
+            }
+        };
+
+        async function addToPrintQueue(orderId, orderNumber, tableNumber, deptName, deptId) {
             const docRef = await addDoc(collection(db, 'licenses', currentClientId, 'print_queue'), {
                 orderId,
                 orderNumber,
                 tableNumber,
                 printerDeptName: deptName,
                 printerDeptId: deptId,
-                paymentDetails,
                 status: 'pending',
                 attempts: 1,
                 createdAt: Timestamp.now()
@@ -8384,7 +8327,6 @@ window.openSearchModalTakeOrder = function() {
                 loadGlobalVariants();
                 loadGlobalModifiers();
                 setupOrderNotificationListener();
-                    setupPrintQueueTakeoverListener();
                 showPage('takeOrder');
             });
         }
