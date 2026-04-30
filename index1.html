@@ -3039,7 +3039,8 @@
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
         import { 
             getFirestore, doc, getDoc, collection, query, where, getDocs,
-            onSnapshot, addDoc, updateDoc, setDoc, Timestamp, deleteDoc
+            onSnapshot, addDoc, updateDoc, setDoc, Timestamp, deleteDoc,
+            orderBy, limit
         } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
         const firebaseConfig = {
@@ -3111,6 +3112,7 @@
         let isEarlyPaymentMode = false;
         let isVoidModeTakeOrder = false;
         let voidingItemData = null;
+        let isInitialLoadNotifications = true;
 
         // ========== LICENSE CHECK ==========
         window.checkLicense = async function() {
@@ -3211,6 +3213,7 @@
                 await loadAllSettings();
                 await loadGlobalVariants();
                 await loadGlobalModifiers();
+                setupOrderNotificationListener();
                 showPage('takeOrder');
                 
             } catch (e) { errorEl.textContent = e.message; }
@@ -8084,6 +8087,58 @@ window.openSearchModalTakeOrder = function() {
             location.reload();
         };
 
+        window.setupOrderNotificationListener = function() {
+            if (unsubscribers['orderNotifications']) unsubscribers['orderNotifications']();
+            isInitialLoadNotifications = true;
+            
+            const ordersRef = collection(db, 'licenses', currentClientId, 'orders');
+            // Query the most recent orders
+            const q = query(ordersRef, orderBy('createdAt', 'desc'), limit(5));
+            
+            unsubscribers['orderNotifications'] = onSnapshot(q, (snapshot) => {
+                if (isInitialLoadNotifications) {
+                    // Skip popups for existing orders on app startup
+                    isInitialLoadNotifications = false;
+                    return;
+                }
+
+                snapshot.docChanges().forEach((change) => {
+                    if (change.type === "added") {
+                        const orderData = change.doc.data();
+                        // Only show if it wasn't placed by the staff member logged into THIS device
+                        if (orderData.staffId !== currentStaff.id) {
+                            showRemoteOrderPopup(orderData);
+                        }
+                    }
+                });
+            });
+        };
+
+        window.showRemoteOrderPopup = function(order) {
+            const stack = document.getElementById('notificationStack');
+            if (!stack) return;
+            const div = document.createElement('div');
+            
+            let tableText = 'N/A';
+            if (order.orderType === 'delivery') tableText = 'Delivery';
+            else if (order.tableId) tableText = order.tableId.toLowerCase() === 'counter' ? 'Counter' : order.tableId.toUpperCase();
+            else tableText = order.orderType === 'takeaway' ? 'Takeaway' : 'N/A';
+
+            div.innerHTML = `
+                <div style="background: white; padding: 20px; border-radius: 20px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.15); width: 280px; animation: slideUp 0.3s ease; border: 2px solid #764ba2; pointer-events: auto; margin-bottom: 10px;">
+                    <div style="color: #764ba2; font-size: 2rem; margin-bottom: 10px;"><i class="fas fa-bell"></i></div>
+                    <h3 style="margin-bottom: 12px; color: #1e293b; font-size: 1rem;">New Order Placed!!!</h3>
+                    <div style="text-align: left; font-size: 0.8rem; color: #475569; background: #f8fafc; padding: 10px; border-radius: 12px; border: 1px solid #e2e8f0;">
+                        <p style="margin-bottom: 4px;"><strong>By :</strong> <span style="color: #764ba2; font-weight: 700;">${order.staffName || 'Unknown'}</span></p>
+                        <p style="margin-bottom: 4px;"><strong>Order ID :</strong> <span style="color: #1e293b; font-weight: 700;">${order.orderNumber || 'N/A'}</span></p>
+                        <p><strong>Table :</strong> <span style="color: #1e293b; font-weight: 700;">${tableText}</span></p>
+                    </div>
+                </div>
+            `;
+            stack.appendChild(div);
+            setTimeout(() => { div.style.transition = 'opacity 0.5s ease'; div.style.opacity = '0'; setTimeout(() => { div.remove(); }, 500); }, 4000);
+        };
+
         async function loadAllSettings() {
             await loadTaxRate();
             
@@ -8134,6 +8189,7 @@ window.openSearchModalTakeOrder = function() {
             loadAllSettings().then(() => {
                 loadGlobalVariants();
                 loadGlobalModifiers();
+                setupOrderNotificationListener();
                 showPage('takeOrder');
             });
         }
