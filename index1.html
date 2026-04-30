@@ -1787,7 +1787,7 @@
         .top-bar-right {
             display: flex;
             align-items: center;
-            gap: 15px;
+            gap: 2px;
             z-index: 103;
         }
         
@@ -1826,6 +1826,35 @@
             font-size: 10px;
             font-weight: bold;
             border: 2px solid white;
+        }
+
+        /* Wi-Fi Signal Bars Styles */
+        .wifi-bars-wrapper {
+            display: flex;
+            align-items: flex-end;
+            gap: 2px;
+            height: 14px;
+            margin-left: 4px;
+        }
+        .wifi-bar {
+            width: 3.5px;
+            border-radius: 1px;
+            background: #cbd5e0;
+            transition: all 0.3s ease;
+        }
+
+        /* Mobile Top Bar Adjustments */
+        @media (max-width: 480px) {
+            .restaurant-name {
+                font-size: 14px;
+            }
+            .top-bar-logo {
+                height: 25px !important;
+                width: 25px !important;
+            }
+            .top-bar-center {
+                gap: 5px !important;
+            }
         }
     </style>
 </head>
@@ -1880,8 +1909,8 @@
                 <span></span>
                 <span></span>
             </button>
-             <div style="position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap; display: flex; align-items: center; gap: 10px;">
-                <img src="https://venturerush-tech.netlify.app/vrLogo.png" alt="Logo" style="height: 35px; width: 35px; border-radius: 50%;">
+             <div class="top-bar-center" style="position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap; display: flex; align-items: center; gap: 10px;">
+                <img src="https://venturerush-tech.netlify.app/vrLogo.png" alt="Logo" class="top-bar-logo" style="height: 35px; width: 35px; border-radius: 50%;">
                 <div class="restaurant-name">VentureRush P.O.S</div>
             </div>
             <div class="top-bar-right">
@@ -1889,6 +1918,15 @@
                     <i class="fas fa-print"></i>
                     <span id="topBarPrinterBadge" class="badge" style="display: none;">0</span>
                 </button>
+                <!-- Network Status Indicator -->
+                <div id="wifiStatusContainer" style="display: flex; align-items: center; gap: 4px; padding: 8px; border-radius: 12px; cursor: default;" title="Network Status">
+                    <i id="wifiIcon" class="fas fa-wifi" style="font-size: 16px; color: #475569;"></i>
+                    <div class="wifi-bars-wrapper">
+                        <div class="wifi-bar" style="height: 6px;"></div>
+                        <div class="wifi-bar" style="height: 10px;"></div>
+                        <div class="wifi-bar" style="height: 14px;"></div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -3103,6 +3141,20 @@
                 <button class="primary-btn" style="background: #e53e3e;" onclick="confirmVoidQtyTakeOrder()">Confirm Void</button>
                 <button class="secondary-btn" onclick="closeModal('voidQtyModalTakeOrder')">Cancel</button>
             </div>
+        </div>
+    </div>
+
+    <!-- No Connection Modal -->
+    <div id="noConnectionModal" class="modal" style="z-index: 200001; align-items: center; justify-content: center; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(8px);">
+        <div class="modal-content" style="max-width: 320px; border-radius: 28px; text-align: center; padding: 35px; animation: slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
+            <div style="width: 80px; height: 80px; background: #fee2e2; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto;">
+                <i class="fa-solid fa-face-frown" style="font-size: 2.5rem; color: #e53e3e;"></i>
+            </div>
+            <h2 style="margin-bottom: 10px; color: #1e293b;">No connection!!</h2>
+            <p style="font-size: 1rem; color: #64748b; line-height: 1.5; margin-bottom: 30px;">Please check your wifi or data.</p>
+            <button class="primary-btn" style="width: 100%; padding: 15px; background: #e53e3e;" onclick="location.reload()">
+                <i class="fas fa-sync-alt"></i> Refresh
+            </button>
         </div>
     </div>
 
@@ -8601,6 +8653,63 @@ window.openSearchModalTakeOrder = function() {
         window.voidItemFromCheckout = voidItemFromCheckout;
         window.updateVoidModalQty = updateVoidModalQty;
         window.confirmVoidQtyTakeOrder = confirmVoidQtyTakeOrder;
+
+        // ========== WIFI STATUS LOGIC ==========
+        window.updateWifiStatus = function() {
+            const wifiIcon = document.getElementById('wifiIcon');
+            const bars = document.querySelectorAll('.wifi-bar');
+            const modal = document.getElementById('noConnectionModal');
+            if (!wifiIcon || bars.length === 0) return;
+
+            const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+            
+            // CASE: No Internet Connection
+            if (!navigator.onLine) {
+                wifiIcon.style.color = '#e53e3e'; // Red
+                bars.forEach(b => { 
+                    b.style.backgroundColor = '#e53e3e'; 
+                    b.style.opacity = '1'; 
+                });
+                if (modal) modal.style.display = 'flex';
+                return;
+            }
+
+            // Connection is back
+            if (modal) modal.style.display = 'none';
+            wifiIcon.style.color = '#475569'; // Default gray
+            
+            let barsCount = 3;
+            let color = '#4caf50'; // Green
+
+            if (conn) {
+                const type = conn.effectiveType;
+                if (type === '4g') {
+                    barsCount = 3; color = '#4caf50'; // Fast: 3 bar Green
+                } else if (type === '3g') {
+                    barsCount = 2; color = 'black';    // Medium: 2 bar Black
+                } else {
+                    barsCount = 1; color = '#e53e3e'; // Slow: 1 bar Red
+                }
+            }
+
+            bars.forEach((bar, i) => {
+                if (i < barsCount) {
+                    bar.style.backgroundColor = color;
+                    bar.style.opacity = '1';
+                } else {
+                    bar.style.backgroundColor = '#cbd5e0'; // Dimmed/Empty
+                    bar.style.opacity = '0.3';
+                }
+            });
+        };
+
+        window.addEventListener('online', updateWifiStatus);
+        window.addEventListener('offline', updateWifiStatus);
+        if (navigator.connection) {
+            navigator.connection.addEventListener('change', updateWifiStatus);
+        }
+        // Initial check
+        updateWifiStatus();
     </script>
 </body>
 </html>
