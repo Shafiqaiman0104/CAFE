@@ -7437,6 +7437,8 @@ window.openSearchModalTakeOrder = function() {
                     const p = doc.data();
                     const isMine = p.takenByStaffId === currentStaff.id;
                     const isTaken = !!p.takenByStaffId;
+                    const isTakenByOthers = isTaken && !isMine;
+                    const disabledAttr = isTakenByOthers ? 'disabled' : '';
                     
                     let takeoverHtml = '';
                     if (isMine) {
@@ -7455,8 +7457,8 @@ window.openSearchModalTakeOrder = function() {
                         </div>
                         <div class="action-buttons" style="align-items: center;">
                             <button class="btn-takeover ${isMine ? 'btn-takeover-on' : 'btn-takeover-off'}" onclick="handleTakeoverToggle('${doc.id}', '${p.takenByStaffId || ''}', '${p.takenByStaffName || ''}')">${isMine ? 'Release' : 'Take Over'}</button>
-                            <button class="btn-edit" style="padding: 6px 10px;" onclick="editPrinter('${doc.id}')"><i class="fas fa-edit"></i></button>
-                            <button class="btn-delete" style="padding: 6px 10px;" onclick="deletePrinter('${doc.id}')"><i class="fas fa-trash"></i></button>
+                            <button class="btn-edit" style="padding: 6px 10px; ${isTakenByOthers ? 'opacity: 0.5; cursor: not-allowed;' : ''}" onclick="editPrinter('${doc.id}')" ${disabledAttr}><i class="fas fa-edit"></i></button>
+                            <button class="btn-delete" style="padding: 6px 10px; ${isTakenByOthers ? 'opacity: 0.5; cursor: not-allowed;' : ''}" onclick="deletePrinter('${doc.id}')" ${disabledAttr}><i class="fas fa-trash"></i></button>
                         </div>
                     </div>`;
                 });
