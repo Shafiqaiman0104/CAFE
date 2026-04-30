@@ -1747,6 +1747,42 @@
             border-radius: 4px;
             border: 1px solid #ddd;
         }
+
+        /* Takeover Styles */
+        .takeover-badge {
+            font-size: 10px;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-weight: bold;
+            margin-top: 5px;
+            display: inline-block;
+        }
+        .takeover-active { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
+        .takeover-mine { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+        
+        .btn-takeover {
+            padding: 6px 12px;
+            border-radius: 8px;
+            border: none;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-takeover-off { background: #f1f5f9; color: #475569; }
+        .btn-takeover-on { background: #764ba2; color: white; }
+
+        #takeoverPinModal .pin-numpad {
+            margin-top: 20px;
+            max-width: 280px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        #takeoverPinDisplay {
+            letter-spacing: 8px;
+            text-align: center;
+            font-size: 24px;
+        }
     </style>
 </head>
 <body>
@@ -2461,6 +2497,32 @@
         </div>
     </div>
 
+    <!-- Takeover PIN Modal -->
+    <div id="takeoverPinModal" class="modal" style="align-items: center; justify-content: center; z-index: 10005;">
+        <div class="modal-content" style="max-width: 350px; border-radius: 24px; text-align: center; padding: 30px;">
+            <h3>Printer Takeover</h3>
+            <p id="takeoverPromptText" style="font-size: 0.9rem; color: #64748b; margin-top: 10px;"></p>
+            <div class="form-group" style="margin-top: 20px;">
+                <input type="password" id="takeoverPinInput" readonly placeholder="••••••" style="text-align: center; font-size: 24px; letter-spacing: 8px; background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 16px; padding: 15px;">
+            </div>
+            <div class="pin-numpad">
+                <button class="btn-numpad" onclick="pressTakeoverPinKey('1')">1</button>
+                <button class="btn-numpad" onclick="pressTakeoverPinKey('2')">2</button>
+                <button class="btn-numpad" onclick="pressTakeoverPinKey('3')">3</button>
+                <button class="btn-numpad" onclick="pressTakeoverPinKey('4')">4</button>
+                <button class="btn-numpad" onclick="pressTakeoverPinKey('5')">5</button>
+                <button class="btn-numpad" onclick="pressTakeoverPinKey('6')">6</button>
+                <button class="btn-numpad" onclick="pressTakeoverPinKey('7')">7</button>
+                <button class="btn-numpad" onclick="pressTakeoverPinKey('8')">8</button>
+                <button class="btn-numpad" onclick="pressTakeoverPinKey('9')">9</button>
+                <button class="btn-numpad" style="color: #e53e3e;" onclick="pressTakeoverPinKey('C')"><i class="fas fa-backspace"></i></button>
+                <button class="btn-numpad" onclick="pressTakeoverPinKey('0')">0</button>
+                <button class="btn-numpad" style="color: #38a169;" onclick="confirmTakeover()"><i class="fas fa-check"></i></button>
+            </div>
+            <button class="secondary-btn" style="width: 100%; margin-top: 15px;" onclick="closeModal('takeoverPinModal')">Cancel</button>
+        </div>
+    </div>
+
     <!-- Global Variant Modal -->
     <div id="globalVariantModal" class="modal">
         <div class="modal-content">
@@ -3113,6 +3175,11 @@
         let isVoidModeTakeOrder = false;
         let voidingItemData = null;
         let isInitialLoadNotifications = true;
+        
+        // Takeover State
+        let takeoverTargetPrinterId = null;
+        let takeoverTargetStaffId = null;
+        let takeoverPinInputVal = "";
 
         // ========== LICENSE CHECK ==========
         window.checkLicense = async function() {
@@ -7364,21 +7431,91 @@ window.openSearchModalTakeOrder = function() {
                 let html = '';
                 snapshot.forEach(doc => {
                     const p = doc.data();
+                    const isMine = p.takenByStaffId === currentStaff.id;
+                    const isTaken = !!p.takenByStaffId;
+                    
+                    let takeoverHtml = '';
+                    if (isMine) {
+                        takeoverHtml = `<div class="takeover-badge takeover-mine">Owned by you</div>`;
+                    } else if (isTaken) {
+                        takeoverHtml = `<div class="takeover-badge takeover-active">Taken by ${p.takenByStaffName}</div>`;
+                    }
+
                     html += `<div style="padding:15px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center; background:white; margin-bottom:8px; border-radius:12px;">
                         <div>
                             <div style="font-weight:bold; color:#1e293b;">${p.name} (${p.paperWidth}mm)</div>
                             <div style="font-size:11px; color:#64748b;">
                                 Receipt: ${p.printReceipt ? '✅' : '❌'} | Auto: ${p.autoPrint ? '✅' : '❌'} | Orders: ${p.printOrders ? '✅' : '❌'}
                             </div>
+                            ${takeoverHtml}
                         </div>
-                        <div class="action-buttons">
-                            <button class="btn-edit" onclick="editPrinter('${doc.id}')">Edit</button>
-                            <button class="btn-delete" onclick="deletePrinter('${doc.id}')">Delete</button>
+                        <div class="action-buttons" style="align-items: center;">
+                            <button class="btn-takeover ${isMine ? 'btn-takeover-on' : 'btn-takeover-off'}" onclick="handleTakeoverToggle('${doc.id}', '${p.takenByStaffId || ''}', '${p.takenByStaffName || ''}')">${isMine ? 'Release' : 'Take Over'}</button>
+                            <button class="btn-edit" style="padding: 6px 10px;" onclick="editPrinter('${doc.id}')"><i class="fas fa-edit"></i></button>
+                            <button class="btn-delete" style="padding: 6px 10px;" onclick="deletePrinter('${doc.id}')"><i class="fas fa-trash"></i></button>
                         </div>
                     </div>`;
                 });
                 container.innerHTML = html || '<div class="loading">No printers configured.</div>';
             });
+        };
+
+        window.handleTakeoverToggle = async function(printerId, takenByStaffId, takenByStaffName) {
+            if (takenByStaffId === currentStaff.id) {
+                // Release
+                if (confirm('Release ownership of this printer?')) {
+                    await updateDoc(doc(db, 'licenses', currentClientId, 'printers', printerId), {
+                        takenByStaffId: null,
+                        takenByStaffName: null
+                    });
+                }
+            } else if (!takenByStaffId) {
+                // Take free printer
+                await updateDoc(doc(db, 'licenses', currentClientId, 'printers', printerId), {
+                    takenByStaffId: currentStaff.id,
+                    takenByStaffName: currentStaff.name
+                });
+            } else {
+                // Take over from someone else
+                takeoverTargetPrinterId = printerId;
+                takeoverTargetStaffId = takenByStaffId;
+                takeoverPinInputVal = "";
+                document.getElementById('takeoverPinInput').value = "";
+                document.getElementById('takeoverPromptText').innerText = `Enter PIN for ${takenByStaffName} to take over this printer.`;
+                document.getElementById('takeoverPinModal').style.display = 'flex';
+            }
+        };
+
+        window.pressTakeoverPinKey = function(k) {
+            if (k === 'C') {
+                takeoverPinInputVal = takeoverPinInputVal.slice(0, -1);
+            } else if (takeoverPinInputVal.length < 6) {
+                takeoverPinInputVal += k;
+            }
+            document.getElementById('takeoverPinInput').value = takeoverPinInputVal;
+        };
+
+        window.confirmTakeover = async function() {
+            if (takeoverPinInputVal.length !== 6) return;
+            
+            try {
+                // Verify target staff PIN
+                const staffRef = doc(db, 'licenses', currentClientId, 'staff', takeoverTargetStaffId);
+                const staffSnap = await getDoc(staffRef);
+                
+                if (staffSnap.exists() && staffSnap.data().pin === takeoverPinInputVal) {
+                    await updateDoc(doc(db, 'licenses', currentClientId, 'printers', takeoverTargetPrinterId), {
+                        takenByStaffId: currentStaff.id,
+                        takenByStaffName: currentStaff.name
+                    });
+                    closeModal('takeoverPinModal');
+                    alert('Printer takeover successful!');
+                } else {
+                    alert('Invalid PIN. Takeover denied.');
+                    takeoverPinInputVal = "";
+                    document.getElementById('takeoverPinInput').value = "";
+                }
+            } catch (e) { alert('Error: ' + e.message); }
         };
 
         window.showAddPrinterModal = async function() {
