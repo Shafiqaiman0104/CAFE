@@ -3081,7 +3081,7 @@
 
         <!-- Printer Status Popup HTML -->
         <div id="printerStatusOverlay">
-            <div style="background: white; padding: 30px; border-radius: 28px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.2); width: 320px; animation: slideUp 0.3s ease;">
+            <div id="printerStatusContent" style="background: white; padding: 30px; border-radius: 28px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.2); width: 320px; animation: slideUp 0.3s ease;">
                 <div id="printerStatusIcon" style="font-size: 4rem; margin-bottom: 15px;"></div>
                 <h2 id="printerStatusTitle" style="margin-bottom: 10px; color: #1e293b;"></h2>
                 <p id="printerStatusMsg" style="font-size: 1rem; color: #475569;"></p>
@@ -7662,6 +7662,25 @@ window.openSearchModalTakeOrder = function() {
             const printersSnap = await getDocs(query(collection(db, 'licenses', currentClientId, 'printers'), where('autoPrint', '==', true)));
             if (printersSnap.empty) return;
 
+            // Printer Server Logic: Check if another device has taken over the printers
+            let takeoverStaffName = null;
+            let iOwnAPrinter = false;
+            
+            for (const doc of printersSnap.docs) {
+                const p = doc.data();
+                if (p.takenByStaffId === currentStaff.id) {
+                    iOwnAPrinter = true;
+                } else if (p.takenByStaffId) {
+                    takeoverStaffName = p.takenByStaffName;
+                }
+            }
+
+            // If Device B submits and Device A has taken over, show the specific smaller popup
+            if (!iOwnAPrinter && takeoverStaffName) {
+                showPrinterStatusPopup("Printer Server", `Send printing to ${takeoverStaffName} device...`, 'info', true);
+                return; 
+            }
+
             // Fetch order items with their variants and modifiers
             const itemsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderId, 'items'));
             const fullItemsList = [];
@@ -8088,17 +8107,31 @@ window.openSearchModalTakeOrder = function() {
             );
         }
 
-        window.showPrinterStatusPopup = function(title, message, status) {
+        window.showPrinterStatusPopup = function(title, message, status, isSmall = false) {
             const overlay = document.getElementById('printerStatusOverlay');
+            const content = document.getElementById('printerStatusContent');
             const icon = document.getElementById('printerStatusIcon');
             const titleEl = document.getElementById('printerStatusTitle');
             const msgEl = document.getElementById('printerStatusMsg');
+
+            // Adjust size for "Device B" informational popup
+            if (isSmall) {
+                content.style.width = "260px";
+                content.style.padding = "20px";
+                icon.style.fontSize = "2.5rem";
+            } else {
+                content.style.width = "320px";
+                content.style.padding = "30px";
+                icon.style.fontSize = "4rem";
+            }
 
             if (status === 'success' || status === true) {
                 icon.innerHTML = '<i class="fas fa-check-circle" style="color: #4caf50;"></i>';
             } else if (status === 'warning') {
                 icon.innerHTML = '<i class="fas fa-exclamation-triangle" style="color: #e53e3e;"></i>';
-            } else { // false, error, failed
+            } else if (status === 'info') {
+                icon.innerHTML = '<i class="fas fa-print" style="color: #764ba2;"></i>';
+            } else { 
                 icon.innerHTML = '<i class="fas fa-times-circle" style="color: #e53e3e;"></i>';
             }
             
