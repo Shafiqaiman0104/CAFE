@@ -1842,20 +1842,6 @@
             background: #cbd5e0;
             transition: all 0.3s ease;
         }
-
-        /* Mobile Top Bar Adjustments */
-        @media (max-width: 480px) {
-            .restaurant-name {
-                font-size: 14px;
-            }
-            .top-bar-logo {
-                height: 25px !important;
-                width: 25px !important;
-            }
-            .top-bar-center {
-                gap: 5px !important;
-            }
-        }
     </style>
 </head>
 <body>
@@ -1904,14 +1890,16 @@
     <div id="appContainer" class="app-container">
         <!-- Top Bar -->
         <div class="top-bar">
-            <button class="menu-toggle" id="menuToggleBtn" onclick="toggleSidebar()">
-                <span></span>
-                <span></span>
-                <span></span>
-            </button>
-             <div class="top-bar-center" style="position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap; display: flex; align-items: center; gap: 10px;">
-                <img src="https://venturerush-tech.netlify.app/vrLogo.png" alt="Logo" class="top-bar-logo" style="height: 35px; width: 35px; border-radius: 50%;">
-                <div class="restaurant-name">VentureRush P.O.S</div>
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <button class="menu-toggle" id="menuToggleBtn" onclick="toggleSidebar()">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+                <div class="top-bar-logo-group" style="white-space: nowrap; display: flex; align-items: center; gap: 10px;">
+                    <img src="https://venturerush-tech.netlify.app/vrLogo.png" alt="Logo" class="top-bar-logo" style="height: 35px; width: 35px; border-radius: 50%;">
+                    <div class="restaurant-name">VentureRush P.O.S</div>
+                </div>
             </div>
             <div class="top-bar-right">
                 <button class="top-bar-icon-btn" onclick="showPage('printerQueue', true)" title="Printer Queue">
