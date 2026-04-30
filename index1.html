@@ -4656,7 +4656,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                 renderTableGridTakeOrder(); 
             });
 
-            await loadTablesTakeOrder();
+            loadTablesTakeOrder();
             await loadMenuItemsTakeOrder();
             
             document.getElementById('tableSectionTakeOrder').style.display = 'block';
@@ -4667,22 +4667,25 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             updateWaitingListBadgeTakeOrder();
         }
 
-        async function loadTablesTakeOrder() {
+        function loadTablesTakeOrder() {
+            if (unsubscribers['tablesTakeOrder']) unsubscribers['tablesTakeOrder']();
+            
             const tablesRef = collection(db, 'licenses', currentClientId, 'tables');
-            const snapshot = await getDocs(tablesRef);
-            tablesListTakeOrder = [];
-            locationsTakeOrder = ['All'];
-            
-            snapshot.forEach(doc => {
-                const table = { id: doc.id, ...doc.data() };
-                tablesListTakeOrder.push(table);
-                if (table.location && !locationsTakeOrder.includes(table.location)) {
-                    locationsTakeOrder.push(table.location);
-                }
+            unsubscribers['tablesTakeOrder'] = onSnapshot(tablesRef, (snapshot) => {
+                tablesListTakeOrder = [];
+                locationsTakeOrder = ['All'];
+                
+                snapshot.forEach(doc => {
+                    const table = { id: doc.id, ...doc.data() };
+                    tablesListTakeOrder.push(table);
+                    if (table.location && !locationsTakeOrder.includes(table.location)) {
+                        locationsTakeOrder.push(table.location);
+                    }
+                });
+                
+                renderLocationFiltersTakeOrder();
+                renderTableGridTakeOrder();
             });
-            
-            renderLocationFiltersTakeOrder();
-            renderTableGridTakeOrder();
         }
 
         function renderLocationFiltersTakeOrder() {
