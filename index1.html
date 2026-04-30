@@ -3174,7 +3174,8 @@
         let isEarlyPaymentMode = false;
         let isVoidModeTakeOrder = false;
         let voidingItemData = null;
-        let isInitialLoadNotifications = true;
+        let isInitialLoadOrders = true;
+        let isInitialLoadTransactions = true;
         
         // Takeover State
         let takeoverTargetPrinterId = null;
@@ -3281,6 +3282,7 @@
                 await loadGlobalVariants();
                 await loadGlobalModifiers();
                 setupOrderNotificationListener();
+                setupTransactionNotificationListener();
                 showPage('takeOrder');
                 
             } catch (e) { errorEl.textContent = e.message; }
@@ -5642,6 +5644,8 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                     status: 'completed',
                     type: isSplitMode ? "Split payment" : "Full payment",
                     orderId: involvedOrderIds.join(', '),
+                    processedByStaffId: currentStaff.id,
+                    itemsPaidJson: JSON.stringify(selectedCheckoutItems.filter(i => involvedOrderIds.includes(i.orderId))),
                     createdAt: Timestamp.now()
                 });
             }
@@ -7683,6 +7687,13 @@ window.openSearchModalTakeOrder = function() {
 
             for (const printerDoc of printersSnap.docs) {
                 const p = printerDoc.data();
+                
+                // Printer Server Logic: Only print if this device/staff has taken over the printer.
+                // If the printer is owned by someone else, skip it.
+                if (p.takenByStaffId && p.takenByStaffId !== currentStaff.id) {
+                    continue; 
+                }
+
                 const device = connectedBluetoothDevices[p.bluetoothDeviceId];
                 if (device) devicesToCleanup.add(device);
                 
@@ -8226,25 +8237,63 @@ window.openSearchModalTakeOrder = function() {
 
         window.setupOrderNotificationListener = function() {
             if (unsubscribers['orderNotifications']) unsubscribers['orderNotifications']();
-            isInitialLoadNotifications = true;
+            isInitialLoadOrders = true;
             
             const ordersRef = collection(db, 'licenses', currentClientId, 'orders');
             // Query the most recent orders
             const q = query(ordersRef, orderBy('createdAt', 'desc'), limit(5));
             
             unsubscribers['orderNotifications'] = onSnapshot(q, (snapshot) => {
-                if (isInitialLoadNotifications) {
+                if (isInitialLoadOrders) {
                     // Skip popups for existing orders on app startup
-                    isInitialLoadNotifications = false;
+                    isInitialLoadOrders = false;
                     return;
                 }
 
                 snapshot.docChanges().forEach((change) => {
                     if (change.type === "added") {
                         const orderData = change.doc.data();
-                        // Only show if it wasn't placed by the staff member logged into THIS device
                         if (orderData.staffId !== currentStaff.id) {
                             showRemoteOrderPopup(orderData);
+                            // Printer Server Logic: If I have taken over a printer, print the order placed by Device B
+                            triggerAutoPrinting(change.doc.id, orderData.orderNumber, 'order');
+                        }
+                    }
+                });
+            });
+        };
+
+        window.setupTransactionNotificationListener = function() {
+            if (unsubscribers['transactionNotifications']) unsubscribers['transactionNotifications']();
+            isInitialLoadTransactions = true;
+
+            const transRef = collection(db, 'licenses', currentClientId, 'transactions');
+            const q = query(transRef, orderBy('createdAt', 'desc'), limit(5));
+
+            unsubscribers['transactionNotifications'] = onSnapshot(q, (snapshot) => {
+                if (isInitialLoadTransactions) {
+                    isInitialLoadTransactions = false;
+                    return;
+                }
+
+                snapshot.docChanges().forEach(async (change) => {
+                    if (change.type === "added") {
+                        const transData = change.doc.data();
+                        // If payment was processed on another device, this device (if it is the server) should print the receipt
+                        if (transData.processedByStaffId && transData.processedByStaffId !== currentStaff.id) {
+                            const orderIds = transData.orderId.split(',').map(id => id.trim());
+                            for (const orderId of orderIds) {
+                                const orderSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', orderId));
+                                if (orderSnap.exists()) {
+                                    const orderData = orderSnap.data();
+                                    const payDetails = {
+                                        method: transData.paymentMethod,
+                                        itemsPaid: transData.itemsPaidJson ? JSON.parse(transData.itemsPaidJson).filter(i => i.orderId === orderId) : null,
+                                        isEarly: transData.type === "Early payment"
+                                    };
+                                    triggerAutoPrinting(orderId, orderData.orderNumber, 'payment', payDetails);
+                                }
+                            }
                         }
                     }
                 });
@@ -8327,6 +8376,7 @@ window.openSearchModalTakeOrder = function() {
                 loadGlobalVariants();
                 loadGlobalModifiers();
                 setupOrderNotificationListener();
+                setupTransactionNotificationListener();
                 showPage('takeOrder');
             });
         }
