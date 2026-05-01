@@ -7838,8 +7838,8 @@ window.openSearchModalTakeOrder = function() {
                 
                 // Handle Full Receipt Printing (Only on payment or early pay)
                 if (p.printReceipt && type === 'payment') {
-                    const qOrderId = (paymentDetails && paymentDetails.mergedOrderIds) ? paymentDetails.mergedOrderIds.join(',') : orderId;
-                    const qId = await addToPrintQueue(qOrderId, orderNumber, tableNumber, 'Receipt', null, cashierName);
+                    const qOrderId = (paymentDetails?.mergedOrderIds) ? paymentDetails.mergedOrderIds.join(',') : orderId;
+                    const qId = await addToPrintQueue(qOrderId, orderNumber, tableNumber, 'Receipt', null, cashierName, paymentDetails?.method);
                     if (device) {
                         // If split payment, we only show items just paid in the receipt
                         let itemsToPrint = fullItemsList;
@@ -7905,7 +7905,7 @@ window.openSearchModalTakeOrder = function() {
             }
         };
 
-        async function addToPrintQueue(orderId, orderNumber, tableNumber, deptName, deptId, cashierName = null) {
+        async function addToPrintQueue(orderId, orderNumber, tableNumber, deptName, deptId, cashierName = null, paymentMethod = null) {
             const docRef = await addDoc(collection(db, 'licenses', currentClientId, 'print_queue'), {
                 orderId,
                 orderNumber,
@@ -7915,6 +7915,7 @@ window.openSearchModalTakeOrder = function() {
                 status: 'pending',
                 attempts: 1,
                 cashierName: cashierName,
+                paymentMethod: paymentMethod, // Store payment method here
                 createdAt: Timestamp.now()
             });
             return docRef.id;
@@ -8081,7 +8082,8 @@ window.openSearchModalTakeOrder = function() {
             if (device && itemsToPrint.length > 0) {
                 let commands;
                 if (item.printerDeptName === 'Receipt') {
-                    commands = await generateMainReceiptCommands(item.orderNumber, item.tableNumber || 'N/A', itemsToPrint, orderTime, 'N/A', statusLabel, cashierName);
+                    const payMethod = item.paymentMethod || 'N/A'; // Retrieve from print queue item
+                    commands = await generateMainReceiptCommands(item.orderNumber, item.tableNumber || 'N/A', itemsToPrint, orderTime, payMethod, statusLabel, cashierName);
                 } else {
                     commands = await generateReceiptCommands(item.orderNumber, item.tableNumber || 'N/A', itemsToPrint, item.printerDeptName || 'Receipt', orderTime, statusLabel);
                 }
