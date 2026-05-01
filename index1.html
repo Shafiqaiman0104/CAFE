@@ -5738,6 +5738,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                     orderId: involvedOrderIds.join(', '),
                     processedByStaffId: currentStaff.id,
                     itemsPaidJson: JSON.stringify(selectedCheckoutItems.filter(i => involvedOrderIds.includes(i.orderId))),
+                    isEarlyPayment: isEarlyPaymentMode,
                     createdAt: Timestamp.now()
                 });
             }
@@ -8511,14 +8512,32 @@ window.openSearchModalTakeOrder = function() {
                         // If payment was processed on another device, this device (if it is the server) should print the receipt
                         if (transData.processedByStaffId && transData.processedByStaffId !== currentStaff.id) {
                             const orderIds = transData.orderId.split(',').map(id => id.trim());
-                            for (const orderId of orderIds) {
+                            const itemsPaid = transData.itemsPaidJson ? JSON.parse(transData.itemsPaidJson) : null;
+                            
+                            if (orderIds.length > 1) {
+                                // Consolidated Printing for Multiple Orders
+                                const orderNums = [];
+                                for (const id of orderIds) {
+                                    const snap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', id));
+                                    orderNums.push(snap.exists() ? snap.data().orderNumber : id.slice(-8));
+                                }
+                                const payDetails = {
+                                    method: transData.paymentMethod,
+                                    itemsPaid: itemsPaid,
+                                    isEarly: transData.isEarlyPayment || false,
+                                    mergedOrderIds: orderIds
+                                };
+                                triggerAutoPrinting(orderIds[0], orderNums.join(', '), 'payment', payDetails);
+                            } else {
+                                // Single Order Printing
+                                const orderId = orderIds[0];
                                 const orderSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', orderId));
                                 if (orderSnap.exists()) {
                                     const orderData = orderSnap.data();
                                     const payDetails = {
                                         method: transData.paymentMethod,
-                                        itemsPaid: transData.itemsPaidJson ? JSON.parse(transData.itemsPaidJson).filter(i => i.orderId === orderId) : null,
-                                        isEarly: transData.type === "Early payment"
+                                        itemsPaid: itemsPaid,
+                                        isEarly: transData.isEarlyPayment || false
                                     };
                                     triggerAutoPrinting(orderId, orderData.orderNumber, 'payment', payDetails);
                                 }
