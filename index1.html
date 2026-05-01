@@ -5737,6 +5737,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                     type: isSplitMode ? "Split payment" : "Full payment",
                     orderId: involvedOrderIds.join(', '),
                     processedByStaffId: currentStaff.id,
+                    processedByStaffName: currentStaff.name,
                     itemsPaidJson: JSON.stringify(selectedCheckoutItems.filter(i => involvedOrderIds.includes(i.orderId))),
                     isEarlyPayment: isEarlyPaymentMode,
                     createdAt: Timestamp.now()
@@ -5753,7 +5754,8 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                     method: checkoutPayMethod === 'mixed' ? 'Mixed' : checkoutPayMethod,
                     itemsPaid: selectedCheckoutItems,
                     isEarly: isEarlyPaymentMode,
-                    mergedOrderIds: involvedOrderIds
+                    mergedOrderIds: involvedOrderIds,
+                    cashierName: currentStaff.name
                 };
                 triggerAutoPrinting(involvedOrderIds[0], orderNums.join(', '), 'payment', payDetails, true);
             } else if (involvedOrderIds.length === 1) {
@@ -5762,7 +5764,8 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                 const payDetails = {
                     method: checkoutPayMethod === 'mixed' ? 'Mixed' : checkoutPayMethod,
                     itemsPaid: selectedCheckoutItems,
-                    isEarly: isEarlyPaymentMode
+                    isEarly: isEarlyPaymentMode,
+                    cashierName: currentStaff.name
                 };
                 triggerAutoPrinting(orderId, orderDoc ? orderDoc.data().orderNumber : 'N/A', 'payment', payDetails, true);
             }
@@ -7759,6 +7762,8 @@ window.openSearchModalTakeOrder = function() {
         };
 
         window.triggerAutoPrinting = async function(orderId, orderNumber, type = 'order', paymentDetails = null, isLocalAction = false) {
+            const cashierName = paymentDetails?.cashierName || currentStaff?.name || 'N/A';
+            
             // Get table number from order
             const orderSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', orderId));
             const orderData = orderSnap.exists() ? orderSnap.data() : null;
@@ -7834,7 +7839,7 @@ window.openSearchModalTakeOrder = function() {
                 // Handle Full Receipt Printing (Only on payment or early pay)
                 if (p.printReceipt && type === 'payment') {
                     const qOrderId = (paymentDetails && paymentDetails.mergedOrderIds) ? paymentDetails.mergedOrderIds.join(',') : orderId;
-                    const qId = await addToPrintQueue(qOrderId, orderNumber, tableNumber, 'Receipt', null);
+                    const qId = await addToPrintQueue(qOrderId, orderNumber, tableNumber, 'Receipt', null, cashierName);
                     if (device) {
                         // If split payment, we only show items just paid in the receipt
                         let itemsToPrint = fullItemsList;
@@ -7854,7 +7859,7 @@ window.openSearchModalTakeOrder = function() {
                         }
                         
                         const label = paymentDetails?.isEarly ? "EARLY PAYMENT" : "PAID";
-                        const commands = await generateMainReceiptCommands(orderNumber, tableNumber, itemsToPrint, orderTime, paymentDetails?.method || 'N/A', label);
+                        const commands = await generateMainReceiptCommands(orderNumber, tableNumber, itemsToPrint, orderTime, paymentDetails?.method || 'N/A', label, cashierName);
                         const success = await sendToBluetoothPrinter(device, commands);
                         await updateDoc(doc(db, 'licenses', currentClientId, 'print_queue', qId), { status: success ? 'success' : 'failed' });
                         printActions.push({ label: 'Main Receipt', success });
@@ -7900,7 +7905,7 @@ window.openSearchModalTakeOrder = function() {
             }
         };
 
-        async function addToPrintQueue(orderId, orderNumber, tableNumber, deptName, deptId) {
+        async function addToPrintQueue(orderId, orderNumber, tableNumber, deptName, deptId, cashierName = null) {
             const docRef = await addDoc(collection(db, 'licenses', currentClientId, 'print_queue'), {
                 orderId,
                 orderNumber,
@@ -7909,12 +7914,13 @@ window.openSearchModalTakeOrder = function() {
                 printerDeptId: deptId,
                 status: 'pending',
                 attempts: 1,
+                cashierName: cashierName,
                 createdAt: Timestamp.now()
             });
             return docRef.id;
         }
 
-        async function generateMainReceiptCommands(orderNumber, tableNumber, items, orderTime, payMethod, statusLabel) {
+        async function generateMainReceiptCommands(orderNumber, tableNumber, items, orderTime, payMethod, statusLabel, cashierName = null) {
             const restaurantName = localStorage.getItem('restaurantName') || 'VENTURERUSH RESTAURANT';
             const restaurantAddress = localStorage.getItem('restaurantAddress') || '123 VentureRush Way, Tech City';
             const restaurantLogo = localStorage.getItem('restaurantLogo');
@@ -7969,7 +7975,7 @@ window.openSearchModalTakeOrder = function() {
                 `Date: ${dateStr}   Time: ${timeStr}\n`,
                 `Receipt No: ${orderNumber}\n`,
                 `Table: ${tableNumber}\n`,
-                `Cashier: ${currentStaff?.name || 'N/A'}\n`,
+                `Cashier: ${cashierName || currentStaff?.name || 'N/A'}\n`,
                 "--------------------------------\n",
                 "Item            Qty       Amount\n",
                 itemsText,
@@ -8030,6 +8036,7 @@ window.openSearchModalTakeOrder = function() {
             
             const currentAttempts = item.attempts || 1;
             const statusLabel = item.printerDeptName === 'Receipt' ? 'REPRINT' : `MANUAL PRINT ${currentAttempts}`;
+            const cashierName = item.cashierName || 'N/A';
 
             const orderIds = item.orderId.split(',');
             const orderSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', orderIds[0]));
@@ -8074,7 +8081,7 @@ window.openSearchModalTakeOrder = function() {
             if (device && itemsToPrint.length > 0) {
                 let commands;
                 if (item.printerDeptName === 'Receipt') {
-                    commands = await generateMainReceiptCommands(item.orderNumber, item.tableNumber || 'N/A', itemsToPrint, orderTime, 'N/A', statusLabel);
+                    commands = await generateMainReceiptCommands(item.orderNumber, item.tableNumber || 'N/A', itemsToPrint, orderTime, 'N/A', statusLabel, cashierName);
                 } else {
                     commands = await generateReceiptCommands(item.orderNumber, item.tableNumber || 'N/A', itemsToPrint, item.printerDeptName || 'Receipt', orderTime, statusLabel);
                 }
@@ -8513,6 +8520,7 @@ window.openSearchModalTakeOrder = function() {
                         if (transData.processedByStaffId && transData.processedByStaffId !== currentStaff.id) {
                             const orderIds = transData.orderId.split(',').map(id => id.trim());
                             const itemsPaid = transData.itemsPaidJson ? JSON.parse(transData.itemsPaidJson) : null;
+                            const cashierName = transData.processedByStaffName || 'N/A';
                             
                             if (orderIds.length > 1) {
                                 // Consolidated Printing for Multiple Orders
@@ -8525,7 +8533,8 @@ window.openSearchModalTakeOrder = function() {
                                     method: transData.paymentMethod,
                                     itemsPaid: itemsPaid,
                                     isEarly: transData.isEarlyPayment || false,
-                                    mergedOrderIds: orderIds
+                                    mergedOrderIds: orderIds,
+                                    cashierName: cashierName
                                 };
                                 triggerAutoPrinting(orderIds[0], orderNums.join(', '), 'payment', payDetails);
                             } else {
@@ -8537,7 +8546,8 @@ window.openSearchModalTakeOrder = function() {
                                     const payDetails = {
                                         method: transData.paymentMethod,
                                         itemsPaid: itemsPaid,
-                                        isEarly: transData.isEarlyPayment || false
+                                        isEarly: transData.isEarlyPayment || false,
+                                        cashierName: cashierName
                                     };
                                     triggerAutoPrinting(orderId, orderData.orderNumber, 'payment', payDetails);
                                 }
