@@ -4246,8 +4246,14 @@
                 let html = '';
                 snapshot.forEach(doc => {
                     const d = doc.data();
+                    let validityHtml = '';
+                    if (d.startTime || d.endTime) {
+                        const start = d.startTime ? d.startTime.toDate().toLocaleString() : 'Anytime';
+                        const end = d.endTime ? d.endTime.toDate().toLocaleString() : 'Forever';
+                        validityHtml = `<br><small style="color:#64748b; font-size: 11px;">Valid: ${start} to ${end}</small>`;
+                    }
                     html += `<div style="padding:10px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;">
-                        <div><b>${d.name}</b> - ${d.type}: ${d.value}${d.type==='percentage'?'%':' RM'} ${d.active ? '✅' : '❌'}</div>
+                        <div><b>${d.name}</b> - ${d.type}: ${d.value}${d.type==='percentage'?'%':' RM'} ${d.active ? '✅' : '❌'}${validityHtml}</div>
                         <div class="action-buttons">
                             <button class="btn-edit" onclick="editDiscount('${doc.id}')">Edit</button>
                             <button class="btn-delete" onclick="deleteDiscount('${doc.id}')">Delete</button>
@@ -4279,6 +4285,21 @@
                 document.getElementById('discountName').value = d.name;
                 document.getElementById('discountType').value = d.type;
                 document.getElementById('discountValue').value = d.value;
+                
+                const formatDateForInput = (timestamp) => {
+                    if (!timestamp) return '';
+                    const dt = timestamp.toDate();
+                    const year = dt.getFullYear();
+                    const month = String(dt.getMonth() + 1).padStart(2, '0');
+                    const day = String(dt.getDate()).padStart(2, '0');
+                    const hours = String(dt.getHours()).padStart(2, '0');
+                    const minutes = String(dt.getMinutes()).padStart(2, '0');
+                    return `${year}-${month}-${day}T${hours}:${minutes}`;
+                };
+
+                document.getElementById('discountStartTime').value = formatDateForInput(d.startTime);
+                document.getElementById('discountEndTime').value = formatDateForInput(d.endTime);
+
                 document.getElementById('discountActive').checked = d.active;
                 document.getElementById('addDiscountModal').style.display = 'flex';
             }
@@ -4296,8 +4317,8 @@
             
             const startTime = document.getElementById('discountStartTime').value;
             const endTime = document.getElementById('discountEndTime').value;
-            if (startTime) data.startTime = Timestamp.fromDate(new Date(startTime));
-            if (endTime) data.endTime = Timestamp.fromDate(new Date(endTime));
+            data.startTime = startTime ? Timestamp.fromDate(new Date(startTime)) : null;
+            data.endTime = endTime ? Timestamp.fromDate(new Date(endTime)) : null;
             if (!id) data.createdAt = Timestamp.now();
             
             if (id) {
