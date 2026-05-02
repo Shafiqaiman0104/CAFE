@@ -2981,7 +2981,7 @@
                 <!-- Left: Order Details -->
                 <div class="checkout-left-panel" style="flex: 1; border-right: 1px solid #eee; padding: 20px; overflow-y: auto; background: #fafafa;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 2px solid #764ba2; padding-bottom: 5px;">
-                        <h4 style="color:#764ba2; margin: 0;">Order Details</h4>
+                        <h4 style="color:#764ba2; margin: 0; display: flex; align-items: center; gap: 8px;">Order Details <i class="fas fa-tag" style="cursor: pointer; font-size: 0.9rem; color: #ff9800;" onclick="openCheckoutDiscountModal()" title="Apply Discount"></i></h4>
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <span style="font-size: 0.75rem; font-weight: bold; color: #64748b;">VOID</span>
                             <div class="view-toggle-takeorder" style="background: #e2e8f0; margin: 0;">
@@ -3057,6 +3057,21 @@
                         <button class="primary-btn" style="padding: 18px; font-size: 1.2rem; box-shadow: 0 4px 15px rgba(118,75,162,0.4);" onclick="submitCheckoutPayment()"><i class="fas fa-print"></i> PAY & COMPLETE</button>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Checkout Discount Modal -->
+    <div id="checkoutDiscountModal" class="modal">
+        <div class="modal-content" style="max-width: 400px; border-radius: 24px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-tag"></i> Apply Discount</h3>
+                <button class="modal-close" onclick="closeModal('checkoutDiscountModal')">&times;</button>
+            </div>
+            <div id="checkoutDiscountList" style="max-height: 400px; overflow-y: auto; margin-bottom: 20px; padding: 10px; background: #f8fafc; border-radius: 16px;"></div>
+            <div style="display: flex; gap: 10px;">
+                <button class="secondary-btn" onclick="removeCheckoutDiscount()">Remove</button>
+                <button class="primary-btn" onclick="applySelectedDiscount()">Apply Discount</button>
             </div>
         </div>
     </div>
@@ -3210,6 +3225,8 @@
         let currentClientId = '';
         let currentStaff = null;
         let currentOrderItems = [];
+        let appliedCheckoutDiscount = null;
+        let allDiscounts = [];
         let unsubscribers = {};
         let currentTaxRate = 6;
         let taxActive = true;
@@ -3371,6 +3388,7 @@
                 await loadAllSettings();
                 await loadGlobalVariants();
                 await loadGlobalModifiers();
+                loadDiscounts();
                 setupOrderNotificationListener();
                 setupTransactionNotificationListener();
                 setupPrinterQueueListener();
@@ -4242,6 +4260,7 @@
         function loadDiscounts() {
             const ref = collection(db, 'licenses', currentClientId, 'discounts');
             onSnapshot(ref, (snapshot) => {
+                allDiscounts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 const container = document.getElementById('discountsList');
                 let html = '';
                 snapshot.forEach(doc => {
@@ -5216,6 +5235,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                 if (snap.empty) { alert('No active orders found'); return; }
                 
                 checkoutOrdersToProcess = snap.docs;
+                appliedCheckoutDiscount = null;
 
                 isEarlyPaymentMode = false;
                 const payBtn = document.querySelector('#checkoutModalTakeOrder .primary-btn[onclick*="submitCheckoutPayment"]');
@@ -5410,20 +5430,42 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
         function recalculateCheckoutTotals() {
             let subtotal = selectedCheckoutItems.reduce((acc, curr) => acc + (curr.unitPrice * curr.qtyToPay), 0);
             const tax = taxActive ? subtotal * (currentTaxRate / 100) : 0;
-            checkoutTotalTakeOrder = subtotal + tax;
+            let totalAmount = subtotal + tax;
+
+            let discountValue = 0;
+            if (appliedCheckoutDiscount) {
+                if (appliedCheckoutDiscount.type === 'percentage') {
+                    discountValue = totalAmount * (parseFloat(appliedCheckoutDiscount.value) / 100);
+                } else {
+                    discountValue = parseFloat(appliedCheckoutDiscount.value);
+                }
+            }
+            
+            checkoutTotalTakeOrder = Math.max(0, totalAmount - discountValue);
             
             document.getElementById('checkoutTotalDue').innerText = `RM ${checkoutTotalTakeOrder.toFixed(2)}`;
             const totalsContainer = document.getElementById('checkoutTotals');
+            
+            let discountHtml = '';
+            if (appliedCheckoutDiscount) {
+                discountHtml = `
+                <div style="display:flex; justify-content:space-between; font-size:0.85rem; color:#e53e3e; margin-bottom:4px;">
+                    <span>Discount (${appliedCheckoutDiscount.name}):</span><span>- RM ${discountValue.toFixed(2)}</span>
+                </div>`;
+            }
+
             totalsContainer.innerHTML = `
                 <div style="display:flex; justify-content:space-between; font-size:0.85rem; color:#64748b; margin-bottom:4px;">
                     <span>Selected Subtotal:</span><span>RM ${subtotal.toFixed(2)}</span>
                 </div>
+                ${discountHtml}
                 <div style="display:flex; justify-content:space-between; font-size:0.85rem; color:#64748b; margin-bottom:10px; display: ${taxActive ? 'flex' : 'none'};">
                     <span>Tax (${currentTaxRate}%):</span><span>RM ${tax.toFixed(2)}</span>
                 </div>
                 <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:1.3rem; border-top:2px solid #f1f5f9; padding-top:10px; color:#1e293b;">
                     <span>Grand Total:</span><span>RM ${checkoutTotalTakeOrder.toFixed(2)}</span>
                 </div>`;
+
             updateCheckoutDisplay();
         }
 
@@ -5870,6 +5912,54 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                 grid.innerHTML = html;
             }
             document.getElementById('changeTableModalTakeOrder').style.display = 'flex';
+        };
+
+        window.openCheckoutDiscountModal = function() {
+            const container = document.getElementById('checkoutDiscountList');
+            const activeDiscounts = allDiscounts.filter(d => d.active === true);
+            
+            if (activeDiscounts.length === 0) {
+                container.innerHTML = '<div style="text-align:center;padding:20px;color:#64748b;">No active discounts available.</div>';
+            } else {
+                container.innerHTML = activeDiscounts.map(d => `
+                    <div style="padding:15px; border-bottom:1px solid #edf2f7; display:flex; align-items:center; gap:12px; cursor:pointer;" onclick="document.getElementById('disc-${d.id}').checked = true">
+                        <input type="radio" name="checkoutDiscount" value="${d.id}" id="disc-${d.id}" ${appliedCheckoutDiscount?.id === d.id ? 'checked' : ''} style="width:18px; height:18px; accent-color:#764ba2;">
+                        <label for="disc-${d.id}" style="flex:1; cursor:pointer;">
+                            <div style="font-weight:700; color:#1e293b; font-size:0.95rem;">${d.name}</div>
+                            <div style="font-size:0.8rem; color:#764ba2; font-weight:600;">${d.type === 'percentage' ? d.value + '%' : 'RM ' + parseFloat(d.value).toFixed(2)} off</div>
+                        </label>
+                    </div>
+                `).join('');
+            }
+            document.getElementById('checkoutDiscountModal').style.display = 'flex';
+        };
+
+        window.applySelectedDiscount = function() {
+            const selectedId = document.querySelector('input[name="checkoutDiscount"]:checked')?.value;
+            if (!selectedId) { alert('Please select a discount'); return; }
+            
+            const discount = allDiscounts.find(d => d.id === selectedId);
+            if (!discount) return;
+
+            const now = new Date();
+            if (discount.startTime && discount.startTime.toDate() > now) {
+                alert(`This discount can use after ${discount.startTime.toDate().toLocaleString()}`);
+                return;
+            }
+            if (discount.endTime && discount.endTime.toDate() < now) {
+                alert("This discount already expired");
+                return;
+            }
+
+            appliedCheckoutDiscount = discount;
+            closeModal('checkoutDiscountModal');
+            recalculateCheckoutTotals();
+        };
+
+        window.removeCheckoutDiscount = function() {
+            appliedCheckoutDiscount = null;
+            closeModal('checkoutDiscountModal');
+            recalculateCheckoutTotals();
         };
 
         window.confirmChangeTableTakeOrder = async function(newTableId, newTableNum) {
@@ -8656,6 +8746,7 @@ window.openSearchModalTakeOrder = function() {
             loadAllSettings().then(() => {
                 loadGlobalVariants();
                 loadGlobalModifiers();
+                loadDiscounts();
                 setupOrderNotificationListener();
                 setupTransactionNotificationListener();
                 setupPrinterQueueListener();
@@ -8696,6 +8787,9 @@ window.openSearchModalTakeOrder = function() {
         window.fetchWaitingListTakeOrder = fetchWaitingListTakeOrder;
         window.removeWaitingListTakeOrder = removeWaitingListTakeOrder;
         window.clearAllWaitingListsTakeOrder = clearAllWaitingListsTakeOrder;
+        window.openCheckoutDiscountModal = openCheckoutDiscountModal;
+        window.applySelectedDiscount = applySelectedDiscount;
+        window.removeCheckoutDiscount = removeCheckoutDiscount;
         window.openSearchOrderByMenuModal = openSearchOrderByMenuModal;
         window.setSearchByMenuMode = setSearchByMenuMode;
         window.renderSearchMenuCategories = renderSearchMenuCategories;
