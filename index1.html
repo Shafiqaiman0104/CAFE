@@ -4619,13 +4619,18 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                         <span>Subtotal:</span>
                         <span>RM ${runningSubtotal.toFixed(2)}</span>
                     </div>
+                    ${order.discountAmount ? `
+                    <div style="display:flex;justify-content:space-between;color:#e53e3e;">
+                        <span>Discount (${order.discountName || 'Applied'}):</span>
+                        <span>- RM ${parseFloat(order.discountAmount).toFixed(2)}</span>
+                    </div>` : ''}
                     <div style="display:flex;justify-content:space-between;">
                         <span>Tax:</span>
                         <span>RM ${calculatedTax.toFixed(2)}</span>
                     </div>
                     <div style="display:flex;justify-content:space-between;font-weight:bold;margin-top:5px;">
                         <span>Total:</span>
-                        <span>RM ${calculatedTotal.toFixed(2)}</span>
+                        <span>RM ${(calculatedTotal - (parseFloat(order.discountAmount) || 0)).toFixed(2)}</span>
                     </div>
                 </div>
             `;
@@ -5504,10 +5509,14 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             const items = itemsSnap.docs.map(d => d.data());
             let subtotal = items.reduce((acc, it) => it.status !== 'cancelled' ? acc + parseFloat(it.total) : acc, 0);
             const tax = taxActive ? subtotal * (currentTaxRate / 100) : 0;
-            const total = subtotal + tax;
+
             const orderRef = doc(db, 'licenses', currentClientId, 'orders', orderId);
             const orderSnap = await getDoc(orderRef);
             const orderData = orderSnap.data();
+
+            const discount = parseFloat(orderData.discountAmount) || 0;
+            const total = Math.max(0, subtotal + tax - discount);
+
             let targetStatus = orderData.status;
             const allCancelled = items.every(it => it.status === 'cancelled');
             const allHandled = items.every(it => it.status === 'cancelled' || it.isPaid === true || it.isPaidEarly === true);
@@ -5709,6 +5718,19 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             let totalReceived = 0;
             let paymentRecords = [];
 
+            // Calculate totals for discount distribution
+            let totalAmountBeforeDiscount = selectedCheckoutItems.reduce((acc, curr) => acc + (curr.unitPrice * curr.qtyToPay), 0);
+            if (taxActive) totalAmountBeforeDiscount *= (1 + currentTaxRate / 100);
+
+            let totalDiscountValue = 0;
+            if (appliedCheckoutDiscount) {
+                if (appliedCheckoutDiscount.type === 'percentage') {
+                    totalDiscountValue = totalAmountBeforeDiscount * (parseFloat(appliedCheckoutDiscount.value) / 100);
+                } else {
+                    totalDiscountValue = parseFloat(appliedCheckoutDiscount.value);
+                }
+            }
+
             if (checkoutPayMethod === 'mixed') {
                 const rows = document.querySelectorAll('.mixed-payment-row');
                 rows.forEach(row => {
@@ -5787,7 +5809,25 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
 
             // Always update the cashier identity on the order as soon as a payment is made
             for (const orderId of involvedOrderIds) {
-                await updateDoc(doc(db, 'licenses', currentClientId, 'orders', orderId), { cashierBy: currentStaff.name });
+                let orderUpdateData = { cashierBy: currentStaff.name };
+                
+                if (appliedCheckoutDiscount) {
+                    orderUpdateData.discountName = appliedCheckoutDiscount.name;
+                    // Proportional discount distribution if multiple orders are involved in checkout
+                    const orderItemsValue = selectedCheckoutItems.filter(i => i.orderId === orderId).reduce((acc, curr) => acc + (curr.unitPrice * curr.qtyToPay), 0);
+                    const orderValueWithTax = taxActive ? orderItemsValue * (1 + currentTaxRate / 100) : orderItemsValue;
+                    const orderDiscount = (totalAmountBeforeDiscount > 0) ? (orderValueWithTax / totalAmountBeforeDiscount) * totalDiscountValue : 0;
+                    
+                    orderUpdateData.discountAmount = orderDiscount.toFixed(2);
+                    
+                    const orderSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', orderId));
+                    if (orderSnap.exists()) {
+                        const currentTotal = parseFloat(orderSnap.data().total) || 0;
+                        orderUpdateData.total = Math.max(0, currentTotal - orderDiscount).toFixed(2);
+                    }
+                }
+                
+                await updateDoc(doc(db, 'licenses', currentClientId, 'orders', orderId), orderUpdateData);
             }
 
             // Record transactions for each payment method used
