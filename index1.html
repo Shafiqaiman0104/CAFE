@@ -2981,13 +2981,14 @@
                 <!-- Left: Order Details -->
                 <div class="checkout-left-panel" style="flex: 1; border-right: 1px solid #eee; padding: 20px; overflow-y: auto; background: #fafafa;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 2px solid #764ba2; padding-bottom: 5px;">
-                        <h4 style="color:#764ba2; margin: 0; display: flex; align-items: center; gap: 8px;">Order Details <i class="fas fa-tag" style="cursor: pointer; font-size: 0.9rem; color: #ff9800;" onclick="openCheckoutDiscountModal()" title="Apply Discount"></i></h4>
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <span style="font-size: 0.75rem; font-weight: bold; color: #64748b;">VOID</span>
-                            <div class="view-toggle-takeorder" style="background: #e2e8f0; margin: 0;">
-                                <button class="view-btn-takeorder active" id="btnVoidOff" onclick="setVoidModeTakeOrder(false)" style="padding: 4px 10px; font-size: 0.75rem; color: #475569;">Off</button>
-                                <button class="view-btn-takeorder" id="btnVoidOn" onclick="setVoidModeTakeOrder(true)" style="padding: 4px 10px; font-size: 0.75rem; color: #475569;">On</button>
+                        <h4 style="color:#764ba2; margin: 0; display: flex; align-items: center; gap: 8px;">
+                            Action : 
+                            <div id="checkoutDiscountIconContainer" onclick="openCheckoutDiscountModal()" style="cursor: pointer; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: white; border: 1px solid #ff9800;" title="Apply Discount">
+                                <i class="fas fa-tag" id="checkoutDiscountIcon" style="font-size: 0.8rem; color: #ff9800;"></i>
                             </div>
+                        </h4>
+                        <div id="voidToggleBtn" onclick="toggleVoidMode()" style="cursor: pointer; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: white; border: 1px solid #e53e3e;" title="Toggle Void Mode">
+                            <i class="fas fa-trash-alt" style="font-size: 0.9rem; color: #e53e3e;"></i>
                         </div>
                         <div class="view-toggle-takeorder" style="background: #e2e8f0;">
                             <button class="view-btn-takeorder active" id="btnCheckoutFull" onclick="setCheckoutMode('full')" style="padding: 4px 10px; font-size: 0.75rem; color: #475569;">Full</button>
@@ -5250,8 +5251,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                 }
 
                 isVoidModeTakeOrder = false;
-                document.getElementById('btnVoidOn').classList.remove('active');
-                document.getElementById('btnVoidOff').classList.add('active');
+                setVoidModeTakeOrder(false);
 
                 let html = '';
                 
@@ -5452,6 +5452,18 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             
             checkoutTotalTakeOrder = Math.max(0, totalAmount - discountValue);
             
+            const discContainer = document.getElementById('checkoutDiscountIconContainer');
+            const discIcon = document.getElementById('checkoutDiscountIcon');
+            if (discContainer && discIcon) {
+                if (appliedCheckoutDiscount) {
+                    discContainer.style.backgroundColor = '#ff9800';
+                    discIcon.style.color = 'white';
+                } else {
+                    discContainer.style.backgroundColor = 'white';
+                    discIcon.style.color = '#ff9800';
+                }
+            }
+
             document.getElementById('checkoutTotalDue').innerText = `RM ${checkoutTotalTakeOrder.toFixed(2)}`;
             const totalsContainer = document.getElementById('checkoutTotals');
             
@@ -5487,10 +5499,23 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             updateCheckoutDisplay();
         }
 
+        window.toggleVoidMode = function() {
+            setVoidModeTakeOrder(!isVoidModeTakeOrder);
+        };
+
         window.setVoidModeTakeOrder = function(on) {
             isVoidModeTakeOrder = on;
-            document.getElementById('btnVoidOn').classList.toggle('active', on);
-            document.getElementById('btnVoidOff').classList.toggle('active', !on);
+            const btn = document.getElementById('voidToggleBtn');
+            if (btn) {
+                const icon = btn.querySelector('i');
+                if (on) {
+                    btn.style.backgroundColor = '#e53e3e';
+                    icon.style.color = 'white';
+                } else {
+                    btn.style.backgroundColor = 'white';
+                    icon.style.color = '#e53e3e';
+                }
+            }
             
             const icons = document.querySelectorAll('.checkout-void-icon');
             icons.forEach(icon => {
@@ -8862,6 +8887,7 @@ window.openSearchModalTakeOrder = function() {
         window.toggleActiveOrdersSearch = toggleActiveOrdersSearch;
         window.handleActiveOrdersSearchInput = handleActiveOrdersSearchInput;
         window.setVoidModeTakeOrder = setVoidModeTakeOrder;
+        window.toggleVoidMode = toggleVoidMode;
         window.voidItemFromCheckout = voidItemFromCheckout;
         window.updateVoidModalQty = updateVoidModalQty;
         window.confirmVoidQtyTakeOrder = confirmVoidQtyTakeOrder;
