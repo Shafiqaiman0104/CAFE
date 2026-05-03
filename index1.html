@@ -5366,6 +5366,10 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
         };
 
         window.setCheckoutMode = function(mode) {
+            if (mode === 'split' && appliedCheckoutDiscount) {
+                alert("Only full payment can apply discount, split payment cannot. Please remove the discount to use split payment.");
+                return;
+            }
             const isFull = mode === 'full';
             
             document.getElementById('btnCheckoutFull').classList.toggle('active', isFull);
@@ -5470,6 +5474,15 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                 <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:1.3rem; border-top:2px solid #f1f5f9; padding-top:10px; color:#1e293b;">
                     <span>Grand Total:</span><span>RM ${checkoutTotalTakeOrder.toFixed(2)}</span>
                 </div>`;
+
+            const splitBtn = document.getElementById('btnCheckoutSplit');
+            if (appliedCheckoutDiscount) {
+                splitBtn.style.opacity = "0.5";
+                splitBtn.style.cursor = "not-allowed";
+            } else {
+                splitBtn.style.opacity = "1";
+                splitBtn.style.cursor = "pointer";
+            }
 
             updateCheckoutDisplay();
         }
@@ -5975,6 +5988,11 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
         };
 
         window.applySelectedDiscount = function() {
+            if (document.getElementById('btnCheckoutSplit').classList.contains('active')) {
+                alert("Only full payment can apply discount, split payment cannot.");
+                return;
+            }
+
             const selectedId = document.querySelector('input[name="checkoutDiscount"]:checked')?.value;
             if (!selectedId) { alert('Please select a discount'); return; }
             
