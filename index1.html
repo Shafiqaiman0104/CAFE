@@ -2547,6 +2547,20 @@
                 </select>
             </div>
 
+            <div class="form-group">
+                <label>Font Size</label>
+                <div style="display: flex; align-items: center; gap: 10px; background: #f8fafc; padding: 10px; border-radius: 12px;">
+                    <span style="font-size: 11px; font-weight: bold; color: #64748b;">Small</span>
+                    <input type="range" id="printerFontSize" min="0" max="2" value="1" style="flex: 1; accent-color: #764ba2;">
+                    <span style="font-size: 16px; font-weight: bold; color: #1e293b;">Bigger</span>
+                </div>
+            </div>
+
+            <div class="checkbox-group" style="margin-bottom: 12px;">
+                <input type="checkbox" id="printerCutterAlarm">
+                <label>Cutter with Alarm (3 beeps)</label>
+            </div>
+
             <div class="checkbox-group" style="margin-bottom: 12px;">
                 <input type="checkbox" id="printReceiptBills">
                 <label>Print Receipt & Bills</label>
@@ -7863,6 +7877,8 @@ window.openSearchModalTakeOrder = function() {
             document.getElementById('printerNameField').value = p.name;
             document.getElementById('printerNameField').setAttribute('data-bt-id', p.bluetoothDeviceId || '');
             document.getElementById('printerPaperWidth').value = p.paperWidth || '58';
+            document.getElementById('printerFontSize').value = p.fontSize !== undefined ? p.fontSize : '1';
+            document.getElementById('printerCutterAlarm').checked = p.cutterAlarm || false;
             document.getElementById('printReceiptBills').checked = p.printReceipt || false;
             document.getElementById('autoPrintReceipt').checked = p.autoPrint || false;
             document.getElementById('printOrdersToggle').checked = p.printOrders || false;
@@ -7883,6 +7899,8 @@ window.openSearchModalTakeOrder = function() {
             const id = document.getElementById('editingPrinterId').value;
             const name = document.getElementById('printerNameField').value.trim();
             const paperWidth = document.getElementById('printerPaperWidth').value;
+            const fontSize = document.getElementById('printerFontSize').value;
+            const cutterAlarm = document.getElementById('printerCutterAlarm').checked;
             const printReceipt = document.getElementById('printReceiptBills').checked;
             const autoPrint = document.getElementById('autoPrintReceipt').checked;
             const printOrders = document.getElementById('printOrdersToggle').checked;
@@ -7891,7 +7909,7 @@ window.openSearchModalTakeOrder = function() {
 
             if (!name) { alert('Please enter printer name'); return; }
 
-            const data = { name, paperWidth, printReceipt, autoPrint, printOrders, bluetoothDeviceId, departmentPrinters, updatedAt: Timestamp.now() };
+            const data = { name, paperWidth, fontSize, cutterAlarm, printReceipt, autoPrint, printOrders, bluetoothDeviceId, departmentPrinters, updatedAt: Timestamp.now() };
             if (id) {
                 await updateDoc(doc(db, 'licenses', currentClientId, 'printers', id), data);
             } else {
@@ -8054,7 +8072,7 @@ window.openSearchModalTakeOrder = function() {
                         }
                         
                         const label = paymentDetails?.isEarly ? "EARLY PAYMENT" : "PAID";
-                        const commands = await generateMainReceiptCommands(orderNumber, tableNumber, itemsToPrint, orderTime, paymentDetails?.method || 'N/A', label, cashierName);
+                        const commands = await generateMainReceiptCommands(orderNumber, tableNumber, itemsToPrint, orderTime, paymentDetails?.method || 'N/A', label, cashierName, p);
                         const success = await sendToBluetoothPrinter(device, commands);
                         await updateDoc(doc(db, 'licenses', currentClientId, 'print_queue', qId), { status: success ? 'success' : 'failed' });
                         printActions.push({ label: 'Main Receipt', success });
@@ -8075,7 +8093,7 @@ window.openSearchModalTakeOrder = function() {
                             if (deptItems.length > 0) {
                                 const qId = await addToPrintQueue(orderId, orderNumber, tableNumber, dept.name, deptId);
                                 if (device) {
-                                    const commands = await generateReceiptCommands(orderNumber, tableNumber, deptItems, dept.name, orderTime, "AUTO PRINT");
+                                    const commands = await generateReceiptCommands(orderNumber, tableNumber, deptItems, dept.name, orderTime, "AUTO PRINT", p);
                                     const success = await sendToBluetoothPrinter(device, commands);
                                     await updateDoc(doc(db, 'licenses', currentClientId, 'print_queue', qId), { status: success ? 'success' : 'failed' });
                                     printActions.push({ label: dept.name, success });
@@ -8116,7 +8134,13 @@ window.openSearchModalTakeOrder = function() {
             return docRef.id;
         }
 
-        async function generateMainReceiptCommands(orderNumber, tableNumber, items, orderTime, payMethod, statusLabel, cashierName = null) {
+        async function generateMainReceiptCommands(orderNumber, tableNumber, items, orderTime, payMethod, statusLabel, cashierName = null, p = null) {
+            let width = (p && p.paperWidth === '80') ? 48 : 32;
+            const fontSize = p ? p.fontSize : '1';
+            if (fontSize === '0') width = (p.paperWidth === '80') ? 64 : 42; // Font B mode allows more chars
+            const fontCmd = (fontSize === '0') ? "\x1B\x4D\x01" : (fontSize === '2' ? "\x1B\x21\x10" : "\x1B\x4D\x00");
+            const sep = "-".repeat(width) + "\n";
+            
             const restaurantName = localStorage.getItem('restaurantName') || 'VENTURERUSH RESTAURANT';
             const restaurantAddress = localStorage.getItem('restaurantAddress') || '123 VentureRush Way, Tech City';
             const restaurantLogo = localStorage.getItem('restaurantLogo');
@@ -8146,47 +8170,52 @@ window.openSearchModalTakeOrder = function() {
 
             let itemsText = "";
             items.forEach(item => {
-                const nameStr = item.name.substring(0, 15).padEnd(16);
+                const nameStr = item.name.substring(0, width - 14).padEnd(width - 13);
                 const qtyStr = item.qty.toString().padStart(3);
                 const amtStr = parseFloat(item.total).toFixed(2).padStart(10);
                 itemsText += `${nameStr}${qtyStr}${amtStr}\n`;
                 
                 if (item.variants?.length) {
-                    item.variants.forEach(v => itemsText += `  + ${v.optionName}\n`);
+                    item.variants.forEach(v => itemsText += `  + ${v.optionName.substring(0, width - 4)}\n`);
                 }
                 if (item.modifiers?.length) {
-                    item.modifiers.forEach(m => itemsText += `  + ${m.optionName}\n`);
+                    item.modifiers.forEach(m => itemsText += `  + ${m.optionName.substring(0, width - 4)}\n`);
+                }
+                if (item.notes) {
+                    itemsText += `  * Req: ${item.notes.substring(0, width - 9)}\n`;
                 }
             });
 
             return combineCommands(
                 "\x1B\x40", // Initialize
+                fontCmd,
                 "\x1B\x61\x01", // Center
                 logoBytes,
                 (logoBytes.length === 0) ? "\x1B\x45\x01 [COMPANY LOGO] \x1B\x45\x00\n" : "",
                 `\x1B\x21\x10${restaurantName.toUpperCase()}\x1B\x21\x00\n`, // Double height
                 `${restaurantAddress}\n`,
-                "--------------------------------\n",
+                sep,
                 "\x1B\x61\x00", // Left
                 `Date: ${dateStr}   Time: ${timeStr}\n`,
                 `Receipt No: ${orderNumber}\n`,
                 `Table: ${tableNumber}\n`,
                 `Cashier: ${cashierName || currentStaff?.name || 'N/A'}\n`,
-                "--------------------------------\n",
-                "Item            Qty       Amount\n",
+                sep,
+                "Item".padEnd(width - 13) + "Qty".padStart(3) + "Amount".padStart(10) + "\n",
                 itemsText,
-                "--------------------------------\n",
-                `Subtotal:              RM ${subtotal.toFixed(2).padStart(8)}\n`,
-                taxActive ? `Tax (${currentTaxRate}%):            RM ${tax.toFixed(2).padStart(8)}\n` : "",
-                `\x1B\x45\x01TOTAL AMOUNT:          RM ${total.toFixed(2).padStart(8)}\x1B\x45\x00\n`,
+                sep,
+                "Subtotal:".padEnd(width - 10) + `RM ${subtotal.toFixed(2).padStart(8)}\n`,
+                taxActive ? `Tax (${currentTaxRate}%):`.padEnd(width - 10) + `RM ${tax.toFixed(2).padStart(8)}\n` : "",
+                `\x1B\x45\x01TOTAL AMOUNT:`.padEnd(width - 10) + `RM ${total.toFixed(2).padStart(8)}\x1B\x45\x00\n`,
                 `Payment by: ${payMethod.toUpperCase()}\n`,
-                "--------------------------------\n",
+                sep,
                 "\x1B\x61\x01", // Center
                 `${receiptFooter}\n`,
                 `Settled at ${settleTime}\n`,
                 `Status: ${statusLabel}\n\n`,
                 "Powered By VentureRush Tech\n",
                 "\n\n\n\n",
+                (p && p.cutterAlarm) ? "\x1B\x42\x03\x01" : "", // Alarm beeps
                 "\x1D\x56\x41\x03" // Cut
             );
         }
@@ -8278,9 +8307,9 @@ window.openSearchModalTakeOrder = function() {
                 let commands;
                 if (item.printerDeptName === 'Receipt') {
                     const payMethod = item.paymentMethod || 'N/A'; // Retrieve from print queue item
-                    commands = await generateMainReceiptCommands(item.orderNumber, item.tableNumber || 'N/A', itemsToPrint, orderTime, payMethod, statusLabel, cashierName);
+                    commands = await generateMainReceiptCommands(item.orderNumber, item.tableNumber || 'N/A', itemsToPrint, orderTime, payMethod, statusLabel, cashierName, printerConfig);
                 } else {
-                    commands = await generateReceiptCommands(item.orderNumber, item.tableNumber || 'N/A', itemsToPrint, item.printerDeptName || 'Receipt', orderTime, statusLabel);
+                    commands = await generateReceiptCommands(item.orderNumber, item.tableNumber || 'N/A', itemsToPrint, item.printerDeptName || 'Receipt', orderTime, statusLabel, printerConfig);
                 }
                 printSuccess = await sendToBluetoothPrinter(device, commands);
                 if (device.gatt.connected) device.gatt.disconnect();
@@ -8424,40 +8453,48 @@ window.openSearchModalTakeOrder = function() {
         };
 
         // Helper to generate ESC/POS commands in the requested format
-        async function generateReceiptCommands(orderNumber, tableNumber, items, headerTitle, orderTime, statusLabel) {
+        async function generateReceiptCommands(orderNumber, tableNumber, items, headerTitle, orderTime, statusLabel, p = null) {
+            let width = (p && p.paperWidth === '80') ? 48 : 32;
+            const fontSize = p ? p.fontSize : '1';
+            if (fontSize === '0') width = (p.paperWidth === '80') ? 64 : 42;
+            const fontCmd = (fontSize === '0') ? "\x1B\x4D\x01" : (fontSize === '2' ? "\x1B\x21\x10" : "\x1B\x4D\x00");
+            const sep = "-".repeat(width) + "\n";
+            
             const printTime = new Date().toLocaleString();
             let itemsText = "";
             items.forEach(item => {
-                itemsText += `[   ] ${item.name}   x${item.qty}\n`;
+                itemsText += `[   ] ${item.name.substring(0, width - 10)}   x${item.qty}\n`;
                 if (item.variants && item.variants.length) {
-                    item.variants.forEach(v => itemsText += `      + ${v.optionName}\n`);
+                    item.variants.forEach(v => itemsText += `      + ${v.optionName.substring(0, width - 8)}\n`);
                 }
                 if (item.modifiers && item.modifiers.length) {
-                    item.modifiers.forEach(m => itemsText += `      + ${m.optionName}\n`);
+                    item.modifiers.forEach(m => itemsText += `      + ${m.optionName.substring(0, width - 8)}\n`);
                 }
                 if (item.notes) {
-                    itemsText += `      * Req: ${item.notes}\n`;
+                    itemsText += `      * Req: ${item.notes.substring(0, width - 12)}\n`;
                 }
                 itemsText += "\n";
             });
 
             return combineCommands(
                 "\x1B\x40", // Initialize printer
+                fontCmd,
                 "\x1B\x61\x01", // Center align
                 `\x1B\x45\x01${headerTitle.toUpperCase()}\x1B\x45\x00\n`, // Bold Title
                 "\x1B\x61\x00", // Left align
                 `ORDER ID: ${orderNumber}\n`,
                 `TABLE: ${tableNumber}\n`,
                 `Order: ${orderTime}\n`,
-                "--------------------------------\n",
+                sep,
                 "Items:\n",
                 itemsText,
-                "--------------------------------\n",
+                sep,
                 `Print: ${printTime}\n`,
                 `Status: ${statusLabel}\n`,
                 "\x1B\x61\x01", // Center align
                 `${headerTitle.toUpperCase()}\n`,
                 "\n\n\n\n", // Feed lines
+                (p && p.cutterAlarm) ? "\x1B\x42\x03\x01" : "", // Alarm beeps
                 "\x1D\x56\x41\x03" // Cut paper command
             );
         }
