@@ -7982,6 +7982,8 @@ window.openSearchModalTakeOrder = function() {
             const orderData = orderSnap.exists() ? orderSnap.data() : null;
             const tableNumber = orderData ? (orderData.tableId || 'N/A').toUpperCase() : 'N/A';
             const orderTime = orderData?.createdAt ? orderData.createdAt.toDate().toLocaleString() : new Date().toLocaleString();
+            const staffName = orderData?.staffName || 'N/A';
+            const orderType = orderData?.orderType || 'dine-in';
 
             // 1. Get all Printers with autoPrint enabled
             const printersSnap = await getDocs(query(collection(db, 'licenses', currentClientId, 'printers'), where('autoPrint', '==', true)));
@@ -8052,7 +8054,7 @@ window.openSearchModalTakeOrder = function() {
                 // Handle Full Receipt Printing (Only on payment or early pay)
                 if (p.printReceipt && type === 'payment') {
                     const qOrderId = (paymentDetails?.mergedOrderIds) ? paymentDetails.mergedOrderIds.join(',') : orderId;
-                    const qId = await addToPrintQueue(qOrderId, orderNumber, tableNumber, 'Receipt', null, cashierName, paymentDetails?.method);
+                    const qId = await addToPrintQueue(qOrderId, orderNumber, tableNumber, 'Receipt', null, cashierName, paymentDetails?.method, staffName, orderType);
                     if (device) {
                         // If split payment, we only show items just paid in the receipt
                         let itemsToPrint = fullItemsList;
@@ -8091,9 +8093,9 @@ window.openSearchModalTakeOrder = function() {
                                 return dept.department && dept.department.includes(catName);
                             });
                             if (deptItems.length > 0) {
-                                const qId = await addToPrintQueue(orderId, orderNumber, tableNumber, dept.name, deptId);
+                                const qId = await addToPrintQueue(orderId, orderNumber, tableNumber, dept.name, deptId, null, null, staffName, orderType);
                                 if (device) {
-                                    const commands = await generateReceiptCommands(orderNumber, tableNumber, deptItems, dept.name, orderTime, "AUTO PRINT", p);
+                                    const commands = await generateReceiptCommands(orderNumber, tableNumber, deptItems, dept.name, orderTime, "AUTO PRINT", p, staffName, orderType);
                                     const success = await sendToBluetoothPrinter(device, commands);
                                     await updateDoc(doc(db, 'licenses', currentClientId, 'print_queue', qId), { status: success ? 'success' : 'failed' });
                                     printActions.push({ label: dept.name, success });
@@ -8118,7 +8120,7 @@ window.openSearchModalTakeOrder = function() {
             }
         };
 
-        async function addToPrintQueue(orderId, orderNumber, tableNumber, deptName, deptId, cashierName = null, paymentMethod = null) {
+        async function addToPrintQueue(orderId, orderNumber, tableNumber, deptName, deptId, cashierName = null, paymentMethod = null, staffName = null, orderType = null) {
             const docRef = await addDoc(collection(db, 'licenses', currentClientId, 'print_queue'), {
                 orderId,
                 orderNumber,
@@ -8129,6 +8131,8 @@ window.openSearchModalTakeOrder = function() {
                 attempts: 1,
                 cashierName: cashierName,
                 paymentMethod: paymentMethod, // Store payment method here
+                staffName: staffName,
+                orderType: orderType,
                 createdAt: Timestamp.now()
             });
             return docRef.id;
@@ -8262,6 +8266,8 @@ window.openSearchModalTakeOrder = function() {
             const currentAttempts = item.attempts || 1;
             const statusLabel = item.printerDeptName === 'Receipt' ? 'REPRINT' : `MANUAL PRINT ${currentAttempts}`;
             const cashierName = item.cashierName || 'N/A';
+            const staffName = item.staffName || 'N/A';
+            const orderType = item.orderType || 'dine-in';
 
             const orderIds = item.orderId.split(',');
             const orderSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', orderIds[0]));
@@ -8309,7 +8315,7 @@ window.openSearchModalTakeOrder = function() {
                     const payMethod = item.paymentMethod || 'N/A'; // Retrieve from print queue item
                     commands = await generateMainReceiptCommands(item.orderNumber, item.tableNumber || 'N/A', itemsToPrint, orderTime, payMethod, statusLabel, cashierName, printerConfig);
                 } else {
-                    commands = await generateReceiptCommands(item.orderNumber, item.tableNumber || 'N/A', itemsToPrint, item.printerDeptName || 'Receipt', orderTime, statusLabel, printerConfig);
+                    commands = await generateReceiptCommands(item.orderNumber, item.tableNumber || 'N/A', itemsToPrint, item.printerDeptName || 'Receipt', orderTime, statusLabel, printerConfig, staffName, orderType);
                 }
                 printSuccess = await sendToBluetoothPrinter(device, commands);
                 if (device.gatt.connected) device.gatt.disconnect();
@@ -8453,7 +8459,7 @@ window.openSearchModalTakeOrder = function() {
         };
 
         // Helper to generate ESC/POS commands in the requested format
-        async function generateReceiptCommands(orderNumber, tableNumber, items, headerTitle, orderTime, statusLabel, p = null) {
+        async function generateReceiptCommands(orderNumber, tableNumber, items, headerTitle, orderTime, statusLabel, p = null, staffName = 'N/A', orderType = 'dine-in') {
             let width = (p && p.paperWidth === '80') ? 48 : 32;
             const fontSize = p ? p.fontSize : '1';
             if (fontSize === '0') width = (p.paperWidth === '80') ? 64 : 42;
@@ -8463,15 +8469,15 @@ window.openSearchModalTakeOrder = function() {
             const printTime = new Date().toLocaleString();
             let itemsText = "";
             items.forEach(item => {
-                itemsText += `[   ] ${item.name.substring(0, width - 10)}   x${item.qty}\n`;
+                itemsText += `\x1B\x45\x01[  ] ${item.name.substring(0, width - 10).padEnd(width - 10)} ${item.qty}\x1B\x45\x00\n`;
                 if (item.variants && item.variants.length) {
-                    item.variants.forEach(v => itemsText += `      + ${v.optionName.substring(0, width - 8)}\n`);
+                    item.variants.forEach(v => itemsText += `\x1B\x45\x01      + ${v.optionName.substring(0, width - 8)}\x1B\x45\x00\n`);
                 }
                 if (item.modifiers && item.modifiers.length) {
-                    item.modifiers.forEach(m => itemsText += `      + ${m.optionName.substring(0, width - 8)}\n`);
+                    item.modifiers.forEach(m => itemsText += `\x1B\x45\x01      + ${m.optionName.substring(0, width - 8)}\x1B\x45\x00\n`);
                 }
                 if (item.notes) {
-                    itemsText += `      * Req: ${item.notes.substring(0, width - 12)}\n`;
+                    itemsText += `\x1B\x45\x01      * Req: ${item.notes.substring(0, width - 12)}\x1B\x45\x00\n`;
                 }
                 itemsText += "\n";
             });
@@ -8480,11 +8486,15 @@ window.openSearchModalTakeOrder = function() {
                 "\x1B\x40", // Initialize printer
                 fontCmd,
                 "\x1B\x61\x01", // Center align
-                `\x1B\x45\x01${headerTitle.toUpperCase()}\x1B\x45\x00\n`, // Bold Title
+                `\x1B\x45\x01${headerTitle.toUpperCase()} | ${orderNumber}\x1B\x45\x00\n`, // Bold Title | Order ID
+                `\x1B\x45\x01TABLE ${tableNumber}\x1B\x45\x00\n\n`, // Bold Table Number
                 "\x1B\x61\x00", // Left align
-                `ORDER ID: ${orderNumber}\n`,
-                `TABLE: ${tableNumber}\n`,
                 `Order: ${orderTime}\n`,
+                `Staff: ${staffName}\n`,
+                sep,
+                "\x1B\x61\x01", // Center align
+                `\x1B\x45\x01${orderType.toUpperCase().replace('-', ' ')}\x1B\x45\x00\n`, // Bold Order Type
+                "\x1B\x61\x00", // Left align
                 sep,
                 "Items:\n",
                 itemsText,
