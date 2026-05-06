@@ -5912,6 +5912,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                     processedByStaffName: currentStaff.name,
                     itemsPaidJson: JSON.stringify(selectedCheckoutItems.filter(i => involvedOrderIds.includes(i.orderId))),
                     isEarlyPayment: isEarlyPaymentMode,
+                    paymentInfoJson: JSON.stringify(paymentInfoForQueue),
                     createdAt: Timestamp.now()
                 });
             }
@@ -8808,7 +8809,8 @@ window.openSearchModalTakeOrder = function() {
                             const orderIds = transData.orderId.split(',').map(id => id.trim());
                             const itemsPaid = transData.itemsPaidJson ? JSON.parse(transData.itemsPaidJson) : null;
                             const cashierName = transData.processedByStaffName || 'N/A';
-                            
+                            const paymentInfo = transData.paymentInfoJson ? JSON.parse(transData.paymentInfoJson) : null;
+
                             if (orderIds.length > 1) {
                                 // Consolidated Printing for Multiple Orders
                                 const orderNums = [];
@@ -8821,7 +8823,8 @@ window.openSearchModalTakeOrder = function() {
                                     itemsPaid: itemsPaid,
                                     isEarly: transData.isEarlyPayment || false,
                                     mergedOrderIds: orderIds,
-                                    cashierName: cashierName
+                                    cashierName: cashierName,
+                                    paymentInfo: paymentInfo
                                 };
                                 triggerAutoPrinting(orderIds[0], orderNums.join(', '), 'payment', payDetails);
                             } else {
@@ -8834,7 +8837,8 @@ window.openSearchModalTakeOrder = function() {
                                         method: transData.paymentMethod,
                                         itemsPaid: itemsPaid,
                                         isEarly: transData.isEarlyPayment || false,
-                                        cashierName: cashierName
+                                        cashierName: cashierName,
+                                        paymentInfo: paymentInfo
                                     };
                                     triggerAutoPrinting(orderId, orderData.orderNumber, 'payment', payDetails);
                                 }
