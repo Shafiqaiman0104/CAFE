@@ -8219,7 +8219,7 @@ window.openSearchModalTakeOrder = function() {
                 `Status: ${statusLabel}\n\n`,
                 "Powered By VentureRush Tech\n",
                 "\n\n\n\n",
-                (p && p.cutterAlarm) ? "\x1B\x42\x03\x01" : "", // Alarm beeps
+                (p && p.cutterAlarm) ? "\x1B\x42\x03\x02" : "", // Alarm beeps
                 "\x1D\x56\x41\x03" // Cut
             );
         }
@@ -8504,7 +8504,7 @@ window.openSearchModalTakeOrder = function() {
                 "\x1B\x61\x01", // Center align
                 `${headerTitle.toUpperCase()}\n`,
                 "\n\n\n\n", // Feed lines
-                (p && p.cutterAlarm) ? "\x1B\x42\x03\x01" : "", // Alarm beeps
+                (p && p.cutterAlarm) ? "\x1B\x42\x03\x02" : "", // Alarm beeps
                 "\x1D\x56\x41\x03" // Cut paper command
             );
         }
