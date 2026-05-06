@@ -5860,6 +5860,22 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             // Determine if Split or Full mode was active
             const isSplitMode = document.getElementById('btnCheckoutSplit').classList.contains('active');
 
+            // Prepare payment info for receipt
+            const paymentInfoForQueue = {
+                totalDue: checkoutTotalTakeOrder,
+                method: checkoutPayMethod === 'mixed' ? 'MIX' : checkoutPayMethod,
+                give: (checkoutPayMethod === 'mixed') ? 
+                    Array.from(document.querySelectorAll('.mixed-payment-row')).reduce((s, row) => s + (parseFloat(row.querySelector('.mixed-amount-input').value) || 0), 0) : 
+                    parseFloat(checkoutReceivedInput),
+                breakdown: (checkoutPayMethod === 'mixed') ? 
+                    Array.from(document.querySelectorAll('.mixed-payment-row')).map(row => ({
+                        type: row.dataset.type,
+                        amount: parseFloat(row.querySelector('.mixed-amount-input').value) || 0
+                    })).filter(b => b.amount > 0) : null,
+                discount: appliedCheckoutDiscount ? { name: appliedCheckoutDiscount.name, value: totalDiscountValue } : null
+            };
+            paymentInfoForQueue.change = paymentInfoForQueue.give - paymentInfoForQueue.totalDue;
+
             // Always update the cashier identity on the order as soon as a payment is made
             for (const orderId of involvedOrderIds) {
                 let orderUpdateData = { cashierBy: currentStaff.name };
@@ -5911,17 +5927,19 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                     itemsPaid: selectedCheckoutItems,
                     isEarly: isEarlyPaymentMode,
                     mergedOrderIds: involvedOrderIds,
-                    cashierName: currentStaff.name
+                    cashierName: currentStaff.name,
+                    paymentInfo: paymentInfoForQueue
                 };
                 triggerAutoPrinting(involvedOrderIds[0], orderNums.join(', '), 'payment', payDetails, true);
             } else if (involvedOrderIds.length === 1) {
                 const orderId = involvedOrderIds[0];
                 const orderDoc = checkoutOrdersToProcess.find(d => d.id === orderId);
                 const payDetails = {
-                    method: checkoutPayMethod === 'mixed' ? 'Mixed' : checkoutPayMethod,
+                    method: checkoutPayMethod === 'mixed' ? 'MIX' : checkoutPayMethod,
                     itemsPaid: selectedCheckoutItems,
                     isEarly: isEarlyPaymentMode,
-                    cashierName: currentStaff.name
+                    cashierName: currentStaff.name,
+                    paymentInfo: paymentInfoForQueue
                 };
                 triggerAutoPrinting(orderId, orderDoc ? orderDoc.data().orderNumber : 'N/A', 'payment', payDetails, true);
             }
@@ -8054,7 +8072,7 @@ window.openSearchModalTakeOrder = function() {
                 // Handle Full Receipt Printing (Only on payment or early pay)
                 if (p.printReceipt && type === 'payment') {
                     const qOrderId = (paymentDetails?.mergedOrderIds) ? paymentDetails.mergedOrderIds.join(',') : orderId;
-                    const qId = await addToPrintQueue(qOrderId, orderNumber, tableNumber, 'Receipt', null, cashierName, paymentDetails?.method, staffName, orderType);
+                    const qId = await addToPrintQueue(qOrderId, orderNumber, tableNumber, 'Receipt', null, cashierName, paymentDetails?.method, staffName, orderType, paymentDetails?.paymentInfo);
                     if (device) {
                         // If split payment, we only show items just paid in the receipt
                         let itemsToPrint = fullItemsList;
@@ -8074,7 +8092,7 @@ window.openSearchModalTakeOrder = function() {
                         }
                         
                         const label = paymentDetails?.isEarly ? "EARLY PAYMENT" : "PAID";
-                        const commands = await generateMainReceiptCommands(orderNumber, tableNumber, itemsToPrint, orderTime, paymentDetails?.method || 'N/A', label, cashierName, p);
+                        const commands = await generateMainReceiptCommands(orderNumber, tableNumber, itemsToPrint, orderTime, paymentDetails?.method || 'N/A', label, cashierName, p, orderType, paymentDetails?.paymentInfo);
                         const success = await sendToBluetoothPrinter(device, commands);
                         await updateDoc(doc(db, 'licenses', currentClientId, 'print_queue', qId), { status: success ? 'success' : 'failed' });
                         printActions.push({ label: 'Main Receipt', success });
@@ -8120,7 +8138,7 @@ window.openSearchModalTakeOrder = function() {
             }
         };
 
-        async function addToPrintQueue(orderId, orderNumber, tableNumber, deptName, deptId, cashierName = null, paymentMethod = null, staffName = null, orderType = null) {
+        async function addToPrintQueue(orderId, orderNumber, tableNumber, deptName, deptId, cashierName = null, paymentMethod = null, staffName = null, orderType = null, paymentInfo = null) {
             const docRef = await addDoc(collection(db, 'licenses', currentClientId, 'print_queue'), {
                 orderId,
                 orderNumber,
@@ -8133,12 +8151,13 @@ window.openSearchModalTakeOrder = function() {
                 paymentMethod: paymentMethod, // Store payment method here
                 staffName: staffName,
                 orderType: orderType,
+                paymentInfo: paymentInfo ? JSON.stringify(paymentInfo) : null,
                 createdAt: Timestamp.now()
             });
             return docRef.id;
         }
 
-        async function generateMainReceiptCommands(orderNumber, tableNumber, items, orderTime, payMethod, statusLabel, cashierName = null, p = null) {
+        async function generateMainReceiptCommands(orderNumber, tableNumber, items, orderTime, payMethod, statusLabel, cashierName = null, p = null, orderType = 'dine-in', paymentInfo = null) {
             let width = (p && p.paperWidth === '80') ? 48 : 32;
             const fontSize = p ? p.fontSize : '1';
             if (fontSize === '0') width = (p.paperWidth === '80') ? 64 : 42; // Font B mode allows more chars
@@ -8163,8 +8182,19 @@ window.openSearchModalTakeOrder = function() {
 
             let subtotal = 0;
             items.forEach(it => subtotal += parseFloat(it.total) || 0);
-            const tax = taxActive ? subtotal * (currentTaxRate / 100) : 0;
-            const total = subtotal + tax;
+            let tax = taxActive ? subtotal * (currentTaxRate / 100) : 0;
+            let total = subtotal + tax;
+
+            let discountText = "";
+            if (paymentInfo && paymentInfo.discount) {
+                const d = paymentInfo.discount;
+                const discVal = parseFloat(d.value) || 0;
+                total -= discVal;
+                
+                const label = `Discount(${d.name}):`.substring(0, width - 15).padEnd(width - 13);
+                const amt = `-RM ${discVal.toFixed(2).padStart(8)}`;
+                discountText = `${label}${amt}\n`;
+            }
             
             const now = new Date();
             const dateStr = now.toLocaleDateString();
@@ -8202,6 +8232,7 @@ window.openSearchModalTakeOrder = function() {
                 "\x1B\x61\x00", // Left
                 `Date: ${dateStr}   Time: ${timeStr}\n`,
                 `Receipt No: ${orderNumber}\n`,
+                `Order Type: ${orderType.toUpperCase().replace('-', ' ')}\n`,
                 `Table: ${tableNumber}\n`,
                 `Cashier: ${cashierName || currentStaff?.name || 'N/A'}\n`,
                 sep,
@@ -8209,9 +8240,18 @@ window.openSearchModalTakeOrder = function() {
                 itemsText,
                 sep,
                 "Subtotal:".padEnd(width - 10) + `RM ${subtotal.toFixed(2).padStart(8)}\n`,
+                discountText,
                 taxActive ? `Tax (${currentTaxRate}%):`.padEnd(width - 10) + `RM ${tax.toFixed(2).padStart(8)}\n` : "",
                 `\x1B\x45\x01TOTAL AMOUNT:`.padEnd(width - 10) + `RM ${total.toFixed(2).padStart(8)}\x1B\x45\x00\n`,
-                `Payment by: ${payMethod.toUpperCase()}\n`,
+                sep,
+                `Payment by : ${(paymentInfo ? paymentInfo.method : payMethod).toUpperCase()}\n`,
+                (paymentInfo && paymentInfo.method.toUpperCase() === 'MIX' && paymentInfo.breakdown) ? 
+                    "Give : " + paymentInfo.breakdown.map((b, idx) => {
+                        const prefix = idx === 0 ? "" : "       ";
+                        return prefix + `${b.type.charAt(0).toUpperCase() + b.type.slice(1)} = RM${parseFloat(b.amount).toFixed(2)}`;
+                    }).join("\n") + "\n" :
+                    `Give : RM${parseFloat(paymentInfo ? paymentInfo.give : 0).toFixed(2)}\n`,
+                `Change : RM${parseFloat(paymentInfo ? paymentInfo.change : 0).toFixed(2)}\n`,
                 sep,
                 "\x1B\x61\x01", // Center
                 `${receiptFooter}\n`,
@@ -8268,6 +8308,7 @@ window.openSearchModalTakeOrder = function() {
             const cashierName = item.cashierName || 'N/A';
             const staffName = item.staffName || 'N/A';
             const orderType = item.orderType || 'dine-in';
+            const paymentInfo = item.paymentInfo ? JSON.parse(item.paymentInfo) : null;
 
             const orderIds = item.orderId.split(',');
             const orderSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', orderIds[0]));
@@ -8313,7 +8354,7 @@ window.openSearchModalTakeOrder = function() {
                 let commands;
                 if (item.printerDeptName === 'Receipt') {
                     const payMethod = item.paymentMethod || 'N/A'; // Retrieve from print queue item
-                    commands = await generateMainReceiptCommands(item.orderNumber, item.tableNumber || 'N/A', itemsToPrint, orderTime, payMethod, statusLabel, cashierName, printerConfig);
+                    commands = await generateMainReceiptCommands(item.orderNumber, item.tableNumber || 'N/A', itemsToPrint, orderTime, payMethod, statusLabel, cashierName, printerConfig, orderType, paymentInfo);
                 } else {
                     commands = await generateReceiptCommands(item.orderNumber, item.tableNumber || 'N/A', itemsToPrint, item.printerDeptName || 'Receipt', orderTime, statusLabel, printerConfig, staffName, orderType);
                 }
