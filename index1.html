@@ -1863,6 +1863,17 @@
             transition: .4s;
             border-radius: 24px;
         }
+        .join-shift-popup {
+            background: white;
+            padding: 30px;
+            border-radius: 28px;
+            text-align: center;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.2);
+            width: 320px;
+            animation: slideUp 0.3s ease;
+            border: 2px solid #764ba2;
+            pointer-events: auto;
+        }
         .slider:before {
             position: absolute;
             content: "";
@@ -2110,14 +2121,16 @@
                                     <th style="padding: 10px;">Shift Date</th>
                                     <th style="padding: 10px;">Open At</th>
                                     <th style="padding: 10px;">Float</th>
+                                    <th style="padding: 10px;">Open By</th>
                                     <th style="padding: 10px;">Staff</th>
-                                    <th style="padding: 10px;">Order IDs</th>
                                     <th style="padding: 10px;">Cash</th>
                                     <th style="padding: 10px;">E-Wallet</th>
                                     <th style="padding: 10px;">Card</th>
                                     <th style="padding: 10px;">Profit</th>
                                     <th style="padding: 10px;">Loss</th>
+                                    <th style="padding: 10px;">Total</th>
                                     <th style="padding: 10px;">End At</th>
+                                    <th style="padding: 10px;">End By</th>
                                 </tr>
                             </thead>
                             <tbody id="shiftHistoryList"></tbody>
@@ -2697,6 +2710,20 @@
             <button class="secondary-btn" style="width: 100%; margin-top: 15px;" onclick="closeModal('takeoverPinModal')">Cancel</button>
         </div>
     </div>
+
+    <!-- Join Shift Modal -->
+    <div id="joinShiftModal" class="modal" style="align-items: center; justify-content: center; z-index: 200002;">
+        <div class="join-shift-popup">
+            <div style="color: #764ba2; font-size: 3rem; margin-bottom: 15px;"><i class="fas fa-clock"></i></div>
+            <h3 id="joinShiftIdDisplay" style="margin-bottom: 10px; color: #1e293b; font-size: 1.1rem; word-break: break-all;"></h3>
+            <p id="joinShiftTimeDisplay" style="font-size: 0.9rem; color: #64748b; margin-bottom: 25px;"></p>
+            <button class="primary-btn" style="width: 100%;" onclick="joinShift()">Join Shift</button>
+            <div id="shiftInvolvedContainer" style="margin-top: 15px; font-size: 0.75rem; color: #94a3b8; line-height: 1.4;">
+                Involved: <span id="involvedStaffNames"></span>
+            </div>
+        </div>
+    </div>
+
 
     <!-- Start Shift Modal -->
     <div id="startShiftModal" class="modal">
@@ -4190,7 +4217,15 @@
             const shiftRef = doc(db, 'licenses', currentClientId, 'settings', 'shift');
             unsubscribers['shiftSettings'] = onSnapshot(shiftRef, (snap) => {
                 if (snap.exists()) {
-                    isShiftActive = snap.data().active === true;
+                    const data = snap.data();
+                    isShiftActive = data.active === true;
+                    
+                    // Popup for other users joining
+                    if (isShiftActive && data.staffNames && !data.staffNames.includes(currentStaff.name)) {
+                        showJoinShiftModal(data);
+                    } else {
+                        closeModal('joinShiftModal');
+                    }
                 } else {
                     isShiftActive = false;
                 }
@@ -4200,6 +4235,28 @@
                 }
             });
         }
+
+        window.showJoinShiftModal = function(data) {
+            document.getElementById('joinShiftIdDisplay').innerText = data.shiftId || 'SHIFT-ACTIVE';
+            document.getElementById('joinShiftTimeDisplay').innerText = `ALREADY START AT ${data.startTime.toDate().toLocaleString()}`;
+            document.getElementById('involvedStaffNames').innerText = data.staffNames.join(', ');
+            document.getElementById('joinShiftModal').style.display = 'flex';
+        };
+
+        window.joinShift = async function() {
+            const shiftRef = doc(db, 'licenses', currentClientId, 'settings', 'shift');
+            const snap = await getDoc(shiftRef);
+            if (snap.exists()) {
+                const data = snap.data();
+                const names = data.staffNames || [];
+                if (!names.includes(currentStaff.name)) {
+                    names.push(currentStaff.name);
+                    await updateDoc(shiftRef, { staffNames: names, updatedAt: Timestamp.now() });
+                }
+            }
+            closeModal('joinShiftModal');
+        };
+
 
         window.loadShiftPage = function() {
             updateShiftUI();
@@ -4229,11 +4286,13 @@
             try {
                 const shiftRef = doc(db, 'licenses', currentClientId, 'settings', 'shift');
                 await setDoc(shiftRef, {
+                    shiftId: 'SHIFT-' + Date.now(),
                     active: true,
                     startTime: Timestamp.now(),
                     startFloat: cashFloat.toFixed(2),
                     startedBy: currentStaff.name,
                     startedById: currentStaff.id,
+                    staffNames: [currentStaff.name],
                     updatedAt: Timestamp.now()
                 }, { merge: true });
                 
@@ -4259,6 +4318,8 @@
             if (!shiftSnap.exists()) return;
             const shiftData = shiftSnap.data();
             
+            const staffNames = shiftData.staffNames || [shiftData.startedBy];
+
             const startTime = shiftData.startTime.toDate();
             const transRef = collection(db, 'licenses', currentClientId, 'transactions');
             const q = query(transRef, where('createdAt', '>=', Timestamp.fromDate(startTime)));
@@ -4282,6 +4343,7 @@
                 <div style="background: #f8fafc; padding: 20px; border-radius: 16px; font-size: 0.95rem; border: 1px solid #e2e8f0;">
                     <div style="margin-bottom:8px; display:flex; justify-content:space-between;"><span>Open At:</span> <b>${startTime.toLocaleString()}</b></div>
                     <div style="margin-bottom:8px; display:flex; justify-content:space-between;"><span>Cash Float:</span> <b>RM ${startFloat.toFixed(2)}</b></div>
+                    <div style="margin-bottom:8px; display:flex; justify-content:space-between;"><span>Involved Staff:</span> <b>${staffNames.join(', ')}</b></div>
                     <hr style="margin: 10px 0; border: none; border-top: 1px dashed #cbd5e0;">
                     <div style="margin-bottom:5px; display:flex; justify-content:space-between;"><span>Cash Payments:</span> <span>RM ${cashTotal.toFixed(2)}</span></div>
                     <div style="margin-bottom:5px; display:flex; justify-content:space-between;"><span>E-Wallet:</span> <span>RM ${ewalletTotal.toFixed(2)}</span></div>
@@ -4300,6 +4362,7 @@
                 startTime: shiftData.startTime,
                 startFloat: startFloat,
                 startedBy: shiftData.startedBy,
+                staffNames: staffNames,
                 cashTotal, ewalletTotal, cardTotal,
                 orderIds: Array.from(orderIds),
                 profit: cashTotal + ewalletTotal + cardTotal
@@ -4342,18 +4405,23 @@
                 const list = document.getElementById('shiftHistoryList');
                 list.innerHTML = snap.docs.map(doc => {
                     const s = doc.data();
+                    const total = parseFloat(s.profit) - parseFloat(s.loss);
+                    const staffNames = Array.isArray(s.staffNames) ? s.staffNames.join(', ') : s.startedBy;
+
                     return `<tr>
                         <td>${s.endTime.toDate().toLocaleDateString()}</td>
                         <td>${s.startTime.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</td>
                         <td>RM ${parseFloat(s.startFloat).toFixed(2)}</td>
                         <td>${s.startedBy}</td>
-                        <td title="${s.orderIds.join(', ')}">${s.orderIds.length} orders</td>
+                        <td title="${staffNames}">${staffNames}</td>
                         <td>RM ${s.cashTotal.toFixed(2)}</td>
                         <td>RM ${s.ewalletTotal.toFixed(2)}</td>
                         <td>RM ${s.cardTotal.toFixed(2)}</td>
                         <td style="color:#764ba2; font-weight:bold;">RM ${s.profit.toFixed(2)}</td>
                         <td style="color:${parseFloat(s.loss) > 0 ? '#e53e3e' : '#64748b'}">RM ${s.loss}</td>
+                        <td style="font-weight:bold; color:${total >= 0 ? '#38a169' : '#e53e3e'}">RM ${total.toFixed(2)}</td>
                         <td>${s.endTime.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</td>
+                        <td>${s.endedBy}</td>
                     </tr>`;
                 }).join('');
             });
