@@ -8469,15 +8469,15 @@ window.openSearchModalTakeOrder = function() {
             const printTime = new Date().toLocaleString();
             let itemsText = "";
             items.forEach(item => {
-                itemsText += `\x1B\x45\x01[  ] ${item.name.substring(0, width - 10).padEnd(width - 10)} ${item.qty}\x1B\x45\x00\n`;
+                itemsText += `\x1B\x45\x01[    ] ${item.name.substring(0, width - 12).padEnd(width - 12)} ${item.qty}\x1B\x45\x00\n`;
                 if (item.variants && item.variants.length) {
-                    item.variants.forEach(v => itemsText += `\x1B\x45\x01      + ${v.optionName.substring(0, width - 8)}\x1B\x45\x00\n`);
+                    item.variants.forEach(v => itemsText += `\x1B\x45\x01       + ${v.optionName.substring(0, width - 9)}\x1B\x45\x00\n`);
                 }
                 if (item.modifiers && item.modifiers.length) {
-                    item.modifiers.forEach(m => itemsText += `\x1B\x45\x01      + ${m.optionName.substring(0, width - 8)}\x1B\x45\x00\n`);
+                    item.modifiers.forEach(m => itemsText += `\x1B\x45\x01       + ${m.optionName.substring(0, width - 9)}\x1B\x45\x00\n`);
                 }
                 if (item.notes) {
-                    itemsText += `\x1B\x45\x01      * Req: ${item.notes.substring(0, width - 12)}\x1B\x45\x00\n`;
+                    itemsText += `\x1B\x45\x01       * Req: ${item.notes.substring(0, width - 13)}\x1B\x45\x00\n`;
                 }
                 itemsText += "\n";
             });
@@ -8486,15 +8486,17 @@ window.openSearchModalTakeOrder = function() {
                 "\x1B\x40", // Initialize printer
                 fontCmd,
                 "\x1B\x61\x01", // Center align
-                `\x1B\x45\x01${headerTitle.toUpperCase()} | ${orderNumber}\x1B\x45\x00\n`, // Bold Title | Order ID
-                `\x1B\x45\x01TABLE ${tableNumber}\x1B\x45\x00\n\n`, // Bold Table Number
+                `\x1B\x21\x30\x1B\x45\x01${headerTitle.toUpperCase()} | ${orderNumber}\x1B\x45\x00\n`, 
+                `\x1B\x21\x30\x1B\x45\x01TABLE ${tableNumber}\x1B\x45\x00\x1B\x21\x00\n\n`, 
                 "\x1B\x61\x00", // Left align
+                fontCmd, // Restore default font mode
                 `Order: ${orderTime}\n`,
                 `Staff: ${staffName}\n`,
                 sep,
                 "\x1B\x61\x01", // Center align
-                `\x1B\x45\x01${orderType.toUpperCase().replace('-', ' ')}\x1B\x45\x00\n`, // Bold Order Type
+                `\x1B\x21\x10\x1B\x45\x01${orderType.toUpperCase().replace('-', ' ')}\x1B\x45\x00\x1B\x21\x00\n`,
                 "\x1B\x61\x00", // Left align
+                fontCmd, // Restore default font mode
                 sep,
                 "Items:\n",
                 itemsText,
@@ -8502,7 +8504,7 @@ window.openSearchModalTakeOrder = function() {
                 `Print: ${printTime}\n`,
                 `Status: ${statusLabel}\n`,
                 "\x1B\x61\x01", // Center align
-                `${headerTitle.toUpperCase()}\n`,
+                `\x1B\x45\x01${headerTitle.toUpperCase()} | ${orderNumber} | ${tableNumber}\x1B\x45\x00\n`,
                 "\n\n\n\n", // Feed lines
                 (p && p.cutterAlarm) ? "\x1B\x42\x03\x02" : "", // Alarm beeps
                 "\x1D\x56\x41\x03" // Cut paper command
