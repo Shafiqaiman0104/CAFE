@@ -1607,6 +1607,10 @@
             transition: max-height 0.3s ease-out;
             display: block; /* Ensure it's block for max-height transition to work */
         }
+        #shiftHistoryList tr td {
+            padding: 12px 10px;
+            border-bottom: 1px solid #f1f5f9;
+        }
 
         /* Long-press selection styles */
         .order-card-selectable {
@@ -2094,6 +2098,30 @@
                             <input type="checkbox" id="shiftToggle" onchange="handleShiftToggle(this.checked)">
                             <span class="slider"></span>
                         </label>
+                    </div>
+
+                    <div class="section-header" style="margin-top: 30px;">
+                        <span class="section-title">Shift History</span>
+                    </div>
+                    <div style="overflow-x: auto; background: white; border-radius: 20px; padding: 15px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem;">
+                            <thead>
+                                <tr style="border-bottom: 2px solid #f1f5f9; text-align: left; color: #64748b;">
+                                    <th style="padding: 10px;">Shift Date</th>
+                                    <th style="padding: 10px;">Open At</th>
+                                    <th style="padding: 10px;">Float</th>
+                                    <th style="padding: 10px;">Staff</th>
+                                    <th style="padding: 10px;">Order IDs</th>
+                                    <th style="padding: 10px;">Cash</th>
+                                    <th style="padding: 10px;">E-Wallet</th>
+                                    <th style="padding: 10px;">Card</th>
+                                    <th style="padding: 10px;">Profit</th>
+                                    <th style="padding: 10px;">Loss</th>
+                                    <th style="padding: 10px;">End At</th>
+                                </tr>
+                            </thead>
+                            <tbody id="shiftHistoryList"></tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -2667,6 +2695,42 @@
                 <button class="btn-numpad" style="color: #38a169;" onclick="confirmTakeover()"><i class="fas fa-check"></i></button>
             </div>
             <button class="secondary-btn" style="width: 100%; margin-top: 15px;" onclick="closeModal('takeoverPinModal')">Cancel</button>
+        </div>
+    </div>
+
+    <!-- Start Shift Modal -->
+    <div id="startShiftModal" class="modal">
+        <div class="modal-content" style="max-width: 400px; border-radius: 28px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-play"></i> Start Shift</h3>
+                <button class="modal-close" onclick="closeStartShiftModal()">&times;</button>
+            </div>
+            <div class="form-group">
+                <label>Shift Date/Time</label>
+                <input type="text" id="startShiftTimeDisplay" readonly style="background: #f8fafc; border: 1.5px solid #e2e8f0;">
+            </div>
+            <div class="form-group">
+                <label>Cash Float (RM)</label>
+                <input type="number" id="startShiftFloatInput" step="0.01" placeholder="Enter opening cash float" style="border: 1.5px solid #764ba2;">
+            </div>
+            <button class="primary-btn" style="width: 100%; margin-top: 10px;" onclick="confirmStartShift()">Start Shift</button>
+        </div>
+    </div>
+
+    <!-- End Shift Modal -->
+    <div id="endShiftModal" class="modal">
+        <div class="modal-content" style="max-width: 450px; border-radius: 28px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-stop"></i> End Shift</h3>
+                <button class="modal-close" onclick="closeEndShiftModal()">&times;</button>
+            </div>
+            <div id="endShiftSummary"></div>
+            <div class="form-group" style="margin-top: 20px;">
+                <label>Total Cash in Drawer (RM)</label>
+                <input type="number" id="endShiftActualCash" step="0.01" placeholder="0.00" oninput="calculateShiftLossLive()" style="border: 2px solid #764ba2; font-size: 1.2rem; text-align: center; padding: 15px;">
+            </div>
+            <div id="liveShiftLossDisplay" style="text-align: center; font-weight: bold; font-size: 1.1rem; margin-bottom: 20px;"></div>
+            <button class="primary-btn" style="width: 100%; background: #e53e3e;" onclick="confirmEndShift()">End Shift</button>
         </div>
     </div>
 
@@ -3322,6 +3386,7 @@
         let categoryMapTakeOrder = {};
         let activeLocationTakeOrder = 'All';
         let isShiftActive = false;
+        let expectedCashInDrawer = 0;
         let locationsTakeOrder = [];
         let currentMenuObjTakeOrder = null;
         let activeOrdersViewMode = 'grid';
@@ -4138,6 +4203,7 @@
 
         window.loadShiftPage = function() {
             updateShiftUI();
+            loadShiftHistory();
         };
 
         function updateShiftUI() {
@@ -4147,39 +4213,164 @@
             if (statusText) statusText.innerText = isShiftActive ? "Shift is currently open" : "Shift is currently closed";
         }
 
-        window.handleShiftToggle = async function(checked) {
-            // Check for active/preparing/served orders
-            const q = query(collection(db, 'licenses', currentClientId, 'orders'), 
-                            where('status', 'in', ['active', 'preparing', 'served']));
-            const snap = await getDocs(q);
+        window.showStartShiftModal = function() {
+            document.getElementById('startShiftTimeDisplay').value = new Date().toLocaleString();
+            document.getElementById('startShiftFloatInput').value = '';
+            document.getElementById('startShiftModal').style.display = 'flex';
+        };
 
-            if (!snap.empty) {
-                alert(`Cannot ${checked ? 'enable' : 'end'} shift while there are orders still in Active, Preparing, or Served status. Please complete or cancel them first.`);
-                // Revert toggle
-                document.getElementById('shiftToggle').checked = !checked;
-                return;
-            }
+        window.closeStartShiftModal = function() {
+            closeModal('startShiftModal');
+            updateShiftUI();
+        };
 
+        window.confirmStartShift = async function() {
+            const cashFloat = parseFloat(document.getElementById('startShiftFloatInput').value) || 0;
             try {
                 const shiftRef = doc(db, 'licenses', currentClientId, 'settings', 'shift');
                 await setDoc(shiftRef, {
-                    active: checked,
-                    updatedAt: Timestamp.now(),
-                    updatedBy: currentStaff.name
+                    active: true,
+                    startTime: Timestamp.now(),
+                    startFloat: cashFloat.toFixed(2),
+                    startedBy: currentStaff.name,
+                    startedById: currentStaff.id,
+                    updatedAt: Timestamp.now()
                 }, { merge: true });
                 
-                // If ending shift, clear current UI
-                if (!checked) {
-                    cartTakeOrder = [];
-                    selectedTableIdTakeOrder = null;
-                    selectedTableNumberTakeOrder = '';
-                    updateOrdersUITakeOrder();
-                }
+                closeModal('startShiftModal');
+                showPrinterStatusPopup("Shift Started", `Shift opened with float RM ${cashFloat.toFixed(2)}`, true);
+            } catch (e) { alert("Error: " + e.message); }
+        };
+
+        window.calculateShiftLossLive = function() {
+            const actual = parseFloat(document.getElementById('endShiftActualCash').value) || 0;
+            const diff = actual - expectedCashInDrawer;
+            const display = document.getElementById('liveShiftLossDisplay');
+            if (diff < 0) {
+                display.innerHTML = `Loss: <span style="color: #e53e3e;">RM ${Math.abs(diff).toFixed(2)}</span>`;
+            } else {
+                display.innerHTML = `Difference: <span style="color: #38a169;">+RM ${diff.toFixed(2)}</span>`;
+            }
+        };
+
+        window.showEndShiftModal = async function() {
+            const shiftRef = doc(db, 'licenses', currentClientId, 'settings', 'shift');
+            const shiftSnap = await getDoc(shiftRef);
+            if (!shiftSnap.exists()) return;
+            const shiftData = shiftSnap.data();
+            
+            const startTime = shiftData.startTime.toDate();
+            const transRef = collection(db, 'licenses', currentClientId, 'transactions');
+            const q = query(transRef, where('createdAt', '>=', Timestamp.fromDate(startTime)));
+            const transSnap = await getDocs(q);
+            
+            let cashTotal = 0, ewalletTotal = 0, cardTotal = 0;
+            const orderIds = new Set();
+            transSnap.forEach(d => {
+                const t = d.data();
+                const amt = parseFloat(t.amount) || 0;
+                if (t.paymentMethod === 'cash') cashTotal += amt;
+                else if (t.paymentMethod === 'ewallet') ewalletTotal += amt;
+                else if (t.paymentMethod === 'card') cardTotal += amt;
+                if (t.orderId) t.orderId.split(',').forEach(id => orderIds.add(id.trim()));
+            });
+
+            const startFloat = parseFloat(shiftData.startFloat) || 0;
+            expectedCashInDrawer = startFloat + cashTotal;
+            
+            document.getElementById('endShiftSummary').innerHTML = `
+                <div style="background: #f8fafc; padding: 20px; border-radius: 16px; font-size: 0.95rem; border: 1px solid #e2e8f0;">
+                    <div style="margin-bottom:8px; display:flex; justify-content:space-between;"><span>Open At:</span> <b>${startTime.toLocaleString()}</b></div>
+                    <div style="margin-bottom:8px; display:flex; justify-content:space-between;"><span>Cash Float:</span> <b>RM ${startFloat.toFixed(2)}</b></div>
+                    <hr style="margin: 10px 0; border: none; border-top: 1px dashed #cbd5e0;">
+                    <div style="margin-bottom:5px; display:flex; justify-content:space-between;"><span>Cash Payments:</span> <span>RM ${cashTotal.toFixed(2)}</span></div>
+                    <div style="margin-bottom:5px; display:flex; justify-content:space-between;"><span>E-Wallet:</span> <span>RM ${ewalletTotal.toFixed(2)}</span></div>
+                    <div style="margin-bottom:5px; display:flex; justify-content:space-between;"><span>Card:</span> <span>RM ${cardTotal.toFixed(2)}</span></div>
+                    <hr style="margin: 10px 0; border: none; border-top: 1px dashed #cbd5e0;">
+                    <div style="display:flex; justify-content:space-between; font-size: 1.1rem; color: #764ba2; font-weight: bold;">
+                        <span>Expected in Drawer:</span> <span>RM ${expectedCashInDrawer.toFixed(2)}</span>
+                    </div>
+                </div>`;
+            
+            document.getElementById('endShiftActualCash').value = '';
+            document.getElementById('liveShiftLossDisplay').innerHTML = '';
+            document.getElementById('endShiftModal').style.display = 'flex';
+            
+            window.lastShiftStats = {
+                startTime: shiftData.startTime,
+                startFloat: startFloat,
+                startedBy: shiftData.startedBy,
+                cashTotal, ewalletTotal, cardTotal,
+                orderIds: Array.from(orderIds),
+                profit: cashTotal + ewalletTotal + cardTotal
+            };
+        };
+
+        window.closeEndShiftModal = function() {
+            closeModal('endShiftModal');
+            updateShiftUI();
+        };
+
+        window.confirmEndShift = async function() {
+            const actualCash = parseFloat(document.getElementById('endShiftActualCash').value) || 0;
+            const diff = actualCash - expectedCashInDrawer;
+            const stats = window.lastShiftStats;
+            
+            const shiftRecord = {
+                ...stats,
+                actualCash: actualCash.toFixed(2),
+                loss: diff < 0 ? Math.abs(diff).toFixed(2) : "0.00",
+                endTime: Timestamp.now(),
+                endedBy: currentStaff.name
+            };
+
+            try {
+                await addDoc(collection(db, 'licenses', currentClientId, 'shifts'), shiftRecord);
+                await setDoc(doc(db, 'licenses', currentClientId, 'settings', 'shift'), { active: false, updatedAt: Timestamp.now() }, { merge: true });
                 
-                showPrinterStatusPopup("Shift Updated", `Shift has been ${checked ? 'Opened' : 'Closed'}`, true);
-            } catch (e) {
-                alert("Error updating shift: " + e.message);
-                document.getElementById('shiftToggle').checked = !checked;
+                closeModal('endShiftModal');
+                cartTakeOrder = [];
+                updateOrdersUITakeOrder();
+                showPrinterStatusPopup("Shift Ended", "Shift summary saved to history.", true);
+            } catch (e) { alert("Error: " + e.message); }
+        };
+
+        window.loadShiftHistory = async function() {
+            const ref = collection(db, 'licenses', currentClientId, 'shifts');
+            const q = query(ref, orderBy('endTime', 'desc'), limit(20));
+            onSnapshot(q, (snap) => {
+                const list = document.getElementById('shiftHistoryList');
+                list.innerHTML = snap.docs.map(doc => {
+                    const s = doc.data();
+                    return `<tr>
+                        <td>${s.endTime.toDate().toLocaleDateString()}</td>
+                        <td>${s.startTime.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</td>
+                        <td>RM ${parseFloat(s.startFloat).toFixed(2)}</td>
+                        <td>${s.startedBy}</td>
+                        <td title="${s.orderIds.join(', ')}">${s.orderIds.length} orders</td>
+                        <td>RM ${s.cashTotal.toFixed(2)}</td>
+                        <td>RM ${s.ewalletTotal.toFixed(2)}</td>
+                        <td>RM ${s.cardTotal.toFixed(2)}</td>
+                        <td style="color:#764ba2; font-weight:bold;">RM ${s.profit.toFixed(2)}</td>
+                        <td style="color:${parseFloat(s.loss) > 0 ? '#e53e3e' : '#64748b'}">RM ${s.loss}</td>
+                        <td>${s.endTime.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</td>
+                    </tr>`;
+                }).join('');
+            });
+        };
+
+        window.handleShiftToggle = async function(checked) {
+            if (checked) {
+                showStartShiftModal();
+            } else {
+                const q = query(collection(db, 'licenses', currentClientId, 'orders'), where('status', 'in', ['active', 'preparing', 'served']));
+                const snap = await getDocs(q);
+                if (!snap.empty) {
+                    alert(`Cannot end shift while there are orders still in Active, Preparing, or Served status.`);
+                    document.getElementById('shiftToggle').checked = true;
+                    return;
+                }
+                showEndShiftModal();
             }
         };
 
