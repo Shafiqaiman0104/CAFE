@@ -1607,6 +1607,10 @@
             transition: max-height 0.3s ease-out;
             display: block; /* Ensure it's block for max-height transition to work */
         }
+        #shiftHistoryList tr td {
+            padding: 12px 10px;
+            border-bottom: 1px solid #f1f5f9;
+        }
 
         /* Long-press selection styles */
         .order-card-selectable {
@@ -1783,6 +1787,106 @@
             text-align: center;
             font-size: 24px;
         }
+
+        .top-bar-right {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            z-index: 103;
+        }
+        
+        .top-bar-icon-btn {
+            background: none;
+            border: none;
+            font-size: 20px;
+            color: #475569;
+            cursor: pointer;
+            position: relative;
+            padding: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            border-radius: 12px;
+        }
+
+        .top-bar-icon-btn:hover {
+            background: #f1f5f9;
+            color: #764ba2;
+        }
+
+        .top-bar-icon-btn .badge {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            background: #ef4444;
+            color: white;
+            border-radius: 50%;
+            min-width: 18px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: bold;
+            border: 2px solid white;
+        }
+
+        /* Wi-Fi Signal Bars Styles */
+        .wifi-bars-wrapper {
+            display: flex;
+            align-items: flex-end;
+            gap: 2px;
+            height: 14px;
+            margin-left: 4px;
+        }
+        .wifi-bar {
+            width: 3.5px;
+            border-radius: 1px;
+            background: #cbd5e0;
+            transition: all 0.3s ease;
+        }
+
+        /* Toggle Switch Styles for Shift */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #cbd5e0;
+            transition: .4s;
+            border-radius: 24px;
+        }
+        .join-shift-popup {
+            background: white;
+            padding: 30px;
+            border-radius: 28px;
+            text-align: center;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.2);
+            width: 320px;
+            animation: slideUp 0.3s ease;
+            border: 2px solid #764ba2;
+            pointer-events: auto;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px; width: 18px;
+            left: 3px; bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider { background-color: #764ba2; }
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
     </style>
 </head>
 <body>
@@ -1831,14 +1935,31 @@
     <div id="appContainer" class="app-container">
         <!-- Top Bar -->
         <div class="top-bar">
-            <button class="menu-toggle" id="menuToggleBtn" onclick="toggleSidebar()">
-                <span></span>
-                <span></span>
-                <span></span>
-            </button>
-             <div style="position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap; display: flex; align-items: center; gap: 10px;">
-                <img src="https://venturerush-tech.netlify.app/vrLogo.png" alt="Logo" style="height: 35px; width: 35px; border-radius: 50%;">
-                <div class="restaurant-name">VentureRush P.O.S</div>
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <button class="menu-toggle" id="menuToggleBtn" onclick="toggleSidebar()">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+                <div class="top-bar-logo-group" style="white-space: nowrap; display: flex; align-items: center; gap: 10px;">
+                    <img src="https://venturerush-tech.netlify.app/vrLogo.png" alt="Logo" class="top-bar-logo" style="height: 35px; width: 35px; border-radius: 50%;">
+                    <div class="restaurant-name">VentureRush P.O.S</div>
+                </div>
+            </div>
+            <div class="top-bar-right">
+                <button class="top-bar-icon-btn" onclick="showPage('printerQueue', true)" title="Printer Queue">
+                    <i class="fas fa-print"></i>
+                    <span id="topBarPrinterBadge" class="badge" style="display: none;">0</span>
+                </button>
+                <!-- Network Status Indicator -->
+                <div id="wifiStatusContainer" style="display: flex; align-items: center; gap: 4px; padding: 8px; border-radius: 12px; cursor: default;" title="Network Status">
+                    <i id="wifiIcon" class="fas fa-wifi" style="font-size: 16px; color: #475569;"></i>
+                    <div class="wifi-bars-wrapper">
+                        <div class="wifi-bar" style="height: 6px;"></div>
+                        <div class="wifi-bar" style="height: 10px;"></div>
+                        <div class="wifi-bar" style="height: 14px;"></div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -1894,6 +2015,9 @@
                         <div class="menu-item" onclick="showPage('dashboard')">
                         <i class="fas fa-chart-pie"></i> Dashboard
                     </div>
+                        <div class="menu-item" onclick="showPage('shift')">
+                            <i class="fas fa-history"></i> Shift
+                        </div>
                         <div class="menu-item" onclick="showPage('menu')">
                             <i class="fas fa-utensils"></i> Menu Items
                         </div>
@@ -1962,6 +2086,56 @@
                         <span class="section-title">Recent Orders</span>
                     </div>
                     <div id="recentOrdersList"></div>
+                </div>
+            </div>
+
+            <!-- Shift Page -->
+            <div id="shift" class="page">
+                <div class="section-card">
+                    <div class="section-header">
+                        <span class="section-title">Shift Management</span>
+                    </div>
+                    <div style="background: white; padding: 25px; border-radius: 20px; display: flex; align-items: center; justify-content: space-between;">
+                        <div style="display: flex; align-items: center; gap: 15px;">
+                            <div style="width: 50px; height: 50px; background: #f0e6ff; border-radius: 14px; display: flex; align-items: center; justify-content: center; color: #764ba2; font-size: 1.5rem;">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                            <div>
+                                <div style="font-weight: 700; color: #1e293b;">Enable Shift</div>
+                                <div id="shiftStatusText" style="font-size: 0.85rem; color: #64748b;">Shift is currently closed</div>
+                            </div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="shiftToggle" onchange="handleShiftToggle(this.checked)">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="section-header" style="margin-top: 30px;">
+                        <span class="section-title">Shift History</span>
+                    </div>
+                    <div style="overflow-x: auto; background: white; border-radius: 20px; padding: 15px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem;">
+                            <thead>
+                                <tr style="border-bottom: 2px solid #f1f5f9; text-align: left; color: #64748b;">
+                                    <th style="padding: 10px;">Shift Date</th>
+                                    <th style="padding: 10px;">Open At</th>
+                                    <th style="padding: 10px;">Float</th>
+                                    <th style="padding: 10px;">Open By</th>
+                                    <th style="padding: 10px;">Staff</th>
+                                    <th style="padding: 10px;">Cash</th>
+                                    <th style="padding: 10px;">E-Wallet</th>
+                                    <th style="padding: 10px;">Card</th>
+                                    <th style="padding: 10px;">Profit</th>
+                                    <th style="padding: 10px;">Loss</th>
+                                    <th style="padding: 10px;">Total</th>
+                                    <th style="padding: 10px;">End At</th>
+                                    <th style="padding: 10px;">End By</th>
+                                </tr>
+                            </thead>
+                            <tbody id="shiftHistoryList"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
@@ -2471,6 +2645,20 @@
                 </select>
             </div>
 
+            <div class="form-group">
+                <label>Font Size</label>
+                <div style="display: flex; align-items: center; gap: 10px; background: #f8fafc; padding: 10px; border-radius: 12px;">
+                    <span style="font-size: 11px; font-weight: bold; color: #64748b;">Small</span>
+                    <input type="range" id="printerFontSize" min="0" max="2" value="1" style="flex: 1; accent-color: #764ba2;">
+                    <span style="font-size: 16px; font-weight: bold; color: #1e293b;">Bigger</span>
+                </div>
+            </div>
+
+            <div class="checkbox-group" style="margin-bottom: 12px;">
+                <input type="checkbox" id="printerCutterAlarm">
+                <label>Cutter with Alarm (3 beeps)</label>
+            </div>
+
             <div class="checkbox-group" style="margin-bottom: 12px;">
                 <input type="checkbox" id="printReceiptBills">
                 <label>Print Receipt & Bills</label>
@@ -2520,6 +2708,57 @@
                 <button class="btn-numpad" style="color: #38a169;" onclick="confirmTakeover()"><i class="fas fa-check"></i></button>
             </div>
             <button class="secondary-btn" style="width: 100%; margin-top: 15px;" onclick="closeModal('takeoverPinModal')">Cancel</button>
+        </div>
+    </div>
+
+    <!-- Join Shift Modal -->
+    <div id="joinShiftModal" class="modal" style="align-items: center; justify-content: center; z-index: 200002;">
+        <div class="join-shift-popup">
+            <div style="color: #764ba2; font-size: 3rem; margin-bottom: 15px;"><i class="fas fa-clock"></i></div>
+            <h3 id="joinShiftIdDisplay" style="margin-bottom: 10px; color: #1e293b; font-size: 1.1rem; word-break: break-all;"></h3>
+            <p id="joinShiftTimeDisplay" style="font-size: 0.9rem; color: #64748b; margin-bottom: 25px;"></p>
+            <button class="primary-btn" style="width: 100%;" onclick="joinShift()">Join Shift</button>
+            <button class="secondary-btn" style="width: 100%; margin-top: 10px;" onclick="logout()">Logout</button>
+            <div id="shiftInvolvedContainer" style="margin-top: 15px; font-size: 0.75rem; color: #94a3b8; line-height: 1.4;">
+                Involved: <span id="involvedStaffNames"></span>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Start Shift Modal -->
+    <div id="startShiftModal" class="modal">
+        <div class="modal-content" style="max-width: 400px; border-radius: 28px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-play"></i> Start Shift</h3>
+                <button class="modal-close" onclick="closeStartShiftModal()">&times;</button>
+            </div>
+            <div class="form-group">
+                <label>Shift Date/Time</label>
+                <input type="text" id="startShiftTimeDisplay" readonly style="background: #f8fafc; border: 1.5px solid #e2e8f0;">
+            </div>
+            <div class="form-group">
+                <label>Cash Float (RM)</label>
+                <input type="number" id="startShiftFloatInput" step="0.01" placeholder="Enter opening cash float" style="border: 1.5px solid #764ba2;">
+            </div>
+            <button class="primary-btn" style="width: 100%; margin-top: 10px;" onclick="confirmStartShift()">Start Shift</button>
+        </div>
+    </div>
+
+    <!-- End Shift Modal -->
+    <div id="endShiftModal" class="modal">
+        <div class="modal-content" style="max-width: 450px; border-radius: 28px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-stop"></i> End Shift</h3>
+                <button class="modal-close" onclick="closeEndShiftModal()">&times;</button>
+            </div>
+            <div id="endShiftSummary"></div>
+            <div class="form-group" style="margin-top: 20px;">
+                <label>Total Cash in Drawer (RM)</label>
+                <input type="number" id="endShiftActualCash" step="0.01" placeholder="0.00" oninput="calculateShiftLossLive()" style="border: 2px solid #764ba2; font-size: 1.2rem; text-align: center; padding: 15px;">
+            </div>
+            <div id="liveShiftLossDisplay" style="text-align: center; font-weight: bold; font-size: 1.1rem; margin-bottom: 20px;"></div>
+            <button class="primary-btn" style="width: 100%; background: #e53e3e;" onclick="confirmEndShift()">End Shift</button>
         </div>
     </div>
 
@@ -2905,15 +3144,17 @@
                 <!-- Left: Order Details -->
                 <div class="checkout-left-panel" style="flex: 1; border-right: 1px solid #eee; padding: 20px; overflow-y: auto; background: #fafafa;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 2px solid #764ba2; padding-bottom: 5px;">
-                        <h4 style="color:#764ba2; margin: 0;">Order Details</h4>
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <span style="font-size: 0.75rem; font-weight: bold; color: #64748b;">VOID</span>
-                            <div class="view-toggle-takeorder" style="background: #e2e8f0; margin: 0;">
-                                <button class="view-btn-takeorder active" id="btnVoidOff" onclick="setVoidModeTakeOrder(false)" style="padding: 4px 10px; font-size: 0.75rem; color: #475569;">Off</button>
-                                <button class="view-btn-takeorder" id="btnVoidOn" onclick="setVoidModeTakeOrder(true)" style="padding: 4px 10px; font-size: 0.75rem; color: #475569;">On</button>
+                        <h4 style="color:#764ba2; margin: 0; display: flex; align-items: center; gap: 8px;">
+                            Action : 
+                            <div id="checkoutDiscountIconContainer" onclick="openCheckoutDiscountModal()" style="cursor: pointer; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: white; border: 1px solid #ff9800;" title="Apply Discount">
+                                <i class="fas fa-tag" id="checkoutDiscountIcon" style="font-size: 0.8rem; color: #ff9800;"></i>
                             </div>
+                        </h4>
+                        <div id="voidToggleBtn" onclick="toggleVoidMode()" style="cursor: pointer; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: white; border: 1px solid #e53e3e;" title="Toggle Void Mode">
+                            <i class="fas fa-trash-alt" style="font-size: 0.9rem; color: #e53e3e;"></i>
                         </div>
                         <div class="view-toggle-takeorder" style="background: #e2e8f0;">
+                            <h5 style="padding-left:10px;color: #000000;">Payment :</h5>
                             <button class="view-btn-takeorder active" id="btnCheckoutFull" onclick="setCheckoutMode('full')" style="padding: 4px 10px; font-size: 0.75rem; color: #475569;">Full</button>
                             <button class="view-btn-takeorder" id="btnCheckoutSplit" onclick="setCheckoutMode('split')" style="padding: 4px 10px; font-size: 0.75rem; color: #475569;">Split</button>
                         </div>
@@ -2981,6 +3222,21 @@
                         <button class="primary-btn" style="padding: 18px; font-size: 1.2rem; box-shadow: 0 4px 15px rgba(118,75,162,0.4);" onclick="submitCheckoutPayment()"><i class="fas fa-print"></i> PAY & COMPLETE</button>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Checkout Discount Modal -->
+    <div id="checkoutDiscountModal" class="modal">
+        <div class="modal-content" style="max-width: 400px; border-radius: 24px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-tag"></i> Apply Discount</h3>
+                <button class="modal-close" onclick="closeModal('checkoutDiscountModal')">&times;</button>
+            </div>
+            <div id="checkoutDiscountList" style="max-height: 400px; overflow-y: auto; margin-bottom: 20px; padding: 10px; background: #f8fafc; border-radius: 16px;"></div>
+            <div style="display: flex; gap: 10px;">
+                <button class="secondary-btn" onclick="removeCheckoutDiscount()">Remove</button>
+                <button class="primary-btn" onclick="applySelectedDiscount()">Apply Discount</button>
             </div>
         </div>
     </div>
@@ -3056,6 +3312,41 @@
         </div>
     </div>
 
+    <!-- No Connection Modal -->
+    <div id="noConnectionModal" class="modal" style="z-index: 200001; align-items: center; justify-content: center; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(8px);">
+        <div class="modal-content" style="max-width: 320px; border-radius: 28px; text-align: center; padding: 35px; animation: slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
+            <div style="width: 80px; height: 80px; background: #fee2e2; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto;">
+                <i class="fa-solid fa-face-frown" style="font-size: 2.5rem; color: #e53e3e;"></i>
+            </div>
+            <h2 style="margin-bottom: 10px; color: #1e293b;">No connection!!</h2>
+            <p style="font-size: 1rem; color: #64748b; line-height: 1.5; margin-bottom: 30px;">Please check your wifi or data.</p>
+            <button class="primary-btn" style="width: 100%; padding: 15px; background: #e53e3e;" onclick="location.reload()">
+                <i class="fas fa-sync-alt"></i> Refresh
+            </button>
+        </div>
+    </div>
+
+    <!-- License Status Overlays -->
+    <div id="licenseInactiveOverlay" class="modal" style="z-index: 999999; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.8); backdrop-filter: blur(10px);">
+        <div class="loading-popup" style="max-width: 350px; border: 2px solid #e53e3e;">
+            <i class="fas fa-exclamation-triangle" style="font-size: 3rem; color: #e53e3e; margin-bottom: 20px;"></i>
+            <p style="font-weight: 600;">Sorry your licenses not active please contact us 601160801477</p>
+            <button class="primary-btn" onclick="logout()" style="margin-top: 20px; width: 100%; background: #e53e3e;">Logout</button>
+        </div>
+    </div>
+
+    <div id="licenseExpiredOverlay" class="modal" style="z-index: 999999; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.8); backdrop-filter: blur(10px);">
+        <div class="loading-popup" style="max-width: 350px; border: 2px solid #ff9800;">
+            <div style="width: 70px; height: 70px; background: #fff7ed; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto;">
+                <i class="fas fa-clock" style="font-size: 2.5rem; color: #ff9800;"></i>
+            </div>
+            <p style="font-weight: 600;">Sorry your licenses already expired please contact us 601160801477 to renew ur licenses Key</p>
+            <button id="whatsappRenewBtn" class="primary-btn" style="margin-top: 20px; width: 100%; background: #25D366; border: none; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                <i class="fab fa-whatsapp" style="font-size: 1.2rem;"></i> Whatsapp
+            </button>
+        </div>
+    </div>
+
     <!-- Notification Stack -->
     <div id="notificationStack">
         <!-- Order Success Popup HTML -->
@@ -3081,7 +3372,7 @@
 
         <!-- Printer Status Popup HTML -->
         <div id="printerStatusOverlay">
-            <div style="background: white; padding: 30px; border-radius: 28px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.2); width: 320px; animation: slideUp 0.3s ease;">
+            <div id="printerStatusContent" style="background: white; padding: 30px; border-radius: 28px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.2); width: 320px; animation: slideUp 0.3s ease;">
                 <div id="printerStatusIcon" style="font-size: 4rem; margin-bottom: 15px;"></div>
                 <h2 id="printerStatusTitle" style="margin-bottom: 10px; color: #1e293b;"></h2>
                 <p id="printerStatusMsg" style="font-size: 1rem; color: #475569;"></p>
@@ -3120,6 +3411,8 @@
         let currentClientId = '';
         let currentStaff = null;
         let currentOrderItems = [];
+        let appliedCheckoutDiscount = null;
+        let allDiscounts = [];
         let unsubscribers = {};
         let currentTaxRate = 6;
         let taxActive = true;
@@ -3141,6 +3434,8 @@
         let menuViewMode = 'grid';
         let categoryMapTakeOrder = {};
         let activeLocationTakeOrder = 'All';
+        let isShiftActive = false;
+        let expectedCashInDrawer = 0;
         let locationsTakeOrder = [];
         let currentMenuObjTakeOrder = null;
         let activeOrdersViewMode = 'grid';
@@ -3174,7 +3469,8 @@
         let isEarlyPaymentMode = false;
         let isVoidModeTakeOrder = false;
         let voidingItemData = null;
-        let isInitialLoadNotifications = true;
+        let isInitialLoadOrders = true;
+        let isInitialLoadTransactions = true;
         
         // Takeover State
         let takeoverTargetPrinterId = null;
@@ -3208,6 +3504,7 @@
                 
                 document.getElementById('licenseScreen').style.display = 'none';
                 document.getElementById('pinScreen').style.display = 'flex';
+                setupLicenseMonitor();
                 
             } catch (e) { errorEl.textContent = e.message; }
         };
@@ -3280,10 +3577,47 @@
                 await loadAllSettings();
                 await loadGlobalVariants();
                 await loadGlobalModifiers();
+                setupShiftListener();
+                loadDiscounts();
                 setupOrderNotificationListener();
+                setupTransactionNotificationListener();
+                setupLicenseMonitor();
+                setupPrinterQueueListener();
+                setupTopBarPrinterListener();
                 showPage('takeOrder');
                 
             } catch (e) { errorEl.textContent = e.message; }
+        };
+
+        window.setupLicenseMonitor = function() {
+            if (unsubscribers['licenseMonitor']) unsubscribers['licenseMonitor']();
+            if (!currentClientId) return;
+
+            const licenseRef = doc(db, 'licenses', currentClientId);
+            unsubscribers['licenseMonitor'] = onSnapshot(licenseRef, (snap) => {
+                if (!snap.exists()) return;
+                const data = snap.data();
+                const now = new Date();
+                const expiry = data.expiryDate ? data.expiryDate.toDate() : null;
+                const status = data.status;
+                const restaurantName = data.restaurantName || localStorage.getItem('restaurantName') || "Restaurant";
+
+                // Check Status: Show popup if NOT active
+                const inactiveOverlay = document.getElementById('licenseInactiveOverlay');
+                inactiveOverlay.style.display = (status !== 'active') ? 'flex' : 'none';
+
+                // Check Expiry: Show popup if expired
+                const expiredOverlay = document.getElementById('licenseExpiredOverlay');
+                if (expiry && expiry < now) {
+                    expiredOverlay.style.display = 'flex';
+                    document.getElementById('whatsappRenewBtn').onclick = () => {
+                        const message = encodeURIComponent(`Hi my licenses Key expired I want to renew ${restaurantName}`);
+                        window.open(`https://wa.me/601160801477?text=${message}`, '_blank');
+                    };
+                } else {
+                    expiredOverlay.style.display = 'none';
+                }
+            });
         };
 
         async function loadTaxRate() {
@@ -3368,6 +3702,7 @@
             if (pageId === 'dashboard') loadDashboard();
             else if (pageId === 'menu') loadMenuItems();
             else if (pageId === 'variants') loadGlobalVariantsPage();
+            else if (pageId === 'shift') loadShiftPage();
             else if (pageId === 'modifiers') loadGlobalModifiersPage();
             else if (pageId === 'categories') loadCategories();
             else if (pageId === 'tables') loadTables();
@@ -3931,6 +4266,237 @@
             }
         };
 
+        // ========== SHIFT LOGIC ==========
+        function setupShiftListener() {
+            if (unsubscribers['shiftSettings']) unsubscribers['shiftSettings']();
+            const shiftRef = doc(db, 'licenses', currentClientId, 'settings', 'shift');
+            unsubscribers['shiftSettings'] = onSnapshot(shiftRef, (snap) => {
+                if (snap.exists()) {
+                    const data = snap.data();
+                    isShiftActive = data.active === true;
+                    
+                    // Popup for other users joining
+                    if (isShiftActive && data.staffNames && !data.staffNames.includes(currentStaff.name)) {
+                        showJoinShiftModal(data);
+                    } else {
+                        closeModal('joinShiftModal');
+                    }
+                } else {
+                    isShiftActive = false;
+                }
+                updateShiftUI();
+                if (document.getElementById('takeOrder').classList.contains('active')) {
+                    renderTableGridTakeOrder();
+                }
+            });
+        }
+
+        window.showJoinShiftModal = function(data) {
+            document.getElementById('joinShiftIdDisplay').innerText = data.shiftId || 'SHIFT-ACTIVE';
+            document.getElementById('joinShiftTimeDisplay').innerText = `ALREADY START AT ${data.startTime.toDate().toLocaleString()}`;
+            document.getElementById('involvedStaffNames').innerText = data.staffNames.join(', ');
+            document.getElementById('joinShiftModal').style.display = 'flex';
+        };
+
+        window.joinShift = async function() {
+            const shiftRef = doc(db, 'licenses', currentClientId, 'settings', 'shift');
+            const snap = await getDoc(shiftRef);
+            if (snap.exists()) {
+                const data = snap.data();
+                const names = data.staffNames || [];
+                if (!names.includes(currentStaff.name)) {
+                    names.push(currentStaff.name);
+                    await updateDoc(shiftRef, { staffNames: names, updatedAt: Timestamp.now() });
+                }
+            }
+            closeModal('joinShiftModal');
+        };
+
+
+        window.loadShiftPage = function() {
+            updateShiftUI();
+            loadShiftHistory();
+        };
+
+        function updateShiftUI() {
+            const toggle = document.getElementById('shiftToggle');
+            const statusText = document.getElementById('shiftStatusText');
+            if (toggle) toggle.checked = isShiftActive;
+            if (statusText) statusText.innerText = isShiftActive ? "Shift is currently open" : "Shift is currently closed";
+        }
+
+        window.showStartShiftModal = function() {
+            document.getElementById('startShiftTimeDisplay').value = new Date().toLocaleString();
+            document.getElementById('startShiftFloatInput').value = '';
+            document.getElementById('startShiftModal').style.display = 'flex';
+        };
+
+        window.closeStartShiftModal = function() {
+            closeModal('startShiftModal');
+            updateShiftUI();
+        };
+
+        window.confirmStartShift = async function() {
+            const cashFloat = parseFloat(document.getElementById('startShiftFloatInput').value) || 0;
+            try {
+                const shiftRef = doc(db, 'licenses', currentClientId, 'settings', 'shift');
+                await setDoc(shiftRef, {
+                    shiftId: 'SHIFT-' + Date.now(),
+                    active: true,
+                    startTime: Timestamp.now(),
+                    startFloat: cashFloat.toFixed(2),
+                    startedBy: currentStaff.name,
+                    startedById: currentStaff.id,
+                    staffNames: [currentStaff.name],
+                    updatedAt: Timestamp.now()
+                }, { merge: true });
+                
+                closeModal('startShiftModal');
+                showPrinterStatusPopup("Shift Started", `Shift opened with float RM ${cashFloat.toFixed(2)}`, true);
+            } catch (e) { alert("Error: " + e.message); }
+        };
+
+        window.calculateShiftLossLive = function() {
+            const actual = parseFloat(document.getElementById('endShiftActualCash').value) || 0;
+            const diff = actual - expectedCashInDrawer;
+            const display = document.getElementById('liveShiftLossDisplay');
+            if (diff < 0) {
+                display.innerHTML = `Loss: <span style="color: #e53e3e;">RM ${Math.abs(diff).toFixed(2)}</span>`;
+            } else {
+                display.innerHTML = `Difference: <span style="color: #38a169;">+RM ${diff.toFixed(2)}</span>`;
+            }
+        };
+
+        window.showEndShiftModal = async function() {
+            const shiftRef = doc(db, 'licenses', currentClientId, 'settings', 'shift');
+            const shiftSnap = await getDoc(shiftRef);
+            if (!shiftSnap.exists()) return;
+            const shiftData = shiftSnap.data();
+            
+            const staffNames = shiftData.staffNames || [shiftData.startedBy];
+
+            const startTime = shiftData.startTime.toDate();
+            const transRef = collection(db, 'licenses', currentClientId, 'transactions');
+            const q = query(transRef, where('createdAt', '>=', Timestamp.fromDate(startTime)));
+            const transSnap = await getDocs(q);
+            
+            let cashTotal = 0, ewalletTotal = 0, cardTotal = 0;
+            const orderIds = new Set();
+            transSnap.forEach(d => {
+                const t = d.data();
+                const amt = parseFloat(t.amount) || 0;
+                if (t.paymentMethod === 'cash') cashTotal += amt;
+                else if (t.paymentMethod === 'ewallet') ewalletTotal += amt;
+                else if (t.paymentMethod === 'card') cardTotal += amt;
+                if (t.orderId) t.orderId.split(',').forEach(id => orderIds.add(id.trim()));
+            });
+
+            const startFloat = parseFloat(shiftData.startFloat) || 0;
+            expectedCashInDrawer = startFloat + cashTotal;
+            
+            document.getElementById('endShiftSummary').innerHTML = `
+                <div style="background: #f8fafc; padding: 20px; border-radius: 16px; font-size: 0.95rem; border: 1px solid #e2e8f0;">
+                    <div style="margin-bottom:8px; display:flex; justify-content:space-between;"><span>Open At:</span> <b>${startTime.toLocaleString()}</b></div>
+                    <div style="margin-bottom:8px; display:flex; justify-content:space-between;"><span>Cash Float:</span> <b>RM ${startFloat.toFixed(2)}</b></div>
+                    <div style="margin-bottom:8px; display:flex; justify-content:space-between;"><span>Involved Staff:</span> <b>${staffNames.join(', ')}</b></div>
+                    <hr style="margin: 10px 0; border: none; border-top: 1px dashed #cbd5e0;">
+                    <div style="margin-bottom:5px; display:flex; justify-content:space-between;"><span>Cash Payments:</span> <span>RM ${cashTotal.toFixed(2)}</span></div>
+                    <div style="margin-bottom:5px; display:flex; justify-content:space-between;"><span>E-Wallet:</span> <span>RM ${ewalletTotal.toFixed(2)}</span></div>
+                    <div style="margin-bottom:5px; display:flex; justify-content:space-between;"><span>Card:</span> <span>RM ${cardTotal.toFixed(2)}</span></div>
+                    <hr style="margin: 10px 0; border: none; border-top: 1px dashed #cbd5e0;">
+                    <div style="display:flex; justify-content:space-between; font-size: 1.1rem; color: #764ba2; font-weight: bold;">
+                        <span>Expected in Drawer:</span> <span>RM ${expectedCashInDrawer.toFixed(2)}</span>
+                    </div>
+                </div>`;
+            
+            document.getElementById('endShiftActualCash').value = '';
+            document.getElementById('liveShiftLossDisplay').innerHTML = '';
+            document.getElementById('endShiftModal').style.display = 'flex';
+            
+            window.lastShiftStats = {
+                startTime: shiftData.startTime,
+                startFloat: startFloat,
+                startedBy: shiftData.startedBy,
+                staffNames: staffNames,
+                cashTotal, ewalletTotal, cardTotal,
+                orderIds: Array.from(orderIds),
+                profit: cashTotal + ewalletTotal + cardTotal
+            };
+        };
+
+        window.closeEndShiftModal = function() {
+            closeModal('endShiftModal');
+            updateShiftUI();
+        };
+
+        window.confirmEndShift = async function() {
+            const actualCash = parseFloat(document.getElementById('endShiftActualCash').value) || 0;
+            const diff = actualCash - expectedCashInDrawer;
+            const stats = window.lastShiftStats;
+            
+            const shiftRecord = {
+                ...stats,
+                actualCash: actualCash.toFixed(2),
+                loss: diff < 0 ? Math.abs(diff).toFixed(2) : "0.00",
+                endTime: Timestamp.now(),
+                endedBy: currentStaff.name
+            };
+
+            try {
+                await addDoc(collection(db, 'licenses', currentClientId, 'shifts'), shiftRecord);
+                await setDoc(doc(db, 'licenses', currentClientId, 'settings', 'shift'), { active: false, updatedAt: Timestamp.now() }, { merge: true });
+                
+                closeModal('endShiftModal');
+                cartTakeOrder = [];
+                updateOrdersUITakeOrder();
+                showPrinterStatusPopup("Shift Ended", "Shift summary saved to history.", true);
+            } catch (e) { alert("Error: " + e.message); }
+        };
+
+        window.loadShiftHistory = async function() {
+            const ref = collection(db, 'licenses', currentClientId, 'shifts');
+            const q = query(ref, orderBy('endTime', 'desc'), limit(20));
+            onSnapshot(q, (snap) => {
+                const list = document.getElementById('shiftHistoryList');
+                list.innerHTML = snap.docs.map(doc => {
+                    const s = doc.data();
+                    const total = parseFloat(s.profit) - parseFloat(s.loss);
+                    const staffNames = Array.isArray(s.staffNames) ? s.staffNames.join(', ') : s.startedBy;
+
+                    return `<tr>
+                        <td>${s.endTime.toDate().toLocaleDateString()}</td>
+                        <td>${s.startTime.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</td>
+                        <td>RM ${parseFloat(s.startFloat).toFixed(2)}</td>
+                        <td>${s.startedBy}</td>
+                        <td title="${staffNames}">${staffNames}</td>
+                        <td>RM ${s.cashTotal.toFixed(2)}</td>
+                        <td>RM ${s.ewalletTotal.toFixed(2)}</td>
+                        <td>RM ${s.cardTotal.toFixed(2)}</td>
+                        <td style="color:#764ba2; font-weight:bold;">RM ${s.profit.toFixed(2)}</td>
+                        <td style="color:${parseFloat(s.loss) > 0 ? '#e53e3e' : '#64748b'}">RM ${s.loss}</td>
+                        <td style="font-weight:bold; color:${total >= 0 ? '#38a169' : '#e53e3e'}">RM ${total.toFixed(2)}</td>
+                        <td>${s.endTime.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</td>
+                        <td>${s.endedBy}</td>
+                    </tr>`;
+                }).join('');
+            });
+        };
+
+        window.handleShiftToggle = async function(checked) {
+            if (checked) {
+                showStartShiftModal();
+            } else {
+                const q = query(collection(db, 'licenses', currentClientId, 'orders'), where('status', 'in', ['active', 'preparing', 'served']));
+                const snap = await getDocs(q);
+                if (!snap.empty) {
+                    alert(`Cannot end shift while there are orders still in Active, Preparing, or Served status.`);
+                    document.getElementById('shiftToggle').checked = true;
+                    return;
+                }
+                showEndShiftModal();
+            }
+        };
+
         // ========== CATEGORIES ==========
         function loadCategories() {
             const ref = collection(db, 'licenses', currentClientId, 'menu_categories');
@@ -4148,12 +4714,19 @@
         function loadDiscounts() {
             const ref = collection(db, 'licenses', currentClientId, 'discounts');
             onSnapshot(ref, (snapshot) => {
+                allDiscounts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 const container = document.getElementById('discountsList');
                 let html = '';
                 snapshot.forEach(doc => {
                     const d = doc.data();
+                    let validityHtml = '';
+                    if (d.startTime || d.endTime) {
+                        const start = d.startTime ? d.startTime.toDate().toLocaleString() : 'Anytime';
+                        const end = d.endTime ? d.endTime.toDate().toLocaleString() : 'Forever';
+                        validityHtml = `<br><small style="color:#64748b; font-size: 11px;">Valid: ${start} to ${end}</small>`;
+                    }
                     html += `<div style="padding:10px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;">
-                        <div><b>${d.name}</b> - ${d.type}: ${d.value}${d.type==='percentage'?'%':' RM'} ${d.active ? '✅' : '❌'}</div>
+                        <div><b>${d.name}</b> - ${d.type}: ${d.value}${d.type==='percentage'?'%':' RM'} ${d.active ? '✅' : '❌'}${validityHtml}</div>
                         <div class="action-buttons">
                             <button class="btn-edit" onclick="editDiscount('${doc.id}')">Edit</button>
                             <button class="btn-delete" onclick="deleteDiscount('${doc.id}')">Delete</button>
@@ -4185,6 +4758,21 @@
                 document.getElementById('discountName').value = d.name;
                 document.getElementById('discountType').value = d.type;
                 document.getElementById('discountValue').value = d.value;
+                
+                const formatDateForInput = (timestamp) => {
+                    if (!timestamp) return '';
+                    const dt = timestamp.toDate();
+                    const year = dt.getFullYear();
+                    const month = String(dt.getMonth() + 1).padStart(2, '0');
+                    const day = String(dt.getDate()).padStart(2, '0');
+                    const hours = String(dt.getHours()).padStart(2, '0');
+                    const minutes = String(dt.getMinutes()).padStart(2, '0');
+                    return `${year}-${month}-${day}T${hours}:${minutes}`;
+                };
+
+                document.getElementById('discountStartTime').value = formatDateForInput(d.startTime);
+                document.getElementById('discountEndTime').value = formatDateForInput(d.endTime);
+
                 document.getElementById('discountActive').checked = d.active;
                 document.getElementById('addDiscountModal').style.display = 'flex';
             }
@@ -4202,8 +4790,8 @@
             
             const startTime = document.getElementById('discountStartTime').value;
             const endTime = document.getElementById('discountEndTime').value;
-            if (startTime) data.startTime = Timestamp.fromDate(new Date(startTime));
-            if (endTime) data.endTime = Timestamp.fromDate(new Date(endTime));
+            data.startTime = startTime ? Timestamp.fromDate(new Date(startTime)) : null;
+            data.endTime = endTime ? Timestamp.fromDate(new Date(endTime)) : null;
             if (!id) data.createdAt = Timestamp.now();
             
             if (id) {
@@ -4485,13 +5073,18 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                         <span>Subtotal:</span>
                         <span>RM ${runningSubtotal.toFixed(2)}</span>
                     </div>
+                    ${order.discountAmount ? `
+                    <div style="display:flex;justify-content:space-between;color:#e53e3e;">
+                        <span>Discount (${order.discountName || 'Applied'}):</span>
+                        <span>- RM ${parseFloat(order.discountAmount).toFixed(2)}</span>
+                    </div>` : ''}
                     <div style="display:flex;justify-content:space-between;">
                         <span>Tax:</span>
                         <span>RM ${calculatedTax.toFixed(2)}</span>
                     </div>
                     <div style="display:flex;justify-content:space-between;font-weight:bold;margin-top:5px;">
                         <span>Total:</span>
-                        <span>RM ${calculatedTotal.toFixed(2)}</span>
+                        <span>RM ${(calculatedTotal - (parseFloat(order.discountAmount) || 0)).toFixed(2)}</span>
                     </div>
                 </div>
             `;
@@ -4774,6 +5367,22 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
         function renderTableGridTakeOrder() {
             const grid = document.getElementById('tableGridTakeOrder');
             const counterContainer = document.getElementById('counterTableContainerTakeOrder');
+
+            if (!isShiftActive) {
+                counterContainer.innerHTML = '';
+                grid.className = "table-grid-takeorder";
+                grid.style.display = "block";
+                grid.innerHTML = `
+                    <div style="text-align: center; padding: 100px 20px; color: white;">
+                        <i class="fas fa-clock" style="font-size: 4rem; opacity: 0.5; margin-bottom: 20px; display: block;"></i>
+                        <h2 style="font-weight: 800; letter-spacing: 1px;">No current shift open</h2>
+                        <p style="opacity: 0.8; margin-top: 10px;">Please contact a manager to enable the shift.</p>
+                    </div>
+                `;
+                return;
+            } else {
+                grid.style.display = viewModeTakeOrder === 'list' ? 'flex' : 'grid';
+            }
             
             // Render persistent Counter table at the top
             const counterTable = tablesListTakeOrder.find(t => t.id.toLowerCase() === 'counter');
@@ -5101,6 +5710,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                 if (snap.empty) { alert('No active orders found'); return; }
                 
                 checkoutOrdersToProcess = snap.docs;
+                appliedCheckoutDiscount = null;
 
                 isEarlyPaymentMode = false;
                 const payBtn = document.querySelector('#checkoutModalTakeOrder .primary-btn[onclick*="submitCheckoutPayment"]');
@@ -5110,8 +5720,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                 }
 
                 isVoidModeTakeOrder = false;
-                document.getElementById('btnVoidOn').classList.remove('active');
-                document.getElementById('btnVoidOff').classList.add('active');
+                setVoidModeTakeOrder(false);
 
                 let html = '';
                 
@@ -5226,6 +5835,10 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
         };
 
         window.setCheckoutMode = function(mode) {
+            if (mode === 'split' && appliedCheckoutDiscount) {
+                alert("Only full payment can apply discount, split payment cannot. Please remove the discount to use split payment.");
+                return;
+            }
             const isFull = mode === 'full';
             
             document.getElementById('btnCheckoutFull').classList.toggle('active', isFull);
@@ -5295,27 +5908,83 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
         function recalculateCheckoutTotals() {
             let subtotal = selectedCheckoutItems.reduce((acc, curr) => acc + (curr.unitPrice * curr.qtyToPay), 0);
             const tax = taxActive ? subtotal * (currentTaxRate / 100) : 0;
-            checkoutTotalTakeOrder = subtotal + tax;
+            let totalAmount = subtotal + tax;
+
+            let discountValue = 0;
+            if (appliedCheckoutDiscount) {
+                if (appliedCheckoutDiscount.type === 'percentage') {
+                    discountValue = totalAmount * (parseFloat(appliedCheckoutDiscount.value) / 100);
+                } else {
+                    discountValue = parseFloat(appliedCheckoutDiscount.value);
+                }
+            }
             
+            checkoutTotalTakeOrder = Math.max(0, totalAmount - discountValue);
+            
+            const discContainer = document.getElementById('checkoutDiscountIconContainer');
+            const discIcon = document.getElementById('checkoutDiscountIcon');
+            if (discContainer && discIcon) {
+                if (appliedCheckoutDiscount) {
+                    discContainer.style.backgroundColor = '#ff9800';
+                    discIcon.style.color = 'white';
+                } else {
+                    discContainer.style.backgroundColor = 'white';
+                    discIcon.style.color = '#ff9800';
+                }
+            }
+
             document.getElementById('checkoutTotalDue').innerText = `RM ${checkoutTotalTakeOrder.toFixed(2)}`;
             const totalsContainer = document.getElementById('checkoutTotals');
+            
+            let discountHtml = '';
+            if (appliedCheckoutDiscount) {
+                discountHtml = `
+                <div style="display:flex; justify-content:space-between; font-size:0.85rem; color:#e53e3e; margin-bottom:4px;">
+                    <span>Discount (${appliedCheckoutDiscount.name}):</span><span>- RM ${discountValue.toFixed(2)}</span>
+                </div>`;
+            }
+
             totalsContainer.innerHTML = `
                 <div style="display:flex; justify-content:space-between; font-size:0.85rem; color:#64748b; margin-bottom:4px;">
                     <span>Selected Subtotal:</span><span>RM ${subtotal.toFixed(2)}</span>
                 </div>
+                ${discountHtml}
                 <div style="display:flex; justify-content:space-between; font-size:0.85rem; color:#64748b; margin-bottom:10px; display: ${taxActive ? 'flex' : 'none'};">
                     <span>Tax (${currentTaxRate}%):</span><span>RM ${tax.toFixed(2)}</span>
                 </div>
                 <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:1.3rem; border-top:2px solid #f1f5f9; padding-top:10px; color:#1e293b;">
                     <span>Grand Total:</span><span>RM ${checkoutTotalTakeOrder.toFixed(2)}</span>
                 </div>`;
+
+            const splitBtn = document.getElementById('btnCheckoutSplit');
+            if (appliedCheckoutDiscount) {
+                splitBtn.style.opacity = "0.5";
+                splitBtn.style.cursor = "not-allowed";
+            } else {
+                splitBtn.style.opacity = "1";
+                splitBtn.style.cursor = "pointer";
+            }
+
             updateCheckoutDisplay();
         }
 
+        window.toggleVoidMode = function() {
+            setVoidModeTakeOrder(!isVoidModeTakeOrder);
+        };
+
         window.setVoidModeTakeOrder = function(on) {
             isVoidModeTakeOrder = on;
-            document.getElementById('btnVoidOn').classList.toggle('active', on);
-            document.getElementById('btnVoidOff').classList.toggle('active', !on);
+            const btn = document.getElementById('voidToggleBtn');
+            if (btn) {
+                const icon = btn.querySelector('i');
+                if (on) {
+                    btn.style.backgroundColor = '#e53e3e';
+                    icon.style.color = 'white';
+                } else {
+                    btn.style.backgroundColor = 'white';
+                    icon.style.color = '#e53e3e';
+                }
+            }
             
             const icons = document.querySelectorAll('.checkout-void-icon');
             icons.forEach(icon => {
@@ -5347,10 +6016,14 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             const items = itemsSnap.docs.map(d => d.data());
             let subtotal = items.reduce((acc, it) => it.status !== 'cancelled' ? acc + parseFloat(it.total) : acc, 0);
             const tax = taxActive ? subtotal * (currentTaxRate / 100) : 0;
-            const total = subtotal + tax;
+
             const orderRef = doc(db, 'licenses', currentClientId, 'orders', orderId);
             const orderSnap = await getDoc(orderRef);
             const orderData = orderSnap.data();
+
+            const discount = parseFloat(orderData.discountAmount) || 0;
+            const total = Math.max(0, subtotal + tax - discount);
+
             let targetStatus = orderData.status;
             const allCancelled = items.every(it => it.status === 'cancelled');
             const allHandled = items.every(it => it.status === 'cancelled' || it.isPaid === true || it.isPaidEarly === true);
@@ -5552,6 +6225,19 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             let totalReceived = 0;
             let paymentRecords = [];
 
+            // Calculate totals for discount distribution
+            let totalAmountBeforeDiscount = selectedCheckoutItems.reduce((acc, curr) => acc + (curr.unitPrice * curr.qtyToPay), 0);
+            if (taxActive) totalAmountBeforeDiscount *= (1 + currentTaxRate / 100);
+
+            let totalDiscountValue = 0;
+            if (appliedCheckoutDiscount) {
+                if (appliedCheckoutDiscount.type === 'percentage') {
+                    totalDiscountValue = totalAmountBeforeDiscount * (parseFloat(appliedCheckoutDiscount.value) / 100);
+                } else {
+                    totalDiscountValue = parseFloat(appliedCheckoutDiscount.value);
+                }
+            }
+
             if (checkoutPayMethod === 'mixed') {
                 const rows = document.querySelectorAll('.mixed-payment-row');
                 rows.forEach(row => {
@@ -5628,9 +6314,43 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             // Determine if Split or Full mode was active
             const isSplitMode = document.getElementById('btnCheckoutSplit').classList.contains('active');
 
+            // Prepare payment info for receipt
+            const paymentInfoForQueue = {
+                totalDue: checkoutTotalTakeOrder,
+                method: checkoutPayMethod === 'mixed' ? 'MIX' : checkoutPayMethod,
+                give: (checkoutPayMethod === 'mixed') ? 
+                    Array.from(document.querySelectorAll('.mixed-payment-row')).reduce((s, row) => s + (parseFloat(row.querySelector('.mixed-amount-input').value) || 0), 0) : 
+                    parseFloat(checkoutReceivedInput),
+                breakdown: (checkoutPayMethod === 'mixed') ? 
+                    Array.from(document.querySelectorAll('.mixed-payment-row')).map(row => ({
+                        type: row.dataset.type,
+                        amount: parseFloat(row.querySelector('.mixed-amount-input').value) || 0
+                    })).filter(b => b.amount > 0) : null,
+                discount: appliedCheckoutDiscount ? { name: appliedCheckoutDiscount.name, value: totalDiscountValue } : null
+            };
+            paymentInfoForQueue.change = paymentInfoForQueue.give - paymentInfoForQueue.totalDue;
+
             // Always update the cashier identity on the order as soon as a payment is made
             for (const orderId of involvedOrderIds) {
-                await updateDoc(doc(db, 'licenses', currentClientId, 'orders', orderId), { cashierBy: currentStaff.name });
+                let orderUpdateData = { cashierBy: currentStaff.name };
+                
+                if (appliedCheckoutDiscount) {
+                    orderUpdateData.discountName = appliedCheckoutDiscount.name;
+                    // Proportional discount distribution if multiple orders are involved in checkout
+                    const orderItemsValue = selectedCheckoutItems.filter(i => i.orderId === orderId).reduce((acc, curr) => acc + (curr.unitPrice * curr.qtyToPay), 0);
+                    const orderValueWithTax = taxActive ? orderItemsValue * (1 + currentTaxRate / 100) : orderItemsValue;
+                    const orderDiscount = (totalAmountBeforeDiscount > 0) ? (orderValueWithTax / totalAmountBeforeDiscount) * totalDiscountValue : 0;
+                    
+                    orderUpdateData.discountAmount = orderDiscount.toFixed(2);
+                    
+                    const orderSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', orderId));
+                    if (orderSnap.exists()) {
+                        const currentTotal = parseFloat(orderSnap.data().total) || 0;
+                        orderUpdateData.total = Math.max(0, currentTotal - orderDiscount).toFixed(2);
+                    }
+                }
+                
+                await updateDoc(doc(db, 'licenses', currentClientId, 'orders', orderId), orderUpdateData);
             }
 
             // Record transactions for each payment method used
@@ -5642,20 +6362,41 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                     status: 'completed',
                     type: isSplitMode ? "Split payment" : "Full payment",
                     orderId: involvedOrderIds.join(', '),
+                    processedByStaffId: currentStaff.id,
+                    processedByStaffName: currentStaff.name,
+                    itemsPaidJson: JSON.stringify(selectedCheckoutItems.filter(i => involvedOrderIds.includes(i.orderId))),
+                    isEarlyPayment: isEarlyPaymentMode,
+                    paymentInfoJson: JSON.stringify(paymentInfoForQueue),
                     createdAt: Timestamp.now()
                 });
             }
 
             // Trigger Automatic Printing for Main Receipt after payment
-            for (const orderId of involvedOrderIds) {
-                const orderDoc = checkoutOrdersToProcess.find(d => d.id === orderId);
-                const orderNum = orderDoc ? orderDoc.data().orderNumber : 'N/A';
+            if (involvedOrderIds.length > 1) {
+                const orderNums = involvedOrderIds.map(id => {
+                    const doc = checkoutOrdersToProcess.find(d => d.id === id);
+                    return doc ? doc.data().orderNumber : id.slice(-8);
+                });
                 const payDetails = {
                     method: checkoutPayMethod === 'mixed' ? 'Mixed' : checkoutPayMethod,
-                    itemsPaid: selectedCheckoutItems.filter(i => i.orderId === orderId),
-                    isEarly: isEarlyPaymentMode
+                    itemsPaid: selectedCheckoutItems,
+                    isEarly: isEarlyPaymentMode,
+                    mergedOrderIds: involvedOrderIds,
+                    cashierName: currentStaff.name,
+                    paymentInfo: paymentInfoForQueue
                 };
-                triggerAutoPrinting(orderId, orderNum, 'payment', payDetails);
+                triggerAutoPrinting(involvedOrderIds[0], orderNums.join(', '), 'payment', payDetails, true);
+            } else if (involvedOrderIds.length === 1) {
+                const orderId = involvedOrderIds[0];
+                const orderDoc = checkoutOrdersToProcess.find(d => d.id === orderId);
+                const payDetails = {
+                    method: checkoutPayMethod === 'mixed' ? 'MIX' : checkoutPayMethod,
+                    itemsPaid: selectedCheckoutItems,
+                    isEarly: isEarlyPaymentMode,
+                    cashierName: currentStaff.name,
+                    paymentInfo: paymentInfoForQueue
+                };
+                triggerAutoPrinting(orderId, orderDoc ? orderDoc.data().orderNumber : 'N/A', 'payment', payDetails, true);
             }
 
             // Check each order to see if it is now fully paid or remaining items are cancelled
@@ -5737,6 +6478,59 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                 grid.innerHTML = html;
             }
             document.getElementById('changeTableModalTakeOrder').style.display = 'flex';
+        };
+
+        window.openCheckoutDiscountModal = function() {
+            const container = document.getElementById('checkoutDiscountList');
+            const activeDiscounts = allDiscounts.filter(d => d.active === true);
+            
+            if (activeDiscounts.length === 0) {
+                container.innerHTML = '<div style="text-align:center;padding:20px;color:#64748b;">No active discounts available.</div>';
+            } else {
+                container.innerHTML = activeDiscounts.map(d => `
+                    <div style="padding:15px; border-bottom:1px solid #edf2f7; display:flex; align-items:center; gap:12px; cursor:pointer;" onclick="document.getElementById('disc-${d.id}').checked = true">
+                        <input type="radio" name="checkoutDiscount" value="${d.id}" id="disc-${d.id}" ${appliedCheckoutDiscount?.id === d.id ? 'checked' : ''} style="width:18px; height:18px; accent-color:#764ba2;">
+                        <label for="disc-${d.id}" style="flex:1; cursor:pointer;">
+                            <div style="font-weight:700; color:#1e293b; font-size:0.95rem;">${d.name}</div>
+                            <div style="font-size:0.8rem; color:#764ba2; font-weight:600;">${d.type === 'percentage' ? d.value + '%' : 'RM ' + parseFloat(d.value).toFixed(2)} off</div>
+                        </label>
+                    </div>
+                `).join('');
+            }
+            document.getElementById('checkoutDiscountModal').style.display = 'flex';
+        };
+
+        window.applySelectedDiscount = function() {
+            if (document.getElementById('btnCheckoutSplit').classList.contains('active')) {
+                alert("Only full payment can apply discount, split payment cannot.");
+                return;
+            }
+
+            const selectedId = document.querySelector('input[name="checkoutDiscount"]:checked')?.value;
+            if (!selectedId) { alert('Please select a discount'); return; }
+            
+            const discount = allDiscounts.find(d => d.id === selectedId);
+            if (!discount) return;
+
+            const now = new Date();
+            if (discount.startTime && discount.startTime.toDate() > now) {
+                alert(`This discount can use after ${discount.startTime.toDate().toLocaleString()}`);
+                return;
+            }
+            if (discount.endTime && discount.endTime.toDate() < now) {
+                alert("This discount already expired");
+                return;
+            }
+
+            appliedCheckoutDiscount = discount;
+            closeModal('checkoutDiscountModal');
+            recalculateCheckoutTotals();
+        };
+
+        window.removeCheckoutDiscount = function() {
+            appliedCheckoutDiscount = null;
+            closeModal('checkoutDiscountModal');
+            recalculateCheckoutTotals();
         };
 
         window.confirmChangeTableTakeOrder = async function(newTableId, newTableNum) {
@@ -6401,7 +7195,7 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
                 }, 2000);
 
                 // Trigger Automatic Printing for Kitchen/Department only on new order
-                triggerAutoPrinting(orderRef.id, orderData.orderNumber, 'order');
+                triggerAutoPrinting(orderRef.id, orderData.orderNumber, 'order', null, true);
 
                 cartTakeOrder = [];
                 updateOrdersUITakeOrder();
@@ -7433,6 +8227,8 @@ window.openSearchModalTakeOrder = function() {
                     const p = doc.data();
                     const isMine = p.takenByStaffId === currentStaff.id;
                     const isTaken = !!p.takenByStaffId;
+                    const isTakenByOthers = isTaken && !isMine;
+                    const disabledAttr = isTakenByOthers ? 'disabled' : '';
                     
                     let takeoverHtml = '';
                     if (isMine) {
@@ -7451,8 +8247,8 @@ window.openSearchModalTakeOrder = function() {
                         </div>
                         <div class="action-buttons" style="align-items: center;">
                             <button class="btn-takeover ${isMine ? 'btn-takeover-on' : 'btn-takeover-off'}" onclick="handleTakeoverToggle('${doc.id}', '${p.takenByStaffId || ''}', '${p.takenByStaffName || ''}')">${isMine ? 'Release' : 'Take Over'}</button>
-                            <button class="btn-edit" style="padding: 6px 10px;" onclick="editPrinter('${doc.id}')"><i class="fas fa-edit"></i></button>
-                            <button class="btn-delete" style="padding: 6px 10px;" onclick="deletePrinter('${doc.id}')"><i class="fas fa-trash"></i></button>
+                            <button class="btn-edit" style="padding: 6px 10px; ${isTakenByOthers ? 'opacity: 0.5; cursor: not-allowed;' : ''}" onclick="editPrinter('${doc.id}')" ${disabledAttr}><i class="fas fa-edit"></i></button>
+                            <button class="btn-delete" style="padding: 6px 10px; ${isTakenByOthers ? 'opacity: 0.5; cursor: not-allowed;' : ''}" onclick="deletePrinter('${doc.id}')" ${disabledAttr}><i class="fas fa-trash"></i></button>
                         </div>
                     </div>`;
                 });
@@ -7554,6 +8350,8 @@ window.openSearchModalTakeOrder = function() {
             document.getElementById('printerNameField').value = p.name;
             document.getElementById('printerNameField').setAttribute('data-bt-id', p.bluetoothDeviceId || '');
             document.getElementById('printerPaperWidth').value = p.paperWidth || '58';
+            document.getElementById('printerFontSize').value = p.fontSize !== undefined ? p.fontSize : '1';
+            document.getElementById('printerCutterAlarm').checked = p.cutterAlarm || false;
             document.getElementById('printReceiptBills').checked = p.printReceipt || false;
             document.getElementById('autoPrintReceipt').checked = p.autoPrint || false;
             document.getElementById('printOrdersToggle').checked = p.printOrders || false;
@@ -7574,6 +8372,8 @@ window.openSearchModalTakeOrder = function() {
             const id = document.getElementById('editingPrinterId').value;
             const name = document.getElementById('printerNameField').value.trim();
             const paperWidth = document.getElementById('printerPaperWidth').value;
+            const fontSize = document.getElementById('printerFontSize').value;
+            const cutterAlarm = document.getElementById('printerCutterAlarm').checked;
             const printReceipt = document.getElementById('printReceiptBills').checked;
             const autoPrint = document.getElementById('autoPrintReceipt').checked;
             const printOrders = document.getElementById('printOrdersToggle').checked;
@@ -7582,7 +8382,7 @@ window.openSearchModalTakeOrder = function() {
 
             if (!name) { alert('Please enter printer name'); return; }
 
-            const data = { name, paperWidth, printReceipt, autoPrint, printOrders, bluetoothDeviceId, departmentPrinters, updatedAt: Timestamp.now() };
+            const data = { name, paperWidth, fontSize, cutterAlarm, printReceipt, autoPrint, printOrders, bluetoothDeviceId, departmentPrinters, updatedAt: Timestamp.now() };
             if (id) {
                 await updateDoc(doc(db, 'licenses', currentClientId, 'printers', id), data);
             } else {
@@ -7647,30 +8447,61 @@ window.openSearchModalTakeOrder = function() {
             loadPrinterQueue();
         };
 
-        window.triggerAutoPrinting = async function(orderId, orderNumber, type = 'order', paymentDetails = null) {
+        window.triggerAutoPrinting = async function(orderId, orderNumber, type = 'order', paymentDetails = null, isLocalAction = false) {
+            const cashierName = paymentDetails?.cashierName || currentStaff?.name || 'N/A';
+            
             // Get table number from order
             const orderSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', orderId));
             const orderData = orderSnap.exists() ? orderSnap.data() : null;
             const tableNumber = orderData ? (orderData.tableId || 'N/A').toUpperCase() : 'N/A';
             const orderTime = orderData?.createdAt ? orderData.createdAt.toDate().toLocaleString() : new Date().toLocaleString();
+            const staffName = orderData?.staffName || 'N/A';
+            const orderType = orderData?.orderType || 'dine-in';
 
             // 1. Get all Printers with autoPrint enabled
             const printersSnap = await getDocs(query(collection(db, 'licenses', currentClientId, 'printers'), where('autoPrint', '==', true)));
             if (printersSnap.empty) return;
 
+            // Printer Server Logic: Check if another device has taken over the printers
+            let takeoverStaffName = null;
+            let iOwnAPrinter = false;
+            
+            for (const doc of printersSnap.docs) {
+                const p = doc.data();
+                if (p.takenByStaffId === currentStaff.id) {
+                    iOwnAPrinter = true;
+                } else if (p.takenByStaffId) {
+                    takeoverStaffName = p.takenByStaffName;
+                }
+            }
+
+            // If this is a background sync (not local action) and I don't own the printer,
+            // return silently. Someone else (the server) will handle the printing.
+            if (!isLocalAction && !iOwnAPrinter) return;
+
+            // If Device B submits locally and Device A has taken over, show the informational popup
+            if (isLocalAction && !iOwnAPrinter && takeoverStaffName) {
+                showPrinterStatusPopup("Printer Server", `Send printing to ${takeoverStaffName} device...`, 'info', true);
+                return; 
+            }
+
             // Fetch order items with their variants and modifiers
-            const itemsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderId, 'items'));
             const fullItemsList = [];
-            for (const itDoc of itemsSnap.docs) {
-                const itData = itDoc.data();
-                const vSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderId, 'items', itDoc.id, 'selectedVariants'));
-                const mSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderId, 'items', itDoc.id, 'selectedModifiers'));
-                fullItemsList.push({
-                    ...itData,
-                    docId: itDoc.id, // Add docId here for filtering later
-                    variants: vSnap.docs.map(v => v.data()),
-                    modifiers: mSnap.docs.map(m => m.data())
-                });
+            const orderIdsToFetch = (paymentDetails && paymentDetails.mergedOrderIds) ? paymentDetails.mergedOrderIds : [orderId];
+            
+            for (const id of orderIdsToFetch) {
+                const itemsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', id, 'items'));
+                for (const itDoc of itemsSnap.docs) {
+                    const itData = itDoc.data();
+                    const vSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', id, 'items', itDoc.id, 'selectedVariants'));
+                    const mSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', id, 'items', itDoc.id, 'selectedModifiers'));
+                    fullItemsList.push({
+                        ...itData,
+                        docId: itDoc.id,
+                        variants: vSnap.docs.map(v => v.data()),
+                        modifiers: mSnap.docs.map(m => m.data())
+                    });
+                }
             }
 
             // Show "Printing..." popup
@@ -7683,12 +8514,20 @@ window.openSearchModalTakeOrder = function() {
 
             for (const printerDoc of printersSnap.docs) {
                 const p = printerDoc.data();
+                
+                // Printer Server Logic: Only print if this device/staff has taken over the printer.
+                // If the printer is owned by someone else, skip it.
+                if (p.takenByStaffId && p.takenByStaffId !== currentStaff.id) {
+                    continue; 
+                }
+
                 const device = connectedBluetoothDevices[p.bluetoothDeviceId];
                 if (device) devicesToCleanup.add(device);
                 
                 // Handle Full Receipt Printing (Only on payment or early pay)
                 if (p.printReceipt && type === 'payment') {
-                    const qId = await addToPrintQueue(orderId, orderNumber, tableNumber, 'Receipt', null);
+                    const qOrderId = (paymentDetails?.mergedOrderIds) ? paymentDetails.mergedOrderIds.join(',') : orderId;
+                    const qId = await addToPrintQueue(qOrderId, orderNumber, tableNumber, 'Receipt', null, cashierName, paymentDetails?.method, staffName, orderType, paymentDetails?.paymentInfo);
                     if (device) {
                         // If split payment, we only show items just paid in the receipt
                         let itemsToPrint = fullItemsList;
@@ -7708,7 +8547,7 @@ window.openSearchModalTakeOrder = function() {
                         }
                         
                         const label = paymentDetails?.isEarly ? "EARLY PAYMENT" : "PAID";
-                        const commands = await generateMainReceiptCommands(orderNumber, tableNumber, itemsToPrint, orderTime, paymentDetails?.method || 'N/A', label);
+                        const commands = await generateMainReceiptCommands(orderNumber, tableNumber, itemsToPrint, orderTime, paymentDetails?.method || 'N/A', label, cashierName, p, orderType, paymentDetails?.paymentInfo);
                         const success = await sendToBluetoothPrinter(device, commands);
                         await updateDoc(doc(db, 'licenses', currentClientId, 'print_queue', qId), { status: success ? 'success' : 'failed' });
                         printActions.push({ label: 'Main Receipt', success });
@@ -7727,9 +8566,9 @@ window.openSearchModalTakeOrder = function() {
                                 return dept.department && dept.department.includes(catName);
                             });
                             if (deptItems.length > 0) {
-                                const qId = await addToPrintQueue(orderId, orderNumber, tableNumber, dept.name, deptId);
+                                const qId = await addToPrintQueue(orderId, orderNumber, tableNumber, dept.name, deptId, null, null, staffName, orderType);
                                 if (device) {
-                                    const commands = await generateReceiptCommands(orderNumber, tableNumber, deptItems, dept.name, orderTime, "AUTO PRINT");
+                                    const commands = await generateReceiptCommands(orderNumber, tableNumber, deptItems, dept.name, orderTime, "AUTO PRINT", p, staffName, orderType);
                                     const success = await sendToBluetoothPrinter(device, commands);
                                     await updateDoc(doc(db, 'licenses', currentClientId, 'print_queue', qId), { status: success ? 'success' : 'failed' });
                                     printActions.push({ label: dept.name, success });
@@ -7754,7 +8593,7 @@ window.openSearchModalTakeOrder = function() {
             }
         };
 
-        async function addToPrintQueue(orderId, orderNumber, tableNumber, deptName, deptId) {
+        async function addToPrintQueue(orderId, orderNumber, tableNumber, deptName, deptId, cashierName = null, paymentMethod = null, staffName = null, orderType = null, paymentInfo = null) {
             const docRef = await addDoc(collection(db, 'licenses', currentClientId, 'print_queue'), {
                 orderId,
                 orderNumber,
@@ -7763,12 +8602,23 @@ window.openSearchModalTakeOrder = function() {
                 printerDeptId: deptId,
                 status: 'pending',
                 attempts: 1,
+                cashierName: cashierName,
+                paymentMethod: paymentMethod, // Store payment method here
+                staffName: staffName,
+                orderType: orderType,
+                paymentInfo: paymentInfo ? JSON.stringify(paymentInfo) : null,
                 createdAt: Timestamp.now()
             });
             return docRef.id;
         }
 
-        async function generateMainReceiptCommands(orderNumber, tableNumber, items, orderTime, payMethod, statusLabel) {
+        async function generateMainReceiptCommands(orderNumber, tableNumber, items, orderTime, payMethod, statusLabel, cashierName = null, p = null, orderType = 'dine-in', paymentInfo = null) {
+            let width = (p && p.paperWidth === '80') ? 48 : 32;
+            const fontSize = p ? p.fontSize : '1';
+            if (fontSize === '0') width = (p.paperWidth === '80') ? 64 : 42; // Font B mode allows more chars
+            const fontCmd = (fontSize === '0') ? "\x1B\x4D\x01" : (fontSize === '2' ? "\x1B\x21\x10" : "\x1B\x4D\x00");
+            const sep = "-".repeat(width) + "\n";
+            
             const restaurantName = localStorage.getItem('restaurantName') || 'VENTURERUSH RESTAURANT';
             const restaurantAddress = localStorage.getItem('restaurantAddress') || '123 VentureRush Way, Tech City';
             const restaurantLogo = localStorage.getItem('restaurantLogo');
@@ -7787,8 +8637,19 @@ window.openSearchModalTakeOrder = function() {
 
             let subtotal = 0;
             items.forEach(it => subtotal += parseFloat(it.total) || 0);
-            const tax = taxActive ? subtotal * (currentTaxRate / 100) : 0;
-            const total = subtotal + tax;
+            let tax = taxActive ? subtotal * (currentTaxRate / 100) : 0;
+            let total = subtotal + tax;
+
+            let discountText = "";
+            if (paymentInfo && paymentInfo.discount) {
+                const d = paymentInfo.discount;
+                const discVal = parseFloat(d.value) || 0;
+                total -= discVal;
+                
+                const label = `Discount(${d.name}):`.substring(0, width - 15).padEnd(width - 13);
+                const amt = `-RM ${discVal.toFixed(2).padStart(8)}`;
+                discountText = `${label}${amt}\n`;
+            }
             
             const now = new Date();
             const dateStr = now.toLocaleDateString();
@@ -7798,47 +8659,62 @@ window.openSearchModalTakeOrder = function() {
 
             let itemsText = "";
             items.forEach(item => {
-                const nameStr = item.name.substring(0, 15).padEnd(16);
+                const nameStr = item.name.substring(0, width - 14).padEnd(width - 13);
                 const qtyStr = item.qty.toString().padStart(3);
                 const amtStr = parseFloat(item.total).toFixed(2).padStart(10);
                 itemsText += `${nameStr}${qtyStr}${amtStr}\n`;
                 
                 if (item.variants?.length) {
-                    item.variants.forEach(v => itemsText += `  + ${v.optionName}\n`);
+                    item.variants.forEach(v => itemsText += `  + ${v.optionName.substring(0, width - 4)}\n`);
                 }
                 if (item.modifiers?.length) {
-                    item.modifiers.forEach(m => itemsText += `  + ${m.optionName}\n`);
+                    item.modifiers.forEach(m => itemsText += `  + ${m.optionName.substring(0, width - 4)}\n`);
+                }
+                if (item.notes) {
+                    itemsText += `  * Req: ${item.notes.substring(0, width - 9)}\n`;
                 }
             });
 
             return combineCommands(
                 "\x1B\x40", // Initialize
+                fontCmd,
                 "\x1B\x61\x01", // Center
                 logoBytes,
                 (logoBytes.length === 0) ? "\x1B\x45\x01 [COMPANY LOGO] \x1B\x45\x00\n" : "",
                 `\x1B\x21\x10${restaurantName.toUpperCase()}\x1B\x21\x00\n`, // Double height
                 `${restaurantAddress}\n`,
-                "--------------------------------\n",
+                sep,
                 "\x1B\x61\x00", // Left
                 `Date: ${dateStr}   Time: ${timeStr}\n`,
                 `Receipt No: ${orderNumber}\n`,
+                `Order Type: ${orderType.toUpperCase().replace('-', ' ')}\n`,
                 `Table: ${tableNumber}\n`,
-                `Cashier: ${currentStaff?.name || 'N/A'}\n`,
-                "--------------------------------\n",
-                "Item            Qty       Amount\n",
+                `Cashier: ${cashierName || currentStaff?.name || 'N/A'}\n`,
+                sep,
+                "Item".padEnd(width - 13) + "Qty".padStart(3) + "Amount".padStart(10) + "\n",
                 itemsText,
-                "--------------------------------\n",
-                `Subtotal:              RM ${subtotal.toFixed(2).padStart(8)}\n`,
-                taxActive ? `Tax (${currentTaxRate}%):            RM ${tax.toFixed(2).padStart(8)}\n` : "",
-                `\x1B\x45\x01TOTAL AMOUNT:          RM ${total.toFixed(2).padStart(8)}\x1B\x45\x00\n`,
-                `Payment by: ${payMethod.toUpperCase()}\n`,
-                "--------------------------------\n",
+                sep,
+                "Subtotal:".padEnd(width - 10) + `RM ${subtotal.toFixed(2).padStart(8)}\n`,
+                discountText,
+                taxActive ? `Tax (${currentTaxRate}%):`.padEnd(width - 10) + `RM ${tax.toFixed(2).padStart(8)}\n` : "",
+                `\x1B\x45\x01TOTAL AMOUNT:`.padEnd(width - 10) + `RM ${total.toFixed(2).padStart(8)}\x1B\x45\x00\n`,
+                sep,
+                `Payment by : ${(paymentInfo ? paymentInfo.method : payMethod).toUpperCase()}\n`,
+                (paymentInfo && paymentInfo.method.toUpperCase() === 'MIX' && paymentInfo.breakdown) ? 
+                    "Give : " + paymentInfo.breakdown.map((b, idx) => {
+                        const prefix = idx === 0 ? "" : "       ";
+                        return prefix + `${b.type.charAt(0).toUpperCase() + b.type.slice(1)} = RM${parseFloat(b.amount).toFixed(2)}`;
+                    }).join("\n") + "\n" :
+                    `Give : RM${parseFloat(paymentInfo ? paymentInfo.give : 0).toFixed(2)}\n`,
+                `Change : RM${parseFloat(paymentInfo ? paymentInfo.change : 0).toFixed(2)}\n`,
+                sep,
                 "\x1B\x61\x01", // Center
                 `${receiptFooter}\n`,
                 `Settled at ${settleTime}\n`,
                 `Status: ${statusLabel}\n\n`,
                 "Powered By VentureRush Tech\n",
                 "\n\n\n\n",
+                (p && p.cutterAlarm) ? "\x1B\x42\x03\x02" : "", // Alarm beeps
                 "\x1D\x56\x41\x03" // Cut
             );
         }
@@ -7849,59 +8725,99 @@ window.openSearchModalTakeOrder = function() {
             if (!snap.exists()) return;
             const item = snap.data();
 
-            // Determine manual print label based on current attempts recorded before incrementing
+           // Check for Printer Server takeover
+            const printersSnap = await getDocs(query(collection(db, 'licenses', currentClientId, 'printers'), where('autoPrint', '==', true)));
+
+            let takeoverStaffName = null;
+            let iOwnAPrinter = false;
+
+             for (const doc of printersSnap.docs) {
+                const p = doc.data();
+                if (p.takenByStaffId === currentStaff.id) {
+                    iOwnAPrinter = true;
+                } else if (p.takenByStaffId) {
+                    takeoverStaffName = p.takenByStaffName;
+                }
+            }
+
+             // If another device has taken over and I don't own a printer, send the request to them
+            if (!iOwnAPrinter && takeoverStaffName) {
+                showPrinterStatusPopup("Printer Server", `Send reprint printing to ${takeoverStaffName} device...`, 'info', true);
+                await updateDoc(ref, { 
+                    status: 'reprint_requested',
+                    updatedAt: Timestamp.now() 
+                });
+                return; 
+            }
+
+            // Otherwise, I am the server or no one has ownership, print locally
+            await executeReprint(id, item);
+        };
+
+        // Internal function to handle the physical printing of a queue item
+        async function executeReprint(id, item) {
+            const ref = doc(db, 'licenses', currentClientId, 'print_queue', id);
+            
             const currentAttempts = item.attempts || 1;
             const statusLabel = item.printerDeptName === 'Receipt' ? 'REPRINT' : `MANUAL PRINT ${currentAttempts}`;
+            const cashierName = item.cashierName || 'N/A';
+            const staffName = item.staffName || 'N/A';
+            const orderType = item.orderType || 'dine-in';
+            const paymentInfo = item.paymentInfo ? JSON.parse(item.paymentInfo) : null;
 
-            // Fetch order time
-            const orderSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', item.orderId));
+            const orderIds = item.orderId.split(',');
+            const orderSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', orderIds[0]));
             const orderTime = orderSnap.exists() ? orderSnap.data().createdAt?.toDate().toLocaleString() : 'N/A';
 
             const printOverlay = document.getElementById('printingProcessOverlay');
-            document.getElementById('printingOrderId').innerText = item.orderNumber;
-            printOverlay.style.display = 'flex';
+            if (printOverlay) {
+                document.getElementById('printingOrderId').innerText = item.orderNumber;
+                printOverlay.style.display = 'flex';
+            }
 
             await updateDoc(ref, { status: 'processing', attempts: currentAttempts + 1 });
 
-            const itemsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', item.orderId, 'items'));
             let itemsToPrint = [];
-            for (const itDoc of itemsSnap.docs) {
-                const itData = itDoc.data();
-                if (item.printerDeptId) {
-                    const deptSnap = await getDoc(doc(db, 'licenses', currentClientId, 'department_printer', item.printerDeptId));
-                    if (deptSnap.exists()) {
-                        const dept = deptSnap.data();
-                        const catName = categoryMapTakeOrder[itData.categoryId];
-                        if (!dept.department || !dept.department.includes(catName)) continue;
+            for (const oId of orderIds) {
+                const itemsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', oId, 'items'));
+                for (const itDoc of itemsSnap.docs) {
+                    const itData = itDoc.data();
+                    if (item.printerDeptId) {
+                        const deptSnap = await getDoc(doc(db, 'licenses', currentClientId, 'department_printer', item.printerDeptId));
+                        if (deptSnap.exists()) {
+                            const dept = deptSnap.data();
+                            const catName = categoryMapTakeOrder[itData.categoryId];
+                            if (!dept.department || !dept.department.includes(catName)) continue;
+                        }
                     }
+                    const vSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', oId, 'items', itDoc.id, 'selectedVariants'));
+                    const mSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', oId, 'items', itDoc.id, 'selectedModifiers'));
+                    itemsToPrint.push({
+                        ...itData,
+                        variants: vSnap.docs.map(v => v.data()),
+                        modifiers: mSnap.docs.map(m => m.data())
+                    });
                 }
-                const vSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', item.orderId, 'items', itDoc.id, 'selectedVariants'));
-                const mSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', item.orderId, 'items', itDoc.id, 'selectedModifiers'));
-                itemsToPrint.push({
-                    ...itData,
-                    variants: vSnap.docs.map(v => v.data()),
-                    modifiers: mSnap.docs.map(m => m.data())
-                });
             }
 
-            // Find which printer config uses this department/receipt
-            const printersSnap = await getDocs(collection(db, 'licenses', currentClientId, 'printers'));
-            const printerConfig = printersSnap.docs.find(d => d.data().bluetoothDeviceId && (item.printerDeptId ? d.data().departmentPrinters?.includes(item.printerDeptId) : d.data().printReceipt))?.data();
+            const printersSnapFull = await getDocs(collection(db, 'licenses', currentClientId, 'printers'));
+            const printerConfig = printersSnapFull.docs.find(d => d.data().bluetoothDeviceId && (item.printerDeptId ? d.data().departmentPrinters?.includes(item.printerDeptId) : d.data().printReceipt))?.data();
             const device = printerConfig ? connectedBluetoothDevices[printerConfig.bluetoothDeviceId] : null;
 
             let printSuccess = false;
             if (device && itemsToPrint.length > 0) {
                 let commands;
                 if (item.printerDeptName === 'Receipt') {
-                    commands = await generateMainReceiptCommands(item.orderNumber, item.tableNumber || 'N/A', itemsToPrint, orderTime, 'N/A', statusLabel);
+                    const payMethod = item.paymentMethod || 'N/A'; // Retrieve from print queue item
+                    commands = await generateMainReceiptCommands(item.orderNumber, item.tableNumber || 'N/A', itemsToPrint, orderTime, payMethod, statusLabel, cashierName, printerConfig, orderType, paymentInfo);
                 } else {
-                    commands = await generateReceiptCommands(item.orderNumber, item.tableNumber || 'N/A', itemsToPrint, item.printerDeptName || 'Receipt', orderTime, statusLabel);
+                    commands = await generateReceiptCommands(item.orderNumber, item.tableNumber || 'N/A', itemsToPrint, item.printerDeptName || 'Receipt', orderTime, statusLabel, printerConfig, staffName, orderType);
                 }
                 printSuccess = await sendToBluetoothPrinter(device, commands);
                 if (device.gatt.connected) device.gatt.disconnect();
             }
 
-            printOverlay.style.display = 'none';
+             if (printOverlay) printOverlay.style.display = 'none';
             if (printSuccess) {
                 await updateDoc(ref, { status: 'success' });
                 showPrinterStatusPopup(`Print ${item.orderNumber} SUCCESS`, `Printer Department: ${item.printerDeptName}\nReprint completed.`, true);
@@ -8039,55 +8955,83 @@ window.openSearchModalTakeOrder = function() {
         };
 
         // Helper to generate ESC/POS commands in the requested format
-        async function generateReceiptCommands(orderNumber, tableNumber, items, headerTitle, orderTime, statusLabel) {
+        async function generateReceiptCommands(orderNumber, tableNumber, items, headerTitle, orderTime, statusLabel, p = null, staffName = 'N/A', orderType = 'dine-in') {
+            let width = (p && p.paperWidth === '80') ? 48 : 32;
+            const fontSize = p ? p.fontSize : '1';
+            if (fontSize === '0') width = (p.paperWidth === '80') ? 64 : 42;
+            const fontCmd = (fontSize === '0') ? "\x1B\x4D\x01" : (fontSize === '2' ? "\x1B\x21\x10" : "\x1B\x4D\x00");
+            const sep = "-".repeat(width) + "\n";
+            
             const printTime = new Date().toLocaleString();
             let itemsText = "";
             items.forEach(item => {
-                itemsText += `[   ] ${item.name}   x${item.qty}\n`;
+                itemsText += `\x1B\x45\x01[    ] ${item.name.substring(0, width - 12).padEnd(width - 12)} ${item.qty}\x1B\x45\x00\n`;
                 if (item.variants && item.variants.length) {
-                    item.variants.forEach(v => itemsText += `      + ${v.optionName}\n`);
+                    item.variants.forEach(v => itemsText += `\x1B\x45\x01       + ${v.optionName.substring(0, width - 9)}\x1B\x45\x00\n`);
                 }
                 if (item.modifiers && item.modifiers.length) {
-                    item.modifiers.forEach(m => itemsText += `      + ${m.optionName}\n`);
+                    item.modifiers.forEach(m => itemsText += `\x1B\x45\x01       + ${m.optionName.substring(0, width - 9)}\x1B\x45\x00\n`);
                 }
                 if (item.notes) {
-                    itemsText += `      * Req: ${item.notes}\n`;
+                    itemsText += `\x1B\x45\x01       * Req: ${item.notes.substring(0, width - 13)}\x1B\x45\x00\n`;
                 }
                 itemsText += "\n";
             });
 
             return combineCommands(
                 "\x1B\x40", // Initialize printer
+                fontCmd,
                 "\x1B\x61\x01", // Center align
-                `\x1B\x45\x01${headerTitle.toUpperCase()}\x1B\x45\x00\n`, // Bold Title
+                `\x1B\x21\x30\x1B\x45\x01${headerTitle.toUpperCase()} | ${orderNumber}\x1B\x45\x00\n`, 
+                `\x1B\x21\x30\x1B\x45\x01TABLE ${tableNumber}\x1B\x45\x00\x1B\x21\x00\n\n`, 
                 "\x1B\x61\x00", // Left align
-                `ORDER ID: ${orderNumber}\n`,
-                `TABLE: ${tableNumber}\n`,
+                fontCmd, // Restore default font mode
                 `Order: ${orderTime}\n`,
-                "--------------------------------\n",
+                `Staff: ${staffName}\n`,
+                sep,
+                "\x1B\x61\x01", // Center align
+                `\x1B\x21\x10\x1B\x45\x01${orderType.toUpperCase().replace('-', ' ')}\x1B\x45\x00\x1B\x21\x00\n`,
+                "\x1B\x61\x00", // Left align
+                fontCmd, // Restore default font mode
+                sep,
                 "Items:\n",
                 itemsText,
-                "--------------------------------\n",
+                sep,
                 `Print: ${printTime}\n`,
                 `Status: ${statusLabel}\n`,
                 "\x1B\x61\x01", // Center align
-                `${headerTitle.toUpperCase()}\n`,
+                `\x1B\x45\x01${headerTitle.toUpperCase()} | ${orderNumber} | ${tableNumber}\x1B\x45\x00\n`,
                 "\n\n\n\n", // Feed lines
+                (p && p.cutterAlarm) ? "\x1B\x42\x03\x02" : "", // Alarm beeps
                 "\x1D\x56\x41\x03" // Cut paper command
             );
         }
 
-        window.showPrinterStatusPopup = function(title, message, status) {
+        window.showPrinterStatusPopup = function(title, message, status, isSmall = false) {
             const overlay = document.getElementById('printerStatusOverlay');
+            const content = document.getElementById('printerStatusContent');
             const icon = document.getElementById('printerStatusIcon');
             const titleEl = document.getElementById('printerStatusTitle');
             const msgEl = document.getElementById('printerStatusMsg');
+
+            // Adjust size for "Device B" informational popup
+            if (isSmall) {
+                content.style.width = "260px";
+                content.style.padding = "20px";
+                icon.style.fontSize = "2.5rem";
+            } else {
+                content.style.width = "320px";
+                content.style.padding = "30px";
+                icon.style.fontSize = "4rem";
+            }
 
             if (status === 'success' || status === true) {
                 icon.innerHTML = '<i class="fas fa-check-circle" style="color: #4caf50;"></i>';
             } else if (status === 'warning') {
                 icon.innerHTML = '<i class="fas fa-exclamation-triangle" style="color: #e53e3e;"></i>';
-            } else { // false, error, failed
+            } else if (status === 'info') {
+                icon.innerHTML = '<i class="fas fa-print" style="color: #764ba2;"></i>';
+            } else { 
                 icon.innerHTML = '<i class="fas fa-times-circle" style="color: #e53e3e;"></i>';
             }
             
@@ -8226,25 +9170,133 @@ window.openSearchModalTakeOrder = function() {
 
         window.setupOrderNotificationListener = function() {
             if (unsubscribers['orderNotifications']) unsubscribers['orderNotifications']();
-            isInitialLoadNotifications = true;
+            isInitialLoadOrders = true;
             
             const ordersRef = collection(db, 'licenses', currentClientId, 'orders');
             // Query the most recent orders
             const q = query(ordersRef, orderBy('createdAt', 'desc'), limit(5));
             
             unsubscribers['orderNotifications'] = onSnapshot(q, (snapshot) => {
-                if (isInitialLoadNotifications) {
+                if (isInitialLoadOrders) {
                     // Skip popups for existing orders on app startup
-                    isInitialLoadNotifications = false;
+                    isInitialLoadOrders = false;
                     return;
                 }
 
                 snapshot.docChanges().forEach((change) => {
                     if (change.type === "added") {
                         const orderData = change.doc.data();
-                        // Only show if it wasn't placed by the staff member logged into THIS device
                         if (orderData.staffId !== currentStaff.id) {
                             showRemoteOrderPopup(orderData);
+                            // Printer Server Logic: If I have taken over a printer, print the order placed by Device B
+                            triggerAutoPrinting(change.doc.id, orderData.orderNumber, 'order');
+                        }
+                    }
+                });
+            });
+        };
+
+        window.setupPrinterQueueListener = function() {
+            if (unsubscribers['printerQueueNotifications']) unsubscribers['printerQueueNotifications']();
+            
+            const q = query(collection(db, 'licenses', currentClientId, 'print_queue'), where('status', '==', 'reprint_requested'));
+            
+            unsubscribers['printerQueueNotifications'] = onSnapshot(q, (snapshot) => {
+                snapshot.docChanges().forEach(async (change) => {
+                    if (change.type === "added" || change.type === "modified") {
+                        const item = change.doc.data();
+                        
+                        // Server Logic: Check if I have ownership of any auto-print printers
+                        const printersSnap = await getDocs(query(collection(db, 'licenses', currentClientId, 'printers'), where('autoPrint', '==', true)));
+                        let iOwnAPrinter = false;
+                        for (const doc of printersSnap.docs) {
+                            if (doc.data().takenByStaffId === currentStaff.id) {
+                                iOwnAPrinter = true;
+                                break;
+                            }
+                        }
+                        
+                        if (iOwnAPrinter) {
+                            await executeReprint(change.doc.id, item);
+                        }
+                    }
+                });
+            });
+        };
+
+        window.setupTopBarPrinterListener = function() {
+            if (unsubscribers['topBarPrinter']) unsubscribers['topBarPrinter']();
+            
+            const q = query(collection(db, 'licenses', currentClientId, 'print_queue'), 
+                            where('status', 'in', ['pending', 'processing', 'failed']));
+            
+            unsubscribers['topBarPrinter'] = onSnapshot(q, (snapshot) => {
+                const badge = document.getElementById('topBarPrinterBadge');
+                const count = snapshot.size;
+                if (count > 0) {
+                    badge.innerText = count;
+                    badge.style.display = 'flex';
+                } else {
+                    badge.style.display = 'none';
+                }
+            });
+        };
+
+        window.setupTransactionNotificationListener = function() {
+            if (unsubscribers['transactionNotifications']) unsubscribers['transactionNotifications']();
+            isInitialLoadTransactions = true;
+
+            const transRef = collection(db, 'licenses', currentClientId, 'transactions');
+            const q = query(transRef, orderBy('createdAt', 'desc'), limit(5));
+
+            unsubscribers['transactionNotifications'] = onSnapshot(q, (snapshot) => {
+                if (isInitialLoadTransactions) {
+                    isInitialLoadTransactions = false;
+                    return;
+                }
+
+                snapshot.docChanges().forEach(async (change) => {
+                    if (change.type === "added") {
+                        const transData = change.doc.data();
+                        // If payment was processed on another device, this device (if it is the server) should print the receipt
+                        if (transData.processedByStaffId && transData.processedByStaffId !== currentStaff.id) {
+                            const orderIds = transData.orderId.split(',').map(id => id.trim());
+                            const itemsPaid = transData.itemsPaidJson ? JSON.parse(transData.itemsPaidJson) : null;
+                            const cashierName = transData.processedByStaffName || 'N/A';
+                            const paymentInfo = transData.paymentInfoJson ? JSON.parse(transData.paymentInfoJson) : null;
+
+                            if (orderIds.length > 1) {
+                                // Consolidated Printing for Multiple Orders
+                                const orderNums = [];
+                                for (const id of orderIds) {
+                                    const snap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', id));
+                                    orderNums.push(snap.exists() ? snap.data().orderNumber : id.slice(-8));
+                                }
+                                const payDetails = {
+                                    method: transData.paymentMethod,
+                                    itemsPaid: itemsPaid,
+                                    isEarly: transData.isEarlyPayment || false,
+                                    mergedOrderIds: orderIds,
+                                    cashierName: cashierName,
+                                    paymentInfo: paymentInfo
+                                };
+                                triggerAutoPrinting(orderIds[0], orderNums.join(', '), 'payment', payDetails);
+                            } else {
+                                // Single Order Printing
+                                const orderId = orderIds[0];
+                                const orderSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', orderId));
+                                if (orderSnap.exists()) {
+                                    const orderData = orderSnap.data();
+                                    const payDetails = {
+                                        method: transData.paymentMethod,
+                                        itemsPaid: itemsPaid,
+                                        isEarly: transData.isEarlyPayment || false,
+                                        cashierName: cashierName,
+                                        paymentInfo: paymentInfo
+                                    };
+                                    triggerAutoPrinting(orderId, orderData.orderNumber, 'payment', payDetails);
+                                }
+                            }
                         }
                     }
                 });
@@ -8326,7 +9378,13 @@ window.openSearchModalTakeOrder = function() {
             loadAllSettings().then(() => {
                 loadGlobalVariants();
                 loadGlobalModifiers();
+                setupShiftListener();
+                loadDiscounts();
                 setupOrderNotificationListener();
+                setupTransactionNotificationListener();
+                setupLicenseMonitor();
+                setupPrinterQueueListener();
+                setupTopBarPrinterListener();
                 showPage('takeOrder');
             });
         }
@@ -8363,6 +9421,9 @@ window.openSearchModalTakeOrder = function() {
         window.fetchWaitingListTakeOrder = fetchWaitingListTakeOrder;
         window.removeWaitingListTakeOrder = removeWaitingListTakeOrder;
         window.clearAllWaitingListsTakeOrder = clearAllWaitingListsTakeOrder;
+        window.openCheckoutDiscountModal = openCheckoutDiscountModal;
+        window.applySelectedDiscount = applySelectedDiscount;
+        window.removeCheckoutDiscount = removeCheckoutDiscount;
         window.openSearchOrderByMenuModal = openSearchOrderByMenuModal;
         window.setSearchByMenuMode = setSearchByMenuMode;
         window.renderSearchMenuCategories = renderSearchMenuCategories;
@@ -8377,9 +9438,67 @@ window.openSearchModalTakeOrder = function() {
         window.toggleActiveOrdersSearch = toggleActiveOrdersSearch;
         window.handleActiveOrdersSearchInput = handleActiveOrdersSearchInput;
         window.setVoidModeTakeOrder = setVoidModeTakeOrder;
+        window.toggleVoidMode = toggleVoidMode;
         window.voidItemFromCheckout = voidItemFromCheckout;
         window.updateVoidModalQty = updateVoidModalQty;
         window.confirmVoidQtyTakeOrder = confirmVoidQtyTakeOrder;
+
+        // ========== WIFI STATUS LOGIC ==========
+        window.updateWifiStatus = function() {
+            const wifiIcon = document.getElementById('wifiIcon');
+            const bars = document.querySelectorAll('.wifi-bar');
+            const modal = document.getElementById('noConnectionModal');
+            if (!wifiIcon || bars.length === 0) return;
+
+            const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+            
+            // CASE: No Internet Connection
+            if (!navigator.onLine) {
+                wifiIcon.style.color = '#e53e3e'; // Red
+                bars.forEach(b => { 
+                    b.style.backgroundColor = '#e53e3e'; 
+                    b.style.opacity = '1'; 
+                });
+                if (modal) modal.style.display = 'flex';
+                return;
+            }
+
+            // Connection is back
+            if (modal) modal.style.display = 'none';
+            wifiIcon.style.color = '#475569'; // Default gray
+            
+            let barsCount = 3;
+            let color = '#4caf50'; // Green
+
+            if (conn) {
+                const type = conn.effectiveType;
+                if (type === '4g') {
+                    barsCount = 3; color = '#4caf50'; // Fast: 3 bar Green
+                } else if (type === '3g') {
+                    barsCount = 2; color = 'black';    // Medium: 2 bar Black
+                } else {
+                    barsCount = 1; color = '#e53e3e'; // Slow: 1 bar Red
+                }
+            }
+
+            bars.forEach((bar, i) => {
+                if (i < barsCount) {
+                    bar.style.backgroundColor = color;
+                    bar.style.opacity = '1';
+                } else {
+                    bar.style.backgroundColor = '#cbd5e0'; // Dimmed/Empty
+                    bar.style.opacity = '0.3';
+                }
+            });
+        };
+
+        window.addEventListener('online', updateWifiStatus);
+        window.addEventListener('offline', updateWifiStatus);
+        if (navigator.connection) {
+            navigator.connection.addEventListener('change', updateWifiStatus);
+        }
+        // Initial check
+        updateWifiStatus();
     </script>
 </body>
 </html>
