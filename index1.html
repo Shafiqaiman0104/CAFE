@@ -4849,11 +4849,27 @@
             const snap = await getDoc(transRef);
             if (!snap.exists()) return;
             const t = snap.data();
+
+            let orderNumbers = 'N/A';
+            if (t.orderId) {
+                const ids = t.orderId.split(',').map(id => id.trim());
+                const numbers = [];
+                for (const id of ids) {
+                    const oSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', id));
+                    if (oSnap.exists()) {
+                        numbers.push(oSnap.data().orderNumber || id.slice(0, 8));
+                    } else {
+                        numbers.push(id.slice(0, 8));
+                    }
+                }
+                orderNumbers = numbers.join(', ');
+            }
+
             const content = document.getElementById('transactionDetailContent');
             content.innerHTML = `
                 <div style="background: #f8fafc; padding: 20px; border-radius: 16px; font-size: 0.95rem; line-height: 1.6;">
                     <p><strong>Transaction Id:</strong> ${transId}</p>
-                    <p><strong>Order Id:</strong> ${t.orderId || 'N/A'}</p>
+                    <p><strong>Order Number:</strong> ${orderNumbers}</p>
                     <p><strong>Date:</strong> ${t.createdAt?.toDate().toLocaleString() || 'N/A'}</p>
                     <p><strong>Type:</strong> ${t.type || 'payment'}</p>
                     <p><strong>Method:</strong> ${t.paymentMethod || 'N/A'}</p>
