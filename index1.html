@@ -1883,6 +1883,14 @@
             transition: .4s;
             border-radius: 50%;
         }
+        .btn-clockout {
+            width: 100%;
+            padding: 10px;
+            border-radius: 12px;
+            cursor: pointer;
+            margin-bottom: 8px;
+            background: #ef4444;
+        }
         input:checked + .slider { background-color: #764ba2; }
         input:checked + .slider:before {
             transform: translateX(26px);
@@ -1971,7 +1979,8 @@
                 <div style="font-size: 14px; color: #555; margin-bottom: 15px;">
                     <span id="staffNameTop" style="font-weight: 600;"></span> | <span id="staffRoleTop" class="role-badge"></span>
                 </div>
-                <button class="btn-small" onclick="logout()" style="width: 100%; padding: 10px; border-radius: 12px; cursor: pointer;">Logout</button>
+                <button id="sidebarClockOutBtn" class="btn-small btn-clockout" onclick="handleManualClockOut()" style="display: none;">Clock Out</button>
+                <button id="sidebarLogoutBtn" class="btn-small" onclick="logout()" style="width: 100%; padding: 10px; border-radius: 12px; cursor: pointer;">Logout</button>
             </div>
             <div class="sidebar-menu">
                 <!-- OPERATIONS Section -->
@@ -3470,6 +3479,7 @@
         let isCounterSummaryFlow = false;
         let checkoutTotalTakeOrder = 0;
         let checkoutReceivedInput = "0";
+        let activeShiftId = null;
         let checkoutPayMethod = "cash";
         let checkoutOrdersToProcess = [];
         
@@ -3608,6 +3618,11 @@
         window.setupLicenseMonitor = function() {
             if (unsubscribers['licenseMonitor']) unsubscribers['licenseMonitor']();
             if (!currentClientId) return;
+
+            // Check local attendance status on refresh
+            if (localStorage.getItem('isClockedIn') === 'true') {
+                document.getElementById('sidebarClockOutBtn').style.display = 'block';
+            }
 
             const licenseRef = doc(db, 'licenses', currentClientId);
             unsubscribers['licenseMonitor'] = onSnapshot(licenseRef, (snap) => {
@@ -4297,7 +4312,9 @@
             unsubscribers['shiftSettings'] = onSnapshot(shiftRef, (snap) => {
                 if (snap.exists()) {
                     const data = snap.data();
+                    const wasActive = isShiftActive;
                     isShiftActive = data.active === true;
+                    activeShiftId = data.shiftId || null;
                     
                     // Popup for other users joining
                     if (isShiftActive && data.staffNames && !data.staffNames.includes(currentStaff.name)) {
@@ -4305,8 +4322,22 @@
                     } else {
                         closeModal('joinShiftModal');
                     }
+
+                    // Auto-logout logic for staff when shift is ended by manager
+                    if (wasActive && !isShiftActive) {
+                        // If shift just ended and it wasn't ended by me, or if I'm clocked in, log out
+                        if (data.endedById !== currentStaff.id && localStorage.getItem('isClockedIn') === 'true') {
+                            alert("The shift has been ended by the manager. You have been clocked out and will be logged out.");
+                            logout();
+                        } else if (data.endedById === currentStaff.id) {
+                            // Manager who ended shift stays logged in but clocked out
+                            localStorage.removeItem('isClockedIn');
+                            document.getElementById('sidebarClockOutBtn').style.display = 'none';
+                        }
+                    }
                 } else {
                     isShiftActive = false;
+                    activeShiftId = null;
                 }
                 updateShiftUI();
                 if (document.getElementById('takeOrder').classList.contains('active')) {
@@ -4322,6 +4353,51 @@
             document.getElementById('joinShiftModal').style.display = 'flex';
         };
 
+        window.handleClockIn = async function(staff, shiftId) {
+            try {
+                await addDoc(collection(db, 'licenses', currentClientId, 'attendance'), {
+                    staffId: staff.id,
+                    staffName: staff.name,
+                    shiftId: shiftId,
+                    clockIn: Timestamp.now(),
+                    clockOut: null,
+                    createdAt: Timestamp.now()
+                });
+                localStorage.setItem('isClockedIn', 'true');
+                document.getElementById('sidebarClockOutBtn').style.display = 'block';
+            } catch (e) { console.error("Clock-in error", e); }
+        };
+
+        window.handleManualClockOut = async function() {
+            if (!confirm("Are you sure you want to clock out? You will be logged out automatically.")) return;
+            await performClockOut(currentStaff.id, activeShiftId, true);
+        };
+
+        async function performClockOut(staffId, shiftId, doLogout = true) {
+            try {
+                // Find active attendance record for this staff and shift
+                const q = query(
+                    collection(db, 'licenses', currentClientId, 'attendance'),
+                    where('staffId', '==', staffId),
+                    where('shiftId', '==', shiftId),
+                    where('clockOut', '==', null),
+                    limit(1)
+                );
+                const snap = await getDocs(q);
+                if (!snap.empty) {
+                    await updateDoc(doc(db, 'licenses', currentClientId, 'attendance', snap.docs[0].id), {
+                        clockOut: Timestamp.now()
+                    });
+                }
+                localStorage.removeItem('isClockedIn');
+                document.getElementById('sidebarClockOutBtn').style.display = 'none';
+                if (doLogout) logout();
+            } catch (e) { 
+                console.error("Clock-out error", e);
+                if (doLogout) logout();
+            }
+        }
+
         window.joinShift = async function() {
             const shiftRef = doc(db, 'licenses', currentClientId, 'settings', 'shift');
             const snap = await getDoc(shiftRef);
@@ -4332,6 +4408,7 @@
                     names.push(currentStaff.name);
                     await updateDoc(shiftRef, { staffNames: names, updatedAt: Timestamp.now() });
                 }
+                await handleClockIn(currentStaff, data.shiftId);
             }
             closeModal('joinShiftModal');
         };
@@ -4363,9 +4440,10 @@
         window.confirmStartShift = async function() {
             const cashFloat = parseFloat(document.getElementById('startShiftFloatInput').value) || 0;
             try {
+                const shiftId = 'SHIFT-' + Date.now();
                 const shiftRef = doc(db, 'licenses', currentClientId, 'settings', 'shift');
                 await setDoc(shiftRef, {
-                    shiftId: 'SHIFT-' + Date.now(),
+                    shiftId: shiftId,
                     active: true,
                     startTime: Timestamp.now(),
                     startFloat: cashFloat.toFixed(2),
@@ -4376,6 +4454,7 @@
                 }, { merge: true });
                 
                 closeModal('startShiftModal');
+                await handleClockIn(currentStaff, shiftId);
                 showPrinterStatusPopup("Shift Started", `Shift opened with float RM ${cashFloat.toFixed(2)}`, true);
             } catch (e) { alert("Error: " + e.message); }
         };
@@ -4480,12 +4559,29 @@
                 actualCash: actualCash.toFixed(2),
                 loss: diff < 0 ? Math.abs(diff).toFixed(2) : "0.00",
                 endTime: Timestamp.now(),
-                endedBy: currentStaff.name
+                endedBy: currentStaff.name,
+                endedById: currentStaff.id
             };
 
             try {
+                // Auto clock out all staff still in shift
+                const attQuery = query(
+                    collection(db, 'licenses', currentClientId, 'attendance'),
+                    where('shiftId', '==', stats.shiftId),
+                    where('clockOut', '==', null)
+                );
+                const attSnap = await getDocs(attQuery);
+                const now = Timestamp.now();
+                for (const d of attSnap.docs) {
+                    await updateDoc(d.ref, { clockOut: now });
+                }
+
                 await addDoc(collection(db, 'licenses', currentClientId, 'shifts'), shiftRecord);
-                await setDoc(doc(db, 'licenses', currentClientId, 'settings', 'shift'), { active: false, updatedAt: Timestamp.now() }, { merge: true });
+                await setDoc(doc(db, 'licenses', currentClientId, 'settings', 'shift'), { 
+                    active: false, 
+                    endedById: currentStaff.id, 
+                    updatedAt: Timestamp.now() 
+                }, { merge: true });
                 
                 closeModal('endShiftModal');
                 cartTakeOrder = [];
@@ -4585,7 +4681,43 @@
                     </div>
                 `;
             } else if (tab === 'staff') {
-                container.innerHTML = '<div style="padding:20px; text-align:center; color:#666;">Coming soon..</div>';
+                container.innerHTML = '<div class="loading">Loading attendance...</div>';
+                const attQuery = query(collection(db, 'licenses', currentClientId, 'attendance'), where('shiftId', '==', s.shiftId));
+                const attSnap = await getDocs(attQuery);
+                
+                let tableHtml = `
+                    <table style="width:100%; border-collapse: collapse; font-size: 0.75rem;">
+                        <thead>
+                            <tr style="text-align:left; border-bottom:2px solid #f1f5f9; color: #64748b;">
+                                <th style="padding:8px;">Staff</th>
+                                <th style="padding:8px;">Clock In</th>
+                                <th style="padding:8px;">Clock Out</th>
+                                <th style="padding:8px;">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+                
+                attSnap.forEach(d => {
+                    const data = d.data();
+                    const cin = data.clockIn.toDate();
+                    const cout = data.clockOut ? data.clockOut.toDate() : null;
+                    let duration = "Active";
+                    if (cout) {
+                        const diffMs = cout - cin;
+                        const diffHrs = Math.floor(diffMs / 3600000);
+                        const diffMins = Math.floor((diffMs % 3600000) / 60000);
+                        duration = `${diffHrs}h ${diffMins}m`;
+                    }
+                    tableHtml += `
+                        <tr style="border-bottom: 1px solid #f1f5f9;">
+                            <td style="padding:8px;"><b>${data.staffName}</b></td>
+                            <td style="padding:8px;">${cin.toLocaleString()}</td>
+                            <td style="padding:8px;">${cout ? cout.toLocaleString() : '---'}</td>
+                            <td style="padding:8px;">${duration}</td>
+                        </tr>`;
+                });
+                tableHtml += '</tbody></table>';
+                container.innerHTML = tableHtml;
             } else if (tab === 'transaction') {
                 container.innerHTML = '<div style="padding:20px; text-align:center; color:#666;">Coming soon..</div>';
             } else if (tab === 'order') {
