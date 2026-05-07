@@ -2123,6 +2123,7 @@
                                     <th style="padding: 10px;">Float</th>
                                     <th style="padding: 10px;">Open By</th>
                                     <th style="padding: 10px;">Staff</th>
+                                    <th style="padding: 10px;">Order Id</th>
                                     <th style="padding: 10px;">Cash</th>
                                     <th style="padding: 10px;">E-Wallet</th>
                                     <th style="padding: 10px;">Card</th>
@@ -2131,6 +2132,7 @@
                                     <th style="padding: 10px;">Total</th>
                                     <th style="padding: 10px;">End At</th>
                                     <th style="padding: 10px;">End By</th>
+                                    <th style="padding: 10px;">Action</th>
                                 </tr>
                             </thead>
                             <tbody id="shiftHistoryList"></tbody>
@@ -2725,6 +2727,16 @@
         </div>
     </div>
 
+    <!-- Shift Detail Modal -->
+    <div id="shiftDetailModal" class="modal">
+        <div class="modal-content" style="max-width: 500px; border-radius: 28px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-history"></i> Shift Details</h3>
+                <button class="modal-close" onclick="closeModal('shiftDetailModal')">&times;</button>
+            </div>
+            <div id="shiftDetailContent"></div>
+        </div>
+    </div>
 
     <!-- Start Shift Modal -->
     <div id="startShiftModal" class="modal">
@@ -4479,6 +4491,7 @@
                         <td>RM ${parseFloat(s.startFloat).toFixed(2)}</td>
                         <td>${s.startedBy}</td>
                         <td title="${staffNames}">${staffNames}</td>
+                        <td style="max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${s.orderIds ? s.orderIds.join(', ') : ''}">${s.orderIds ? s.orderIds.join(', ') : 'N/A'}</td>
                         <td>RM ${s.cashTotal.toFixed(2)}</td>
                         <td>RM ${s.ewalletTotal.toFixed(2)}</td>
                         <td>RM ${s.cardTotal.toFixed(2)}</td>
@@ -4487,9 +4500,39 @@
                         <td style="font-weight:bold; color:${total >= 0 ? '#38a169' : '#e53e3e'}">RM ${total.toFixed(2)}</td>
                         <td>${s.endTime.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</td>
                         <td>${s.endedBy}</td>
+                        <td><button class="btn-view" style="padding: 5px 10px; font-size: 0.7rem; border-radius: 8px;" onclick="viewShiftDetails('${doc.id}')">View Details</button></td>
                     </tr>`;
                 }).join('');
             });
+        };
+
+        window.viewShiftDetails = async function(id) {
+            const snap = await getDoc(doc(db, 'licenses', currentClientId, 'shifts', id));
+            if (!snap.exists()) return;
+            const s = snap.data();
+            const total = parseFloat(s.profit) - parseFloat(s.loss);
+            const staffNames = Array.isArray(s.staffNames) ? s.staffNames.join(', ') : s.startedBy;
+
+            document.getElementById('shiftDetailContent').innerHTML = `
+                <div style="background: #f8fafc; padding: 20px; border-radius: 16px; font-size: 0.9rem; line-height: 1.6;">
+                    <p><strong>Shift ID:</strong> <span style="color:#764ba2;">${s.shiftId || 'N/A'}</span></p>
+                    <p><strong>Date:</strong> ${s.endTime.toDate().toLocaleDateString()}</p>
+                    <p><strong>Period:</strong> ${s.startTime.toDate().toLocaleTimeString()} - ${s.endTime.toDate().toLocaleTimeString()}</p>
+                    <p><strong>Opened By:</strong> ${s.startedBy} | <strong>Closed By:</strong> ${s.endedBy}</p>
+                    <hr style="margin: 10px 0; border: none; border-top: 1px dashed #cbd5e0;">
+                    <p><strong>Staff Involved:</strong> ${staffNames}</p>
+                    <p style="word-break: break-all;"><strong>Order IDs:</strong> ${s.orderIds ? s.orderIds.join(', ') : 'N/A'}</p>
+                    <hr style="margin: 10px 0; border: none; border-top: 1px dashed #cbd5e0;">
+                    <div style="display: flex; justify-content: space-between;"><span>Opening Float:</span> <b>RM ${parseFloat(s.startFloat).toFixed(2)}</b></div>
+                    <div style="display: flex; justify-content: space-between;"><span>Cash Sales:</span> <b>RM ${s.cashTotal.toFixed(2)}</b></div>
+                    <div style="display: flex; justify-content: space-between;"><span>E-Wallet Sales:</span> <b>RM ${s.ewalletTotal.toFixed(2)}</b></div>
+                    <div style="display: flex; justify-content: space-between;"><span>Card Sales:</span> <b>RM ${s.cardTotal.toFixed(2)}</b></div>
+                    <div style="display: flex; justify-content: space-between; margin-top: 5px; color: #764ba2; font-weight: bold;"><span>Total Profit:</span> <span>RM ${s.profit.toFixed(2)}</span></div>
+                    <div style="display: flex; justify-content: space-between; color: #e53e3e;"><span>Loss/Shortage:</span> <span>RM ${s.loss}</span></div>
+                    <div style="display: flex; justify-content: space-between; font-size: 1.1rem; font-weight: 800; margin-top: 10px; padding-top: 10px; border-top: 2px solid #eee;"><span>Net Total:</span> <span>RM ${total.toFixed(2)}</span></div>
+                </div>
+            `;
+            document.getElementById('shiftDetailModal').style.display = 'flex';
         };
 
         window.handleShiftToggle = async function(checked) {
