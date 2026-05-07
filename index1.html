@@ -2124,7 +2124,8 @@
                                     <th style="padding: 10px;">Float</th>
                                     <th style="padding: 10px;">Open By</th>
                                     <th style="padding: 10px;">Staff</th>
-                                    <th style="padding: 10px;">Order Id</th>
+                                    <th style="padding: 10px;">Total Orders</th>
+                                    <th style="padding: 10px;">Total Cancelled</th>
                                     <th style="padding: 10px;">Cash</th>
                                     <th style="padding: 10px;">E-Wallet</th>
                                     <th style="padding: 10px;">Card</th>
@@ -4399,31 +4400,34 @@
             const staffNames = shiftData.staffNames || [shiftData.startedBy];
 
             const startTime = shiftData.startTime.toDate();
+
+            // Get all orders in this shift to count status and collect numbers
+            const ordersRef = collection(db, 'licenses', currentClientId, 'orders');
+            const ordersInShiftSnap = await getDocs(query(ordersRef, where('createdAt', '>=', Timestamp.fromDate(startTime))));
+            
+            let totalCompletedCount = 0;
+            let totalCancelledCount = 0;
+            const allOrderNumbers = [];
+            
+            ordersInShiftSnap.forEach(oDoc => {
+                const oData = oDoc.data();
+                if (oData.status === 'completed') totalCompletedCount++;
+                if (oData.status === 'cancelled') totalCancelledCount++;
+                allOrderNumbers.push(oData.orderNumber || oDoc.id);
+            });
+
             const transRef = collection(db, 'licenses', currentClientId, 'transactions');
             const q = query(transRef, where('createdAt', '>=', Timestamp.fromDate(startTime)));
             const transSnap = await getDocs(q);
             
             let cashTotal = 0, ewalletTotal = 0, cardTotal = 0;
-            const orderIds = new Set();
             transSnap.forEach(d => {
                 const t = d.data();
                 const amt = parseFloat(t.amount) || 0;
                 if (t.paymentMethod === 'cash') cashTotal += amt;
                 else if (t.paymentMethod === 'ewallet') ewalletTotal += amt;
                 else if (t.paymentMethod === 'card') cardTotal += amt;
-                if (t.orderId) t.orderId.split(',').forEach(id => orderIds.add(id.trim()));
             });
-
-            const orderNumbers = [];
-            const idsArray = Array.from(orderIds);
-            for (const id of idsArray) {
-                try {
-                    const oSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', id));
-                    if (oSnap.exists()) {
-                        orderNumbers.push(oSnap.data().orderNumber || id);
-                    }
-                } catch (e) { console.error("Error fetching order number", e); }
-            }
 
             const startFloat = parseFloat(shiftData.startFloat) || 0;
             expectedCashInDrawer = startFloat + cashTotal;
@@ -4454,7 +4458,9 @@
                 startedBy: shiftData.startedBy,
                 staffNames: staffNames,
                 cashTotal, ewalletTotal, cardTotal,
-                orderIds: orderNumbers,
+                orderIds: allOrderNumbers,
+                totalOrders: totalCompletedCount,
+                totalCancelled: totalCancelledCount,
                 profit: cashTotal + ewalletTotal + cardTotal
             };
         };
@@ -4505,7 +4511,8 @@
                         <td>RM ${parseFloat(s.startFloat).toFixed(2)}</td>
                         <td>${s.startedBy}</td>
                         <td title="${staffNames}">${staffNames}</td>
-                        <td style="max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${s.orderIds ? s.orderIds.join(', ') : ''}">${s.orderIds ? s.orderIds.join(', ') : 'N/A'}</td>
+                        <td>${s.totalOrders || 0}</td>
+                        <td style="color:${(s.totalCancelled || 0) > 0 ? '#e53e3e' : '#64748b'}">${s.totalCancelled || 0}</td>
                         <td>RM ${s.cashTotal.toFixed(2)}</td>
                         <td>RM ${s.ewalletTotal.toFixed(2)}</td>
                         <td>RM ${s.cardTotal.toFixed(2)}</td>
@@ -4565,7 +4572,8 @@
                         <p><strong>Opened By:</strong> ${s.startedBy} | <strong>Closed By:</strong> ${s.endedBy}</p>
                         <hr style="margin: 10px 0; border: none; border-top: 1px dashed #cbd5e0;">
                         <p><strong>Staff Involved:</strong> ${staffNames}</p>
-                        <p style="word-break: break-all;"><strong>Order IDs:</strong> ${s.orderIds ? s.orderIds.join(', ') : 'N/A'}</p>
+                        <p><strong>Total Orders (Completed):</strong> <span style="color:#38a169;">${s.totalOrders || 0}</span></p>
+                        <p><strong>Total Cancelled:</strong> <span style="color:#e53e3e;">${s.totalCancelled || 0}</span></p>
                         <hr style="margin: 10px 0; border: none; border-top: 1px dashed #cbd5e0;">
                         <div style="display: flex; justify-content: space-between;"><span>Opening Float:</span> <b>RM ${parseFloat(s.startFloat).toFixed(2)}</b></div>
                         <div style="display: flex; justify-content: space-between;"><span>Cash Sales:</span> <b>RM ${s.cashTotal.toFixed(2)}</b></div>
@@ -4598,9 +4606,10 @@
                     const snap = await getDocs(q);
                     snap.forEach(doc => {
                         const o = doc.data();
+                        const isCancelled = o.status === 'cancelled';
                         tableHtml += `
                             <tr style="border-bottom: 1px solid #f1f5f9;">
-                                <td style="padding:10px;">${o.orderNumber}</td>
+                                <td style="padding:10px; color:${isCancelled ? '#e53e3e' : 'inherit'};">${o.orderNumber}${isCancelled ? ' (Cancelled)' : ''}</td>
                                 <td style="padding:10px;">RM ${o.total}</td>
                                 <td style="padding:10px;"><button class="btn-view" style="padding: 5px 10px; font-size: 0.7rem;" onclick="viewOrderDetails('${doc.id}')">View Order</button></td>
                             </tr>
