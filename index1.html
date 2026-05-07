@@ -3619,11 +3619,6 @@
             if (unsubscribers['licenseMonitor']) unsubscribers['licenseMonitor']();
             if (!currentClientId) return;
 
-            // Check local attendance status on refresh
-            if (localStorage.getItem('isClockedIn') === 'true') {
-                document.getElementById('sidebarClockOutBtn').style.display = 'block';
-            }
-
             const licenseRef = doc(db, 'licenses', currentClientId);
             unsubscribers['licenseMonitor'] = onSnapshot(licenseRef, (snap) => {
                 if (!snap.exists()) return;
@@ -4309,13 +4304,18 @@
         function setupShiftListener() {
             if (unsubscribers['shiftSettings']) unsubscribers['shiftSettings']();
             const shiftRef = doc(db, 'licenses', currentClientId, 'settings', 'shift');
-            unsubscribers['shiftSettings'] = onSnapshot(shiftRef, (snap) => {
+            unsubscribers['shiftSettings'] = onSnapshot(shiftRef, async (snap) => {
                 if (snap.exists()) {
                     const data = snap.data();
                     const wasActive = isShiftActive;
                     isShiftActive = data.active === true;
                     activeShiftId = data.shiftId || null;
                     
+                    // Verify clock-in status from DB to ensure button persists after logout/login
+                    if (activeShiftId && currentStaff) {
+                        await checkAttendanceStatus();
+                    }
+
                     // Popup for other users joining
                     if (isShiftActive && data.staffNames && !data.staffNames.includes(currentStaff.name)) {
                         showJoinShiftModal(data);
@@ -4344,6 +4344,27 @@
                     renderTableGridTakeOrder();
                 }
             });
+        }
+
+        async function checkAttendanceStatus() {
+            if (!activeShiftId || !currentStaff) return;
+            const q = query(
+                collection(db, 'licenses', currentClientId, 'attendance'),
+                where('staffId', '==', currentStaff.id),
+                where('shiftId', '==', activeShiftId),
+                where('clockOut', '==', null),
+                limit(1)
+            );
+            try {
+                const snap = await getDocs(q);
+                if (!snap.empty) {
+                    localStorage.setItem('isClockedIn', 'true');
+                    document.getElementById('sidebarClockOutBtn').style.display = 'block';
+                } else {
+                    localStorage.removeItem('isClockedIn');
+                    document.getElementById('sidebarClockOutBtn').style.display = 'none';
+                }
+            } catch (e) { console.error("Error checking attendance status", e); }
         }
 
         window.showJoinShiftModal = function(data) {
