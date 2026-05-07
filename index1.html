@@ -4320,8 +4320,10 @@
                         await checkAttendanceStatus();
                     }
 
+                    const isClockedIn = localStorage.getItem('isClockedIn') === 'true';
+
                     // Popup for other users joining
-                    if (isShiftActive && data.staffNames && !data.staffNames.includes(currentStaff.name)) {
+                    if (isShiftActive && !isClockedIn) {
                         showJoinShiftModal(data);
                     } else {
                         closeModal('joinShiftModal');
@@ -4709,6 +4711,7 @@
                 container.innerHTML = '<div class="loading">Loading attendance...</div>';
                 const attQuery = query(collection(db, 'licenses', currentClientId, 'attendance'), where('shiftId', '==', s.shiftId));
                 const attSnap = await getDocs(attQuery);
+                const attRecords = attSnap.docs.map(d => d.data()).sort((a, b) => a.clockIn.toDate() - b.clockIn.toDate());
                 
                 let tableHtml = `
                     <table style="width:100%; border-collapse: collapse; font-size: 0.75rem;">
@@ -4722,8 +4725,7 @@
                         </thead>
                         <tbody>`;
                 
-                attSnap.forEach(d => {
-                    const data = d.data();
+                attRecords.forEach(data => {
                     const cin = data.clockIn.toDate();
                     const cout = data.clockOut ? data.clockOut.toDate() : null;
                     let duration = "Active";
