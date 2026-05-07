@@ -3331,7 +3331,9 @@
         <div class="loading-popup" style="max-width: 350px; border: 2px solid #e53e3e;">
             <i class="fas fa-exclamation-triangle" style="font-size: 3rem; color: #e53e3e; margin-bottom: 20px;"></i>
             <p style="font-weight: 600;">Sorry your licenses not active please contact us 601160801477</p>
-            <button class="primary-btn" onclick="logout()" style="margin-top: 20px; width: 100%; background: #e53e3e;">Logout</button>
+            <button id="whatsappActivateBtn" class="primary-btn" style="margin-top: 20px; width: 100%; background: #25D366; border: none; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                <i class="fab fa-whatsapp" style="font-size: 1.2rem;"></i> Whatsapp
+            </button>
         </div>
     </div>
 
@@ -3604,7 +3606,15 @@
 
                 // Check Status: Show popup if NOT active
                 const inactiveOverlay = document.getElementById('licenseInactiveOverlay');
-                inactiveOverlay.style.display = (status !== 'active') ? 'flex' : 'none';
+                if (status !== 'active') {
+                    inactiveOverlay.style.display = 'flex';
+                    document.getElementById('whatsappActivateBtn').onclick = () => {
+                        const message = encodeURIComponent(`Hi my licenses Key not active I want to activate my ${restaurantName}`);
+                        window.open(`https://wa.me/601160801477?text=${message}`, '_blank');
+                    };
+                } else {
+                    inactiveOverlay.style.display = 'none';
+                }
 
                 // Check Expiry: Show popup if expired
                 const expiredOverlay = document.getElementById('licenseExpiredOverlay');
