@@ -2135,6 +2135,7 @@
                                     <th style="padding: 10px;">Staff</th>
                                     <th style="padding: 10px;">Total Orders</th>
                                     <th style="padding: 10px;">Total Cancelled</th>
+                                    <th style="padding: 10px;">Total Transaction</th>
                                     <th style="padding: 10px;">Cash</th>
                                     <th style="padding: 10px;">E-Wallet</th>
                                     <th style="padding: 10px;">Card</th>
@@ -2746,6 +2747,17 @@
                 <button class="modal-close" onclick="closeModal('shiftDetailModal')">&times;</button>
             </div>
             <div id="shiftDetailContent"></div>
+        </div>
+    </div>
+
+    <!-- Transaction Detail Detail Modal -->
+    <div id="transactionDetailModal" class="modal">
+        <div class="modal-content" style="max-width: 450px; border-radius: 28px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-money-bill-wave"></i> Transaction Details</h3>
+                <button class="modal-close" onclick="closeModal('transactionDetailModal')">&times;</button>
+            </div>
+            <div id="transactionDetailContent"></div>
         </div>
     </div>
 
@@ -4542,6 +4554,7 @@
             const transSnap = await getDocs(q);
             
             let cashTotal = 0, ewalletTotal = 0, cardTotal = 0;
+            let totalTransactions = transSnap.size;
             transSnap.forEach(d => {
                 const t = d.data();
                 const amt = parseFloat(t.amount) || 0;
@@ -4582,6 +4595,7 @@
                 orderIds: allOrderNumbers,
                 totalOrders: totalCompletedCount,
                 totalCancelled: totalCancelledCount,
+                totalTransactions: totalTransactions,
                 profit: cashTotal + ewalletTotal + cardTotal
             };
         };
@@ -4651,6 +4665,7 @@
                         <td title="${staffNames}">${staffNames}</td>
                         <td>${s.totalOrders || 0}</td>
                         <td style="color:${(s.totalCancelled || 0) > 0 ? '#e53e3e' : '#64748b'}">${s.totalCancelled || 0}</td>
+                        <td>${s.totalTransactions || 0}</td>
                         <td>RM ${s.cashTotal.toFixed(2)}</td>
                         <td>RM ${s.ewalletTotal.toFixed(2)}</td>
                         <td>RM ${s.cardTotal.toFixed(2)}</td>
@@ -4712,6 +4727,7 @@
                         <p><strong>Staff Involved:</strong> ${staffNames}</p>
                         <p><strong>Total Orders (Completed):</strong> <span style="color:#38a169;">${s.totalOrders || 0}</span></p>
                         <p><strong>Total Cancelled:</strong> <span style="color:#e53e3e;">${s.totalCancelled || 0}</span></p>
+                        <p><strong>Total Transaction:</strong> <span style="color:#764ba2;">${s.totalTransactions || 0}</span></p>
                         <hr style="margin: 10px 0; border: none; border-top: 1px dashed #cbd5e0;">
                         <div style="display: flex; justify-content: space-between;"><span>Opening Float:</span> <b>RM ${parseFloat(s.startFloat).toFixed(2)}</b></div>
                         <div style="display: flex; justify-content: space-between;"><span>Cash Sales:</span> <b>RM ${s.cashTotal.toFixed(2)}</b></div>
@@ -4761,7 +4777,38 @@
                 tableHtml += '</tbody></table>';
                 container.innerHTML = tableHtml;
             } else if (tab === 'transaction') {
-                container.innerHTML = '<div style="padding:20px; text-align:center; color:#666;">Coming soon..</div>';
+                container.innerHTML = '<div class="loading">Loading transactions...</div>';
+                const transRef = collection(db, 'licenses', currentClientId, 'transactions');
+                const q = query(transRef, where('createdAt', '>=', s.startTime), where('createdAt', '<=', s.endTime));
+                const transSnap = await getDocs(q);
+                
+                let tableHtml = `
+                    <table style="width:100%; border-collapse: collapse; font-size: 0.8rem;">
+                        <thead>
+                            <tr style="text-align:left; border-bottom:2px solid #f1f5f9; color: #64748b;">
+                                <th style="padding:10px;">Transaction Id</th>
+                                <th style="padding:10px;">Amount</th>
+                                <th style="padding:10px;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+                
+                if (transSnap.empty) {
+                    tableHtml += '<tr><td colspan="3" style="padding:20px; text-align:center; color:#666;">No transactions in this shift</td></tr>';
+                } else {
+                    transSnap.forEach(tDoc => {
+                        const t = tDoc.data();
+                        tableHtml += `
+                            <tr style="border-bottom: 1px solid #f1f5f9;">
+                                <td style="padding:10px;">#${tDoc.id.slice(0,8)}</td>
+                                <td style="padding:10px;">RM ${parseFloat(t.amount).toFixed(2)}</td>
+                                <td style="padding:10px;"><button class="btn-view" style="padding: 5px 10px; font-size: 0.7rem;" onclick="viewTransactionDetails('${tDoc.id}')">View Transaction</button></td>
+                            </tr>`;
+                    });
+                }
+                
+                tableHtml += '</tbody></table>';
+                container.innerHTML = tableHtml;
             } else if (tab === 'order') {
                 container.innerHTML = '<div class="loading">Loading orders...</div>';
                 let tableHtml = `
@@ -4795,6 +4842,25 @@
                 tableHtml += '</tbody></table>';
                 container.innerHTML = tableHtml;
             }
+        };
+
+        window.viewTransactionDetails = async function(transId) {
+            const transRef = doc(db, 'licenses', currentClientId, 'transactions', transId);
+            const snap = await getDoc(transRef);
+            if (!snap.exists()) return;
+            const t = snap.data();
+            const content = document.getElementById('transactionDetailContent');
+            content.innerHTML = `
+                <div style="background: #f8fafc; padding: 20px; border-radius: 16px; font-size: 0.95rem; line-height: 1.6;">
+                    <p><strong>Transaction Id:</strong> ${transId}</p>
+                    <p><strong>Order Id:</strong> ${t.orderId || 'N/A'}</p>
+                    <p><strong>Date:</strong> ${t.createdAt?.toDate().toLocaleString() || 'N/A'}</p>
+                    <p><strong>Type:</strong> ${t.type || 'payment'}</p>
+                    <p><strong>Method:</strong> ${t.paymentMethod || 'N/A'}</p>
+                    <p><strong>Amount:</strong> <b>RM ${parseFloat(t.amount).toFixed(2)}</b></p>
+                </div>
+            `;
+            document.getElementById('transactionDetailModal').style.display = 'flex';
         };
 
         window.handleShiftToggle = async function(checked) {
@@ -9758,6 +9824,7 @@ window.openSearchModalTakeOrder = function() {
         window.updateVoidModalQty = updateVoidModalQty;
         window.confirmVoidQtyTakeOrder = confirmVoidQtyTakeOrder;
         window.showShiftDetailTab = showShiftDetailTab;
+        window.viewTransactionDetails = viewTransactionDetails;
         
         // ========== WIFI STATUS LOGIC ==========
         window.updateWifiStatus = function() {
