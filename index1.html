@@ -4308,11 +4308,15 @@
                 if (snap.exists()) {
                     const data = snap.data();
                     const wasActive = isShiftActive;
+                    // Capture status before it might be updated/cleared by checkAttendanceStatus
+                    const currentlyClockedIn = localStorage.getItem('isClockedIn') === 'true';
+
                     isShiftActive = data.active === true;
                     activeShiftId = data.shiftId || null;
                     
-                    // Verify clock-in status from DB to ensure button persists after logout/login
-                    if (activeShiftId && currentStaff) {
+                    // Only verify clock-in status from DB if shift is still active.
+                    // If shift ended, the manager already updated the DB, so we rely on currentlyClockedIn state.
+                    if (isShiftActive && activeShiftId && currentStaff) {
                         await checkAttendanceStatus();
                     }
 
@@ -4322,17 +4326,17 @@
                     } else {
                         closeModal('joinShiftModal');
                     }
-
-                    // Auto-logout logic for staff when shift is ended by manager
+                    
+                    // Handle Shift Ending logic
                     if (wasActive && !isShiftActive) {
-                        // If shift just ended and it wasn't ended by me, or if I'm clocked in, log out
-                        if (data.endedById !== currentStaff.id && localStorage.getItem('isClockedIn') === 'true') {
-                            alert("The shift has been ended by the manager. You have been clocked out and will be logged out.");
+                        if (data.endedById !== currentStaff.id && currentlyClockedIn) {
+                            alert("The shift has been ended by the manager. You have been automatically clocked out and will be logged out.");
                             logout();
-                        } else if (data.endedById === currentStaff.id) {
-                            // Manager who ended shift stays logged in but clocked out
+                        } else {
+                            // For the manager who ended the shift or staff already manually clocked out, just hide the button
                             localStorage.removeItem('isClockedIn');
-                            document.getElementById('sidebarClockOutBtn').style.display = 'none';
+                            const clockOutBtn = document.getElementById('sidebarClockOutBtn');
+                            if (clockOutBtn) clockOutBtn.style.display = 'none';
                         }
                     }
                 } else {
