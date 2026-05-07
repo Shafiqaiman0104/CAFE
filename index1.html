@@ -2119,6 +2119,7 @@
                             <thead>
                                 <tr style="border-bottom: 2px solid #f1f5f9; text-align: left; color: #64748b;">
                                     <th style="padding: 10px;">Shift Date</th>
+                                    <th style="padding: 10px;">Shift ID</th>
                                     <th style="padding: 10px;">Open At</th>
                                     <th style="padding: 10px;">Float</th>
                                     <th style="padding: 10px;">Open By</th>
@@ -4413,6 +4414,17 @@
                 if (t.orderId) t.orderId.split(',').forEach(id => orderIds.add(id.trim()));
             });
 
+            const orderNumbers = [];
+            const idsArray = Array.from(orderIds);
+            for (const id of idsArray) {
+                try {
+                    const oSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', id));
+                    if (oSnap.exists()) {
+                        orderNumbers.push(oSnap.data().orderNumber || id);
+                    }
+                } catch (e) { console.error("Error fetching order number", e); }
+            }
+
             const startFloat = parseFloat(shiftData.startFloat) || 0;
             expectedCashInDrawer = startFloat + cashTotal;
             
@@ -4436,12 +4448,13 @@
             document.getElementById('endShiftModal').style.display = 'flex';
             
             window.lastShiftStats = {
+                shiftId: shiftData.shiftId || 'N/A',
                 startTime: shiftData.startTime,
                 startFloat: startFloat,
                 startedBy: shiftData.startedBy,
                 staffNames: staffNames,
                 cashTotal, ewalletTotal, cardTotal,
-                orderIds: Array.from(orderIds),
+                orderIds: orderNumbers,
                 profit: cashTotal + ewalletTotal + cardTotal
             };
         };
@@ -4487,6 +4500,7 @@
 
                     return `<tr>
                         <td>${s.endTime.toDate().toLocaleDateString()}</td>
+                        <td>${s.shiftId || 'N/A'}</td>
                         <td>${s.startTime.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</td>
                         <td>RM ${parseFloat(s.startFloat).toFixed(2)}</td>
                         <td>${s.startedBy}</td>
