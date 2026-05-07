@@ -4524,29 +4524,94 @@
             const snap = await getDoc(doc(db, 'licenses', currentClientId, 'shifts', id));
             if (!snap.exists()) return;
             const s = snap.data();
-            const total = parseFloat(s.profit) - parseFloat(s.loss);
-            const staffNames = Array.isArray(s.staffNames) ? s.staffNames.join(', ') : s.startedBy;
+            window.currentViewingShift = s;
 
-            document.getElementById('shiftDetailContent').innerHTML = `
-                <div style="background: #f8fafc; padding: 20px; border-radius: 16px; font-size: 0.9rem; line-height: 1.6;">
-                    <p><strong>Shift ID:</strong> <span style="color:#764ba2;">${s.shiftId || 'N/A'}</span></p>
-                    <p><strong>Date:</strong> ${s.endTime.toDate().toLocaleDateString()}</p>
-                    <p><strong>Period:</strong> ${s.startTime.toDate().toLocaleTimeString()} - ${s.endTime.toDate().toLocaleTimeString()}</p>
-                    <p><strong>Opened By:</strong> ${s.startedBy} | <strong>Closed By:</strong> ${s.endedBy}</p>
-                    <hr style="margin: 10px 0; border: none; border-top: 1px dashed #cbd5e0;">
-                    <p><strong>Staff Involved:</strong> ${staffNames}</p>
-                    <p style="word-break: break-all;"><strong>Order IDs:</strong> ${s.orderIds ? s.orderIds.join(', ') : 'N/A'}</p>
-                    <hr style="margin: 10px 0; border: none; border-top: 1px dashed #cbd5e0;">
-                    <div style="display: flex; justify-content: space-between;"><span>Opening Float:</span> <b>RM ${parseFloat(s.startFloat).toFixed(2)}</b></div>
-                    <div style="display: flex; justify-content: space-between;"><span>Cash Sales:</span> <b>RM ${s.cashTotal.toFixed(2)}</b></div>
-                    <div style="display: flex; justify-content: space-between;"><span>E-Wallet Sales:</span> <b>RM ${s.ewalletTotal.toFixed(2)}</b></div>
-                    <div style="display: flex; justify-content: space-between;"><span>Card Sales:</span> <b>RM ${s.cardTotal.toFixed(2)}</b></div>
-                    <div style="display: flex; justify-content: space-between; margin-top: 5px; color: #764ba2; font-weight: bold;"><span>Total Profit:</span> <span>RM ${s.profit.toFixed(2)}</span></div>
-                    <div style="display: flex; justify-content: space-between; color: #e53e3e;"><span>Loss/Shortage:</span> <span>RM ${s.loss}</span></div>
-                    <div style="display: flex; justify-content: space-between; font-size: 1.1rem; font-weight: 800; margin-top: 10px; padding-top: 10px; border-top: 2px solid #eee;"><span>Net Total:</span> <span>RM ${total.toFixed(2)}</span></div>
+            const modalContent = document.getElementById('shiftDetailContent');
+            modalContent.innerHTML = `
+                <div style="display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px; overflow-x: auto; scrollbar-width: none;">
+                    <button class="shift-tab-btn active" onclick="showShiftDetailTab('summary', this)" style="padding: 8px 12px; border:none; border-radius:10px; cursor:pointer; font-weight:bold; background:#764ba2; color:white; font-size: 0.8rem; white-space: nowrap;">Summary</button>
+                    <button class="shift-tab-btn" onclick="showShiftDetailTab('staff', this)" style="padding: 8px 12px; border:none; border-radius:10px; cursor:pointer; font-weight:bold; background:#f1f5f9; color:#475569; font-size: 0.8rem; white-space: nowrap;">Staff</button>
+                    <button class="shift-tab-btn" onclick="showShiftDetailTab('order', this)" style="padding: 8px 12px; border:none; border-radius:10px; cursor:pointer; font-weight:bold; background:#f1f5f9; color:#475569; font-size: 0.8rem; white-space: nowrap;">Order</button>
+                    <button class="shift-tab-btn" onclick="showShiftDetailTab('transaction', this)" style="padding: 8px 12px; border:none; border-radius:10px; cursor:pointer; font-weight:bold; background:#f1f5f9; color:#475569; font-size: 0.8rem; white-space: nowrap;">Transaction</button>
                 </div>
+                <div id="shiftTabContent"></div>
             `;
+
+            showShiftDetailTab('summary');
             document.getElementById('shiftDetailModal').style.display = 'flex';
+        };
+
+        window.showShiftDetailTab = async function(tab, btn) {
+            const s = window.currentViewingShift;
+            const container = document.getElementById('shiftTabContent');
+            
+            if (btn) {
+                document.querySelectorAll('.shift-tab-btn').forEach(b => {
+                    b.style.background = '#f1f5f9';
+                    b.style.color = '#475569';
+                });
+                btn.style.background = '#764ba2';
+                btn.style.color = 'white';
+            }
+
+            if (tab === 'summary') {
+                const total = parseFloat(s.profit) - parseFloat(s.loss);
+                const staffNames = Array.isArray(s.staffNames) ? s.staffNames.join(', ') : s.startedBy;
+                container.innerHTML = `
+                    <div style="background: #f8fafc; padding: 20px; border-radius: 16px; font-size: 0.9rem; line-height: 1.6;">
+                        <p><strong>Shift ID:</strong> <span style="color:#764ba2;">${s.shiftId || 'N/A'}</span></p>
+                        <p><strong>Date:</strong> ${s.endTime.toDate().toLocaleDateString()}</p>
+                        <p><strong>Period:</strong> ${s.startTime.toDate().toLocaleTimeString()} - ${s.endTime.toDate().toLocaleTimeString()}</p>
+                        <p><strong>Opened By:</strong> ${s.startedBy} | <strong>Closed By:</strong> ${s.endedBy}</p>
+                        <hr style="margin: 10px 0; border: none; border-top: 1px dashed #cbd5e0;">
+                        <p><strong>Staff Involved:</strong> ${staffNames}</p>
+                        <p style="word-break: break-all;"><strong>Order IDs:</strong> ${s.orderIds ? s.orderIds.join(', ') : 'N/A'}</p>
+                        <hr style="margin: 10px 0; border: none; border-top: 1px dashed #cbd5e0;">
+                        <div style="display: flex; justify-content: space-between;"><span>Opening Float:</span> <b>RM ${parseFloat(s.startFloat).toFixed(2)}</b></div>
+                        <div style="display: flex; justify-content: space-between;"><span>Cash Sales:</span> <b>RM ${s.cashTotal.toFixed(2)}</b></div>
+                        <div style="display: flex; justify-content: space-between;"><span>E-Wallet Sales:</span> <b>RM ${s.ewalletTotal.toFixed(2)}</b></div>
+                        <div style="display: flex; justify-content: space-between;"><span>Card Sales:</span> <b>RM ${s.cardTotal.toFixed(2)}</b></div>
+                        <div style="display: flex; justify-content: space-between; margin-top: 5px; color: #764ba2; font-weight: bold;"><span>Total Profit:</span> <span>RM ${s.profit.toFixed(2)}</span></div>
+                        <div style="display: flex; justify-content: space-between; color: #e53e3e;"><span>Loss/Shortage:</span> <span>RM ${s.loss}</span></div>
+                        <div style="display: flex; justify-content: space-between; font-size: 1.1rem; font-weight: 800; margin-top: 10px; padding-top: 10px; border-top: 2px solid #eee;"><span>Net Total:</span> <span>RM ${total.toFixed(2)}</span></div>
+                    </div>
+                `;
+            } else if (tab === 'staff') {
+                container.innerHTML = '<div style="padding:20px; text-align:center; color:#666;">Coming soon..</div>';
+            } else if (tab === 'transaction') {
+                container.innerHTML = '<div style="padding:20px; text-align:center; color:#666;">Coming soon..</div>';
+            } else if (tab === 'order') {
+                container.innerHTML = '<div class="loading">Loading orders...</div>';
+                let tableHtml = `
+                    <table style="width:100%; border-collapse: collapse; font-size: 0.8rem;">
+                        <thead>
+                            <tr style="text-align:left; border-bottom:2px solid #f1f5f9; color: #64748b;">
+                                <th style="padding:10px;">Order Id</th>
+                                <th style="padding:10px;">Total</th>
+                                <th style="padding:10px;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                if (s.orderIds && s.orderIds.length > 0) {
+                    const q = query(collection(db, 'licenses', currentClientId, 'orders'), where('orderNumber', 'in', s.orderIds));
+                    const snap = await getDocs(q);
+                    snap.forEach(doc => {
+                        const o = doc.data();
+                        tableHtml += `
+                            <tr style="border-bottom: 1px solid #f1f5f9;">
+                                <td style="padding:10px;">${o.orderNumber}</td>
+                                <td style="padding:10px;">RM ${o.total}</td>
+                                <td style="padding:10px;"><button class="btn-view" style="padding: 5px 10px; font-size: 0.7rem;" onclick="viewOrderDetails('${doc.id}')">View Order</button></td>
+                            </tr>
+                        `;
+                    });
+                } else {
+                    tableHtml += '<tr><td colspan="3" style="padding:20px; text-align:center; color:#666;">No orders in this shift</td></tr>';
+                }
+                tableHtml += '</tbody></table>';
+                container.innerHTML = tableHtml;
+            }
         };
 
         window.handleShiftToggle = async function(checked) {
@@ -9509,7 +9574,8 @@ window.openSearchModalTakeOrder = function() {
         window.voidItemFromCheckout = voidItemFromCheckout;
         window.updateVoidModalQty = updateVoidModalQty;
         window.confirmVoidQtyTakeOrder = confirmVoidQtyTakeOrder;
-
+        window.showShiftDetailTab = showShiftDetailTab;
+        
         // ========== WIFI STATUS LOGIC ==========
         window.updateWifiStatus = function() {
             const wifiIcon = document.getElementById('wifiIcon');
