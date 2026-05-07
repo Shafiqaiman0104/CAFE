@@ -4382,6 +4382,11 @@
 
         window.handleClockIn = async function(staff, shiftId) {
             try {
+                // Set locally immediately to prevent join popup flicker during process
+                localStorage.setItem('isClockedIn', 'true');
+                const clockOutBtn = document.getElementById('sidebarClockOutBtn');
+                if (clockOutBtn) clockOutBtn.style.display = 'block';
+
                 await addDoc(collection(db, 'licenses', currentClientId, 'attendance'), {
                     staffId: staff.id,
                     staffName: staff.name,
@@ -4390,9 +4395,12 @@
                     clockOut: null,
                     createdAt: Timestamp.now()
                 });
-                localStorage.setItem('isClockedIn', 'true');
-                document.getElementById('sidebarClockOutBtn').style.display = 'block';
-            } catch (e) { console.error("Clock-in error", e); }
+            } catch (e) { 
+                console.error("Clock-in error", e);
+                localStorage.removeItem('isClockedIn');
+                const clockOutBtn = document.getElementById('sidebarClockOutBtn');
+                if (clockOutBtn) clockOutBtn.style.display = 'none';
+            }
         };
 
         window.handleManualClockOut = async function() {
@@ -4430,12 +4438,16 @@
             const snap = await getDoc(shiftRef);
             if (snap.exists()) {
                 const data = snap.data();
+                
+                // Clock in first
+                await handleClockIn(currentStaff, data.shiftId);
+                
+                // Update names if necessary
                 const names = data.staffNames || [];
                 if (!names.includes(currentStaff.name)) {
                     names.push(currentStaff.name);
                     await updateDoc(shiftRef, { staffNames: names, updatedAt: Timestamp.now() });
                 }
-                await handleClockIn(currentStaff, data.shiftId);
             }
             closeModal('joinShiftModal');
         };
@@ -4468,6 +4480,10 @@
             const cashFloat = parseFloat(document.getElementById('startShiftFloatInput').value) || 0;
             try {
                 const shiftId = 'SHIFT-' + Date.now();
+                
+                // Clock in the starter first to establish attendance record before global activation
+                await handleClockIn(currentStaff, shiftId);
+
                 const shiftRef = doc(db, 'licenses', currentClientId, 'settings', 'shift');
                 await setDoc(shiftRef, {
                     shiftId: shiftId,
@@ -4481,7 +4497,6 @@
                 }, { merge: true });
                 
                 closeModal('startShiftModal');
-                await handleClockIn(currentStaff, shiftId);
                 showPrinterStatusPopup("Shift Started", `Shift opened with float RM ${cashFloat.toFixed(2)}`, true);
             } catch (e) { alert("Error: " + e.message); }
         };
