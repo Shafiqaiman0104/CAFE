@@ -1883,6 +1883,14 @@
             transition: .4s;
             border-radius: 50%;
         }
+        .btn-clockout {
+            width: 100%;
+            padding: 10px;
+            border-radius: 12px;
+            cursor: pointer;
+            margin-bottom: 8px;
+            background: #ef4444;
+        }
         input:checked + .slider { background-color: #764ba2; }
         input:checked + .slider:before {
             transform: translateX(26px);
@@ -1966,12 +1974,23 @@
         <!-- Sidebar -->
         <div class="sidebar" id="sidebar">
             <div class="sidebar-header" style="padding: 24px; text-align: center; border-bottom: 1px solid rgba(0,0,0,0.05);">
-                  <img id="sidebarLogo" src="https://venturerush-tech.netlify.app/vrLogo.png" alt="Logo" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; margin-bottom: 15px; border: 3px solid #0273e61a; box-shadow: 0 4px 10px rgb(15,103,208);">
+                <div id="sidebarLogoWrapper" style="position: relative; width: 80px; height: 80px; margin: 0 auto 15px auto;">
+                    <!-- Shift Timer -->
+                    <div id="shiftTimerBadge" style="display: none; position: absolute; top: -5px; left: -35px; background: white; border: 1.5px solid #764ba2; border-radius: 20px; padding: 2px 8px; font-size: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); align-items: center; gap: 4px; z-index: 5; white-space: nowrap;">
+                        <i class="fas fa-clock" style="color: #764ba2;"></i> <span id="shiftTimerVal">0hr 00m</span>
+                    </div>
+                    <!-- Staff Timer -->
+                    <div id="staffTimerBadge" style="display: none; position: absolute; top: -5px; right: -35px; background: white; border: 1.5px solid #ff9800; border-radius: 20px; padding: 2px 8px; font-size: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); align-items: center; gap: 4px; z-index: 5; white-space: nowrap;">
+                        <i class="fas fa-user-clock" style="color: #ff9800;"></i> <span id="staffTimerVal">0hr 00m</span>
+                    </div>
+                    <img id="sidebarLogo" src="https://venturerush-tech.netlify.app/vrLogo.png" alt="Logo" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid #0273e61a; box-shadow: 0 4px 10px rgb(15,103,208);">
+                </div>
                 <div class="restaurant-name" id="appRestaurantName" style="font-size: 20px; margin-bottom: 10px;"></div>
                 <div style="font-size: 14px; color: #555; margin-bottom: 15px;">
                     <span id="staffNameTop" style="font-weight: 600;"></span> | <span id="staffRoleTop" class="role-badge"></span>
                 </div>
-                <button class="btn-small" onclick="logout()" style="width: 100%; padding: 10px; border-radius: 12px; cursor: pointer;">Logout</button>
+                <button id="sidebarClockOutBtn" class="btn-small btn-clockout" onclick="handleManualClockOut()" style="display: none;">Clock Out</button>
+                <button id="sidebarLogoutBtn" class="btn-small" onclick="logout()" style="width: 100%; padding: 10px; border-radius: 12px; cursor: pointer;">Logout</button>
             </div>
             <div class="sidebar-menu">
                 <!-- OPERATIONS Section -->
@@ -2119,10 +2138,14 @@
                             <thead>
                                 <tr style="border-bottom: 2px solid #f1f5f9; text-align: left; color: #64748b;">
                                     <th style="padding: 10px;">Shift Date</th>
+                                    <th style="padding: 10px;">Shift ID</th>
                                     <th style="padding: 10px;">Open At</th>
                                     <th style="padding: 10px;">Float</th>
                                     <th style="padding: 10px;">Open By</th>
                                     <th style="padding: 10px;">Staff</th>
+                                    <th style="padding: 10px;">Total Orders</th>
+                                    <th style="padding: 10px;">Total Cancelled</th>
+                                    <th style="padding: 10px;">Total Transaction</th>
                                     <th style="padding: 10px;">Cash</th>
                                     <th style="padding: 10px;">E-Wallet</th>
                                     <th style="padding: 10px;">Card</th>
@@ -2131,6 +2154,7 @@
                                     <th style="padding: 10px;">Total</th>
                                     <th style="padding: 10px;">End At</th>
                                     <th style="padding: 10px;">End By</th>
+                                    <th style="padding: 10px;">Action</th>
                                 </tr>
                             </thead>
                             <tbody id="shiftHistoryList"></tbody>
@@ -2725,6 +2749,27 @@
         </div>
     </div>
 
+    <!-- Shift Detail Modal -->
+    <div id="shiftDetailModal" class="modal">
+        <div class="modal-content" style="max-width: 500px; border-radius: 28px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-history"></i> Shift Details</h3>
+                <button class="modal-close" onclick="closeModal('shiftDetailModal')">&times;</button>
+            </div>
+            <div id="shiftDetailContent"></div>
+        </div>
+    </div>
+
+    <!-- Transaction Detail Detail Modal -->
+    <div id="transactionDetailModal" class="modal">
+        <div class="modal-content" style="max-width: 450px; border-radius: 28px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-money-bill-wave"></i> Transaction Details</h3>
+                <button class="modal-close" onclick="closeModal('transactionDetailModal')">&times;</button>
+            </div>
+            <div id="transactionDetailContent"></div>
+        </div>
+    </div>
 
     <!-- Start Shift Modal -->
     <div id="startShiftModal" class="modal">
@@ -3331,7 +3376,9 @@
         <div class="loading-popup" style="max-width: 350px; border: 2px solid #e53e3e;">
             <i class="fas fa-exclamation-triangle" style="font-size: 3rem; color: #e53e3e; margin-bottom: 20px;"></i>
             <p style="font-weight: 600;">Sorry your licenses not active please contact us 601160801477</p>
-            <button class="primary-btn" onclick="logout()" style="margin-top: 20px; width: 100%; background: #e53e3e;">Logout</button>
+            <button id="whatsappActivateBtn" class="primary-btn" style="margin-top: 20px; width: 100%; background: #25D366; border: none; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                <i class="fab fa-whatsapp" style="font-size: 1.2rem;"></i> Whatsapp
+            </button>
         </div>
     </div>
 
@@ -3340,7 +3387,7 @@
             <div style="width: 70px; height: 70px; background: #fff7ed; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto;">
                 <i class="fas fa-clock" style="font-size: 2.5rem; color: #ff9800;"></i>
             </div>
-            <p style="font-weight: 600;">Sorry your licenses already expired please contact us 601160801477 to renew ur licenses Key</p>
+            <p style="font-weight: 600;">Sorry your Licenses already expired please contact us 601160801477 to renew your Licenses Key</p>
             <button id="whatsappRenewBtn" class="primary-btn" style="margin-top: 20px; width: 100%; background: #25D366; border: none; display: flex; align-items: center; justify-content: center; gap: 10px;">
                 <i class="fab fa-whatsapp" style="font-size: 1.2rem;"></i> Whatsapp
             </button>
@@ -3454,9 +3501,13 @@
         let isCounterSummaryFlow = false;
         let checkoutTotalTakeOrder = 0;
         let checkoutReceivedInput = "0";
+        let activeShiftId = null;
         let checkoutPayMethod = "cash";
         let checkoutOrdersToProcess = [];
         
+        let shiftStartTime = null;
+        let staffClockInTime = null;
+        let timerInterval = null;
         let selectedOrderIdsForCheckout = [];
         let activeOrdersSortDirection = 'asc'; // oldest first
         let activeOrdersSearchTerm = '';
@@ -3585,6 +3636,7 @@
                 setupPrinterQueueListener();
                 setupTopBarPrinterListener();
                 showPage('takeOrder');
+                startTimerLoop();
                 
             } catch (e) { errorEl.textContent = e.message; }
         };
@@ -3604,14 +3656,22 @@
 
                 // Check Status: Show popup if NOT active
                 const inactiveOverlay = document.getElementById('licenseInactiveOverlay');
-                inactiveOverlay.style.display = (status !== 'active') ? 'flex' : 'none';
+                if (status !== 'active') {
+                    inactiveOverlay.style.display = 'flex';
+                    document.getElementById('whatsappActivateBtn').onclick = () => {
+                        const message = encodeURIComponent(`Hi my Licenses Key not active I want to activate my ${restaurantName}`);
+                        window.open(`https://wa.me/601160801477?text=${message}`, '_blank');
+                    };
+                } else {
+                    inactiveOverlay.style.display = 'none';
+                }
 
                 // Check Expiry: Show popup if expired
                 const expiredOverlay = document.getElementById('licenseExpiredOverlay');
                 if (expiry && expiry < now) {
                     expiredOverlay.style.display = 'flex';
                     document.getElementById('whatsappRenewBtn').onclick = () => {
-                        const message = encodeURIComponent(`Hi my licenses Key expired I want to renew ${restaurantName}`);
+                        const message = encodeURIComponent(`Hi my Licenses Key expired I want to renew ${restaurantName}`);
                         window.open(`https://wa.me/601160801477?text=${message}`, '_blank');
                     };
                 } else {
@@ -4270,25 +4330,78 @@
         function setupShiftListener() {
             if (unsubscribers['shiftSettings']) unsubscribers['shiftSettings']();
             const shiftRef = doc(db, 'licenses', currentClientId, 'settings', 'shift');
-            unsubscribers['shiftSettings'] = onSnapshot(shiftRef, (snap) => {
+            unsubscribers['shiftSettings'] = onSnapshot(shiftRef, async (snap) => {
                 if (snap.exists()) {
                     const data = snap.data();
+                    const wasActive = isShiftActive;
+                    // Capture status before it might be updated/cleared by checkAttendanceStatus
+                    const currentlyClockedIn = localStorage.getItem('isClockedIn') === 'true';
+
                     isShiftActive = data.active === true;
+                    activeShiftId = data.shiftId || null;
+                    shiftStartTime = data.startTime ? data.startTime.toDate() : null;
                     
+                    // Only verify clock-in status from DB if shift is still active.
+                    // If shift ended, the manager already updated the DB, so we rely on currentlyClockedIn state.
+                    if (isShiftActive && activeShiftId && currentStaff) {
+                        await checkAttendanceStatus();
+                    }
+
+                    const isClockedIn = localStorage.getItem('isClockedIn') === 'true';
+
                     // Popup for other users joining
-                    if (isShiftActive && data.staffNames && !data.staffNames.includes(currentStaff.name)) {
+                    if (isShiftActive && !isClockedIn) {
                         showJoinShiftModal(data);
                     } else {
                         closeModal('joinShiftModal');
                     }
+                    
+                    // Handle Shift Ending logic
+                    if (wasActive && !isShiftActive) {
+                        if (data.endedById !== currentStaff.id && currentlyClockedIn) {
+                            alert("The shift has been ended by the manager. You have been automatically clocked out and will be logged out.");
+                            logout();
+                        } else {
+                            // For the manager who ended the shift or staff already manually clocked out, just hide the button
+                            localStorage.removeItem('isClockedIn');
+                            const clockOutBtn = document.getElementById('sidebarClockOutBtn');
+                            if (clockOutBtn) clockOutBtn.style.display = 'none';
+                        }
+                        shiftStartTime = null;
+                    }
                 } else {
                     isShiftActive = false;
+                    activeShiftId = null;
                 }
                 updateShiftUI();
                 if (document.getElementById('takeOrder').classList.contains('active')) {
                     renderTableGridTakeOrder();
                 }
             });
+        }
+
+        async function checkAttendanceStatus() {
+            if (!activeShiftId || !currentStaff) return;
+            const q = query(
+                collection(db, 'licenses', currentClientId, 'attendance'),
+                where('staffId', '==', currentStaff.id),
+                where('shiftId', '==', activeShiftId),
+                where('clockOut', '==', null),
+                limit(1)
+            );
+            try {
+                const snap = await getDocs(q);
+                if (!snap.empty) {
+                    localStorage.setItem('isClockedIn', 'true');
+                    staffClockInTime = snap.docs[0].data().clockIn.toDate();
+                    document.getElementById('sidebarClockOutBtn').style.display = 'block';
+                } else {
+                    localStorage.removeItem('isClockedIn');
+                    staffClockInTime = null;
+                    document.getElementById('sidebarClockOutBtn').style.display = 'none';
+                }
+                updateLiveTimers();
+            } catch (e) { console.error("Error checking attendance status", e); }
         }
 
         window.showJoinShiftModal = function(data) {
@@ -4298,11 +4411,106 @@
             document.getElementById('joinShiftModal').style.display = 'flex';
         };
 
+        window.handleClockIn = async function(staff, shiftId) {
+            try {
+                // Set locally immediately to prevent join popup flicker during process
+                localStorage.setItem('isClockedIn', 'true');
+                const clockOutBtn = document.getElementById('sidebarClockOutBtn');
+                if (clockOutBtn) clockOutBtn.style.display = 'block';
+                staffClockInTime = new Date();
+
+                await addDoc(collection(db, 'licenses', currentClientId, 'attendance'), {
+                    staffId: staff.id,
+                    staffName: staff.name,
+                    shiftId: shiftId,
+                    clockIn: Timestamp.now(),
+                    clockOut: null,
+                    createdAt: Timestamp.now()
+                });
+                updateLiveTimers();
+            } catch (e) { 
+                console.error("Clock-in error", e);
+                localStorage.removeItem('isClockedIn');
+                const clockOutBtn = document.getElementById('sidebarClockOutBtn');
+                if (clockOutBtn) clockOutBtn.style.display = 'none';
+            }
+        };
+
+        window.handleManualClockOut = async function() {
+            if (!confirm("Are you sure you want to clock out? You will be logged out automatically.")) return;
+            await performClockOut(currentStaff.id, activeShiftId, true);
+        };
+
+        async function performClockOut(staffId, shiftId, doLogout = true) {
+            try {
+                // Find active attendance record for this staff and shift
+                const q = query(
+                    collection(db, 'licenses', currentClientId, 'attendance'),
+                    where('staffId', '==', staffId),
+                    where('shiftId', '==', shiftId),
+                    where('clockOut', '==', null),
+                    limit(1)
+                );
+                const snap = await getDocs(q);
+                if (!snap.empty) {
+                    await updateDoc(doc(db, 'licenses', currentClientId, 'attendance', snap.docs[0].id), {
+                        clockOut: Timestamp.now()
+                    });
+                }
+                localStorage.removeItem('isClockedIn');
+                staffClockInTime = null;
+                document.getElementById('sidebarClockOutBtn').style.display = 'none';
+                if (doLogout) logout();
+            } catch (e) { 
+                console.error("Clock-out error", e);
+                if (doLogout) logout();
+            }
+        }
+
+        function formatDuration(ms) {
+            const totalMinutes = Math.floor(ms / 60000);
+            const hours = Math.floor(totalMinutes / 60);
+            const mins = totalMinutes % 60;
+            return `${hours}hr ${mins.toString().padStart(2, '0')}m`;
+        }
+
+        function updateLiveTimers() {
+            const now = new Date();
+            const shiftBadge = document.getElementById('shiftTimerBadge');
+            const staffBadge = document.getElementById('staffTimerBadge');
+
+            if (isShiftActive && shiftStartTime) {
+                document.getElementById('shiftTimerVal').innerText = formatDuration(now - shiftStartTime);
+                shiftBadge.style.display = 'flex';
+            } else {
+                shiftBadge.style.display = 'none';
+            }
+
+            const isClockedIn = localStorage.getItem('isClockedIn') === 'true';
+            if (isShiftActive && isClockedIn && staffClockInTime) {
+                document.getElementById('staffTimerVal').innerText = formatDuration(now - staffClockInTime);
+                staffBadge.style.display = 'flex';
+            } else {
+                staffBadge.style.display = 'none';
+            }
+        }
+
+        function startTimerLoop() {
+            if (timerInterval) clearInterval(timerInterval);
+            updateLiveTimers();
+            timerInterval = setInterval(updateLiveTimers, 30000);
+        }
+
         window.joinShift = async function() {
             const shiftRef = doc(db, 'licenses', currentClientId, 'settings', 'shift');
             const snap = await getDoc(shiftRef);
             if (snap.exists()) {
                 const data = snap.data();
+                
+                // Clock in first
+                await handleClockIn(currentStaff, data.shiftId);
+                
+                // Update names if necessary
                 const names = data.staffNames || [];
                 if (!names.includes(currentStaff.name)) {
                     names.push(currentStaff.name);
@@ -4339,9 +4547,14 @@
         window.confirmStartShift = async function() {
             const cashFloat = parseFloat(document.getElementById('startShiftFloatInput').value) || 0;
             try {
+                const shiftId = 'SHIFT-' + Date.now();
+                
+                // Clock in the starter first to establish attendance record before global activation
+                await handleClockIn(currentStaff, shiftId);
+
                 const shiftRef = doc(db, 'licenses', currentClientId, 'settings', 'shift');
                 await setDoc(shiftRef, {
-                    shiftId: 'SHIFT-' + Date.now(),
+                    shiftId: shiftId,
                     active: true,
                     startTime: Timestamp.now(),
                     startFloat: cashFloat.toFixed(2),
@@ -4376,19 +4589,34 @@
             const staffNames = shiftData.staffNames || [shiftData.startedBy];
 
             const startTime = shiftData.startTime.toDate();
+
+            // Get all orders in this shift to count status and collect numbers
+            const ordersRef = collection(db, 'licenses', currentClientId, 'orders');
+            const ordersInShiftSnap = await getDocs(query(ordersRef, where('createdAt', '>=', Timestamp.fromDate(startTime))));
+            
+            let totalCompletedCount = 0;
+            let totalCancelledCount = 0;
+            const allOrderNumbers = [];
+            
+            ordersInShiftSnap.forEach(oDoc => {
+                const oData = oDoc.data();
+                if (oData.status === 'completed') totalCompletedCount++;
+                if (oData.status === 'cancelled') totalCancelledCount++;
+                allOrderNumbers.push(oData.orderNumber || oDoc.id);
+            });
+
             const transRef = collection(db, 'licenses', currentClientId, 'transactions');
             const q = query(transRef, where('createdAt', '>=', Timestamp.fromDate(startTime)));
             const transSnap = await getDocs(q);
             
             let cashTotal = 0, ewalletTotal = 0, cardTotal = 0;
-            const orderIds = new Set();
+            let totalTransactions = transSnap.size;
             transSnap.forEach(d => {
                 const t = d.data();
                 const amt = parseFloat(t.amount) || 0;
                 if (t.paymentMethod === 'cash') cashTotal += amt;
                 else if (t.paymentMethod === 'ewallet') ewalletTotal += amt;
                 else if (t.paymentMethod === 'card') cardTotal += amt;
-                if (t.orderId) t.orderId.split(',').forEach(id => orderIds.add(id.trim()));
             });
 
             const startFloat = parseFloat(shiftData.startFloat) || 0;
@@ -4414,12 +4642,16 @@
             document.getElementById('endShiftModal').style.display = 'flex';
             
             window.lastShiftStats = {
+                shiftId: shiftData.shiftId || 'N/A',
                 startTime: shiftData.startTime,
                 startFloat: startFloat,
                 startedBy: shiftData.startedBy,
                 staffNames: staffNames,
                 cashTotal, ewalletTotal, cardTotal,
-                orderIds: Array.from(orderIds),
+                orderIds: allOrderNumbers,
+                totalOrders: totalCompletedCount,
+                totalCancelled: totalCancelledCount,
+                totalTransactions: totalTransactions,
                 profit: cashTotal + ewalletTotal + cardTotal
             };
         };
@@ -4439,12 +4671,29 @@
                 actualCash: actualCash.toFixed(2),
                 loss: diff < 0 ? Math.abs(diff).toFixed(2) : "0.00",
                 endTime: Timestamp.now(),
-                endedBy: currentStaff.name
+                endedBy: currentStaff.name,
+                endedById: currentStaff.id
             };
 
             try {
+                // Auto clock out all staff still in shift
+                const attQuery = query(
+                    collection(db, 'licenses', currentClientId, 'attendance'),
+                    where('shiftId', '==', stats.shiftId),
+                    where('clockOut', '==', null)
+                );
+                const attSnap = await getDocs(attQuery);
+                const now = Timestamp.now();
+                for (const d of attSnap.docs) {
+                    await updateDoc(d.ref, { clockOut: now });
+                }
+
                 await addDoc(collection(db, 'licenses', currentClientId, 'shifts'), shiftRecord);
-                await setDoc(doc(db, 'licenses', currentClientId, 'settings', 'shift'), { active: false, updatedAt: Timestamp.now() }, { merge: true });
+                await setDoc(doc(db, 'licenses', currentClientId, 'settings', 'shift'), { 
+                    active: false, 
+                    endedById: currentStaff.id, 
+                    updatedAt: Timestamp.now() 
+                }, { merge: true });
                 
                 closeModal('endShiftModal');
                 cartTakeOrder = [];
@@ -4465,10 +4714,14 @@
 
                     return `<tr>
                         <td>${s.endTime.toDate().toLocaleDateString()}</td>
+                        <td>${s.shiftId || 'N/A'}</td>
                         <td>${s.startTime.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</td>
                         <td>RM ${parseFloat(s.startFloat).toFixed(2)}</td>
                         <td>${s.startedBy}</td>
                         <td title="${staffNames}">${staffNames}</td>
+                        <td>${s.totalOrders || 0}</td>
+                        <td style="color:${(s.totalCancelled || 0) > 0 ? '#e53e3e' : '#64748b'}">${s.totalCancelled || 0}</td>
+                        <td>${s.totalTransactions || 0}</td>
                         <td>RM ${s.cashTotal.toFixed(2)}</td>
                         <td>RM ${s.ewalletTotal.toFixed(2)}</td>
                         <td>RM ${s.cardTotal.toFixed(2)}</td>
@@ -4477,9 +4730,209 @@
                         <td style="font-weight:bold; color:${total >= 0 ? '#38a169' : '#e53e3e'}">RM ${total.toFixed(2)}</td>
                         <td>${s.endTime.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</td>
                         <td>${s.endedBy}</td>
+                        <td><button class="btn-view" style="padding: 5px 10px; font-size: 0.7rem; border-radius: 8px;" onclick="viewShiftDetails('${doc.id}')">View Details</button></td>
                     </tr>`;
                 }).join('');
             });
+        };
+
+        window.viewShiftDetails = async function(id) {
+            const snap = await getDoc(doc(db, 'licenses', currentClientId, 'shifts', id));
+            if (!snap.exists()) return;
+            const s = snap.data();
+            window.currentViewingShift = s;
+
+            const modalContent = document.getElementById('shiftDetailContent');
+            modalContent.innerHTML = `
+                <div style="display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px; overflow-x: auto; scrollbar-width: none;">
+                    <button class="shift-tab-btn active" onclick="showShiftDetailTab('summary', this)" style="padding: 8px 12px; border:none; border-radius:10px; cursor:pointer; font-weight:bold; background:#764ba2; color:white; font-size: 0.8rem; white-space: nowrap;">Summary</button>
+                    <button class="shift-tab-btn" onclick="showShiftDetailTab('staff', this)" style="padding: 8px 12px; border:none; border-radius:10px; cursor:pointer; font-weight:bold; background:#f1f5f9; color:#475569; font-size: 0.8rem; white-space: nowrap;">Staff</button>
+                    <button class="shift-tab-btn" onclick="showShiftDetailTab('order', this)" style="padding: 8px 12px; border:none; border-radius:10px; cursor:pointer; font-weight:bold; background:#f1f5f9; color:#475569; font-size: 0.8rem; white-space: nowrap;">Order</button>
+                    <button class="shift-tab-btn" onclick="showShiftDetailTab('transaction', this)" style="padding: 8px 12px; border:none; border-radius:10px; cursor:pointer; font-weight:bold; background:#f1f5f9; color:#475569; font-size: 0.8rem; white-space: nowrap;">Transaction</button>
+                </div>
+                <div id="shiftTabContent"></div>
+            `;
+
+            showShiftDetailTab('summary');
+            document.getElementById('shiftDetailModal').style.display = 'flex';
+        };
+
+        window.showShiftDetailTab = async function(tab, btn) {
+            const s = window.currentViewingShift;
+            const container = document.getElementById('shiftTabContent');
+            
+            if (btn) {
+                document.querySelectorAll('.shift-tab-btn').forEach(b => {
+                    b.style.background = '#f1f5f9';
+                    b.style.color = '#475569';
+                });
+                btn.style.background = '#764ba2';
+                btn.style.color = 'white';
+            }
+
+            if (tab === 'summary') {
+                const total = parseFloat(s.profit) - parseFloat(s.loss);
+                const staffNames = Array.isArray(s.staffNames) ? s.staffNames.join(', ') : s.startedBy;
+                container.innerHTML = `
+                    <div style="background: #f8fafc; padding: 20px; border-radius: 16px; font-size: 0.9rem; line-height: 1.6;">
+                        <p><strong>Shift ID:</strong> <span style="color:#764ba2;">${s.shiftId || 'N/A'}</span></p>
+                        <p><strong>Date:</strong> ${s.endTime.toDate().toLocaleDateString()}</p>
+                        <p><strong>Period:</strong> ${s.startTime.toDate().toLocaleTimeString()} - ${s.endTime.toDate().toLocaleTimeString()}</p>
+                        <p><strong>Opened By:</strong> ${s.startedBy} | <strong>Closed By:</strong> ${s.endedBy}</p>
+                        <hr style="margin: 10px 0; border: none; border-top: 1px dashed #cbd5e0;">
+                        <p><strong>Staff Involved:</strong> ${staffNames}</p>
+                        <p><strong>Total Orders (Completed):</strong> <span style="color:#38a169;">${s.totalOrders || 0}</span></p>
+                        <p><strong>Total Cancelled:</strong> <span style="color:#e53e3e;">${s.totalCancelled || 0}</span></p>
+                        <p><strong>Total Transaction:</strong> <span style="color:#764ba2;">${s.totalTransactions || 0}</span></p>
+                        <hr style="margin: 10px 0; border: none; border-top: 1px dashed #cbd5e0;">
+                        <div style="display: flex; justify-content: space-between;"><span>Opening Float:</span> <b>RM ${parseFloat(s.startFloat).toFixed(2)}</b></div>
+                        <div style="display: flex; justify-content: space-between;"><span>Cash Sales:</span> <b>RM ${s.cashTotal.toFixed(2)}</b></div>
+                        <div style="display: flex; justify-content: space-between;"><span>E-Wallet Sales:</span> <b>RM ${s.ewalletTotal.toFixed(2)}</b></div>
+                        <div style="display: flex; justify-content: space-between;"><span>Card Sales:</span> <b>RM ${s.cardTotal.toFixed(2)}</b></div>
+                        <div style="display: flex; justify-content: space-between; margin-top: 5px; color: #764ba2; font-weight: bold;"><span>Total Profit:</span> <span>RM ${s.profit.toFixed(2)}</span></div>
+                        <div style="display: flex; justify-content: space-between; color: #e53e3e;"><span>Loss/Shortage:</span> <span>RM ${s.loss}</span></div>
+                        <div style="display: flex; justify-content: space-between; font-size: 1.1rem; font-weight: 800; margin-top: 10px; padding-top: 10px; border-top: 2px solid #eee;"><span>Net Total:</span> <span>RM ${total.toFixed(2)}</span></div>
+                    </div>
+                `;
+            } else if (tab === 'staff') {
+                container.innerHTML = '<div class="loading">Loading attendance...</div>';
+                const attQuery = query(collection(db, 'licenses', currentClientId, 'attendance'), where('shiftId', '==', s.shiftId));
+                const attSnap = await getDocs(attQuery);
+                const attRecords = attSnap.docs.map(d => d.data()).sort((a, b) => a.clockIn.toDate() - b.clockIn.toDate());
+                
+                let tableHtml = `
+                    <table style="width:100%; border-collapse: collapse; font-size: 0.75rem;">
+                        <thead>
+                            <tr style="text-align:left; border-bottom:2px solid #f1f5f9; color: #64748b;">
+                                <th style="padding:8px;">Staff</th>
+                                <th style="padding:8px;">Clock In</th>
+                                <th style="padding:8px;">Clock Out</th>
+                                <th style="padding:8px;">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+                
+                attRecords.forEach(data => {
+                    const cin = data.clockIn.toDate();
+                    const cout = data.clockOut ? data.clockOut.toDate() : null;
+                    let duration = "Active";
+                    if (cout) {
+                        const diffMs = cout - cin;
+                        const diffHrs = Math.floor(diffMs / 3600000);
+                        const diffMins = Math.floor((diffMs % 3600000) / 60000);
+                        duration = `${diffHrs}h ${diffMins}m`;
+                    }
+                    tableHtml += `
+                        <tr style="border-bottom: 1px solid #f1f5f9;">
+                            <td style="padding:8px;"><b>${data.staffName}</b></td>
+                            <td style="padding:8px;">${cin.toLocaleString()}</td>
+                            <td style="padding:8px;">${cout ? cout.toLocaleString() : '---'}</td>
+                            <td style="padding:8px;">${duration}</td>
+                        </tr>`;
+                });
+                tableHtml += '</tbody></table>';
+                container.innerHTML = tableHtml;
+            } else if (tab === 'transaction') {
+                container.innerHTML = '<div class="loading">Loading transactions...</div>';
+                const transRef = collection(db, 'licenses', currentClientId, 'transactions');
+                const q = query(transRef, where('createdAt', '>=', s.startTime), where('createdAt', '<=', s.endTime));
+                const transSnap = await getDocs(q);
+                
+                let tableHtml = `
+                    <table style="width:100%; border-collapse: collapse; font-size: 0.8rem;">
+                        <thead>
+                            <tr style="text-align:left; border-bottom:2px solid #f1f5f9; color: #64748b;">
+                                <th style="padding:10px;">Transaction Id</th>
+                                <th style="padding:10px;">Amount</th>
+                                <th style="padding:10px;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+                
+                if (transSnap.empty) {
+                    tableHtml += '<tr><td colspan="3" style="padding:20px; text-align:center; color:#666;">No transactions in this shift</td></tr>';
+                } else {
+                    transSnap.forEach(tDoc => {
+                        const t = tDoc.data();
+                        tableHtml += `
+                            <tr style="border-bottom: 1px solid #f1f5f9;">
+                                <td style="padding:10px;">#${tDoc.id.slice(0,8)}</td>
+                                <td style="padding:10px;">RM ${parseFloat(t.amount).toFixed(2)}</td>
+                                <td style="padding:10px;"><button class="btn-view" style="padding: 5px 10px; font-size: 0.7rem;" onclick="viewTransactionDetails('${tDoc.id}')">View Transaction</button></td>
+                            </tr>`;
+                    });
+                }
+                
+                tableHtml += '</tbody></table>';
+                container.innerHTML = tableHtml;
+            } else if (tab === 'order') {
+                container.innerHTML = '<div class="loading">Loading orders...</div>';
+                let tableHtml = `
+                    <table style="width:100%; border-collapse: collapse; font-size: 0.8rem;">
+                        <thead>
+                            <tr style="text-align:left; border-bottom:2px solid #f1f5f9; color: #64748b;">
+                                <th style="padding:10px;">Order Id</th>
+                                <th style="padding:10px;">Total</th>
+                                <th style="padding:10px;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                if (s.orderIds && s.orderIds.length > 0) {
+                    const q = query(collection(db, 'licenses', currentClientId, 'orders'), where('orderNumber', 'in', s.orderIds));
+                    const snap = await getDocs(q);
+                    snap.forEach(doc => {
+                        const o = doc.data();
+                        const isCancelled = o.status === 'cancelled';
+                        tableHtml += `
+                            <tr style="border-bottom: 1px solid #f1f5f9;">
+                                <td style="padding:10px; color:${isCancelled ? '#e53e3e' : 'inherit'};">${o.orderNumber}${isCancelled ? ' (Cancelled)' : ''}</td>
+                                <td style="padding:10px;">RM ${o.total}</td>
+                                <td style="padding:10px;"><button class="btn-view" style="padding: 5px 10px; font-size: 0.7rem;" onclick="viewOrderDetails('${doc.id}')">View Order</button></td>
+                            </tr>
+                        `;
+                    });
+                } else {
+                    tableHtml += '<tr><td colspan="3" style="padding:20px; text-align:center; color:#666;">No orders in this shift</td></tr>';
+                }
+                tableHtml += '</tbody></table>';
+                container.innerHTML = tableHtml;
+            }
+        };
+
+        window.viewTransactionDetails = async function(transId) {
+            const transRef = doc(db, 'licenses', currentClientId, 'transactions', transId);
+            const snap = await getDoc(transRef);
+            if (!snap.exists()) return;
+            const t = snap.data();
+
+            let orderNumbers = 'N/A';
+            if (t.orderId) {
+                const ids = t.orderId.split(',').map(id => id.trim());
+                const numbers = [];
+                for (const id of ids) {
+                    const oSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', id));
+                    if (oSnap.exists()) {
+                        numbers.push(oSnap.data().orderNumber || id.slice(0, 8));
+                    } else {
+                        numbers.push(id.slice(0, 8));
+                    }
+                }
+                orderNumbers = numbers.join(', ');
+            }
+
+            const content = document.getElementById('transactionDetailContent');
+            content.innerHTML = `
+                <div style="background: #f8fafc; padding: 20px; border-radius: 16px; font-size: 0.95rem; line-height: 1.6;">
+                    <p><strong>Transaction Id:</strong> ${transId}</p>
+                    <p><strong>Order Number:</strong> ${orderNumbers}</p>
+                    <p><strong>Date:</strong> ${t.createdAt?.toDate().toLocaleString() || 'N/A'}</p>
+                    <p><strong>Type:</strong> ${t.type || 'payment'}</p>
+                    <p><strong>Method:</strong> ${t.paymentMethod || 'N/A'}</p>
+                    <p><strong>Amount:</strong> <b>RM ${parseFloat(t.amount).toFixed(2)}</b></p>
+                </div>
+            `;
+            document.getElementById('transactionDetailModal').style.display = 'flex';
         };
 
         window.handleShiftToggle = async function(checked) {
@@ -9164,6 +9617,7 @@ window.openSearchModalTakeOrder = function() {
 
         window.logout = function() {
             Object.values(unsubscribers).forEach(u => u?.());
+            if (timerInterval) clearInterval(timerInterval);
             localStorage.clear();
             location.reload();
         };
@@ -9386,6 +9840,7 @@ window.openSearchModalTakeOrder = function() {
                 setupPrinterQueueListener();
                 setupTopBarPrinterListener();
                 showPage('takeOrder');
+                startTimerLoop();
             });
         }
 
@@ -9442,7 +9897,9 @@ window.openSearchModalTakeOrder = function() {
         window.voidItemFromCheckout = voidItemFromCheckout;
         window.updateVoidModalQty = updateVoidModalQty;
         window.confirmVoidQtyTakeOrder = confirmVoidQtyTakeOrder;
-
+        window.showShiftDetailTab = showShiftDetailTab;
+        window.viewTransactionDetails = viewTransactionDetails;
+        
         // ========== WIFI STATUS LOGIC ==========
         window.updateWifiStatus = function() {
             const wifiIcon = document.getElementById('wifiIcon');
