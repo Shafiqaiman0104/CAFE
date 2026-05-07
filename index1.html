@@ -3326,6 +3326,27 @@
         </div>
     </div>
 
+    <!-- License Status Overlays -->
+    <div id="licenseInactiveOverlay" class="modal" style="z-index: 999999; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.8); backdrop-filter: blur(10px);">
+        <div class="loading-popup" style="max-width: 350px; border: 2px solid #e53e3e;">
+            <i class="fas fa-exclamation-triangle" style="font-size: 3rem; color: #e53e3e; margin-bottom: 20px;"></i>
+            <p style="font-weight: 600;">Sorry your licenses not active please contact us 601160801477</p>
+            <button class="primary-btn" onclick="logout()" style="margin-top: 20px; width: 100%; background: #e53e3e;">Logout</button>
+        </div>
+    </div>
+
+    <div id="licenseExpiredOverlay" class="modal" style="z-index: 999999; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.8); backdrop-filter: blur(10px);">
+        <div class="loading-popup" style="max-width: 350px; border: 2px solid #ff9800;">
+            <div style="width: 70px; height: 70px; background: #fff7ed; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto;">
+                <i class="fas fa-clock" style="font-size: 2.5rem; color: #ff9800;"></i>
+            </div>
+            <p style="font-weight: 600;">Sorry your licenses already expired please contact us 601160801477 to renew ur licenses Key</p>
+            <button id="whatsappRenewBtn" class="primary-btn" style="margin-top: 20px; width: 100%; background: #25D366; border: none; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                <i class="fab fa-whatsapp" style="font-size: 1.2rem;"></i> Whatsapp
+            </button>
+        </div>
+    </div>
+
     <!-- Notification Stack -->
     <div id="notificationStack">
         <!-- Order Success Popup HTML -->
@@ -3483,6 +3504,7 @@
                 
                 document.getElementById('licenseScreen').style.display = 'none';
                 document.getElementById('pinScreen').style.display = 'flex';
+                setupLicenseMonitor();
                 
             } catch (e) { errorEl.textContent = e.message; }
         };
@@ -3559,11 +3581,43 @@
                 loadDiscounts();
                 setupOrderNotificationListener();
                 setupTransactionNotificationListener();
+                setupLicenseMonitor();
                 setupPrinterQueueListener();
                 setupTopBarPrinterListener();
                 showPage('takeOrder');
                 
             } catch (e) { errorEl.textContent = e.message; }
+        };
+
+        window.setupLicenseMonitor = function() {
+            if (unsubscribers['licenseMonitor']) unsubscribers['licenseMonitor']();
+            if (!currentClientId) return;
+
+            const licenseRef = doc(db, 'licenses', currentClientId);
+            unsubscribers['licenseMonitor'] = onSnapshot(licenseRef, (snap) => {
+                if (!snap.exists()) return;
+                const data = snap.data();
+                const now = new Date();
+                const expiry = data.expiryDate ? data.expiryDate.toDate() : null;
+                const status = data.status;
+                const restaurantName = data.restaurantName || localStorage.getItem('restaurantName') || "Restaurant";
+
+                // Check Status: Show popup if NOT active
+                const inactiveOverlay = document.getElementById('licenseInactiveOverlay');
+                inactiveOverlay.style.display = (status !== 'active') ? 'flex' : 'none';
+
+                // Check Expiry: Show popup if expired
+                const expiredOverlay = document.getElementById('licenseExpiredOverlay');
+                if (expiry && expiry < now) {
+                    expiredOverlay.style.display = 'flex';
+                    document.getElementById('whatsappRenewBtn').onclick = () => {
+                        const message = encodeURIComponent(`Hi my licenses Key expired I want to renew ${restaurantName}`);
+                        window.open(`https://wa.me/601160801477?text=${message}`, '_blank');
+                    };
+                } else {
+                    expiredOverlay.style.display = 'none';
+                }
+            });
         };
 
         async function loadTaxRate() {
@@ -9328,6 +9382,7 @@ window.openSearchModalTakeOrder = function() {
                 loadDiscounts();
                 setupOrderNotificationListener();
                 setupTransactionNotificationListener();
+                setupLicenseMonitor();
                 setupPrinterQueueListener();
                 setupTopBarPrinterListener();
                 showPage('takeOrder');
