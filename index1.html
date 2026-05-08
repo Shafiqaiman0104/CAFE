@@ -1974,13 +1974,36 @@
         <!-- Sidebar -->
         <div class="sidebar" id="sidebar">
             <div class="sidebar-header" style="padding: 24px; text-align: center; border-bottom: 1px solid rgba(0,0,0,0.05);">
-                  <img id="sidebarLogo" src="https://venturerush-tech.netlify.app/vrLogo.png" alt="Logo" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; margin-bottom: 15px; border: 3px solid #0273e61a; box-shadow: 0 4px 10px rgb(15,103,208);">
+                <img id="sidebarLogo" src="https://venturerush-tech.netlify.app/vrLogo.png" alt="Logo" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; margin: 0 auto 15px auto; display: block; border: 3px solid #0273e61a; box-shadow: 0 4px 10px rgb(15,103,208);">
                 <div class="restaurant-name" id="appRestaurantName" style="font-size: 20px; margin-bottom: 10px;"></div>
-                <div style="font-size: 14px; color: #555; margin-bottom: 15px;">
+                <div style="font-size: 14px; color: #555; margin-bottom: 10px;">
                     <span id="staffNameTop" style="font-weight: 600;"></span> | <span id="staffRoleTop" class="role-badge"></span>
                 </div>
-                <button id="sidebarClockOutBtn" class="btn-small btn-clockout" onclick="handleManualClockOut()" style="display: none;">Clock Out</button>
-                <button id="sidebarLogoutBtn" class="btn-small" onclick="logout()" style="width: 100%; padding: 10px; border-radius: 12px; cursor: pointer;">Logout</button>
+
+                <!-- Live Timers Container -->
+                <div id="sidebarTimerContainer" style="display: none; flex-direction: column; gap: 8px; background: #f8fafc; padding: 10px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #e2e8f0; font-size: 12px; text-align: left;">
+                    <div id="shiftTimerRow" style="display: none; justify-content: space-between; align-items: center;">
+                        <span style="font-weight: 600; color: #64748b;">Shift</span>
+                        <div id="shiftTimerBadge" style="background: white; border: 1.5px solid #764ba2; border-radius: 20px; padding: 2px 8px; font-size: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 4px; white-space: nowrap;">
+                            <i class="fas fa-clock" style="color: #764ba2;"></i> <span id="shiftTimerVal">0hr 00m</span>
+                        </div>
+                    </div>
+                    <div id="staffTimerRow" style="display: none; justify-content: space-between; align-items: center;">
+                        <span style="font-weight: 600; color: #64748b;">Work</span>
+                        <div id="staffTimerBadge" style="background: white; border: 1.5px solid #ff9800; border-radius: 20px; padding: 2px 8px; font-size: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 4px; white-space: nowrap;">
+                            <i class="fas fa-user-clock" style="color: #ff9800;"></i> <span id="staffTimerVal">0hr 00m</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="sidebarActionBtns" style="display: flex; gap: 8px;">
+                    <button id="sidebarLogoutBtn" class="btn-small" onclick="logout()" style="flex: 1; padding: 10px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </button>
+                    <button id="sidebarClockOutBtn" class="btn-small btn-clockout" onclick="handleManualClockOut()" style="display: none; flex: 1; padding: 10px; border-radius: 12px; cursor: pointer; margin-bottom: 0; align-items: center; justify-content: center; gap: 6px;">
+                        <i class="fas fa-door-closed"></i> Clock Out
+                    </button>
+                </div>
             </div>
             <div class="sidebar-menu">
                 <!-- OPERATIONS Section -->
@@ -3495,6 +3518,9 @@
         let checkoutPayMethod = "cash";
         let checkoutOrdersToProcess = [];
         
+        let shiftStartTime = null;
+        let staffClockInTime = null;
+        let timerInterval = null;
         let selectedOrderIdsForCheckout = [];
         let activeOrdersSortDirection = 'asc'; // oldest first
         let activeOrdersSearchTerm = '';
@@ -3623,6 +3649,7 @@
                 setupPrinterQueueListener();
                 setupTopBarPrinterListener();
                 showPage('takeOrder');
+                startTimerLoop();
                 
             } catch (e) { errorEl.textContent = e.message; }
         };
@@ -4325,6 +4352,7 @@
 
                     isShiftActive = data.active === true;
                     activeShiftId = data.shiftId || null;
+                    shiftStartTime = data.startTime ? data.startTime.toDate() : null;
                     
                     // Only verify clock-in status from DB if shift is still active.
                     // If shift ended, the manager already updated the DB, so we rely on currentlyClockedIn state.
@@ -4352,6 +4380,7 @@
                             const clockOutBtn = document.getElementById('sidebarClockOutBtn');
                             if (clockOutBtn) clockOutBtn.style.display = 'none';
                         }
+                        shiftStartTime = null;
                     }
                 } else {
                     isShiftActive = false;
@@ -4377,11 +4406,14 @@
                 const snap = await getDocs(q);
                 if (!snap.empty) {
                     localStorage.setItem('isClockedIn', 'true');
-                    document.getElementById('sidebarClockOutBtn').style.display = 'block';
+                    staffClockInTime = snap.docs[0].data().clockIn.toDate();
+                    document.getElementById('sidebarClockOutBtn').style.display = 'flex';
                 } else {
                     localStorage.removeItem('isClockedIn');
+                    staffClockInTime = null;
                     document.getElementById('sidebarClockOutBtn').style.display = 'none';
                 }
+                updateLiveTimers();
             } catch (e) { console.error("Error checking attendance status", e); }
         }
 
@@ -4397,7 +4429,8 @@
                 // Set locally immediately to prevent join popup flicker during process
                 localStorage.setItem('isClockedIn', 'true');
                 const clockOutBtn = document.getElementById('sidebarClockOutBtn');
-                if (clockOutBtn) clockOutBtn.style.display = 'block';
+                if (clockOutBtn) clockOutBtn.style.display = 'flex';
+                staffClockInTime = new Date();
 
                 await addDoc(collection(db, 'licenses', currentClientId, 'attendance'), {
                     staffId: staff.id,
@@ -4407,6 +4440,7 @@
                     clockOut: null,
                     createdAt: Timestamp.now()
                 });
+                updateLiveTimers();
             } catch (e) { 
                 console.error("Clock-in error", e);
                 localStorage.removeItem('isClockedIn');
@@ -4437,12 +4471,55 @@
                     });
                 }
                 localStorage.removeItem('isClockedIn');
+                staffClockInTime = null;
                 document.getElementById('sidebarClockOutBtn').style.display = 'none';
                 if (doLogout) logout();
             } catch (e) { 
                 console.error("Clock-out error", e);
                 if (doLogout) logout();
             }
+        }
+
+        function formatDuration(ms) {
+            const totalMinutes = Math.floor(ms / 60000);
+            const hours = Math.floor(totalMinutes / 60);
+            const mins = totalMinutes % 60;
+            return `${hours}hr ${mins.toString().padStart(2, '0')}m`;
+        }
+
+        function updateLiveTimers() {
+            const now = new Date();
+            const shiftRow = document.getElementById('shiftTimerRow');
+            const staffRow = document.getElementById('staffTimerRow');
+            const container = document.getElementById('sidebarTimerContainer');
+
+            let shiftShown = false;
+            let staffShown = false;
+
+            if (isShiftActive && shiftStartTime) {
+                document.getElementById('shiftTimerVal').innerText = formatDuration(now - shiftStartTime);
+                shiftRow.style.display = 'flex';
+                shiftShown = true;
+            } else {
+                shiftRow.style.display = 'none';
+            }
+
+            const isClockedIn = localStorage.getItem('isClockedIn') === 'true';
+            if (isShiftActive && isClockedIn && staffClockInTime) {
+                document.getElementById('staffTimerVal').innerText = formatDuration(now - staffClockInTime);
+                staffRow.style.display = 'flex';
+                staffShown = true;
+            } else {
+                staffRow.style.display = 'none';
+            }
+
+            if (container) container.style.display = (shiftShown || staffShown) ? 'flex' : 'none';
+        }
+
+        function startTimerLoop() {
+            if (timerInterval) clearInterval(timerInterval);
+            updateLiveTimers();
+            timerInterval = setInterval(updateLiveTimers, 30000);
         }
 
         window.joinShift = async function() {
@@ -9561,6 +9638,7 @@ window.openSearchModalTakeOrder = function() {
 
         window.logout = function() {
             Object.values(unsubscribers).forEach(u => u?.());
+            if (timerInterval) clearInterval(timerInterval);
             localStorage.clear();
             location.reload();
         };
@@ -9783,6 +9861,7 @@ window.openSearchModalTakeOrder = function() {
                 setupPrinterQueueListener();
                 setupTopBarPrinterListener();
                 showPage('takeOrder');
+                startTimerLoop();
             });
         }
 
