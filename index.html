@@ -1,10 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
-     <meta charset="utf-8">
+    <meta charset="utf-8">
      <title>VRPOS</title>
-  <!-- Link the manifest -->
-  <link rel="manifest" href="/manifest.json">
+     <link rel="manifest" href="/manifest.json">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -18,7 +17,6 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: #f8fafc;
             min-height: 100vh;
-            overscroll-behavior-y: none;
         }
         
         .login-container {
@@ -1978,23 +1976,36 @@
         <!-- Sidebar -->
         <div class="sidebar" id="sidebar">
             <div class="sidebar-header" style="padding: 24px; text-align: center; border-bottom: 1px solid rgba(0,0,0,0.05);">
-                <div id="sidebarLogoWrapper" style="position: relative; width: 80px; height: 80px; margin: 0 auto 15px auto;">
-                    <!-- Shift Timer -->
-                    <div id="shiftTimerBadge" style="display: none; position: absolute; top: -5px; left: -35px; background: white; border: 1.5px solid #764ba2; border-radius: 20px; padding: 2px 8px; font-size: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); align-items: center; gap: 4px; z-index: 5; white-space: nowrap;">
-                        <i class="fas fa-clock" style="color: #764ba2;"></i> <span id="shiftTimerVal">0hr 00m</span>
-                    </div>
-                    <!-- Staff Timer -->
-                    <div id="staffTimerBadge" style="display: none; position: absolute; top: -5px; right: -35px; background: white; border: 1.5px solid #ff9800; border-radius: 20px; padding: 2px 8px; font-size: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); align-items: center; gap: 4px; z-index: 5; white-space: nowrap;">
-                        <i class="fas fa-user-clock" style="color: #ff9800;"></i> <span id="staffTimerVal">0hr 00m</span>
-                    </div>
-                    <img id="sidebarLogo" src="https://venturerush-tech.netlify.app/vrLogo.png" alt="Logo" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid #0273e61a; box-shadow: 0 4px 10px rgb(15,103,208);">
-                </div>
+                <img id="sidebarLogo" src="https://venturerush-tech.netlify.app/vrLogo.png" alt="Logo" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; margin: 0 auto 15px auto; display: block; border: 3px solid #0273e61a; box-shadow: 0 4px 10px rgb(15,103,208);">
                 <div class="restaurant-name" id="appRestaurantName" style="font-size: 20px; margin-bottom: 10px;"></div>
-                <div style="font-size: 14px; color: #555; margin-bottom: 15px;">
+                <div style="font-size: 14px; color: #555; margin-bottom: 10px;">
                     <span id="staffNameTop" style="font-weight: 600;"></span> | <span id="staffRoleTop" class="role-badge"></span>
                 </div>
-                <button id="sidebarClockOutBtn" class="btn-small btn-clockout" onclick="handleManualClockOut()" style="display: none;">Clock Out</button>
-                <button id="sidebarLogoutBtn" class="btn-small" onclick="logout()" style="width: 100%; padding: 10px; border-radius: 12px; cursor: pointer;">Logout</button>
+
+                <!-- Live Timers Container -->
+                <div id="sidebarTimerContainer" style="display: none; flex-direction: column; gap: 8px; background: #f8fafc; padding: 10px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #e2e8f0; font-size: 12px; text-align: left;">
+                    <div id="shiftTimerRow" style="display: none; justify-content: space-between; align-items: center;">
+                        <span style="font-weight: 600; color: #64748b;">Shift</span>
+                        <div id="shiftTimerBadge" style="background: white; border: 1.5px solid #764ba2; border-radius: 20px; padding: 2px 8px; font-size: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 4px; white-space: nowrap;">
+                            <i class="fas fa-clock" style="color: #764ba2;"></i> <span id="shiftTimerVal">0hr 00m</span>
+                        </div>
+                    </div>
+                    <div id="staffTimerRow" style="display: none; justify-content: space-between; align-items: center;">
+                        <span style="font-weight: 600; color: #64748b;">Work</span>
+                        <div id="staffTimerBadge" style="background: white; border: 1.5px solid #ff9800; border-radius: 20px; padding: 2px 8px; font-size: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 4px; white-space: nowrap;">
+                            <i class="fas fa-user-clock" style="color: #ff9800;"></i> <span id="staffTimerVal">0hr 00m</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="sidebarActionBtns" style="display: flex; gap: 8px;">
+                    <button id="sidebarLogoutBtn" class="btn-small" onclick="logout()" style="flex: 1; padding: 10px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </button>
+                    <button id="sidebarClockOutBtn" class="btn-small btn-clockout" onclick="handleManualClockOut()" style="display: none; flex: 1; padding: 10px; border-radius: 12px; cursor: pointer; margin-bottom: 0; align-items: center; justify-content: center; gap: 6px;">
+                        <i class="fas fa-door-closed"></i> Clock Out
+                    </button>
+                </div>
             </div>
             <div class="sidebar-menu">
                 <!-- OPERATIONS Section -->
@@ -2133,6 +2144,8 @@
                             <span class="slider"></span>
                         </label>
                     </div>
+
+                    <div id="activeShiftDetails" style="display: none; margin-top: 20px; background: white; padding: 25px; border-radius: 20px; border: 1px solid #e2e8f0;"></div>
 
                     <div class="section-header" style="margin-top: 30px;">
                         <span class="section-title">Shift History</span>
@@ -2753,6 +2766,30 @@
         </div>
     </div>
 
+    <!-- Edit Involved Staff Modal -->
+    <div id="editInvolvedStaffModal" class="modal">
+        <div class="modal-content" style="max-width: 700px; border-radius: 28px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-users-cog"></i> Edit Involved Staff</h3>
+                <button class="modal-close" onclick="closeModal('editInvolvedStaffModal')">&times;</button>
+            </div>
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                    <thead>
+                        <tr style="border-bottom: 2px solid #f1f5f9; text-align: left; color: #64748b;">
+                            <th style="padding: 12px 10px;">Staff</th>
+                            <th style="padding: 12px 10px;">Clock In</th>
+                            <th style="padding: 12px 10px;">Clock Out</th>
+                            <th style="padding: 12px 10px;">Total</th>
+                            <th style="padding: 12px 10px;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="involvedStaffList"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
     <!-- Shift Detail Modal -->
     <div id="shiftDetailModal" class="modal">
         <div class="modal-content" style="max-width: 500px; border-radius: 28px;">
@@ -2761,6 +2798,39 @@
                 <button class="modal-close" onclick="closeModal('shiftDetailModal')">&times;</button>
             </div>
             <div id="shiftDetailContent"></div>
+        </div>
+    </div>
+
+    <!-- Edit Cash Float Modal -->
+    <div id="editFloatModal" class="modal">
+        <div class="modal-content" style="max-width: 450px; border-radius: 28px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-money-bill-wave"></i> Edit Cash Float</h3>
+                <button class="modal-close" onclick="closeModal('editFloatModal')">&times;</button>
+            </div>
+            <div style="text-align: center; margin-bottom: 20px; background: #f8fafc; padding: 15px; border-radius: 16px;">
+                <div style="font-size: 0.85rem; color: #64748b;">Current Float</div>
+                <div id="currentFloatDisplay" style="font-size: 1.8rem; font-weight: 800; color: #764ba2;">RM 0.00</div>
+            </div>
+            <div style="display: flex; gap: 15px; margin-bottom: 20px;">
+                <button class="primary-btn" onclick="prepareFloatAdjustment('add')" style="background: #38a169;"><i class="fas fa-plus"></i> Add</button>
+                <button class="primary-btn" onclick="prepareFloatAdjustment('minus')" style="background: #e53e3e;"><i class="fas fa-minus"></i> Minus</button>
+            </div>
+            <div id="floatAdjustmentForm" style="display: none; border-top: 1px dashed #cbd5e0; padding-top: 20px;">
+                <h4 id="adjTitle" style="margin-bottom: 15px; font-weight: 800; color: #1e293b;">Add Cash</h4>
+                <div class="form-group">
+                    <label>Amount (RM)</label>
+                    <input type="number" id="adjAmount" step="0.01" placeholder="0.00" style="font-size: 1.5rem; text-align: center; font-weight: 800; border: 2px solid #764ba2; border-radius: 16px; padding: 15px;">
+                </div>
+                <div class="form-group">
+                    <label>Reason</label>
+                    <textarea id="adjReason" rows="2" placeholder="Enter reason for this adjustment..." style="border: 2px solid #e0e0e0; border-radius: 14px; padding: 12px;"></textarea>
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 10px;">
+                    <button class="secondary-btn" onclick="document.getElementById('floatAdjustmentForm').style.display='none'">Cancel</button>
+                    <button class="primary-btn" id="confirmAdjBtn">Confirm Adjustment</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -3440,7 +3510,6 @@
     </div>
 
     <script type="module">
-        
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
         import { 
             getFirestore, doc, getDoc, collection, query, where, getDocs,
@@ -3506,6 +3575,7 @@
         let isCounterSummaryFlow = false;
         let checkoutTotalTakeOrder = 0;
         let checkoutReceivedInput = "0";
+        let activeShiftData = null;
         let activeShiftId = null;
         let checkoutPayMethod = "cash";
         let checkoutOrdersToProcess = [];
@@ -4338,6 +4408,7 @@
             unsubscribers['shiftSettings'] = onSnapshot(shiftRef, async (snap) => {
                 if (snap.exists()) {
                     const data = snap.data();
+                    activeShiftData = data;
                     const wasActive = isShiftActive;
                     // Capture status before it might be updated/cleared by checkAttendanceStatus
                     const currentlyClockedIn = localStorage.getItem('isClockedIn') === 'true';
@@ -4376,6 +4447,7 @@
                     }
                 } else {
                     isShiftActive = false;
+                    activeShiftData = null;
                     activeShiftId = null;
                 }
                 updateShiftUI();
@@ -4385,28 +4457,40 @@
             });
         }
 
-        async function checkAttendanceStatus() {
+        function checkAttendanceStatus() {
             if (!activeShiftId || !currentStaff) return;
+            if (unsubscribers['myAttendance']) unsubscribers['myAttendance']();
+
             const q = query(
                 collection(db, 'licenses', currentClientId, 'attendance'),
                 where('staffId', '==', currentStaff.id),
-                where('shiftId', '==', activeShiftId),
-                where('clockOut', '==', null),
-                limit(1)
+                where('shiftId', '==', activeShiftId)
             );
-            try {
-                const snap = await getDocs(q);
-                if (!snap.empty) {
+
+            unsubscribers['myAttendance'] = onSnapshot(q, (snap) => {
+                const myDocs = snap.docs.map(d => ({id: d.id, ...d.data()}));
+                const activeRecord = myDocs.find(d => d.clockOut === null);
+                
+                if (activeRecord) {
                     localStorage.setItem('isClockedIn', 'true');
-                    staffClockInTime = snap.docs[0].data().clockIn.toDate();
-                    document.getElementById('sidebarClockOutBtn').style.display = 'block';
+                    staffClockInTime = activeRecord.clockIn.toDate();
+                    document.getElementById('sidebarClockOutBtn').style.display = 'flex';
                 } else {
+                    // Check if we were just kicked
+                    const kickedRecord = myDocs.find(d => d.kickedBy);
+                    if (kickedRecord && localStorage.getItem('isClockedIn') === 'true') {
+                        const kickedBy = kickedRecord.kickedBy;
+                        alert(`You been kick from this shift by ${kickedBy}`);
+                        logout();
+                        return;
+                    }
+
                     localStorage.removeItem('isClockedIn');
                     staffClockInTime = null;
                     document.getElementById('sidebarClockOutBtn').style.display = 'none';
                 }
                 updateLiveTimers();
-            } catch (e) { console.error("Error checking attendance status", e); }
+            });
         }
 
         window.showJoinShiftModal = function(data) {
@@ -4421,7 +4505,7 @@
                 // Set locally immediately to prevent join popup flicker during process
                 localStorage.setItem('isClockedIn', 'true');
                 const clockOutBtn = document.getElementById('sidebarClockOutBtn');
-                if (clockOutBtn) clockOutBtn.style.display = 'block';
+                if (clockOutBtn) clockOutBtn.style.display = 'flex';
                 staffClockInTime = new Date();
 
                 await addDoc(collection(db, 'licenses', currentClientId, 'attendance'), {
@@ -4481,23 +4565,31 @@
 
         function updateLiveTimers() {
             const now = new Date();
-            const shiftBadge = document.getElementById('shiftTimerBadge');
-            const staffBadge = document.getElementById('staffTimerBadge');
+            const shiftRow = document.getElementById('shiftTimerRow');
+            const staffRow = document.getElementById('staffTimerRow');
+            const container = document.getElementById('sidebarTimerContainer');
+
+            let shiftShown = false;
+            let staffShown = false;
 
             if (isShiftActive && shiftStartTime) {
                 document.getElementById('shiftTimerVal').innerText = formatDuration(now - shiftStartTime);
-                shiftBadge.style.display = 'flex';
+                shiftRow.style.display = 'flex';
+                shiftShown = true;
             } else {
-                shiftBadge.style.display = 'none';
+                shiftRow.style.display = 'none';
             }
 
             const isClockedIn = localStorage.getItem('isClockedIn') === 'true';
             if (isShiftActive && isClockedIn && staffClockInTime) {
                 document.getElementById('staffTimerVal').innerText = formatDuration(now - staffClockInTime);
-                staffBadge.style.display = 'flex';
+                staffRow.style.display = 'flex';
+                staffShown = true;
             } else {
-                staffBadge.style.display = 'none';
+                staffRow.style.display = 'none';
             }
+
+            if (container) container.style.display = (shiftShown || staffShown) ? 'flex' : 'none';
         }
 
         function startTimerLoop() {
@@ -4534,9 +4626,164 @@
         function updateShiftUI() {
             const toggle = document.getElementById('shiftToggle');
             const statusText = document.getElementById('shiftStatusText');
+            const detailsContainer = document.getElementById('activeShiftDetails');
+
             if (toggle) toggle.checked = isShiftActive;
             if (statusText) statusText.innerText = isShiftActive ? "Shift is currently open" : "Shift is currently closed";
+
+            if (isShiftActive && activeShiftData) {
+                detailsContainer.style.display = 'block';
+                const startTime = activeShiftData.startTime ? activeShiftData.startTime.toDate().toLocaleString() : 'N/A';
+                const staffInvolved = Array.isArray(activeShiftData.staffNames) ? activeShiftData.staffNames.join(', ') : (activeShiftData.startedBy || 'N/A');
+                
+                detailsContainer.innerHTML = `
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; font-size: 0.9rem;">
+                        <div style="grid-column: span 2;"><span style="color: #64748b; font-size: 11px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">Active Shift Details</span></div>
+                        <div><span style="color: #64748b;">Shift ID:</span> <br><b style="word-break: break-all; color: #1e293b;">${activeShiftData.shiftId || 'N/A'}</b></div>
+                        <div><span style="color: #64748b;">Open At:</span> <br><b style="color: #1e293b;">${startTime}</b></div>
+                        <div><span style="color: #64748b;">Open By:</span> <br><b style="color: #1e293b;">${activeShiftData.startedBy || 'N/A'}</b></div>
+                        <div><span style="color: #64748b;">Staff Involved:</span> <br><b style="color: #1e293b;">${staffInvolved}</b></div>
+                        <div style="grid-column: span 2; border-top: 1px dashed #e2e8f0; padding-top: 20px; margin-top: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                            <div>
+                                <span style="color: #64748b; font-size: 0.85rem;">Cash Float</span><br>
+                                <b style="font-size: 1.4rem; color: #764ba2;">RM ${parseFloat(activeShiftData.startFloat || 0).toFixed(2)}</b>
+                            </div>
+                            <div style="display: flex; gap: 10px;">
+                                <button class="btn-small" onclick="openEditFloatModal()" style="background: #764ba2; border-radius: 12px; padding: 10px 18px; font-weight: 700;"><i class="fas fa-edit"></i> Edit Float</button>
+                                <button class="btn-small" onclick="openEditInvolvedStaffModal()" style="background: #64748b; border-radius: 12px; padding: 10px 18px; font-weight: 700;"><i class="fas fa-users-cog"></i> Edit Staff</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                detailsContainer.style.display = 'none';
+                detailsContainer.innerHTML = '';
+            }
         }
+
+        window.openEditInvolvedStaffModal = async function() {
+            if (!activeShiftId) return;
+            const body = document.getElementById('involvedStaffList');
+            body.innerHTML = '<tr><td colspan="5" class="loading">Loading...</td></tr>';
+            document.getElementById('editInvolvedStaffModal').style.display = 'flex';
+
+            if (unsubscribers['editInvolvedStaff']) unsubscribers['editInvolvedStaff']();
+
+            const q = query(
+                collection(db, 'licenses', currentClientId, 'attendance'),
+                where('shiftId', '==', activeShiftId)
+            );
+
+            unsubscribers['editInvolvedStaff'] = onSnapshot(q, (snap) => {
+                let html = '';
+                snap.docs.forEach(doc => {
+                    const data = doc.data();
+                    const cin = data.clockIn.toDate();
+                    const cout = data.clockOut ? data.clockOut.toDate() : null;
+                    
+                    let duration = "Active";
+                    if (cout) {
+                        const diffMs = cout - cin;
+                        const diffHrs = Math.floor(diffMs / 3600000);
+                        const diffMins = Math.floor((diffMs % 3600000) / 60000);
+                        duration = `${diffHrs}h ${diffMins}m`;
+                    }
+
+                    const isClockedOut = !!cout;
+                    
+                    html += `
+                        <tr style="border-bottom: 1px solid #f1f5f9;">
+                            <td style="padding: 12px 10px;"><b>${data.staffName}</b></td>
+                            <td style="padding: 12px 10px;">${cin.toLocaleString()}</td>
+                            <td style="padding: 12px 10px;">${cout ? cout.toLocaleString() : '---'}</td>
+                            <td style="padding: 12px 10px;">${duration}</td>
+                            <td style="padding: 12px 10px;">
+                                <div class="action-buttons">
+                                    <button class="btn-edit" style="background: #ed8936; ${isClockedOut ? 'opacity:0.5; cursor:not-allowed;' : ''}" 
+                                        onclick="kickStaff('${doc.id}', '${data.staffId}', '${data.staffName}')" ${isClockedOut ? 'disabled' : ''}>
+                                        <i class="fas fa-user-slash"></i> Kick
+                                    </button>
+                                    <button class="btn-delete" style="${!isClockedOut ? 'opacity:0.5; cursor:not-allowed;' : ''}" 
+                                        onclick="deleteAttendanceRecord('${doc.id}')" ${!isClockedOut ? 'disabled' : ''}>
+                                        <i class="fas fa-trash"></i> Delete
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                });
+                body.innerHTML = html || '<tr><td colspan="5" style="text-align:center; padding:20px;">No staff involved yet.</td></tr>';
+            });
+        };
+
+        window.kickStaff = async function(attendanceId, staffId, staffName) {
+            if (!confirm(`Are you sure you want to kick ${staffName} from this shift?`)) return;
+            try {
+                await updateDoc(doc(db, 'licenses', currentClientId, 'attendance', attendanceId), {
+                    clockOut: Timestamp.now(),
+                    kickedBy: currentStaff.name
+                });
+            } catch (e) { alert("Error kicking staff: " + e.message); }
+        };
+
+        window.deleteAttendanceRecord = async function(attendanceId) {
+            if (!confirm("Are you sure you want to delete this attendance record?")) return;
+            try {
+                await deleteDoc(doc(db, 'licenses', currentClientId, 'attendance', attendanceId));
+            } catch (e) { alert("Error deleting record: " + e.message); }
+        };
+
+        let currentAdjustmentType = 'add';
+        window.openEditFloatModal = function() {
+            if (!activeShiftData) return;
+            document.getElementById('currentFloatDisplay').innerText = `RM ${parseFloat(activeShiftData.startFloat || 0).toFixed(2)}`;
+            document.getElementById('floatAdjustmentForm').style.display = 'none';
+            document.getElementById('adjAmount').value = '';
+            document.getElementById('adjReason').value = '';
+            document.getElementById('editFloatModal').style.display = 'flex';
+        };
+
+        window.prepareFloatAdjustment = function(type) {
+            currentAdjustmentType = type;
+            document.getElementById('floatAdjustmentForm').style.display = 'block';
+            document.getElementById('adjTitle').innerText = type === 'add' ? 'Add Cash' : 'Minus Cash';
+            const btn = document.getElementById('confirmAdjBtn');
+            btn.style.background = type === 'add' ? '#38a169' : '#e53e3e';
+            btn.onclick = confirmFloatAdjustment;
+            document.getElementById('adjAmount').focus();
+        };
+
+        window.confirmFloatAdjustment = async function() {
+            const amount = parseFloat(document.getElementById('adjAmount').value);
+            const reason = document.getElementById('adjReason').value.trim();
+            
+            if (!amount || amount <= 0) { alert('Enter valid amount'); return; }
+            if (!reason) { alert('Enter reason'); return; }
+            
+            try {
+                const currentFloat = parseFloat(activeShiftData.startFloat || 0);
+                const adjustment = currentAdjustmentType === 'add' ? amount : -amount;
+                const newFloat = currentFloat + adjustment;
+                
+                const shiftRef = doc(db, 'licenses', currentClientId, 'settings', 'shift');
+                await updateDoc(shiftRef, { startFloat: newFloat.toFixed(2), updatedAt: Timestamp.now() });
+                
+                await addDoc(collection(db, 'licenses', currentClientId, 'float_adjustments'), {
+                    shiftId: activeShiftData.shiftId,
+                    type: currentAdjustmentType,
+                    amount: amount.toFixed(2),
+                    reason: reason,
+                    staffId: currentStaff.id,
+                    staffName: currentStaff.name,
+                    previousFloat: currentFloat.toFixed(2),
+                    newFloat: newFloat.toFixed(2),
+                    createdAt: Timestamp.now()
+                });
+                
+                closeModal('editFloatModal');
+                showPrinterStatusPopup("Float Updated", `New float: RM ${newFloat.toFixed(2)}`, true);
+            } catch (e) { alert('Error: ' + e.message); }
+        };
 
         window.showStartShiftModal = function() {
             document.getElementById('startShiftTimeDisplay').value = new Date().toLocaleString();
@@ -9904,6 +10151,12 @@ window.openSearchModalTakeOrder = function() {
         window.confirmVoidQtyTakeOrder = confirmVoidQtyTakeOrder;
         window.showShiftDetailTab = showShiftDetailTab;
         window.viewTransactionDetails = viewTransactionDetails;
+        window.openEditFloatModal = openEditFloatModal;
+        window.prepareFloatAdjustment = prepareFloatAdjustment;
+        window.confirmFloatAdjustment = confirmFloatAdjustment;
+        window.openEditInvolvedStaffModal = openEditInvolvedStaffModal;
+        window.kickStaff = kickStaff;
+        window.deleteAttendanceRecord = deleteAttendanceRecord;
         
         // ========== WIFI STATUS LOGIC ==========
         window.updateWifiStatus = function() {
