@@ -2143,6 +2143,8 @@
                         </label>
                     </div>
 
+                    <div id="activeShiftDetails" style="display: none; margin-top: 20px; background: white; padding: 25px; border-radius: 20px; border: 1px solid #e2e8f0;"></div>
+
                     <div class="section-header" style="margin-top: 30px;">
                         <span class="section-title">Shift History</span>
                     </div>
@@ -2770,6 +2772,39 @@
                 <button class="modal-close" onclick="closeModal('shiftDetailModal')">&times;</button>
             </div>
             <div id="shiftDetailContent"></div>
+        </div>
+    </div>
+
+    <!-- Edit Cash Float Modal -->
+    <div id="editFloatModal" class="modal">
+        <div class="modal-content" style="max-width: 450px; border-radius: 28px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-money-bill-wave"></i> Edit Cash Float</h3>
+                <button class="modal-close" onclick="closeModal('editFloatModal')">&times;</button>
+            </div>
+            <div style="text-align: center; margin-bottom: 20px; background: #f8fafc; padding: 15px; border-radius: 16px;">
+                <div style="font-size: 0.85rem; color: #64748b;">Current Float</div>
+                <div id="currentFloatDisplay" style="font-size: 1.8rem; font-weight: 800; color: #764ba2;">RM 0.00</div>
+            </div>
+            <div style="display: flex; gap: 15px; margin-bottom: 20px;">
+                <button class="primary-btn" onclick="prepareFloatAdjustment('add')" style="background: #38a169;"><i class="fas fa-plus"></i> Add</button>
+                <button class="primary-btn" onclick="prepareFloatAdjustment('minus')" style="background: #e53e3e;"><i class="fas fa-minus"></i> Minus</button>
+            </div>
+            <div id="floatAdjustmentForm" style="display: none; border-top: 1px dashed #cbd5e0; padding-top: 20px;">
+                <h4 id="adjTitle" style="margin-bottom: 15px; font-weight: 800; color: #1e293b;">Add Cash</h4>
+                <div class="form-group">
+                    <label>Amount (RM)</label>
+                    <input type="number" id="adjAmount" step="0.01" placeholder="0.00" style="font-size: 1.5rem; text-align: center; font-weight: 800; border: 2px solid #764ba2; border-radius: 16px; padding: 15px;">
+                </div>
+                <div class="form-group">
+                    <label>Reason</label>
+                    <textarea id="adjReason" rows="2" placeholder="Enter reason for this adjustment..." style="border: 2px solid #e0e0e0; border-radius: 14px; padding: 12px;"></textarea>
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 10px;">
+                    <button class="secondary-btn" onclick="document.getElementById('floatAdjustmentForm').style.display='none'">Cancel</button>
+                    <button class="primary-btn" id="confirmAdjBtn">Confirm Adjustment</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -3514,6 +3549,7 @@
         let isCounterSummaryFlow = false;
         let checkoutTotalTakeOrder = 0;
         let checkoutReceivedInput = "0";
+        let activeShiftData = null;
         let activeShiftId = null;
         let checkoutPayMethod = "cash";
         let checkoutOrdersToProcess = [];
@@ -4346,6 +4382,7 @@
             unsubscribers['shiftSettings'] = onSnapshot(shiftRef, async (snap) => {
                 if (snap.exists()) {
                     const data = snap.data();
+                    activeShiftData = data;
                     const wasActive = isShiftActive;
                     // Capture status before it might be updated/cleared by checkAttendanceStatus
                     const currentlyClockedIn = localStorage.getItem('isClockedIn') === 'true';
@@ -4384,6 +4421,7 @@
                     }
                 } else {
                     isShiftActive = false;
+                    activeShiftData = null;
                     activeShiftId = null;
                 }
                 updateShiftUI();
@@ -4550,9 +4588,92 @@
         function updateShiftUI() {
             const toggle = document.getElementById('shiftToggle');
             const statusText = document.getElementById('shiftStatusText');
+            const detailsContainer = document.getElementById('activeShiftDetails');
+
             if (toggle) toggle.checked = isShiftActive;
             if (statusText) statusText.innerText = isShiftActive ? "Shift is currently open" : "Shift is currently closed";
+
+            if (isShiftActive && activeShiftData) {
+                detailsContainer.style.display = 'block';
+                const startTime = activeShiftData.startTime ? activeShiftData.startTime.toDate().toLocaleString() : 'N/A';
+                const staffInvolved = Array.isArray(activeShiftData.staffNames) ? activeShiftData.staffNames.join(', ') : (activeShiftData.startedBy || 'N/A');
+                
+                detailsContainer.innerHTML = `
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; font-size: 0.9rem;">
+                        <div style="grid-column: span 2;"><span style="color: #64748b; font-size: 11px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">Active Shift Details</span></div>
+                        <div><span style="color: #64748b;">Shift ID:</span> <br><b style="word-break: break-all; color: #1e293b;">${activeShiftData.shiftId || 'N/A'}</b></div>
+                        <div><span style="color: #64748b;">Open At:</span> <br><b style="color: #1e293b;">${startTime}</b></div>
+                        <div><span style="color: #64748b;">Open By:</span> <br><b style="color: #1e293b;">${activeShiftData.startedBy || 'N/A'}</b></div>
+                        <div><span style="color: #64748b;">Staff Involved:</span> <br><b style="color: #1e293b;">${staffInvolved}</b></div>
+                        <div style="grid-column: span 2; border-top: 1px dashed #e2e8f0; padding-top: 20px; margin-top: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                            <div>
+                                <span style="color: #64748b; font-size: 0.85rem;">Cash Float</span><br>
+                                <b style="font-size: 1.4rem; color: #764ba2;">RM ${parseFloat(activeShiftData.startFloat || 0).toFixed(2)}</b>
+                            </div>
+                            <div style="display: flex; gap: 10px;">
+                                <button class="btn-small" onclick="openEditFloatModal()" style="background: #764ba2; border-radius: 12px; padding: 10px 18px; font-weight: 700;"><i class="fas fa-edit"></i> Edit Float</button>
+                                <button class="btn-small" onclick="alert('Coming soon')" style="background: #64748b; border-radius: 12px; padding: 10px 18px; font-weight: 700;"><i class="fas fa-users-cog"></i> Edit Staff</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                detailsContainer.style.display = 'none';
+                detailsContainer.innerHTML = '';
+            }
         }
+
+        let currentAdjustmentType = 'add';
+        window.openEditFloatModal = function() {
+            if (!activeShiftData) return;
+            document.getElementById('currentFloatDisplay').innerText = `RM ${parseFloat(activeShiftData.startFloat || 0).toFixed(2)}`;
+            document.getElementById('floatAdjustmentForm').style.display = 'none';
+            document.getElementById('adjAmount').value = '';
+            document.getElementById('adjReason').value = '';
+            document.getElementById('editFloatModal').style.display = 'flex';
+        };
+
+        window.prepareFloatAdjustment = function(type) {
+            currentAdjustmentType = type;
+            document.getElementById('floatAdjustmentForm').style.display = 'block';
+            document.getElementById('adjTitle').innerText = type === 'add' ? 'Add Cash' : 'Minus Cash';
+            const btn = document.getElementById('confirmAdjBtn');
+            btn.style.background = type === 'add' ? '#38a169' : '#e53e3e';
+            btn.onclick = confirmFloatAdjustment;
+            document.getElementById('adjAmount').focus();
+        };
+
+        window.confirmFloatAdjustment = async function() {
+            const amount = parseFloat(document.getElementById('adjAmount').value);
+            const reason = document.getElementById('adjReason').value.trim();
+            
+            if (!amount || amount <= 0) { alert('Enter valid amount'); return; }
+            if (!reason) { alert('Enter reason'); return; }
+            
+            try {
+                const currentFloat = parseFloat(activeShiftData.startFloat || 0);
+                const adjustment = currentAdjustmentType === 'add' ? amount : -amount;
+                const newFloat = currentFloat + adjustment;
+                
+                const shiftRef = doc(db, 'licenses', currentClientId, 'settings', 'shift');
+                await updateDoc(shiftRef, { startFloat: newFloat.toFixed(2), updatedAt: Timestamp.now() });
+                
+                await addDoc(collection(db, 'licenses', currentClientId, 'float_adjustments'), {
+                    shiftId: activeShiftData.shiftId,
+                    type: currentAdjustmentType,
+                    amount: amount.toFixed(2),
+                    reason: reason,
+                    staffId: currentStaff.id,
+                    staffName: currentStaff.name,
+                    previousFloat: currentFloat.toFixed(2),
+                    newFloat: newFloat.toFixed(2),
+                    createdAt: Timestamp.now()
+                });
+                
+                closeModal('editFloatModal');
+                showPrinterStatusPopup("Float Updated", `New float: RM ${newFloat.toFixed(2)}`, true);
+            } catch (e) { alert('Error: ' + e.message); }
+        };
 
         window.showStartShiftModal = function() {
             document.getElementById('startShiftTimeDisplay').value = new Date().toLocaleString();
@@ -9920,6 +10041,9 @@ window.openSearchModalTakeOrder = function() {
         window.confirmVoidQtyTakeOrder = confirmVoidQtyTakeOrder;
         window.showShiftDetailTab = showShiftDetailTab;
         window.viewTransactionDetails = viewTransactionDetails;
+        window.openEditFloatModal = openEditFloatModal;
+        window.prepareFloatAdjustment = prepareFloatAdjustment;
+        window.confirmFloatAdjustment = confirmFloatAdjustment;
         
         // ========== WIFI STATUS LOGIC ==========
         window.updateWifiStatus = function() {
