@@ -1,7 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Restaurant POS System</title>
+     <title>VRPOS</title>
+  <!-- Link the manifest -->
+  <link rel="manifest" href="/manifest.json">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -15,6 +17,7 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: #f8fafc;
             min-height: 100vh;
+            overscroll-behavior-y: none;
         }
         
         .login-container {
@@ -3436,6 +3439,16 @@
     </div>
 
     <script type="module">
+
+         // Register the Service Worker (sw.js)
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(reg => console.log('Service Worker Registered!', reg.scope))
+          .catch(err => console.log('Service Worker Failed!', err));
+      });
+    }
+        
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
         import { 
             getFirestore, doc, getDoc, collection, query, where, getDocs,
