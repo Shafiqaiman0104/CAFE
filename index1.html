@@ -4647,6 +4647,7 @@
                                 <b style="font-size: 1.4rem; color: #764ba2;">RM ${parseFloat(activeShiftData.startFloat || 0).toFixed(2)}</b>
                             </div>
                             <div style="display: flex; gap: 10px;">
+                                <button class="btn-small" onclick="openViewFloatModal()" style="background: #3182ce; border-radius: 12px; padding: 10px 18px; font-weight: 700;"><i class="fas fa-history"></i> View Float</button>
                                 <button class="btn-small" onclick="openEditFloatModal()" style="background: #764ba2; border-radius: 12px; padding: 10px 18px; font-weight: 700;"><i class="fas fa-edit"></i> Edit Float</button>
                                 <button class="btn-small" onclick="openEditInvolvedStaffModal()" style="background: #64748b; border-radius: 12px; padding: 10px 18px; font-weight: 700;"><i class="fas fa-users-cog"></i> Edit Staff</button>
                             </div>
@@ -4739,6 +4740,48 @@
             document.getElementById('adjAmount').value = '';
             document.getElementById('adjReason').value = '';
             document.getElementById('editFloatModal').style.display = 'flex';
+        };
+
+        window.openViewFloatModal = async function() {
+            if (!activeShiftId) return;
+            const modal = document.getElementById('shiftDetailModal');
+            modal.querySelector('h3').innerHTML = '<i class="fas fa-money-bill-wave"></i> Float History';
+            const content = document.getElementById('shiftDetailContent');
+            content.innerHTML = '<div class="loading">Loading adjustments...</div>';
+            modal.style.display = 'flex';
+
+            const adjRef = collection(db, 'licenses', currentClientId, 'float_adjustments');
+            const q = query(adjRef, where('shiftId', '==', activeShiftId));
+            const snap = await getDocs(q);
+            
+            let tableHtml = `
+                <div style="overflow-x: auto;">
+                    <table style="width:100%; border-collapse: collapse; font-size: 0.75rem;">
+                        <thead>
+                            <tr style="text-align:left; border-bottom:2px solid #f1f5f9; color: #64748b;">
+                                <th style="padding:8px;">Time</th>
+                                <th style="padding:8px;">Staff</th>
+                                <th style="padding:8px;">Type</th>
+                                <th style="padding:8px;">Amount</th>
+                                <th style="padding:8px;">Reason</th>
+                                <th style="padding:8px;">Previous</th>
+                                <th style="padding:8px;">New</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+            
+            if (snap.empty) {
+                tableHtml += '<tr><td colspan="7" style="padding:20px; text-align:center; color:#666;">No float adjustments recorded.</td></tr>';
+            } else {
+                const sortedDocs = snap.docs.sort((a,b) => a.data().createdAt?.toDate() - b.data().createdAt?.toDate());
+                sortedDocs.forEach(d => {
+                    const data = d.data();
+                    const time = data.createdAt ? data.createdAt.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'N/A';
+                    tableHtml += `<tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding:8px;">${time}</td><td style="padding:8px;">${data.staffName}</td><td style="padding:8px;"><span style="color:${data.type==='add'?'#38a169':'#e53e3e'}; font-weight:bold;">${data.type.toUpperCase()}</span></td><td style="padding:8px;">RM ${data.amount}</td><td style="padding:8px;">${data.reason}</td><td style="padding:8px;">RM ${data.previousFloat}</td><td style="padding:8px;">RM ${data.newFloat}</td></tr>`;
+                });
+            }
+            tableHtml += '</tbody></table></div>';
+            content.innerHTML = tableHtml;
         };
 
         window.prepareFloatAdjustment = function(type) {
@@ -4991,6 +5034,7 @@
             if (!snap.exists()) return;
             const s = snap.data();
             window.currentViewingShift = s;
+            document.getElementById('shiftDetailModal').querySelector('h3').innerHTML = '<i class="fas fa-history"></i> Shift Details';
 
             const modalContent = document.getElementById('shiftDetailContent');
             modalContent.innerHTML = `
@@ -10193,6 +10237,7 @@ window.openSearchModalTakeOrder = function() {
         window.confirmVoidQtyTakeOrder = confirmVoidQtyTakeOrder;
         window.showShiftDetailTab = showShiftDetailTab;
         window.viewTransactionDetails = viewTransactionDetails;
+        window.openViewFloatModal = openViewFloatModal;
         window.openEditFloatModal = openEditFloatModal;
         window.prepareFloatAdjustment = prepareFloatAdjustment;
         window.confirmFloatAdjustment = confirmFloatAdjustment;
