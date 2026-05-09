@@ -4996,6 +4996,7 @@
             modalContent.innerHTML = `
                 <div style="display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px; overflow-x: auto; scrollbar-width: none;">
                     <button class="shift-tab-btn active" onclick="showShiftDetailTab('summary', this)" style="padding: 8px 12px; border:none; border-radius:10px; cursor:pointer; font-weight:bold; background:#764ba2; color:white; font-size: 0.8rem; white-space: nowrap;">Summary</button>
+                    <button class="shift-tab-btn" onclick="showShiftDetailTab('cashFloat', this)" style="padding: 8px 12px; border:none; border-radius:10px; cursor:pointer; font-weight:bold; background:#f1f5f9; color:#475569; font-size: 0.8rem; white-space: nowrap;">Cash Float</button>
                     <button class="shift-tab-btn" onclick="showShiftDetailTab('staff', this)" style="padding: 8px 12px; border:none; border-radius:10px; cursor:pointer; font-weight:bold; background:#f1f5f9; color:#475569; font-size: 0.8rem; white-space: nowrap;">Staff</button>
                     <button class="shift-tab-btn" onclick="showShiftDetailTab('order', this)" style="padding: 8px 12px; border:none; border-radius:10px; cursor:pointer; font-weight:bold; background:#f1f5f9; color:#475569; font-size: 0.8rem; white-space: nowrap;">Order</button>
                     <button class="shift-tab-btn" onclick="showShiftDetailTab('transaction', this)" style="padding: 8px 12px; border:none; border-radius:10px; cursor:pointer; font-weight:bold; background:#f1f5f9; color:#475569; font-size: 0.8rem; white-space: nowrap;">Transaction</button>
@@ -5044,6 +5045,49 @@
                         <div style="display: flex; justify-content: space-between; font-size: 1.1rem; font-weight: 800; margin-top: 10px; padding-top: 10px; border-top: 2px solid #eee;"><span>Net Total:</span> <span>RM ${total.toFixed(2)}</span></div>
                     </div>
                 `;
+            } else if (tab === 'cashFloat') {
+                container.innerHTML = '<div class="loading">Loading adjustments...</div>';
+                const adjRef = collection(db, 'licenses', currentClientId, 'float_adjustments');
+                const q = query(adjRef, where('shiftId', '==', s.shiftId));
+                const snap = await getDocs(q);
+                
+                let tableHtml = `
+                    <div style="overflow-x: auto;">
+                        <table style="width:100%; border-collapse: collapse; font-size: 0.75rem;">
+                            <thead>
+                                <tr style="text-align:left; border-bottom:2px solid #f1f5f9; color: #64748b;">
+                                    <th style="padding:8px;">Time</th>
+                                    <th style="padding:8px;">Staff</th>
+                                    <th style="padding:8px;">Type</th>
+                                    <th style="padding:8px;">Amount</th>
+                                    <th style="padding:8px;">Reason</th>
+                                    <th style="padding:8px;">Previous</th>
+                                    <th style="padding:8px;">New</th>
+                                </tr>
+                            </thead>
+                            <tbody>`;
+                
+                if (snap.empty) {
+                    tableHtml += '<tr><td colspan="7" style="padding:20px; text-align:center; color:#666;">No float adjustments recorded.</td></tr>';
+                } else {
+                    const sortedDocs = snap.docs.sort((a,b) => a.data().createdAt?.toDate() - b.data().createdAt?.toDate());
+                    sortedDocs.forEach(d => {
+                        const data = d.data();
+                        const time = data.createdAt ? data.createdAt.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'N/A';
+                        tableHtml += `
+                            <tr style="border-bottom: 1px solid #f1f5f9;">
+                                <td style="padding:8px;">${time}</td>
+                                <td style="padding:8px;">${data.staffName}</td>
+                                <td style="padding:8px;"><span style="color:${data.type==='add'?'#38a169':'#e53e3e'}; font-weight:bold;">${data.type.toUpperCase()}</span></td>
+                                <td style="padding:8px;">RM ${data.amount}</td>
+                                <td style="padding:8px;">${data.reason}</td>
+                                <td style="padding:8px;">RM ${data.previousFloat}</td>
+                                <td style="padding:8px;">RM ${data.newFloat}</td>
+                            </tr>`;
+                    });
+                }
+                tableHtml += '</tbody></table></div>';
+                container.innerHTML = tableHtml;
             } else if (tab === 'staff') {
                 container.innerHTML = '<div class="loading">Loading attendance...</div>';
                 const attQuery = query(collection(db, 'licenses', currentClientId, 'attendance'), where('shiftId', '==', s.shiftId));
