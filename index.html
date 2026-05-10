@@ -2494,6 +2494,9 @@
                                 <div id="activeOrdersSortBtn" onclick="toggleActiveOrdersSort()" style="color: white; cursor: pointer; font-size: 1.1rem; width: 30px; text-align: center;" title="Toggle Sort Order">
                                     <i class="fas fa-arrow-up"></i>
                                 </div>
+                                <div id="voidToggleBtnOrdersTab" onclick="toggleVoidModeOrdersTab()" style="color: white; cursor: pointer; font-size: 1rem; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1.5px solid white;" title="Toggle Void Mode">
+                                    <i class="fas fa-trash-alt"></i>
+                                </div>
                                 <div onclick="toggleActiveOrdersSearch()" style="color: white; cursor: pointer; font-size: 1rem;" title="Search Orders">
                                     <i class="fas fa-search"></i>
                                 </div>
@@ -2787,6 +2790,26 @@
                     <tbody id="involvedStaffList"></tbody>
                 </table>
             </div>
+        </div>
+    </div>
+
+    <!-- Edit Attendance Time Modal -->
+    <div id="editAttendanceTimeModal" class="modal">
+        <div class="modal-content" style="max-width: 400px; border-radius: 28px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-clock"></i> Edit Attendance Time</h3>
+                <button class="modal-close" onclick="closeModal('editAttendanceTimeModal')">&times;</button>
+            </div>
+            <input type="hidden" id="editingAttendanceId">
+            <div class="form-group">
+                <label>Clock In Time</label>
+                <input type="datetime-local" id="editClockInTime">
+            </div>
+            <div class="form-group">
+                <label>Clock Out Time (Optional)</label>
+                <input type="datetime-local" id="editClockOutTime">
+            </div>
+            <button class="primary-btn" style="width: 100%; margin-top: 10px;" onclick="saveAttendanceTime()">Save Changes</button>
         </div>
     </div>
 
@@ -3581,6 +3604,7 @@
         let checkoutOrdersToProcess = [];
         
         let shiftStartTime = null;
+        let isVoidModeOrdersTab = false;
         let staffClockInTime = null;
         let timerInterval = null;
         let selectedOrderIdsForCheckout = [];
@@ -4700,6 +4724,9 @@
                             <td style="padding: 12px 10px;">${duration}</td>
                             <td style="padding: 12px 10px;">
                                 <div class="action-buttons">
+                                    <button class="btn-edit" style="background: #764ba2;" onclick="openEditAttendanceTimeModal('${doc.id}')">
+                                        <i class="fas fa-clock"></i> Edit Time
+                                    </button>
                                     <button class="btn-edit" style="background: #ed8936; ${isClockedOut ? 'opacity:0.5; cursor:not-allowed;' : ''}" 
                                         onclick="kickStaff('${doc.id}', '${data.staffId}', '${data.staffName}')" ${isClockedOut ? 'disabled' : ''}>
                                         <i class="fas fa-user-slash"></i> Kick
@@ -4715,6 +4742,47 @@
                 });
                 body.innerHTML = html || '<tr><td colspan="5" style="text-align:center; padding:20px;">No staff involved yet.</td></tr>';
             });
+        };
+
+        window.openEditAttendanceTimeModal = async function(attendanceId) {
+            const snap = await getDoc(doc(db, 'licenses', currentClientId, 'attendance', attendanceId));
+            if (!snap.exists()) return;
+            
+            const data = snap.data();
+            document.getElementById('editingAttendanceId').value = attendanceId;
+            
+            const formatDateForInput = (timestamp) => {
+                if (!timestamp) return '';
+                const dt = timestamp.toDate();
+                const year = dt.getFullYear();
+                const month = String(dt.getMonth() + 1).padStart(2, '0');
+                const day = String(dt.getDate()).padStart(2, '0');
+                const hours = String(dt.getHours()).padStart(2, '0');
+                const minutes = String(dt.getMinutes()).padStart(2, '0');
+                return `${year}-${month}-${day}T${hours}:${minutes}`;
+            };
+
+            document.getElementById('editClockInTime').value = formatDateForInput(data.clockIn);
+            document.getElementById('editClockOutTime').value = formatDateForInput(data.clockOut);
+            
+            document.getElementById('editAttendanceTimeModal').style.display = 'flex';
+        };
+
+        window.saveAttendanceTime = async function() {
+            const id = document.getElementById('editingAttendanceId').value;
+            const clockInVal = document.getElementById('editClockInTime').value;
+            const clockOutVal = document.getElementById('editClockOutTime').value;
+            
+            if (!clockInVal) { alert("Clock In time is required."); return; }
+            
+            const updateData = {
+                clockIn: Timestamp.fromDate(new Date(clockInVal)),
+                clockOut: clockOutVal ? Timestamp.fromDate(new Date(clockOutVal)) : null,
+                updatedAt: Timestamp.now()
+            };
+            
+            await updateDoc(doc(db, 'licenses', currentClientId, 'attendance', id), updateData);
+            closeModal('editAttendanceTimeModal');
         };
 
         window.kickStaff = async function(attendanceId, staffId, staffName) {
@@ -6851,10 +6919,14 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
         window.confirmVoidQtyTakeOrder = async function() {
             if (!voidingItemData) return;
             const qtyToVoid = parseInt(document.getElementById('voidModalQtyVal').innerText);
-            const { orderId, itemId, maxQty, unitPrice } = voidingItemData;
+            const { orderId, itemId, maxQty, unitPrice, source } = voidingItemData;
             try {
                 if (qtyToVoid >= maxQty) {
-                    await performFullVoidLogic(orderId, itemId);
+                    if (source === 'orders') {
+                        await updateItemStatusOrdersTab(orderId, itemId, 'cancelled');
+                    } else {
+                        await performFullVoidLogic(orderId, itemId);
+                    }
                 } else {
                     const remainingQty = maxQty - qtyToVoid;
                     const itemRef = doc(db, 'licenses', currentClientId, 'orders', orderId, 'items', itemId);
@@ -6868,7 +6940,9 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                     const mSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderId, 'items', itemId, 'selectedModifiers'));
                     for (const m of mSnap.docs) await addDoc(collection(db, 'licenses', currentClientId, 'orders', orderId, 'items', newCancelledItemRef.id, 'selectedModifiers'), m.data());
                     await updateOrderTotals(orderId);
-                    const row = document.getElementById(`chk-item-${itemId}`);
+
+                    if (source === 'checkout') {
+                        const row = document.getElementById(`chk-item-${itemId}`);
                     if (row) {
                         row.setAttribute('data-max-qty', remainingQty);
                         row.setAttribute('data-price', (unitPrice * remainingQty).toFixed(2));
@@ -6882,6 +6956,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                     const stateItem = selectedCheckoutItems.find(i => i.itemId === itemId);
                     if (stateItem) { stateItem.maxQty = remainingQty; stateItem.qtyToPay = Math.min(stateItem.qtyToPay, remainingQty); }
                     recalculateCheckoutTotals();
+                    }
                 }
                 closeModal('voidQtyModalTakeOrder');
             } catch (e) { alert('Void error: ' + e.message); }
@@ -6893,7 +6968,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             const name = row.querySelector('span[style*="font-weight:600"]').innerText;
             const unitPrice = parseFloat(row.getAttribute('data-unit-price'));
             if (maxQty > 1) {
-                voidingItemData = { orderId, itemId, maxQty, unitPrice, name };
+                voidingItemData = { orderId, itemId, maxQty, unitPrice, name, source: 'checkout' };
                 document.getElementById('voidQtyItemName').innerText = name;
                 document.getElementById('voidModalQtyVal').innerText = "1";
                 document.getElementById('voidQtyModalTakeOrder').style.display = 'flex';
@@ -8477,11 +8552,7 @@ window.openSearchModalTakeOrder = function() {
                         
                         itemsHtml += `
                             <div id="item-card-orders-${item.docId}" 
-                                 ${(isItemPaid || isItemPaidEarly) ? '' : `
-                                 onmousedown="startItemHoldOrdersTab('${orderId}', '${item.docId}')" onmouseup="clearItemHoldOrdersTab()" onmouseleave="clearItemHoldOrdersTab()"
-                                 ontouchstart="startItemHoldOrdersTab('${orderId}', '${item.docId}')" ontouchend="clearItemHoldOrdersTab()"
-                                 onclick="handleItemClickOrdersTab('${orderId}', '${item.docId}')"
-                                 `}
+                                
                                  style="padding: 10px; background: ${isItemCancelled ? '#fff5f5' : (isItemPaid ? '#f0fff4' : (isItemPaidEarly ? '#e0f2fe' : (isEditingThis ? '#f0e6ff' : '#f8fafc')))}; border-radius: 12px; margin-bottom: 8px; border: 1px solid ${isItemCancelled ? '#feb2b2' : (isItemPaid ? '#38a169' : (isItemPaidEarly ? '#004fa6' : (isEditingThis ? '#764ba2' : '#f1f5f9')))}; cursor: ${(isItemPaid || isItemPaidEarly) ? 'default' : 'pointer'}; user-select: none; opacity: ${(isItemCancelled || isItemPaid || isItemPaidEarly) ? '0.8' : '1'};">
                                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
                                     <b style="color: ${isItemCancelled ? '#e53e3e' : (isItemPaid ? '#38a169' : (isItemPaidEarly ? '#004fa6' : '#1e293b'))}; font-size: 0.9rem; ${(isItemCancelled || isItemPaid || isItemPaidEarly) ? 'text-decoration: line-through;' : ''}">
@@ -8490,7 +8561,16 @@ window.openSearchModalTakeOrder = function() {
                                         ${isItemPaid ? `<span style="font-size: 10px; color: #38a169; text-transform: uppercase; font-weight: 800;">(Paid)</span>` : ''}
                                         ${isItemPaidEarly ? `<span style="font-size: 10px; color: #004fa6; text-transform: uppercase; font-weight: 800;">(Paid Early)</span>` : ''}
                                     </b>
-                                    <span style="background: #e2e8f0; color: #475569; padding: 2px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: bold;">x${item.qty}</span>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        ${isVoidModeOrdersTab ? (
+                                            (!isItemCancelled && !isItemPaid && !isItemPaidEarly) ? `
+                                                <i class="fas fa-trash-alt" style="color: #e53e3e; cursor: pointer; padding: 5px;" title="Cancel Item" onclick="voidItemFromOrdersTab('${orderId}', '${item.docId}', '${item.total}', '${item.qty}', '${item.name.replace(/'/g, "\\'")}')"></i>
+                                            ` : (isItemCancelled && o.status !== 'cancelled') ? `
+                                                <i class="fas fa-plus-circle" style="color: #38a169; cursor: pointer; padding: 5px;" title="Uncancel Item" onclick="updateItemStatusOrdersTab('${orderId}', '${item.docId}', 'pending')"></i>
+                                            ` : ''
+                                        ) : ''}
+                                        <span style="background: #e2e8f0; color: #475569; padding: 2px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: bold;">x${item.qty}</span>
+                                    </div>
                                 </div>
                                 ${selections.length ? `<div style="color:#64748b; font-size:0.75rem; line-height: 1.4;"><i class="fas fa-check-circle" style="font-size: 0.65rem;"></i> ${selections.join(', ')}</div>` : ''}
                                 ${item.notes ? `<div style="color:#764ba2; font-size:0.75rem; font-style:italic; margin-top: 4px; padding-left: 8px; border-left: 2px solid #764ba2;">"${item.notes}"</div>` : ''}
@@ -8652,27 +8732,28 @@ window.openSearchModalTakeOrder = function() {
             }
         };
 
-        window.startItemHoldOrdersTab = function(orderId, itemId) {
-            holdTriggeredOrdersTab = false;
-            holdTimerOrdersTab = setTimeout(() => {
-                holdTriggeredOrdersTab = true;
-                activeEditItemIdOrdersTab = itemId;
-                loadActiveOrders();
-            }, 1000);
-        };
-
-        window.clearItemHoldOrdersTab = function() {
-            clearTimeout(holdTimerOrdersTab);
-        };
-
-        window.handleItemClickOrdersTab = function(orderId, itemId) {
-            if (holdTriggeredOrdersTab) {
-                holdTriggeredOrdersTab = false;
-                return;
+        window.toggleVoidModeOrdersTab = function() {
+            isVoidModeOrdersTab = !isVoidModeOrdersTab;
+            const btn = document.getElementById('voidToggleBtnOrdersTab');
+            if (btn) {
+                btn.style.backgroundColor = isVoidModeOrdersTab ? '#e53e3e' : 'transparent';
+                btn.style.borderColor = isVoidModeOrdersTab ? '#e53e3e' : 'white';
             }
-            if (activeEditItemIdOrdersTab) {
-                activeEditItemIdOrdersTab = null;
-                loadActiveOrders();
+            loadActiveOrders();
+        };
+
+        window.voidItemFromOrdersTab = async function(orderId, itemId, itemTotal, itemQty, itemName) {
+            const maxQty = parseInt(itemQty);
+            const unitPrice = parseFloat(itemTotal) / maxQty;
+            
+            if (maxQty > 1) {
+                voidingItemData = { orderId, itemId, maxQty, unitPrice, name: itemName, source: 'orders' };
+                document.getElementById('voidQtyItemName').innerText = itemName;
+                document.getElementById('voidModalQtyVal').innerText = "1";
+                document.getElementById('voidQtyModalTakeOrder').style.display = 'flex';
+            } else {
+                if (!confirm('Are you sure you want to cancel this item?')) return;
+                await updateItemStatusOrdersTab(orderId, itemId, 'cancelled');
             }
         };
 
@@ -10234,6 +10315,8 @@ window.openSearchModalTakeOrder = function() {
         window.toggleActiveOrdersSearch = toggleActiveOrdersSearch;
         window.handleActiveOrdersSearchInput = handleActiveOrdersSearchInput;
         window.setVoidModeTakeOrder = setVoidModeTakeOrder;
+        window.toggleVoidModeOrdersTab = toggleVoidModeOrdersTab;
+        window.voidItemFromOrdersTab = voidItemFromOrdersTab;
         window.toggleVoidMode = toggleVoidMode;
         window.voidItemFromCheckout = voidItemFromCheckout;
         window.updateVoidModalQty = updateVoidModalQty;
@@ -10246,6 +10329,8 @@ window.openSearchModalTakeOrder = function() {
         window.confirmFloatAdjustment = confirmFloatAdjustment;
         window.openEditInvolvedStaffModal = openEditInvolvedStaffModal;
         window.kickStaff = kickStaff;
+        window.openEditAttendanceTimeModal = openEditAttendanceTimeModal;
+        window.saveAttendanceTime = saveAttendanceTime;
         window.deleteAttendanceRecord = deleteAttendanceRecord;
         
         // ========== WIFI STATUS LOGIC ==========
@@ -10305,7 +10390,7 @@ window.openSearchModalTakeOrder = function() {
         // Initial check
         updateWifiStatus();
     </script>
-    <script>
+      <script>
               // Register the Service Worker (sw.js)
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
