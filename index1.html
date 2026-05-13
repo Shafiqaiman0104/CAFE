@@ -2702,6 +2702,11 @@
             </div>
 
             <div class="checkbox-group" style="margin-bottom: 12px;">
+                <input type="checkbox" id="printerKickDrawer">
+                <label>Kick Cash Drawer</label>
+            </div>
+
+            <div class="checkbox-group" style="margin-bottom: 12px;">
                 <input type="checkbox" id="printReceiptBills">
                 <label>Print Receipt & Bills</label>
             </div>
@@ -7137,6 +7142,17 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             let totalReceived = 0;
             let paymentRecords = [];
 
+            let hasCashPayment = false;
+            if (checkoutPayMethod === 'cash') {
+                hasCashPayment = true;
+            } else if (checkoutPayMethod === 'mixed') {
+                document.querySelectorAll('.mixed-payment-row').forEach(row => {
+                    if (row.dataset.type === 'cash' && (parseFloat(row.querySelector('.mixed-amount-input').value) || 0) > 0) {
+                        hasCashPayment = true;
+                    }
+                });
+            }
+
             // Calculate totals for discount distribution
             let totalAmountBeforeDiscount = selectedCheckoutItems.reduce((acc, curr) => acc + (curr.unitPrice * curr.qtyToPay), 0);
             if (taxActive) totalAmountBeforeDiscount *= (1 + currentTaxRate / 100);
@@ -7239,7 +7255,8 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                         amount: parseFloat(row.querySelector('.mixed-amount-input').value) || 0
                     })).filter(b => b.amount > 0) : null,
                 itemsPaid: selectedCheckoutItems,
-                discount: appliedCheckoutDiscount ? { name: appliedCheckoutDiscount.name, value: totalDiscountValue } : null
+                discount: appliedCheckoutDiscount ? { name: appliedCheckoutDiscount.name, value: totalDiscountValue } : null,
+                hasCashPayment: hasCashPayment
             };
             paymentInfoForQueue.change = paymentInfoForQueue.give - paymentInfoForQueue.totalDue;
 
@@ -7296,7 +7313,8 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                     isEarly: isEarlyPaymentMode,
                     mergedOrderIds: involvedOrderIds,
                     cashierName: currentStaff.name,
-                    paymentInfo: paymentInfoForQueue
+                    paymentInfo: paymentInfoForQueue,
+                    hasCashPayment: hasCashPayment
                 };
                 triggerAutoPrinting(involvedOrderIds[0], orderNums.join(', '), 'payment', payDetails, true);
             } else if (involvedOrderIds.length === 1) {
@@ -7307,7 +7325,8 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                     itemsPaid: selectedCheckoutItems,
                     isEarly: isEarlyPaymentMode,
                     cashierName: currentStaff.name,
-                    paymentInfo: paymentInfoForQueue
+                    paymentInfo: paymentInfoForQueue,
+                    hasCashPayment: hasCashPayment
                 };
                 triggerAutoPrinting(orderId, orderDoc ? orderDoc.data().orderNumber : 'N/A', 'payment', payDetails, true);
             }
@@ -9254,6 +9273,7 @@ window.openSearchModalTakeOrder = function() {
             document.getElementById('editingPrinterId').value = '';
             document.getElementById('printerNameField').value = '';
             document.getElementById('printerPaperWidth').value = '58';
+            document.getElementById('printerKickDrawer').checked = false;
             document.getElementById('printReceiptBills').checked = false;
             document.getElementById('autoPrintReceipt').checked = false;
             document.getElementById('printOrdersToggle').checked = false;
@@ -9287,6 +9307,7 @@ window.openSearchModalTakeOrder = function() {
             document.getElementById('printerPaperWidth').value = p.paperWidth || '58';
             document.getElementById('printerFontSize').value = p.fontSize !== undefined ? p.fontSize : '1';
             document.getElementById('printerCutterAlarm').checked = p.cutterAlarm || false;
+            document.getElementById('printerKickDrawer').checked = p.kickCashDrawer || false;
             document.getElementById('printReceiptBills').checked = p.printReceipt || false;
             document.getElementById('autoPrintReceipt').checked = p.autoPrint || false;
             document.getElementById('printOrdersToggle').checked = p.printOrders || false;
@@ -9309,6 +9330,7 @@ window.openSearchModalTakeOrder = function() {
             const paperWidth = document.getElementById('printerPaperWidth').value;
             const fontSize = document.getElementById('printerFontSize').value;
             const cutterAlarm = document.getElementById('printerCutterAlarm').checked;
+            const kickCashDrawer = document.getElementById('printerKickDrawer').checked;
             const printReceipt = document.getElementById('printReceiptBills').checked;
             const autoPrint = document.getElementById('autoPrintReceipt').checked;
             const printOrders = document.getElementById('printOrdersToggle').checked;
@@ -9317,7 +9339,7 @@ window.openSearchModalTakeOrder = function() {
 
             if (!name) { alert('Please enter printer name'); return; }
 
-            const data = { name, paperWidth, fontSize, cutterAlarm, printReceipt, autoPrint, printOrders, bluetoothDeviceId, departmentPrinters, updatedAt: Timestamp.now() };
+            const data = { name, paperWidth, fontSize, cutterAlarm, kickCashDrawer, printReceipt, autoPrint, printOrders, bluetoothDeviceId, departmentPrinters, updatedAt: Timestamp.now() };
             if (id) {
                 await updateDoc(doc(db, 'licenses', currentClientId, 'printers', id), data);
             } else {
@@ -9477,6 +9499,13 @@ window.openSearchModalTakeOrder = function() {
                 const device = connectedBluetoothDevices[p.bluetoothDeviceId];
                 if (device) devicesToCleanup.add(device);
                 
+                // Cash Drawer Kick Logic
+                const isCashInvolved = paymentDetails?.hasCashPayment || paymentDetails?.paymentInfo?.hasCashPayment;
+                if (p.kickCashDrawer && isCashInvolved) {
+                    console.log(`%c[Drawer] Sending kick command to ${p.name}...`, "color: #764ba2; font-weight: bold;");
+                    if (device) await sendToBluetoothPrinter(device, new Uint8Array([0x1B, 0x70, 0x00, 0x19, 0xFA]));
+                }
+
                 // Handle Full Receipt Printing (Only on payment or early pay)
                 if (p.printReceipt && type === 'payment') {
                     const qOrderId = (paymentDetails?.mergedOrderIds) ? paymentDetails.mergedOrderIds.join(',') : orderId;
@@ -9772,6 +9801,12 @@ window.openSearchModalTakeOrder = function() {
 
             let printSuccess = false;
             if (device && itemsToPrint.length > 0) {
+                // Cash Drawer Kick Logic for Reprints
+                if (printerConfig.kickCashDrawer && paymentInfo?.hasCashPayment) {
+                    console.log(`%c[Drawer] Sending kick command (reprint) to ${printerConfig.name}...`, "color: #764ba2; font-weight: bold;");
+                    await sendToBluetoothPrinter(device, new Uint8Array([0x1B, 0x70, 0x00, 0x19, 0xFA]));
+                }
+
                 let commands;
                 if (item.printerDeptName === 'Receipt') {
                     const payMethod = item.paymentMethod || 'N/A'; // Retrieve from print queue item
@@ -10246,7 +10281,8 @@ window.openSearchModalTakeOrder = function() {
                                     isEarly: transData.isEarlyPayment || false,
                                     mergedOrderIds: orderIds,
                                     cashierName: cashierName,
-                                    paymentInfo: paymentInfo
+                                    paymentInfo: paymentInfo,
+                                    hasCashPayment: paymentInfo?.hasCashPayment
                                 };
                                 triggerAutoPrinting(orderIds[0], orderNums.join(', '), 'payment', payDetails);
                             } else {
@@ -10260,7 +10296,8 @@ window.openSearchModalTakeOrder = function() {
                                         itemsPaid: itemsPaid,
                                         isEarly: transData.isEarlyPayment || false,
                                         cashierName: cashierName,
-                                        paymentInfo: paymentInfo
+                                        paymentInfo: paymentInfo,
+                                        hasCashPayment: paymentInfo?.hasCashPayment
                                     };
                                     triggerAutoPrinting(orderId, orderData.orderNumber, 'payment', payDetails);
                                 }
