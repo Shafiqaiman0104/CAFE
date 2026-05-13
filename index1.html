@@ -7238,6 +7238,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                         type: row.dataset.type,
                         amount: parseFloat(row.querySelector('.mixed-amount-input').value) || 0
                     })).filter(b => b.amount > 0) : null,
+                itemsPaid: selectedCheckoutItems,
                 discount: appliedCheckoutDiscount ? { name: appliedCheckoutDiscount.name, value: totalDiscountValue } : null
             };
             paymentInfoForQueue.change = paymentInfoForQueue.give - paymentInfoForQueue.totalDue;
@@ -9718,6 +9719,7 @@ window.openSearchModalTakeOrder = function() {
             const staffName = item.staffName || 'N/A';
             const orderType = item.orderType || 'dine-in';
             const paymentInfo = item.paymentInfo ? JSON.parse(item.paymentInfo) : null;
+            const itemsPaid = paymentInfo?.itemsPaid || null;
             const orderSeq = item.orderSequence;
 
             const orderIds = item.orderId.split(',');
@@ -9737,6 +9739,15 @@ window.openSearchModalTakeOrder = function() {
                 const itemsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', oId, 'items'));
                 for (const itDoc of itemsSnap.docs) {
                     const itData = itDoc.data();
+
+                    if (item.printerDeptName === 'Receipt' && itemsPaid) {
+                        const match = itemsPaid.find(p => p.itemId === itDoc.id);
+                        if (!match) continue;
+                        
+                        itData.qty = match.qtyToPay.toString();
+                        itData.total = (match.unitPrice * match.qtyToPay).toFixed(2);
+                    }
+
                     if (item.printerDeptId) {
                         const deptSnap = await getDoc(doc(db, 'licenses', currentClientId, 'department_printer', item.printerDeptId));
                         if (deptSnap.exists()) {
