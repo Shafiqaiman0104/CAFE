@@ -9617,8 +9617,8 @@ window.openSearchModalTakeOrder = function() {
                 sep,
                 "\x1B\x61\x00", // Left
                 `Date: ${dateStr}   Time: ${timeStr}\n`,
-                `${String(orderSeq).split(',').map(s => '#' + s.trim()).join(',')}\n`,
-                `${orderNumber}\n`,
+                `Order No: ${String(orderSeq).split(',').map(s => '#' + s.trim()).join(',')}\n`,
+                `Order ID: ${orderNumber}\n`,
                 `Order Type: ${orderType.toUpperCase().replace('-', ' ')}\n`,
                 `Table: ${tableNumber}\n`,
                 `Cashier: ${cashierName || currentStaff?.name || 'N/A'}\n`,
