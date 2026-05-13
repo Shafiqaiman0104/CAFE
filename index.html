@@ -2704,6 +2704,11 @@
             </div>
 
             <div class="checkbox-group" style="margin-bottom: 12px;">
+                <input type="checkbox" id="printerKickDrawer">
+                <label>Kick Cash Drawer</label>
+            </div>
+
+            <div class="checkbox-group" style="margin-bottom: 12px;">
                 <input type="checkbox" id="printReceiptBills">
                 <label>Print Receipt & Bills</label>
             </div>
@@ -2882,6 +2887,14 @@
             <div class="form-group">
                 <label>Cash Float (RM)</label>
                 <input type="number" id="startShiftFloatInput" step="0.01" placeholder="Enter opening cash float" style="border: 1.5px solid #764ba2;">
+            </div>
+            <div class="form-group">
+                <label>Next Order Number</label>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <input type="number" id="startShiftNextOrderSeq" readonly style="flex: 1; background: #f8fafc; border: 1.5px solid #e2e8f0;">
+                    <button class="btn-small" onclick="resetOrderSequence()" style="width: auto; background: #e53e3e; border-radius: 12px;">Reset to 1</button>
+                </div>
+                <small style="color: #64748b; font-size: 11px;">This sequence will increment for every new order.</small>
             </div>
             <button class="primary-btn" style="width: 100%; margin-top: 10px;" onclick="confirmStartShift()">Start Shift</button>
         </div>
@@ -3537,7 +3550,7 @@
         import { 
             getFirestore, doc, getDoc, collection, query, where, getDocs,
             onSnapshot, addDoc, updateDoc, setDoc, Timestamp, deleteDoc,
-            orderBy, limit
+            orderBy, limit, runTransaction
         } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
         const firebaseConfig = {
@@ -4896,10 +4909,24 @@
             } catch (e) { alert('Error: ' + e.message); }
         };
 
-        window.showStartShiftModal = function() {
+        window.showStartShiftModal = async function() {
             document.getElementById('startShiftTimeDisplay').value = new Date().toLocaleString();
             document.getElementById('startShiftFloatInput').value = '';
+            
+            // Fetch current sequence from DB
+            const shiftRef = doc(db, 'licenses', currentClientId, 'settings', 'shift');
+            const snap = await getDoc(shiftRef);
+            let nextSeq = 1;
+            if (snap.exists() && snap.data().nextOrderSequence) {
+                nextSeq = snap.data().nextOrderSequence;
+            }
+            document.getElementById('startShiftNextOrderSeq').value = nextSeq;
+            
             document.getElementById('startShiftModal').style.display = 'flex';
+        };
+
+        window.resetOrderSequence = function() {
+            document.getElementById('startShiftNextOrderSeq').value = 1;
         };
 
         window.closeStartShiftModal = function() {
@@ -4909,6 +4936,7 @@
 
         window.confirmStartShift = async function() {
             const cashFloat = parseFloat(document.getElementById('startShiftFloatInput').value) || 0;
+            const nextSeq = parseInt(document.getElementById('startShiftNextOrderSeq').value) || 1;
             try {
                 const shiftId = 'SHIFT-' + Date.now();
                 
@@ -4924,6 +4952,7 @@
                     startedBy: currentStaff.name,
                     startedById: currentStaff.id,
                     staffNames: [currentStaff.name],
+                    nextOrderSequence: nextSeq,
                     updatedAt: Timestamp.now()
                 }, { merge: true });
                 
@@ -5315,25 +5344,32 @@
             const t = snap.data();
 
             let orderNumbers = 'N/A';
+            let orderSeqs = 'N/A';
             if (t.orderId) {
                 const ids = t.orderId.split(',').map(id => id.trim());
                 const numbers = [];
+                const seqs = [];
                 for (const id of ids) {
                     const oSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', id));
                     if (oSnap.exists()) {
-                        numbers.push(oSnap.data().orderNumber || id.slice(0, 8));
+                        const od = oSnap.data();
+                        numbers.push(od.orderNumber || id.slice(0, 8));
+                        seqs.push('#' + (od.orderSequence || '?'));
                     } else {
                         numbers.push(id.slice(0, 8));
+                        seqs.push('#?');
                     }
                 }
                 orderNumbers = numbers.join(', ');
+                orderSeqs = seqs.join(', ');
             }
 
             const content = document.getElementById('transactionDetailContent');
             content.innerHTML = `
                 <div style="background: #f8fafc; padding: 20px; border-radius: 16px; font-size: 0.95rem; line-height: 1.6;">
                     <p><strong>Transaction Id:</strong> ${transId}</p>
-                    <p><strong>Order Number:</strong> ${orderNumbers}</p>
+                    <p><strong>Order No:</strong> ${orderSeqs}</p>
+                    <p><strong>Order ID:</strong> ${orderNumbers}</p>
                     <p><strong>Date:</strong> ${t.createdAt?.toDate().toLocaleString() || 'N/A'}</p>
                     <p><strong>Type:</strong> ${t.type || 'payment'}</p>
                     <p><strong>Method:</strong> ${t.paymentMethod || 'N/A'}</p>
@@ -5813,7 +5849,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                         <div class="order-detail-card">
                             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
                                 <div>
-                                    <b>${order.orderNumber || 'ORD-' + orderDoc.id.slice(0,8)}</b>
+                                    <b>#${order.orderSequence || '?'} - ${order.orderNumber || 'ORD-' + orderDoc.id.slice(0,8)}</b>
                                     <span class="status-badge status-${order.status || 'active'}">${order.status || 'active'}</span>
                                 </div>
                                 <div>${orderDate.toLocaleString()}</div>
@@ -5916,7 +5952,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             const content = document.getElementById('orderDetailContent');
             content.innerHTML = `
                 <div style="margin-bottom:15px;">
-                    <b>${order.orderNumber}</b><br>
+                    <b>#${order.orderSequence || '?'} (${order.orderNumber})</b><br>
                     Status: <span class="status-badge status-${order.status || 'active'}">${order.status || 'active'}</span><br>
                     Table: ${order.tableId?.toUpperCase() || 'N/A'}<br>
                     Type: ${order.orderType || 'dine-in'}<br>
@@ -6035,15 +6071,25 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                     const transDate = trans.createdAt?.toDate() || new Date();
                     
                     let orderNumber = 'N/A';
+                    let orderSeqDisplay = 'N/A';
                     if (trans.orderId) {
                         try {
-                            // Split by comma in case of multiple order IDs and take the first one for display
-                            const firstOrderId = trans.orderId.split(',')[0].trim();
-                            const orderSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', firstOrderId));
-                            if (orderSnap.exists()) {
-                                orderNumber = orderSnap.data().orderNumber || firstOrderId.slice(0,8);
-                                if (trans.orderId.includes(',')) orderNumber += '...';
+                            const ids = trans.orderId.split(',').map(id => id.trim());
+                            const nums = [];
+                            const seqs = [];
+                            for (const id of ids) {
+                                const oSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', id));
+                                if (oSnap.exists()) {
+                                    const od = oSnap.data();
+                                    nums.push(od.orderNumber || id.slice(0, 8));
+                                    seqs.push('#' + (od.orderSequence || '?'));
+                                } else {
+                                    nums.push(id.slice(0, 8));
+                                    seqs.push('#?');
+                                }
                             }
+                            orderNumber = nums.join(', ');
+                            orderSeqDisplay = seqs.join(',');
                         } catch (e) {}
                     }
                     
@@ -6060,12 +6106,14 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                                 <div>${transDate.toLocaleString()}</div>
                             </div>
                             <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:5px;margin-bottom:10px;">
-                                <div>Order: ${orderNumber}</div>
+                                <div style="grid-column: span 2;">Order No: ${orderSeqDisplay}</div>
+                                <div style="grid-column: span 2;">Order: ${orderNumber}</div>
                                 <div>Amount: <b>RM ${trans.amount}</b></div>
                                 <div>Method: ${trans.paymentMethod || 'cash'}</div>
                                 <div>Type: ${trans.type || 'payment'}</div>
                             </div>
                             <div class="action-buttons" style="margin-top:10px;">
+                                <button class="btn-view" onclick="viewTransactionDetails('${transDoc.id}')">View Transaction</button>
                                 <button class="btn-edit" onclick="editTransaction('${transDoc.id}')">Edit</button>
                                 <button class="btn-delete" onclick="deleteTransaction('${transDoc.id}')">Delete</button>
                             </div>
@@ -6426,12 +6474,15 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                              style="background:white; padding:15px; border-radius:12px; margin-bottom:10px; border-left:4px solid #764ba2; box-shadow:0 2px 5px rgba(0,0,0,0.05);">
                             <div style="display:flex; justify-content:space-between; font-weight:bold; margin-bottom:8px; align-items: flex-start;">
                                 <div>
-                                    <span>ID: ${order.orderNumber} <span style="background:#e9ecef; color:#666; font-size:10px; padding:2px 6px; border-radius:10px; margin-left:5px; text-transform:uppercase; vertical-align:middle;">${(order.orderType || 'dine-in').replace('-', ' ')}</span></span>
+                                    <span>#${order.orderSequence || '?'} (${order.orderNumber}) <span style="background:#e9ecef; color:#666; font-size:10px; padding:2px 6px; border-radius:10px; margin-left:5px; text-transform:uppercase; vertical-align:middle;">${(order.orderType || 'dine-in').replace('-', ' ')}</span></span>
                                     <div style="font-size: 11px; color: #666; font-weight: normal; margin-top: 3px;"><i class="fas fa-clock"></i> ${orderTime}</div>
                                 </div>
                                 <span style="color:#764ba2;">RM ${order.total}</span>
                             </div>
                             <div style="font-size:0.85rem; color:#444; border-bottom: 1px dashed #eee; padding-bottom: 10px;">${itemsHtml}</div>
+                            <div style="display: flex; justify-content: flex-end; margin-top: 8px;">
+                                <span class="status-badge status-${order.status}" style="font-size: 10px; font-weight: 800; text-transform: uppercase;">${order.status}</span>
+                            </div>
                             ${showQuickCompleteBtn ? `
                                 <button onclick="event.stopPropagation(); completeOrderFromTableDetails('${orderDoc.id}')" 
                                         style="width: 100%; padding: 12px; margin-top: 10px; border-radius: 12px; border: none; background: #38a169; color: white; font-weight: 800; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 6px rgba(56, 161, 105, 0.1);">
@@ -6647,7 +6698,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                         html += `
                             <div style="margin-bottom:15px; background:white; padding:12px; border-radius:18px; border:1px solid #f1f5f9; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
                                 <div style="font-weight:bold; font-size:0.8rem; color:#94a3b8; border-bottom:1px solid #f8fafc; padding-bottom:8px; margin-bottom:8px; display: flex; justify-content: space-between; align-items: center;">
-                                    <span>Order Id: ${order.orderNumber}</span>
+                                    <span>Order: #${order.orderSequence || '?'} (${order.orderNumber})</span>
                                     <span class="status-badge status-${order.status}">${order.status}</span>
                                 </div>
                                 ${orderItemsHtml}
@@ -7093,6 +7144,17 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             let totalReceived = 0;
             let paymentRecords = [];
 
+            let hasCashPayment = false;
+            if (checkoutPayMethod === 'cash') {
+                hasCashPayment = true;
+            } else if (checkoutPayMethod === 'mixed') {
+                document.querySelectorAll('.mixed-payment-row').forEach(row => {
+                    if (row.dataset.type === 'cash' && (parseFloat(row.querySelector('.mixed-amount-input').value) || 0) > 0) {
+                        hasCashPayment = true;
+                    }
+                });
+            }
+
             // Calculate totals for discount distribution
             let totalAmountBeforeDiscount = selectedCheckoutItems.reduce((acc, curr) => acc + (curr.unitPrice * curr.qtyToPay), 0);
             if (taxActive) totalAmountBeforeDiscount *= (1 + currentTaxRate / 100);
@@ -7194,7 +7256,9 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                         type: row.dataset.type,
                         amount: parseFloat(row.querySelector('.mixed-amount-input').value) || 0
                     })).filter(b => b.amount > 0) : null,
-                discount: appliedCheckoutDiscount ? { name: appliedCheckoutDiscount.name, value: totalDiscountValue } : null
+                itemsPaid: selectedCheckoutItems,
+                discount: appliedCheckoutDiscount ? { name: appliedCheckoutDiscount.name, value: totalDiscountValue } : null,
+                hasCashPayment: hasCashPayment
             };
             paymentInfoForQueue.change = paymentInfoForQueue.give - paymentInfoForQueue.totalDue;
 
@@ -7251,7 +7315,8 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                     isEarly: isEarlyPaymentMode,
                     mergedOrderIds: involvedOrderIds,
                     cashierName: currentStaff.name,
-                    paymentInfo: paymentInfoForQueue
+                    paymentInfo: paymentInfoForQueue,
+                    hasCashPayment: hasCashPayment
                 };
                 triggerAutoPrinting(involvedOrderIds[0], orderNums.join(', '), 'payment', payDetails, true);
             } else if (involvedOrderIds.length === 1) {
@@ -7262,7 +7327,8 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                     itemsPaid: selectedCheckoutItems,
                     isEarly: isEarlyPaymentMode,
                     cashierName: currentStaff.name,
-                    paymentInfo: paymentInfoForQueue
+                    paymentInfo: paymentInfoForQueue,
+                    hasCashPayment: hasCashPayment
                 };
                 triggerAutoPrinting(orderId, orderDoc ? orderDoc.data().orderNumber : 'N/A', 'payment', payDetails, true);
             }
@@ -7991,12 +8057,27 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
             submitBtn.disabled = true;
             submitBtn.innerText = 'Submitting...';
             
+            // Use Transaction to get and increment Order Sequence
+            let sequenceNum = 1;
+            try {
+                const shiftRef = doc(db, 'licenses', currentClientId, 'settings', 'shift');
+                sequenceNum = await runTransaction(db, async (transaction) => {
+                    const shiftSnap = await transaction.get(shiftRef);
+                    let currentSeq = (shiftSnap.exists() && shiftSnap.data().nextOrderSequence) ? shiftSnap.data().nextOrderSequence : 1;
+                    transaction.update(shiftRef, { nextOrderSequence: currentSeq + 1 });
+                    return currentSeq;
+                });
+            } catch (e) {
+                console.error("Sequence transaction failed: ", e);
+            }
+
             let subtotal = cartTakeOrder.reduce((s, i) => s + i.total, 0);
             const tax = taxActive ? subtotal * (currentTaxRate / 100) : 0;
             const total = subtotal + tax;
             
             const orderData = {
                 orderNumber: 'ORD-' + Date.now().toString().slice(-8),
+                orderSequence: sequenceNum,
                 staffId: currentStaff.id,
                 staffName: currentStaff.name,
                 status: 'active',
@@ -8597,7 +8678,7 @@ window.openSearchModalTakeOrder = function() {
                                     <span class="status-badge status-${o.status}">${o.status}</span>
                                 </div>
                                 <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
-                                    <div style="font-weight:800; font-size: 1.1rem; background: #764ba2; padding: 6px 14px; border-radius: 12px; display: inline-block; color: #fff; box-shadow: 0 2px 4px rgba(118,75,162,0.2);"># ${o.orderNumber}</div>
+                                    <div style="font-weight:800; font-size: 1.1rem; background: #764ba2; padding: 6px 14px; border-radius: 12px; display: inline-block; color: #fff; box-shadow: 0 2px 4px rgba(118,75,162,0.2);">#${o.orderSequence || '?'} (${o.orderNumber})</div>
                                     <span style="background:#e2e8f0; color:#475569; font-size:10px; padding:4px 8px; border-radius:10px; text-transform:uppercase; font-weight:700; vertical-align: middle;">${(o.orderType || 'dine-in').replace('-', ' ')}</span>
                                 </div>
                                 <div style="font-size:0.9rem; color:#475569; font-weight: 600; margin-bottom:12px;">
@@ -9194,6 +9275,7 @@ window.openSearchModalTakeOrder = function() {
             document.getElementById('editingPrinterId').value = '';
             document.getElementById('printerNameField').value = '';
             document.getElementById('printerPaperWidth').value = '58';
+            document.getElementById('printerKickDrawer').checked = false;
             document.getElementById('printReceiptBills').checked = false;
             document.getElementById('autoPrintReceipt').checked = false;
             document.getElementById('printOrdersToggle').checked = false;
@@ -9227,6 +9309,7 @@ window.openSearchModalTakeOrder = function() {
             document.getElementById('printerPaperWidth').value = p.paperWidth || '58';
             document.getElementById('printerFontSize').value = p.fontSize !== undefined ? p.fontSize : '1';
             document.getElementById('printerCutterAlarm').checked = p.cutterAlarm || false;
+            document.getElementById('printerKickDrawer').checked = p.kickCashDrawer || false;
             document.getElementById('printReceiptBills').checked = p.printReceipt || false;
             document.getElementById('autoPrintReceipt').checked = p.autoPrint || false;
             document.getElementById('printOrdersToggle').checked = p.printOrders || false;
@@ -9249,6 +9332,7 @@ window.openSearchModalTakeOrder = function() {
             const paperWidth = document.getElementById('printerPaperWidth').value;
             const fontSize = document.getElementById('printerFontSize').value;
             const cutterAlarm = document.getElementById('printerCutterAlarm').checked;
+            const kickCashDrawer = document.getElementById('printerKickDrawer').checked;
             const printReceipt = document.getElementById('printReceiptBills').checked;
             const autoPrint = document.getElementById('autoPrintReceipt').checked;
             const printOrders = document.getElementById('printOrdersToggle').checked;
@@ -9257,7 +9341,7 @@ window.openSearchModalTakeOrder = function() {
 
             if (!name) { alert('Please enter printer name'); return; }
 
-            const data = { name, paperWidth, fontSize, cutterAlarm, printReceipt, autoPrint, printOrders, bluetoothDeviceId, departmentPrinters, updatedAt: Timestamp.now() };
+            const data = { name, paperWidth, fontSize, cutterAlarm, kickCashDrawer, printReceipt, autoPrint, printOrders, bluetoothDeviceId, departmentPrinters, updatedAt: Timestamp.now() };
             if (id) {
                 await updateDoc(doc(db, 'licenses', currentClientId, 'printers', id), data);
             } else {
@@ -9293,10 +9377,19 @@ window.openSearchModalTakeOrder = function() {
                     const time = item.createdAt?.toDate().toLocaleString() || 'N/A';
                     const statusColor = item.status === 'success' ? '#38a169' : (item.status === 'failed' ? '#e53e3e' : '#ed8936');
                     
+                    const seqs = String(item.orderSequence || '?').split(',');
+                    const nums = String(item.orderNumber || '').split(',');
+                    let orderDisplay = "";
+                    if (seqs.length > 1 && seqs.length === nums.length) {
+                        orderDisplay = seqs.map((s, i) => `#${s.trim()} ${nums[i].trim()}`).join(', ');
+                    } else {
+                        orderDisplay = `#${item.orderSequence || '?'} (${item.orderNumber})`;
+                    }
+
                     html += `<div class="order-detail-card" style="border-left: 5px solid ${statusColor};">
                         <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
                             <div>
-                                <div style="font-weight:bold; font-size:1rem;">[${item.printerDeptName || 'Receipt'}] ${item.orderNumber}</div>
+                                <div style="font-weight:bold; font-size:1rem;">[${item.printerDeptName || 'Receipt'}] ${orderDisplay}</div>
                                 <div style="font-size:12px; color:#64748b;">${time}</div>
                             </div>
                             <div style="text-align:right;">
@@ -9328,6 +9421,15 @@ window.openSearchModalTakeOrder = function() {
             // Get table number from order
             const orderSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', orderId));
             const orderData = orderSnap.exists() ? orderSnap.data() : null;
+            
+            const orderIdsToFetchForSeq = (paymentDetails && paymentDetails.mergedOrderIds) ? paymentDetails.mergedOrderIds : [orderId];
+            const seqList = [];
+            for (const id of orderIdsToFetchForSeq) {
+                const sSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', id));
+                if (sSnap.exists()) seqList.push(sSnap.data().orderSequence || '?');
+            }
+            const orderSeq = seqList.join(',');
+
             const tableNumber = orderData ? (orderData.tableId || 'N/A').toUpperCase() : 'N/A';
             const orderTime = orderData?.createdAt ? orderData.createdAt.toDate().toLocaleString() : new Date().toLocaleString();
             const staffName = orderData?.staffName || 'N/A';
@@ -9399,10 +9501,17 @@ window.openSearchModalTakeOrder = function() {
                 const device = connectedBluetoothDevices[p.bluetoothDeviceId];
                 if (device) devicesToCleanup.add(device);
                 
+                // Cash Drawer Kick Logic
+                const isCashInvolved = paymentDetails?.hasCashPayment || paymentDetails?.paymentInfo?.hasCashPayment;
+                if (p.kickCashDrawer && isCashInvolved) {
+                    console.log(`%c[Drawer] Sending kick command to ${p.name}...`, "color: #764ba2; font-weight: bold;");
+                    if (device) await sendToBluetoothPrinter(device, new Uint8Array([0x1B, 0x70, 0x00, 0x19, 0xFA]));
+                }
+
                 // Handle Full Receipt Printing (Only on payment or early pay)
                 if (p.printReceipt && type === 'payment') {
                     const qOrderId = (paymentDetails?.mergedOrderIds) ? paymentDetails.mergedOrderIds.join(',') : orderId;
-                    const qId = await addToPrintQueue(qOrderId, orderNumber, tableNumber, 'Receipt', null, cashierName, paymentDetails?.method, staffName, orderType, paymentDetails?.paymentInfo);
+                    const qId = await addToPrintQueue(qOrderId, orderNumber, tableNumber, 'Receipt', null, cashierName, paymentDetails?.method, staffName, orderType, paymentDetails?.paymentInfo, orderSeq);
                     if (device) {
                         // If split payment, we only show items just paid in the receipt
                         let itemsToPrint = fullItemsList;
@@ -9422,7 +9531,7 @@ window.openSearchModalTakeOrder = function() {
                         }
                         
                         const label = paymentDetails?.isEarly ? "EARLY PAYMENT" : "PAID";
-                        const commands = await generateMainReceiptCommands(orderNumber, tableNumber, itemsToPrint, orderTime, paymentDetails?.method || 'N/A', label, cashierName, p, orderType, paymentDetails?.paymentInfo);
+                        const commands = await generateMainReceiptCommands(orderNumber, tableNumber, itemsToPrint, orderTime, paymentDetails?.method || 'N/A', label, cashierName, p, orderType, paymentDetails?.paymentInfo, orderSeq);
                         const success = await sendToBluetoothPrinter(device, commands);
                         await updateDoc(doc(db, 'licenses', currentClientId, 'print_queue', qId), { status: success ? 'success' : 'failed' });
                         printActions.push({ label: 'Main Receipt', success });
@@ -9441,9 +9550,9 @@ window.openSearchModalTakeOrder = function() {
                                 return dept.department && dept.department.includes(catName);
                             });
                             if (deptItems.length > 0) {
-                                const qId = await addToPrintQueue(orderId, orderNumber, tableNumber, dept.name, deptId, null, null, staffName, orderType);
+                                const qId = await addToPrintQueue(orderId, orderNumber, tableNumber, dept.name, deptId, null, null, staffName, orderType, null, orderSeq);
                                 if (device) {
-                                    const commands = await generateReceiptCommands(orderNumber, tableNumber, deptItems, dept.name, orderTime, "AUTO PRINT", p, staffName, orderType);
+                                    const commands = await generateReceiptCommands(orderNumber, tableNumber, deptItems, dept.name, orderTime, "AUTO PRINT", p, staffName, orderType, orderSeq);
                                     const success = await sendToBluetoothPrinter(device, commands);
                                     await updateDoc(doc(db, 'licenses', currentClientId, 'print_queue', qId), { status: success ? 'success' : 'failed' });
                                     printActions.push({ label: dept.name, success });
@@ -9468,10 +9577,11 @@ window.openSearchModalTakeOrder = function() {
             }
         };
 
-        async function addToPrintQueue(orderId, orderNumber, tableNumber, deptName, deptId, cashierName = null, paymentMethod = null, staffName = null, orderType = null, paymentInfo = null) {
+        async function addToPrintQueue(orderId, orderNumber, tableNumber, deptName, deptId, cashierName = null, paymentMethod = null, staffName = null, orderType = null, paymentInfo = null, orderSeq = null) {
             const docRef = await addDoc(collection(db, 'licenses', currentClientId, 'print_queue'), {
                 orderId,
                 orderNumber,
+                orderSequence: orderSeq,
                 tableNumber,
                 printerDeptName: deptName,
                 printerDeptId: deptId,
@@ -9487,7 +9597,7 @@ window.openSearchModalTakeOrder = function() {
             return docRef.id;
         }
 
-        async function generateMainReceiptCommands(orderNumber, tableNumber, items, orderTime, payMethod, statusLabel, cashierName = null, p = null, orderType = 'dine-in', paymentInfo = null) {
+        async function generateMainReceiptCommands(orderNumber, tableNumber, items, orderTime, payMethod, statusLabel, cashierName = null, p = null, orderType = 'dine-in', paymentInfo = null, orderSeq = null) {
             let width = (p && p.paperWidth === '80') ? 48 : 32;
             const fontSize = p ? p.fontSize : '1';
             if (fontSize === '0') width = (p.paperWidth === '80') ? 64 : 42; // Font B mode allows more chars
@@ -9561,7 +9671,8 @@ window.openSearchModalTakeOrder = function() {
                 sep,
                 "\x1B\x61\x00", // Left
                 `Date: ${dateStr}   Time: ${timeStr}\n`,
-                `Receipt No: ${orderNumber}\n`,
+                `Order No: ${String(orderSeq).split(',').map(s => '#' + s.trim()).join(',')}\n`,
+                `Order ID: ${orderNumber}\n`,
                 `Order Type: ${orderType.toUpperCase().replace('-', ' ')}\n`,
                 `Table: ${tableNumber}\n`,
                 `Cashier: ${cashierName || currentStaff?.name || 'N/A'}\n`,
@@ -9569,9 +9680,9 @@ window.openSearchModalTakeOrder = function() {
                 "Item".padEnd(width - 13) + "Qty".padStart(3) + "Amount".padStart(10) + "\n",
                 itemsText,
                 sep,
-                "Subtotal:".padEnd(width - 10) + `RM ${subtotal.toFixed(2).padStart(8)}\n`,
+                "Subtotal:".padEnd(width - 13) + `RM ${subtotal.toFixed(2).padStart(8)}\n`,
                 discountText,
-                taxActive ? `Tax (${currentTaxRate}%):`.padEnd(width - 10) + `RM ${tax.toFixed(2).padStart(8)}\n` : "",
+                taxActive ? `Tax (${currentTaxRate}%):`.padEnd(width - 13) + `RM ${tax.toFixed(2).padStart(8)}\n` : "",
                 `\x1B\x45\x01TOTAL AMOUNT:`.padEnd(width - 10) + `RM ${total.toFixed(2).padStart(8)}\x1B\x45\x00\n`,
                 sep,
                 `Payment by : ${(paymentInfo ? paymentInfo.method : payMethod).toUpperCase()}\n`,
@@ -9639,6 +9750,8 @@ window.openSearchModalTakeOrder = function() {
             const staffName = item.staffName || 'N/A';
             const orderType = item.orderType || 'dine-in';
             const paymentInfo = item.paymentInfo ? JSON.parse(item.paymentInfo) : null;
+            const itemsPaid = paymentInfo?.itemsPaid || null;
+            const orderSeq = item.orderSequence;
 
             const orderIds = item.orderId.split(',');
             const orderSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', orderIds[0]));
@@ -9657,6 +9770,15 @@ window.openSearchModalTakeOrder = function() {
                 const itemsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', oId, 'items'));
                 for (const itDoc of itemsSnap.docs) {
                     const itData = itDoc.data();
+
+                    if (item.printerDeptName === 'Receipt' && itemsPaid) {
+                        const match = itemsPaid.find(p => p.itemId === itDoc.id);
+                        if (!match) continue;
+                        
+                        itData.qty = match.qtyToPay.toString();
+                        itData.total = (match.unitPrice * match.qtyToPay).toFixed(2);
+                    }
+
                     if (item.printerDeptId) {
                         const deptSnap = await getDoc(doc(db, 'licenses', currentClientId, 'department_printer', item.printerDeptId));
                         if (deptSnap.exists()) {
@@ -9681,12 +9803,18 @@ window.openSearchModalTakeOrder = function() {
 
             let printSuccess = false;
             if (device && itemsToPrint.length > 0) {
+                // Cash Drawer Kick Logic for Reprints
+                if (printerConfig.kickCashDrawer && paymentInfo?.hasCashPayment) {
+                    console.log(`%c[Drawer] Sending kick command (reprint) to ${printerConfig.name}...`, "color: #764ba2; font-weight: bold;");
+                    await sendToBluetoothPrinter(device, new Uint8Array([0x1B, 0x70, 0x00, 0x19, 0xFA]));
+                }
+
                 let commands;
                 if (item.printerDeptName === 'Receipt') {
                     const payMethod = item.paymentMethod || 'N/A'; // Retrieve from print queue item
-                    commands = await generateMainReceiptCommands(item.orderNumber, item.tableNumber || 'N/A', itemsToPrint, orderTime, payMethod, statusLabel, cashierName, printerConfig, orderType, paymentInfo);
+                    commands = await generateMainReceiptCommands(item.orderNumber, item.tableNumber || 'N/A', itemsToPrint, orderTime, payMethod, statusLabel, cashierName, printerConfig, orderType, paymentInfo, orderSeq);
                 } else {
-                    commands = await generateReceiptCommands(item.orderNumber, item.tableNumber || 'N/A', itemsToPrint, item.printerDeptName || 'Receipt', orderTime, statusLabel, printerConfig, staffName, orderType);
+                    commands = await generateReceiptCommands(item.orderNumber, item.tableNumber || 'N/A', itemsToPrint, item.printerDeptName || 'Receipt', orderTime, statusLabel, printerConfig, staffName, orderType, orderSeq);
                 }
                 printSuccess = await sendToBluetoothPrinter(device, commands);
                 if (device.gatt.connected) device.gatt.disconnect();
@@ -9830,7 +9958,7 @@ window.openSearchModalTakeOrder = function() {
         };
 
         // Helper to generate ESC/POS commands in the requested format
-        async function generateReceiptCommands(orderNumber, tableNumber, items, headerTitle, orderTime, statusLabel, p = null, staffName = 'N/A', orderType = 'dine-in') {
+        async function generateReceiptCommands(orderNumber, tableNumber, items, headerTitle, orderTime, statusLabel, p = null, staffName = 'N/A', orderType = 'dine-in', orderSeq = null) {
             let width = (p && p.paperWidth === '80') ? 48 : 32;
             const fontSize = p ? p.fontSize : '1';
             if (fontSize === '0') width = (p.paperWidth === '80') ? 64 : 42;
@@ -9857,7 +9985,8 @@ window.openSearchModalTakeOrder = function() {
                 "\x1B\x40", // Initialize printer
                 fontCmd,
                 "\x1B\x61\x01", // Center align
-                `\x1B\x21\x30\x1B\x45\x01${headerTitle.toUpperCase()} | ${orderNumber}\x1B\x45\x00\n`, 
+                `\x1B\x21\x30\x1B\x45\x01${headerTitle.toUpperCase()} | ${String(orderSeq).split(',').map(s => '#' + s.trim()).join(',')}\n`, 
+                `\x1B\x45\x01${orderNumber}\x1B\x45\x00\n`, 
                 `\x1B\x21\x30\x1B\x45\x01TABLE ${tableNumber}\x1B\x45\x00\x1B\x21\x00\n\n`, 
                 "\x1B\x61\x00", // Left align
                 fontCmd, // Restore default font mode
@@ -9875,7 +10004,7 @@ window.openSearchModalTakeOrder = function() {
                 `Print: ${printTime}\n`,
                 `Status: ${statusLabel}\n`,
                 "\x1B\x61\x01", // Center align
-                `\x1B\x45\x01${headerTitle.toUpperCase()} | ${orderNumber} | ${tableNumber}\x1B\x45\x00\n`,
+                `\x1B\x45\x01${headerTitle.toUpperCase()} | ${String(orderSeq).split(',').map(s => '#' + s.trim()).join(',')} | ${orderNumber} | ${tableNumber}\x1B\x45\x00\n`,
                 "\n\n\n\n", // Feed lines
                 (p && p.cutterAlarm) ? "\x1B\x42\x03\x02" : "", // Alarm beeps
                 "\x1D\x56\x41\x03" // Cut paper command
@@ -10154,7 +10283,8 @@ window.openSearchModalTakeOrder = function() {
                                     isEarly: transData.isEarlyPayment || false,
                                     mergedOrderIds: orderIds,
                                     cashierName: cashierName,
-                                    paymentInfo: paymentInfo
+                                    paymentInfo: paymentInfo,
+                                    hasCashPayment: paymentInfo?.hasCashPayment
                                 };
                                 triggerAutoPrinting(orderIds[0], orderNums.join(', '), 'payment', payDetails);
                             } else {
@@ -10168,7 +10298,8 @@ window.openSearchModalTakeOrder = function() {
                                         itemsPaid: itemsPaid,
                                         isEarly: transData.isEarlyPayment || false,
                                         cashierName: cashierName,
-                                        paymentInfo: paymentInfo
+                                        paymentInfo: paymentInfo,
+                                        hasCashPayment: paymentInfo?.hasCashPayment
                                     };
                                     triggerAutoPrinting(orderId, orderData.orderNumber, 'payment', payDetails);
                                 }
@@ -10195,7 +10326,7 @@ window.openSearchModalTakeOrder = function() {
                     <h3 style="margin-bottom: 12px; color: #1e293b; font-size: 1rem;">New Order Placed!!!</h3>
                     <div style="text-align: left; font-size: 0.8rem; color: #475569; background: #f8fafc; padding: 10px; border-radius: 12px; border: 1px solid #e2e8f0;">
                         <p style="margin-bottom: 4px;"><strong>By :</strong> <span style="color: #764ba2; font-weight: 700;">${order.staffName || 'Unknown'}</span></p>
-                        <p style="margin-bottom: 4px;"><strong>Order ID :</strong> <span style="color: #1e293b; font-weight: 700;">${order.orderNumber || 'N/A'}</span></p>
+                        <p style="margin-bottom: 4px;"><strong>Order :</strong> <span style="color: #1e293b; font-weight: 700;">#${order.orderSequence || '?'} (${order.orderNumber || 'N/A'})</span></p>
                         <p><strong>Table :</strong> <span style="color: #1e293b; font-weight: 700;">${tableText}</span></p>
                     </div>
                 </div>
@@ -10332,6 +10463,7 @@ window.openSearchModalTakeOrder = function() {
         window.openEditAttendanceTimeModal = openEditAttendanceTimeModal;
         window.saveAttendanceTime = saveAttendanceTime;
         window.deleteAttendanceRecord = deleteAttendanceRecord;
+        window.resetOrderSequence = resetOrderSequence;
         
         // ========== WIFI STATUS LOGIC ==========
         window.updateWifiStatus = function() {
@@ -10390,7 +10522,7 @@ window.openSearchModalTakeOrder = function() {
         // Initial check
         updateWifiStatus();
     </script>
-      <script>
+     <script>
               // Register the Service Worker (sw.js)
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
