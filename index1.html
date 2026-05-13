@@ -9330,10 +9330,19 @@ window.openSearchModalTakeOrder = function() {
                     const time = item.createdAt?.toDate().toLocaleString() || 'N/A';
                     const statusColor = item.status === 'success' ? '#38a169' : (item.status === 'failed' ? '#e53e3e' : '#ed8936');
                     
+                    const seqs = String(item.orderSequence || '?').split(',');
+                    const nums = String(item.orderNumber || '').split(',');
+                    let orderDisplay = "";
+                    if (seqs.length > 1 && seqs.length === nums.length) {
+                        orderDisplay = seqs.map((s, i) => `#${s.trim()} ${nums[i].trim()}`).join(', ');
+                    } else {
+                        orderDisplay = `#${item.orderSequence || '?'} (${item.orderNumber})`;
+                    }
+
                     html += `<div class="order-detail-card" style="border-left: 5px solid ${statusColor};">
                         <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
                             <div>
-                                <div style="font-weight:bold; font-size:1rem;">[${item.printerDeptName || 'Receipt'}] #${item.orderSequence || '?'} (${item.orderNumber})</div>
+                                <div style="font-weight:bold; font-size:1rem;">[${item.printerDeptName || 'Receipt'}] ${orderDisplay}</div>
                                 <div style="font-size:12px; color:#64748b;">${time}</div>
                             </div>
                             <div style="text-align:right;">
@@ -9365,7 +9374,15 @@ window.openSearchModalTakeOrder = function() {
             // Get table number from order
             const orderSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', orderId));
             const orderData = orderSnap.exists() ? orderSnap.data() : null;
-            const orderSeq = orderData ? orderData.orderSequence : null;
+            
+            const orderIdsToFetchForSeq = (paymentDetails && paymentDetails.mergedOrderIds) ? paymentDetails.mergedOrderIds : [orderId];
+            const seqList = [];
+            for (const id of orderIdsToFetchForSeq) {
+                const sSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', id));
+                if (sSnap.exists()) seqList.push(sSnap.data().orderSequence || '?');
+            }
+            const orderSeq = seqList.join(',');
+
             const tableNumber = orderData ? (orderData.tableId || 'N/A').toUpperCase() : 'N/A';
             const orderTime = orderData?.createdAt ? orderData.createdAt.toDate().toLocaleString() : new Date().toLocaleString();
             const staffName = orderData?.staffName || 'N/A';
@@ -9600,8 +9617,8 @@ window.openSearchModalTakeOrder = function() {
                 sep,
                 "\x1B\x61\x00", // Left
                 `Date: ${dateStr}   Time: ${timeStr}\n`,
-                `Order No: #${orderSeq || '?'}\n`,
-                `Receipt No: ${orderNumber}\n`,
+                `${String(orderSeq).split(',').map(s => '#' + s.trim()).join(',')}\n`,
+                `${orderNumber}\n`,
                 `Order Type: ${orderType.toUpperCase().replace('-', ' ')}\n`,
                 `Table: ${tableNumber}\n`,
                 `Cashier: ${cashierName || currentStaff?.name || 'N/A'}\n`,
@@ -9898,8 +9915,8 @@ window.openSearchModalTakeOrder = function() {
                 "\x1B\x40", // Initialize printer
                 fontCmd,
                 "\x1B\x61\x01", // Center align
-                `\x1B\x21\x30\x1B\x45\x01${headerTitle.toUpperCase()} | #${orderSeq || '?'}\n`, 
-                `\x1B\x45\x01ID: ${orderNumber}\x1B\x45\x00\n`, 
+                `\x1B\x21\x30\x1B\x45\x01${headerTitle.toUpperCase()} | ${String(orderSeq).split(',').map(s => '#' + s.trim()).join(',')}\n`, 
+                `\x1B\x45\x01${orderNumber}\x1B\x45\x00\n`, 
                 `\x1B\x21\x30\x1B\x45\x01TABLE ${tableNumber}\x1B\x45\x00\x1B\x21\x00\n\n`, 
                 "\x1B\x61\x00", // Left align
                 fontCmd, // Restore default font mode
