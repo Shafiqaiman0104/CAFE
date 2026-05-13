@@ -2881,6 +2881,14 @@
                 <label>Cash Float (RM)</label>
                 <input type="number" id="startShiftFloatInput" step="0.01" placeholder="Enter opening cash float" style="border: 1.5px solid #764ba2;">
             </div>
+            <div class="form-group">
+                <label>Next Order Number</label>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <input type="number" id="startShiftNextOrderSeq" readonly style="flex: 1; background: #f8fafc; border: 1.5px solid #e2e8f0;">
+                    <button class="btn-small" onclick="resetOrderSequence()" style="width: auto; background: #e53e3e; border-radius: 12px;">Reset to 1</button>
+                </div>
+                <small style="color: #64748b; font-size: 11px;">This sequence will increment for every new order.</small>
+            </div>
             <button class="primary-btn" style="width: 100%; margin-top: 10px;" onclick="confirmStartShift()">Start Shift</button>
         </div>
     </div>
@@ -3535,7 +3543,7 @@
         import { 
             getFirestore, doc, getDoc, collection, query, where, getDocs,
             onSnapshot, addDoc, updateDoc, setDoc, Timestamp, deleteDoc,
-            orderBy, limit
+            orderBy, limit, runTransaction
         } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
         const firebaseConfig = {
@@ -4894,10 +4902,24 @@
             } catch (e) { alert('Error: ' + e.message); }
         };
 
-        window.showStartShiftModal = function() {
+        window.showStartShiftModal = async function() {
             document.getElementById('startShiftTimeDisplay').value = new Date().toLocaleString();
             document.getElementById('startShiftFloatInput').value = '';
+            
+            // Fetch current sequence from DB
+            const shiftRef = doc(db, 'licenses', currentClientId, 'settings', 'shift');
+            const snap = await getDoc(shiftRef);
+            let nextSeq = 1;
+            if (snap.exists() && snap.data().nextOrderSequence) {
+                nextSeq = snap.data().nextOrderSequence;
+            }
+            document.getElementById('startShiftNextOrderSeq').value = nextSeq;
+            
             document.getElementById('startShiftModal').style.display = 'flex';
+        };
+
+        window.resetOrderSequence = function() {
+            document.getElementById('startShiftNextOrderSeq').value = 1;
         };
 
         window.closeStartShiftModal = function() {
@@ -4907,6 +4929,7 @@
 
         window.confirmStartShift = async function() {
             const cashFloat = parseFloat(document.getElementById('startShiftFloatInput').value) || 0;
+            const nextSeq = parseInt(document.getElementById('startShiftNextOrderSeq').value) || 1;
             try {
                 const shiftId = 'SHIFT-' + Date.now();
                 
@@ -4922,6 +4945,7 @@
                     startedBy: currentStaff.name,
                     startedById: currentStaff.id,
                     staffNames: [currentStaff.name],
+                    nextOrderSequence: nextSeq,
                     updatedAt: Timestamp.now()
                 }, { merge: true });
                 
@@ -5811,7 +5835,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                         <div class="order-detail-card">
                             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
                                 <div>
-                                    <b>${order.orderNumber || 'ORD-' + orderDoc.id.slice(0,8)}</b>
+                                    <b>#${order.orderSequence || '?'} - ${order.orderNumber || 'ORD-' + orderDoc.id.slice(0,8)}</b>
                                     <span class="status-badge status-${order.status || 'active'}">${order.status || 'active'}</span>
                                 </div>
                                 <div>${orderDate.toLocaleString()}</div>
@@ -5914,7 +5938,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             const content = document.getElementById('orderDetailContent');
             content.innerHTML = `
                 <div style="margin-bottom:15px;">
-                    <b>${order.orderNumber}</b><br>
+                    <b>#${order.orderSequence || '?'} (${order.orderNumber})</b><br>
                     Status: <span class="status-badge status-${order.status || 'active'}">${order.status || 'active'}</span><br>
                     Table: ${order.tableId?.toUpperCase() || 'N/A'}<br>
                     Type: ${order.orderType || 'dine-in'}<br>
@@ -6424,7 +6448,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                              style="background:white; padding:15px; border-radius:12px; margin-bottom:10px; border-left:4px solid #764ba2; box-shadow:0 2px 5px rgba(0,0,0,0.05);">
                             <div style="display:flex; justify-content:space-between; font-weight:bold; margin-bottom:8px; align-items: flex-start;">
                                 <div>
-                                    <span>ID: ${order.orderNumber} <span style="background:#e9ecef; color:#666; font-size:10px; padding:2px 6px; border-radius:10px; margin-left:5px; text-transform:uppercase; vertical-align:middle;">${(order.orderType || 'dine-in').replace('-', ' ')}</span></span>
+                                    <span>#${order.orderSequence || '?'} (${order.orderNumber}) <span style="background:#e9ecef; color:#666; font-size:10px; padding:2px 6px; border-radius:10px; margin-left:5px; text-transform:uppercase; vertical-align:middle;">${(order.orderType || 'dine-in').replace('-', ' ')}</span></span>
                                     <div style="font-size: 11px; color: #666; font-weight: normal; margin-top: 3px;"><i class="fas fa-clock"></i> ${orderTime}</div>
                                 </div>
                                 <span style="color:#764ba2;">RM ${order.total}</span>
@@ -7989,12 +8013,27 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
             submitBtn.disabled = true;
             submitBtn.innerText = 'Submitting...';
             
+            // Use Transaction to get and increment Order Sequence
+            let sequenceNum = 1;
+            try {
+                const shiftRef = doc(db, 'licenses', currentClientId, 'settings', 'shift');
+                sequenceNum = await runTransaction(db, async (transaction) => {
+                    const shiftSnap = await transaction.get(shiftRef);
+                    let currentSeq = (shiftSnap.exists() && shiftSnap.data().nextOrderSequence) ? shiftSnap.data().nextOrderSequence : 1;
+                    transaction.update(shiftRef, { nextOrderSequence: currentSeq + 1 });
+                    return currentSeq;
+                });
+            } catch (e) {
+                console.error("Sequence transaction failed: ", e);
+            }
+
             let subtotal = cartTakeOrder.reduce((s, i) => s + i.total, 0);
             const tax = taxActive ? subtotal * (currentTaxRate / 100) : 0;
             const total = subtotal + tax;
             
             const orderData = {
                 orderNumber: 'ORD-' + Date.now().toString().slice(-8),
+                orderSequence: sequenceNum,
                 staffId: currentStaff.id,
                 staffName: currentStaff.name,
                 status: 'active',
@@ -8595,7 +8634,7 @@ window.openSearchModalTakeOrder = function() {
                                     <span class="status-badge status-${o.status}">${o.status}</span>
                                 </div>
                                 <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
-                                    <div style="font-weight:800; font-size: 1.1rem; background: #764ba2; padding: 6px 14px; border-radius: 12px; display: inline-block; color: #fff; box-shadow: 0 2px 4px rgba(118,75,162,0.2);"># ${o.orderNumber}</div>
+                                    <div style="font-weight:800; font-size: 1.1rem; background: #764ba2; padding: 6px 14px; border-radius: 12px; display: inline-block; color: #fff; box-shadow: 0 2px 4px rgba(118,75,162,0.2);">#${o.orderSequence || '?'} (${o.orderNumber})</div>
                                     <span style="background:#e2e8f0; color:#475569; font-size:10px; padding:4px 8px; border-radius:10px; text-transform:uppercase; font-weight:700; vertical-align: middle;">${(o.orderType || 'dine-in').replace('-', ' ')}</span>
                                 </div>
                                 <div style="font-size:0.9rem; color:#475569; font-weight: 600; margin-bottom:12px;">
@@ -9294,7 +9333,7 @@ window.openSearchModalTakeOrder = function() {
                     html += `<div class="order-detail-card" style="border-left: 5px solid ${statusColor};">
                         <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
                             <div>
-                                <div style="font-weight:bold; font-size:1rem;">[${item.printerDeptName || 'Receipt'}] ${item.orderNumber}</div>
+                                <div style="font-weight:bold; font-size:1rem;">[${item.printerDeptName || 'Receipt'}] #${item.orderSequence || '?'} (${item.orderNumber})</div>
                                 <div style="font-size:12px; color:#64748b;">${time}</div>
                             </div>
                             <div style="text-align:right;">
@@ -9326,6 +9365,7 @@ window.openSearchModalTakeOrder = function() {
             // Get table number from order
             const orderSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', orderId));
             const orderData = orderSnap.exists() ? orderSnap.data() : null;
+            const orderSeq = orderData ? orderData.orderSequence : null;
             const tableNumber = orderData ? (orderData.tableId || 'N/A').toUpperCase() : 'N/A';
             const orderTime = orderData?.createdAt ? orderData.createdAt.toDate().toLocaleString() : new Date().toLocaleString();
             const staffName = orderData?.staffName || 'N/A';
@@ -9400,7 +9440,7 @@ window.openSearchModalTakeOrder = function() {
                 // Handle Full Receipt Printing (Only on payment or early pay)
                 if (p.printReceipt && type === 'payment') {
                     const qOrderId = (paymentDetails?.mergedOrderIds) ? paymentDetails.mergedOrderIds.join(',') : orderId;
-                    const qId = await addToPrintQueue(qOrderId, orderNumber, tableNumber, 'Receipt', null, cashierName, paymentDetails?.method, staffName, orderType, paymentDetails?.paymentInfo);
+                    const qId = await addToPrintQueue(qOrderId, orderNumber, tableNumber, 'Receipt', null, cashierName, paymentDetails?.method, staffName, orderType, paymentDetails?.paymentInfo, orderSeq);
                     if (device) {
                         // If split payment, we only show items just paid in the receipt
                         let itemsToPrint = fullItemsList;
@@ -9420,7 +9460,7 @@ window.openSearchModalTakeOrder = function() {
                         }
                         
                         const label = paymentDetails?.isEarly ? "EARLY PAYMENT" : "PAID";
-                        const commands = await generateMainReceiptCommands(orderNumber, tableNumber, itemsToPrint, orderTime, paymentDetails?.method || 'N/A', label, cashierName, p, orderType, paymentDetails?.paymentInfo);
+                        const commands = await generateMainReceiptCommands(orderNumber, tableNumber, itemsToPrint, orderTime, paymentDetails?.method || 'N/A', label, cashierName, p, orderType, paymentDetails?.paymentInfo, orderSeq);
                         const success = await sendToBluetoothPrinter(device, commands);
                         await updateDoc(doc(db, 'licenses', currentClientId, 'print_queue', qId), { status: success ? 'success' : 'failed' });
                         printActions.push({ label: 'Main Receipt', success });
@@ -9439,9 +9479,9 @@ window.openSearchModalTakeOrder = function() {
                                 return dept.department && dept.department.includes(catName);
                             });
                             if (deptItems.length > 0) {
-                                const qId = await addToPrintQueue(orderId, orderNumber, tableNumber, dept.name, deptId, null, null, staffName, orderType);
+                                const qId = await addToPrintQueue(orderId, orderNumber, tableNumber, dept.name, deptId, null, null, staffName, orderType, null, orderSeq);
                                 if (device) {
-                                    const commands = await generateReceiptCommands(orderNumber, tableNumber, deptItems, dept.name, orderTime, "AUTO PRINT", p, staffName, orderType);
+                                    const commands = await generateReceiptCommands(orderNumber, tableNumber, deptItems, dept.name, orderTime, "AUTO PRINT", p, staffName, orderType, orderSeq);
                                     const success = await sendToBluetoothPrinter(device, commands);
                                     await updateDoc(doc(db, 'licenses', currentClientId, 'print_queue', qId), { status: success ? 'success' : 'failed' });
                                     printActions.push({ label: dept.name, success });
@@ -9466,10 +9506,11 @@ window.openSearchModalTakeOrder = function() {
             }
         };
 
-        async function addToPrintQueue(orderId, orderNumber, tableNumber, deptName, deptId, cashierName = null, paymentMethod = null, staffName = null, orderType = null, paymentInfo = null) {
+        async function addToPrintQueue(orderId, orderNumber, tableNumber, deptName, deptId, cashierName = null, paymentMethod = null, staffName = null, orderType = null, paymentInfo = null, orderSeq = null) {
             const docRef = await addDoc(collection(db, 'licenses', currentClientId, 'print_queue'), {
                 orderId,
                 orderNumber,
+                orderSequence: orderSeq,
                 tableNumber,
                 printerDeptName: deptName,
                 printerDeptId: deptId,
@@ -9485,7 +9526,7 @@ window.openSearchModalTakeOrder = function() {
             return docRef.id;
         }
 
-        async function generateMainReceiptCommands(orderNumber, tableNumber, items, orderTime, payMethod, statusLabel, cashierName = null, p = null, orderType = 'dine-in', paymentInfo = null) {
+        async function generateMainReceiptCommands(orderNumber, tableNumber, items, orderTime, payMethod, statusLabel, cashierName = null, p = null, orderType = 'dine-in', paymentInfo = null, orderSeq = null) {
             let width = (p && p.paperWidth === '80') ? 48 : 32;
             const fontSize = p ? p.fontSize : '1';
             if (fontSize === '0') width = (p.paperWidth === '80') ? 64 : 42; // Font B mode allows more chars
@@ -9559,6 +9600,7 @@ window.openSearchModalTakeOrder = function() {
                 sep,
                 "\x1B\x61\x00", // Left
                 `Date: ${dateStr}   Time: ${timeStr}\n`,
+                `Order No: #${orderSeq || '?'}\n`,
                 `Receipt No: ${orderNumber}\n`,
                 `Order Type: ${orderType.toUpperCase().replace('-', ' ')}\n`,
                 `Table: ${tableNumber}\n`,
@@ -9637,6 +9679,7 @@ window.openSearchModalTakeOrder = function() {
             const staffName = item.staffName || 'N/A';
             const orderType = item.orderType || 'dine-in';
             const paymentInfo = item.paymentInfo ? JSON.parse(item.paymentInfo) : null;
+            const orderSeq = item.orderSequence;
 
             const orderIds = item.orderId.split(',');
             const orderSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', orderIds[0]));
@@ -9682,9 +9725,9 @@ window.openSearchModalTakeOrder = function() {
                 let commands;
                 if (item.printerDeptName === 'Receipt') {
                     const payMethod = item.paymentMethod || 'N/A'; // Retrieve from print queue item
-                    commands = await generateMainReceiptCommands(item.orderNumber, item.tableNumber || 'N/A', itemsToPrint, orderTime, payMethod, statusLabel, cashierName, printerConfig, orderType, paymentInfo);
+                    commands = await generateMainReceiptCommands(item.orderNumber, item.tableNumber || 'N/A', itemsToPrint, orderTime, payMethod, statusLabel, cashierName, printerConfig, orderType, paymentInfo, orderSeq);
                 } else {
-                    commands = await generateReceiptCommands(item.orderNumber, item.tableNumber || 'N/A', itemsToPrint, item.printerDeptName || 'Receipt', orderTime, statusLabel, printerConfig, staffName, orderType);
+                    commands = await generateReceiptCommands(item.orderNumber, item.tableNumber || 'N/A', itemsToPrint, item.printerDeptName || 'Receipt', orderTime, statusLabel, printerConfig, staffName, orderType, orderSeq);
                 }
                 printSuccess = await sendToBluetoothPrinter(device, commands);
                 if (device.gatt.connected) device.gatt.disconnect();
@@ -9828,7 +9871,7 @@ window.openSearchModalTakeOrder = function() {
         };
 
         // Helper to generate ESC/POS commands in the requested format
-        async function generateReceiptCommands(orderNumber, tableNumber, items, headerTitle, orderTime, statusLabel, p = null, staffName = 'N/A', orderType = 'dine-in') {
+        async function generateReceiptCommands(orderNumber, tableNumber, items, headerTitle, orderTime, statusLabel, p = null, staffName = 'N/A', orderType = 'dine-in', orderSeq = null) {
             let width = (p && p.paperWidth === '80') ? 48 : 32;
             const fontSize = p ? p.fontSize : '1';
             if (fontSize === '0') width = (p.paperWidth === '80') ? 64 : 42;
@@ -9855,7 +9898,8 @@ window.openSearchModalTakeOrder = function() {
                 "\x1B\x40", // Initialize printer
                 fontCmd,
                 "\x1B\x61\x01", // Center align
-                `\x1B\x21\x30\x1B\x45\x01${headerTitle.toUpperCase()} | ${orderNumber}\x1B\x45\x00\n`, 
+                `\x1B\x21\x30\x1B\x45\x01${headerTitle.toUpperCase()} | #${orderSeq || '?'}\n`, 
+                `\x1B\x45\x01ID: ${orderNumber}\x1B\x45\x00\n`, 
                 `\x1B\x21\x30\x1B\x45\x01TABLE ${tableNumber}\x1B\x45\x00\x1B\x21\x00\n\n`, 
                 "\x1B\x61\x00", // Left align
                 fontCmd, // Restore default font mode
@@ -10193,7 +10237,7 @@ window.openSearchModalTakeOrder = function() {
                     <h3 style="margin-bottom: 12px; color: #1e293b; font-size: 1rem;">New Order Placed!!!</h3>
                     <div style="text-align: left; font-size: 0.8rem; color: #475569; background: #f8fafc; padding: 10px; border-radius: 12px; border: 1px solid #e2e8f0;">
                         <p style="margin-bottom: 4px;"><strong>By :</strong> <span style="color: #764ba2; font-weight: 700;">${order.staffName || 'Unknown'}</span></p>
-                        <p style="margin-bottom: 4px;"><strong>Order ID :</strong> <span style="color: #1e293b; font-weight: 700;">${order.orderNumber || 'N/A'}</span></p>
+                        <p style="margin-bottom: 4px;"><strong>Order :</strong> <span style="color: #1e293b; font-weight: 700;">#${order.orderSequence || '?'} (${order.orderNumber || 'N/A'})</span></p>
                         <p><strong>Table :</strong> <span style="color: #1e293b; font-weight: 700;">${tableText}</span></p>
                     </div>
                 </div>
@@ -10330,6 +10374,7 @@ window.openSearchModalTakeOrder = function() {
         window.openEditAttendanceTimeModal = openEditAttendanceTimeModal;
         window.saveAttendanceTime = saveAttendanceTime;
         window.deleteAttendanceRecord = deleteAttendanceRecord;
+        window.resetOrderSequence = resetOrderSequence;
         
         // ========== WIFI STATUS LOGIC ==========
         window.updateWifiStatus = function() {
