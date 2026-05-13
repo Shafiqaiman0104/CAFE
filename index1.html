@@ -9956,7 +9956,7 @@ window.openSearchModalTakeOrder = function() {
                 `Print: ${printTime}\n`,
                 `Status: ${statusLabel}\n`,
                 "\x1B\x61\x01", // Center align
-                `\x1B\x45\x01${headerTitle.toUpperCase()} | ${orderNumber} | ${tableNumber}\x1B\x45\x00\n`,
+                `\x1B\x45\x01${headerTitle.toUpperCase()} | ${String(orderSeq).split(',').map(s => '#' + s.trim()).join(',')} | ${orderNumber} | ${tableNumber}\x1B\x45\x00\n`,
                 "\n\n\n\n", // Feed lines
                 (p && p.cutterAlarm) ? "\x1B\x42\x03\x02" : "", // Alarm beeps
                 "\x1D\x56\x41\x03" // Cut paper command
