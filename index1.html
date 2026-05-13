@@ -9678,7 +9678,7 @@ window.openSearchModalTakeOrder = function() {
                 "Item".padEnd(width - 13) + "Qty".padStart(3) + "Amount".padStart(10) + "\n",
                 itemsText,
                 sep,
-                "Subtotal:".padEnd(width - 10) + `RM ${subtotal.toFixed(2).padStart(8)}\n`,
+                "Subtotal:".padEnd(width - 13) + `RM ${subtotal.toFixed(2).padStart(8)}\n`,
                 discountText,
                 taxActive ? `Tax (${currentTaxRate}%):`.padEnd(width - 10) + `RM ${tax.toFixed(2).padStart(8)}\n` : "",
                 `\x1B\x45\x01TOTAL AMOUNT:`.padEnd(width - 10) + `RM ${total.toFixed(2).padStart(8)}\x1B\x45\x00\n`,
