@@ -5337,25 +5337,32 @@
             const t = snap.data();
 
             let orderNumbers = 'N/A';
+            let orderSeqs = 'N/A';
             if (t.orderId) {
                 const ids = t.orderId.split(',').map(id => id.trim());
                 const numbers = [];
+                const seqs = [];
                 for (const id of ids) {
                     const oSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', id));
                     if (oSnap.exists()) {
-                        numbers.push(oSnap.data().orderNumber || id.slice(0, 8));
+                        const od = oSnap.data();
+                        numbers.push(od.orderNumber || id.slice(0, 8));
+                        seqs.push('#' + (od.orderSequence || '?'));
                     } else {
                         numbers.push(id.slice(0, 8));
+                        seqs.push('#?');
                     }
                 }
                 orderNumbers = numbers.join(', ');
+                orderSeqs = seqs.join(', ');
             }
 
             const content = document.getElementById('transactionDetailContent');
             content.innerHTML = `
                 <div style="background: #f8fafc; padding: 20px; border-radius: 16px; font-size: 0.95rem; line-height: 1.6;">
                     <p><strong>Transaction Id:</strong> ${transId}</p>
-                    <p><strong>Order Number:</strong> ${orderNumbers}</p>
+                    <p><strong>Order No:</strong> ${orderSeqs}</p>
+                    <p><strong>Order ID:</strong> ${orderNumbers}</p>
                     <p><strong>Date:</strong> ${t.createdAt?.toDate().toLocaleString() || 'N/A'}</p>
                     <p><strong>Type:</strong> ${t.type || 'payment'}</p>
                     <p><strong>Method:</strong> ${t.paymentMethod || 'N/A'}</p>
@@ -6057,15 +6064,25 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                     const transDate = trans.createdAt?.toDate() || new Date();
                     
                     let orderNumber = 'N/A';
+                    let orderSeqDisplay = 'N/A';
                     if (trans.orderId) {
                         try {
-                            // Split by comma in case of multiple order IDs and take the first one for display
-                            const firstOrderId = trans.orderId.split(',')[0].trim();
-                            const orderSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', firstOrderId));
-                            if (orderSnap.exists()) {
-                                orderNumber = orderSnap.data().orderNumber || firstOrderId.slice(0,8);
-                                if (trans.orderId.includes(',')) orderNumber += '...';
+                            const ids = trans.orderId.split(',').map(id => id.trim());
+                            const nums = [];
+                            const seqs = [];
+                            for (const id of ids) {
+                                const oSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', id));
+                                if (oSnap.exists()) {
+                                    const od = oSnap.data();
+                                    nums.push(od.orderNumber || id.slice(0, 8));
+                                    seqs.push('#' + (od.orderSequence || '?'));
+                                } else {
+                                    nums.push(id.slice(0, 8));
+                                    seqs.push('#?');
+                                }
                             }
+                            orderNumber = nums.join(', ');
+                            orderSeqDisplay = seqs.join(',');
                         } catch (e) {}
                     }
                     
@@ -6082,12 +6099,14 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                                 <div>${transDate.toLocaleString()}</div>
                             </div>
                             <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:5px;margin-bottom:10px;">
-                                <div>Order: ${orderNumber}</div>
+                                <div style="grid-column: span 2;">Order No: ${orderSeqDisplay}</div>
+                                <div style="grid-column: span 2;">Order: ${orderNumber}</div>
                                 <div>Amount: <b>RM ${trans.amount}</b></div>
                                 <div>Method: ${trans.paymentMethod || 'cash'}</div>
                                 <div>Type: ${trans.type || 'payment'}</div>
                             </div>
                             <div class="action-buttons" style="margin-top:10px;">
+                                <button class="btn-view" onclick="viewTransactionDetails('${transDoc.id}')">View Transaction</button>
                                 <button class="btn-edit" onclick="editTransaction('${transDoc.id}')">Edit</button>
                                 <button class="btn-delete" onclick="deleteTransaction('${transDoc.id}')">Delete</button>
                             </div>
