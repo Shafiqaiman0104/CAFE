@@ -6597,7 +6597,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                         itemsHtml += `
                             <div style="margin-bottom:8px; ${itemStyles}">
                                 <div style="font-weight:600;">
-                                    ${item.name} (x${item.qty}) 
+                                    ${(order.orderType === 'mix' && item.orderType) ? `${item.name}(${item.orderType === 'dine-in' ? 'D' : 'TA'})(${item.qty})` : `${item.name} (x${item.qty})`} 
                                     ${paidText}${(isOrderCancelledGlobal || isItemCancelled) ? '<span style="font-size:0.7rem; font-weight:bold; text-decoration: none; display: inline-block;">(Cancelled)</span>' : ''}
                                 </div>
                                 ${selectionHtml}
@@ -6816,7 +6816,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                                 <div style="display:flex; justify-content:space-between; font-size:0.9rem; align-items:center;">
                                     <div style="display: flex; align-items: center; gap: 8px;">
                                         <i id="icon-item-${itemDoc.id}" class="fas fa-check-circle"></i>
-                                        <span style="font-weight:600;">${item.name}</span>
+                                        <span style="font-weight:600;">${(order.orderType === 'mix' && item.orderType) ? `${item.name} (${item.orderType === 'dine-in' ? 'D' : 'TA'})` : item.name}</span>
                                         <div class="chk-qty-container" id="qty-ctrl-${itemDoc.id}" style="display:none; align-items:center; gap:8px; margin-left:10px; background:#f1f5f9; padding:2px 8px; border-radius:20px;">
                                             <button onclick="event.stopPropagation(); updateCheckoutItemQty('${orderDoc.id}', '${itemDoc.id}', -1)" 
                                                     style="border:none; background:none; cursor:pointer; padding:0 5px; font-weight:bold; color:#764ba2;">-</button>
@@ -6843,7 +6843,10 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                             <div style="margin-bottom:15px; background:white; padding:12px; border-radius:18px; border:1px solid #f1f5f9; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
                                 <div style="font-weight:bold; font-size:0.8rem; color:#94a3b8; border-bottom:1px solid #f8fafc; padding-bottom:8px; margin-bottom:8px; display: flex; justify-content: space-between; align-items: center;">
                                     <span>Order: #${order.orderSequence || '?'} (${order.orderNumber})</span>
-                                    <span class="status-badge status-${order.status}">${order.status}</span>
+                                    <div>
+                                        <span style="background:#e2e8f0; color:#475569; font-size:10px; padding:2px 6px; border-radius:10px; margin-right:5px; text-transform:uppercase; vertical-align:middle;">${(order.orderType || 'dine-in').replace('-', ' ')}</span>
+                                        <span class="status-badge status-${order.status}">${order.status}</span>
+                                    </div>
                                 </div>
                                 ${orderItemsHtml}
                             </div>`;
@@ -8807,7 +8810,7 @@ window.openSearchModalTakeOrder = function() {
                                  style="padding: 10px; background: ${isItemCancelled ? '#fff5f5' : (isItemPaid ? '#f0fff4' : (isItemPaidEarly ? '#e0f2fe' : (isEditingThis ? '#f0e6ff' : '#f8fafc')))}; border-radius: 12px; margin-bottom: 8px; border: 1px solid ${isItemCancelled ? '#feb2b2' : (isItemPaid ? '#38a169' : (isItemPaidEarly ? '#004fa6' : (isEditingThis ? '#764ba2' : '#f1f5f9')))}; cursor: ${(isItemPaid || isItemPaidEarly) ? 'default' : 'pointer'}; user-select: none; opacity: ${(isItemCancelled || isItemPaid || isItemPaidEarly) ? '0.8' : '1'};">
                                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
                                     <b style="color: ${isItemCancelled ? '#e53e3e' : (isItemPaid ? '#38a169' : (isItemPaidEarly ? '#004fa6' : '#1e293b'))}; font-size: 0.9rem; ${(isItemCancelled || isItemPaid || isItemPaidEarly) ? 'text-decoration: line-through;' : ''}">
-                                        ${item.name}
+                                        ${(o.orderType === 'mix' && item.orderType) ? `${item.name} (${item.orderType === 'dine-in' ? 'D' : 'TA'})` : item.name}
                                         ${isItemCancelled ? `<span style="font-size: 10px; color: #e53e3e; text-transform: uppercase; font-weight: 800;">(${itemStatus})</span>` : ''}
                                         ${isItemPaid ? `<span style="font-size: 10px; color: #38a169; text-transform: uppercase; font-weight: 800;">(Paid)</span>` : ''}
                                         ${isItemPaidEarly ? `<span style="font-size: 10px; color: #004fa6; text-transform: uppercase; font-weight: 800;">(Paid Early)</span>` : ''}
