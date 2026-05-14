@@ -1,7 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Restaurant POS System</title>
+     <meta charset="utf-8">
+     <title>VRPOS</title>
+     <link rel="manifest" href="/manifest.json">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -4636,17 +4638,18 @@
 
             unsubscribers['myAttendance'] = onSnapshot(q, (snap) => {
                 const myDocs = snap.docs.map(d => ({id: d.id, ...d.data()}));
-                const activeRecord = myDocs.find(d => d.clockOut === null);
+                // Sort by clockIn descending to always evaluate the most recent activity
+                const sortedDocs = myDocs.sort((a, b) => b.clockIn.toMillis() - a.clockIn.toMillis());
+                const latestRecord = sortedDocs[0];
                 
-                if (activeRecord) {
+                if (latestRecord && latestRecord.clockOut === null) {
                     localStorage.setItem('isClockedIn', 'true');
-                    staffClockInTime = activeRecord.clockIn.toDate();
+                    staffClockInTime = latestRecord.clockIn.toDate();
                     document.getElementById('sidebarClockOutBtn').style.display = 'flex';
                 } else {
-                    // Check if we were just kicked
-                    const kickedRecord = myDocs.find(d => d.kickedBy);
-                    if (kickedRecord && localStorage.getItem('isClockedIn') === 'true') {
-                        const kickedBy = kickedRecord.kickedBy;
+                    // Check if we were just kicked (on the most recent attendance record only)
+                    if (latestRecord && latestRecord.kickedBy && localStorage.getItem('isClockedIn') === 'true') {
+                        const kickedBy = latestRecord.kickedBy;
                         alert(`You been kick from this shift by ${kickedBy}`);
                         logout();
                         return;
@@ -4699,6 +4702,8 @@
 
         async function performClockOut(staffId, shiftId, doLogout = true) {
             try {
+                // Clear local flag immediately to prevent listener race conditions
+                localStorage.removeItem('isClockedIn');
                 // Find active attendance record for this staff and shift
                 const q = query(
                     collection(db, 'licenses', currentClientId, 'attendance'),
@@ -6597,7 +6602,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                         itemsHtml += `
                             <div style="margin-bottom:8px; ${itemStyles}">
                                 <div style="font-weight:600;">
-                                    ${item.name} (x${item.qty}) 
+                                    ${(order.orderType === 'mix' && item.orderType) ? `${item.name} (${item.orderType === 'dine-in' ? 'D' : 'TA'}) (${item.qty})` : `${item.name} (x${item.qty})`} 
                                     ${paidText}${(isOrderCancelledGlobal || isItemCancelled) ? '<span style="font-size:0.7rem; font-weight:bold; text-decoration: none; display: inline-block;">(Cancelled)</span>' : ''}
                                 </div>
                                 ${selectionHtml}
@@ -6816,7 +6821,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                                 <div style="display:flex; justify-content:space-between; font-size:0.9rem; align-items:center;">
                                     <div style="display: flex; align-items: center; gap: 8px;">
                                         <i id="icon-item-${itemDoc.id}" class="fas fa-check-circle"></i>
-                                        <span style="font-weight:600;">${item.name}</span>
+                                        <span style="font-weight:600;">${(order.orderType === 'mix' && item.orderType) ? `${item.name} (${item.orderType === 'dine-in' ? 'D' : 'TA'})` : item.name}</span>
                                         <div class="chk-qty-container" id="qty-ctrl-${itemDoc.id}" style="display:none; align-items:center; gap:8px; margin-left:10px; background:#f1f5f9; padding:2px 8px; border-radius:20px;">
                                             <button onclick="event.stopPropagation(); updateCheckoutItemQty('${orderDoc.id}', '${itemDoc.id}', -1)" 
                                                     style="border:none; background:none; cursor:pointer; padding:0 5px; font-weight:bold; color:#764ba2;">-</button>
@@ -6843,7 +6848,10 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                             <div style="margin-bottom:15px; background:white; padding:12px; border-radius:18px; border:1px solid #f1f5f9; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
                                 <div style="font-weight:bold; font-size:0.8rem; color:#94a3b8; border-bottom:1px solid #f8fafc; padding-bottom:8px; margin-bottom:8px; display: flex; justify-content: space-between; align-items: center;">
                                     <span>Order: #${order.orderSequence || '?'} (${order.orderNumber})</span>
-                                    <span class="status-badge status-${order.status}">${order.status}</span>
+                                    <div>
+                                        <span style="background:#e2e8f0; color:#475569; font-size:10px; padding:2px 6px; border-radius:10px; margin-right:5px; text-transform:uppercase; vertical-align:middle;">${(order.orderType || 'dine-in').replace('-', ' ')}</span>
+                                        <span class="status-badge status-${order.status}">${order.status}</span>
+                                    </div>
                                 </div>
                                 ${orderItemsHtml}
                             </div>`;
@@ -7683,7 +7691,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             renderMenuGridTakeOrder();
         };
 
-        window.selectOrderTypeTakeOrder = function(type) {
+        window.selectOrderTypeTakeOrder = function(type, preventRefresh = false) {
             selectedOrderTypeTakeOrder = type;
             document.querySelectorAll('.type-option-takeorder').forEach(opt => opt.classList.remove('selected'));
             document.querySelectorAll(`.type-option-takeorder[data-type="${type}"]`).forEach(el => el.classList.add('selected'));
@@ -7691,7 +7699,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             if (deliveryFields) deliveryFields.style.display = type === 'delivery' ? 'block' : 'none';
             
             // Refresh summary if type changes to/from mix
-            if (document.getElementById('orderSummaryModalTakeOrder').style.display === 'flex') {
+            if (!preventRefresh && document.getElementById('orderSummaryModalTakeOrder').style.display === 'flex') {
                 showOrderSummaryTakeOrder();
             }
 
@@ -8203,7 +8211,7 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
             document.getElementById('orderSummaryBodyTakeOrder').innerHTML = summaryHtml;
             document.getElementById('orderSummaryModalTakeOrder').style.display = 'flex';
 
-            if (isCounterSummaryFlow) selectOrderTypeTakeOrder(selectedOrderTypeTakeOrder);
+            if (isCounterSummaryFlow) selectOrderTypeTakeOrder(selectedOrderTypeTakeOrder, true);
         };
 
         window.setItemOrderType = function(idx, type) {
@@ -8807,7 +8815,7 @@ window.openSearchModalTakeOrder = function() {
                                  style="padding: 10px; background: ${isItemCancelled ? '#fff5f5' : (isItemPaid ? '#f0fff4' : (isItemPaidEarly ? '#e0f2fe' : (isEditingThis ? '#f0e6ff' : '#f8fafc')))}; border-radius: 12px; margin-bottom: 8px; border: 1px solid ${isItemCancelled ? '#feb2b2' : (isItemPaid ? '#38a169' : (isItemPaidEarly ? '#004fa6' : (isEditingThis ? '#764ba2' : '#f1f5f9')))}; cursor: ${(isItemPaid || isItemPaidEarly) ? 'default' : 'pointer'}; user-select: none; opacity: ${(isItemCancelled || isItemPaid || isItemPaidEarly) ? '0.8' : '1'};">
                                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
                                     <b style="color: ${isItemCancelled ? '#e53e3e' : (isItemPaid ? '#38a169' : (isItemPaidEarly ? '#004fa6' : '#1e293b'))}; font-size: 0.9rem; ${(isItemCancelled || isItemPaid || isItemPaidEarly) ? 'text-decoration: line-through;' : ''}">
-                                        ${item.name}
+                                        ${(o.orderType === 'mix' && item.orderType) ? `${item.name} (${item.orderType === 'dine-in' ? 'D' : 'TA'})` : item.name}
                                         ${isItemCancelled ? `<span style="font-size: 10px; color: #e53e3e; text-transform: uppercase; font-weight: 800;">(${itemStatus})</span>` : ''}
                                         ${isItemPaid ? `<span style="font-size: 10px; color: #38a169; text-transform: uppercase; font-weight: 800;">(Paid)</span>` : ''}
                                         ${isItemPaidEarly ? `<span style="font-size: 10px; color: #004fa6; text-transform: uppercase; font-weight: 800;">(Paid Early)</span>` : ''}
@@ -9593,17 +9601,24 @@ window.openSearchModalTakeOrder = function() {
             const orderData = orderSnap.exists() ? orderSnap.data() : null;
             
             const orderIdsToFetchForSeq = (paymentDetails && paymentDetails.mergedOrderIds) ? paymentDetails.mergedOrderIds : [orderId];
+            const orderIdsToFetch = (paymentDetails && paymentDetails.mergedOrderIds) ? paymentDetails.mergedOrderIds : [orderId];
+            
             const seqList = [];
-            for (const id of orderIdsToFetchForSeq) {
+            const orderTypesSet = new Set();
+            for (const id of orderIdsToFetch) {
                 const sSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', id));
-                if (sSnap.exists()) seqList.push(sSnap.data().orderSequence || '?');
+                if (sSnap.exists()) {
+                    const oData = sSnap.data();
+                    seqList.push(oData.orderSequence || '?');
+                    orderTypesSet.add(oData.orderType || 'dine-in');
+                }
             }
             const orderSeq = seqList.join(',');
+            const orderType = Array.from(orderTypesSet).join(', ');
 
             const tableNumber = orderData ? (orderData.tableId || 'N/A').toUpperCase() : 'N/A';
             const orderTime = orderData?.createdAt ? orderData.createdAt.toDate().toLocaleString() : new Date().toLocaleString();
             const staffName = orderData?.staffName || 'N/A';
-            const orderType = orderData?.orderType || 'dine-in';
 
             // 1. Get all Printers with autoPrint enabled
             const printersSnap = await getDocs(query(collection(db, 'licenses', currentClientId, 'printers'), where('autoPrint', '==', true)));
@@ -9634,7 +9649,6 @@ window.openSearchModalTakeOrder = function() {
 
             // Fetch order items with their variants and modifiers
             const fullItemsList = [];
-            const orderIdsToFetch = (paymentDetails && paymentDetails.mergedOrderIds) ? paymentDetails.mergedOrderIds : [orderId];
             
             for (const id of orderIdsToFetch) {
                 const itemsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', id, 'items'));
@@ -9814,7 +9828,8 @@ window.openSearchModalTakeOrder = function() {
 
             let itemsText = "";
             items.forEach(item => {
-                const typeSuffix = (orderType === 'mix' && item.orderType) ? `(${item.orderType === 'dine-in' ? 'Dine In' : 'Takeaway'})` : '';
+                const itemType = item.orderType || 'dine-in';
+                const typeSuffix = ` (${itemType === 'dine-in' ? 'Dine In' : (itemType === 'delivery' ? 'Delivery' : 'Takeaway')})`;
                 const displayName = `${item.name}${typeSuffix}`;
                 
                 const nameStr = displayName.substring(0, width - 14).padEnd(width - 13);
@@ -9846,7 +9861,7 @@ window.openSearchModalTakeOrder = function() {
                 `Date: ${dateStr}   Time: ${timeStr}\n`,
                 `Order No: ${String(orderSeq).split(',').map(s => '#' + s.trim()).join(',')}\n`,
                 `Order ID: ${orderNumber}\n`,
-                `Order Type: ${orderType.toUpperCase().replace('-', ' ')}\n`,
+                `Order Type: ${orderType.toUpperCase().replace(/-/g, ' ')}\n`,
                 `Table: ${tableNumber}\n`,
                 `Cashier: ${cashierName || currentStaff?.name || 'N/A'}\n`,
                 sep,
@@ -9921,12 +9936,20 @@ window.openSearchModalTakeOrder = function() {
             const statusLabel = item.printerDeptName === 'Receipt' ? 'REPRINT' : `MANUAL PRINT ${currentAttempts}`;
             const cashierName = item.cashierName || 'N/A';
             const staffName = item.staffName || 'N/A';
-            const orderType = item.orderType || 'dine-in';
             const paymentInfo = item.paymentInfo ? JSON.parse(item.paymentInfo) : null;
             const itemsPaid = paymentInfo?.itemsPaid || null;
             const orderSeq = item.orderSequence;
 
             const orderIds = item.orderId.split(',');
+            
+            // Collect unique order types for reprint
+            const orderTypesSet = new Set();
+            for (const oId of orderIds) {
+                const oSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', oId.trim()));
+                if (oSnap.exists()) orderTypesSet.add(oSnap.data().orderType || 'dine-in');
+            }
+            const orderType = Array.from(orderTypesSet).join(', ');
+
             const orderSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', orderIds[0]));
             const orderTime = orderSnap.exists() ? orderSnap.data().createdAt?.toDate().toLocaleString() : 'N/A';
 
@@ -10142,7 +10165,8 @@ window.openSearchModalTakeOrder = function() {
             const printTime = new Date().toLocaleString();
             let itemsText = "";
             items.forEach(item => {
-                const typeSuffix = (orderType === 'mix' && item.orderType) ? `(${item.orderType === 'dine-in' ? 'Dine In' : 'Takeaway'})` : '';
+                const itemType = item.orderType || 'dine-in';
+                const typeSuffix = ` (${itemType === 'dine-in' ? 'Dine In' : (itemType === 'delivery' ? 'Delivery' : 'Takeaway')})`;
                 const displayName = `${item.name}${typeSuffix}`;
 
                 itemsText += `\x1B\x45\x01[    ] ${displayName.substring(0, width - 12).padEnd(width - 12)} ${item.qty}\x1B\x45\x00\n`;
@@ -10805,7 +10829,7 @@ window.openSearchModalTakeOrder = function() {
 
         // ========== IDLE TIMEOUT LOGIC ==========
         let lastInteractionTime = Date.now();
-        const IDLE_LIMIT = 60000; // 1 minute inactivity limit
+        const IDLE_LIMIT = 300000; // 5 minutes inactivity limit
 
         function resetIdleTimer() {
             lastInteractionTime = Date.now();
@@ -10881,5 +10905,15 @@ window.openSearchModalTakeOrder = function() {
         // Initial check
         updateWifiStatus();
     </script>
+    <script>
+              // Register the Service Worker (sw.js)
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(reg => console.log('Service Worker Registered!', reg.scope))
+          .catch(err => console.log('Service Worker Failed!', err));
+      });
+    }
+</script>
 </body>
 </html>
