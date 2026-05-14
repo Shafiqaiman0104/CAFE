@@ -1,9 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-     <meta charset="utf-8">
-     <title>VRPOS</title>
-     <link rel="manifest" href="/manifest.json">
+    <title>Restaurant POS System</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -1897,6 +1895,47 @@
         input:checked + .slider:before {
             transform: translateX(26px);
         }
+
+        /* Sync Loading Overlay Styles */
+        #syncLoadingOverlay {
+            transition: opacity 0.5s ease;
+        }
+        .sync-progress-container {
+            width: 100%;
+            height: 10px;
+            background: #f1f5f9;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 20px 0 10px 0;
+        }
+        #syncProgressBar {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.4s ease;
+        }
+        /* Mix Order Type Toggle Styles */
+        .item-mix-toggle {
+            display: flex;
+            background: #f1f5f9;
+            border-radius: 30px;
+            padding: 2px;
+            margin-top: 5px;
+            width: fit-content;
+        }
+        .mix-type-btn {
+            padding: 4px 10px;
+            border-radius: 25px;
+            font-size: 0.65rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #64748b;
+        }
+        .mix-type-btn.active {
+            background: #764ba2;
+            color: white;
+        }
     </style>
 </head>
 <body>
@@ -2904,7 +2943,16 @@
     <div id="endShiftModal" class="modal">
         <div class="modal-content" style="max-width: 450px; border-radius: 28px;">
             <div class="modal-header">
-                <h3><i class="fas fa-stop"></i> End Shift</h3>
+                <div style="display: flex; align-items: center; gap: 15px; flex: 1;">
+                    <h3><i class="fas fa-stop"></i> End Shift</h3>
+                    <div style="display: flex; align-items: center; gap: 8px; background: #f1f5f9; padding: 4px 12px; border-radius: 20px;">
+                        <span style="font-size: 0.7rem; font-weight: 800; color: #475569; text-transform: uppercase;">Print Report</span>
+                        <label class="switch" style="transform: scale(0.7); width: 50px; height: 24px; display: inline-block; margin-bottom: -5px;">
+                            <input type="checkbox" id="printShiftReportToggle" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
                 <button class="modal-close" onclick="closeEndShiftModal()">&times;</button>
             </div>
             <div id="endShiftSummary"></div>
@@ -2914,6 +2962,18 @@
             </div>
             <div id="liveShiftLossDisplay" style="text-align: center; font-weight: bold; font-size: 1.1rem; margin-bottom: 20px;"></div>
             <button class="primary-btn" style="width: 100%; background: #e53e3e;" onclick="confirmEndShift()">End Shift</button>
+        </div>
+    </div>
+
+    <!-- Select Report Printer Modal -->
+    <div id="selectReportPrinterModal" class="modal" style="align-items: center; justify-content: center; z-index: 10006;">
+        <div class="modal-content" style="max-width: 400px; border-radius: 24px; padding: 30px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-print"></i> Print to which printer?</h3>
+                <button class="modal-close" onclick="closeModal('selectReportPrinterModal')">&times;</button>
+            </div>
+            <div id="reportPrinterList" style="display: flex; flex-direction: column; gap: 10px; margin-top: 20px;"></div>
+            <button class="secondary-btn" style="width: 100%; margin-top: 20px;" onclick="closeModal('selectReportPrinterModal')">Cancel</button>
         </div>
     </div>
 
@@ -3264,6 +3324,7 @@
             <div id="orderSummaryBodyTakeOrder" style="margin-bottom: 20px;"></div>
             <div class="action-buttons">
                 <button class="secondary-btn" onclick="closeModal('orderSummaryModalTakeOrder')">Back</button>
+                <button class="secondary-btn" style="background:#ed8936; color:white;" onclick="saveToWaitingListTakeOrder(); closeModal('orderSummaryModalTakeOrder');">Save to List</button>
                 <button class="primary-btn" onclick="confirmAndSubmitOrderTakeOrder()">Confirm & Submit</button>
             </div>
         </div>
@@ -3504,6 +3565,20 @@
         </div>
     </div>
 
+    <!-- Sync Loading Overlay -->
+    <div id="syncLoadingOverlay" class="modal" style="z-index: 999999; display: none; align-items: center; justify-content: center; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);">
+        <div class="loading-popup" style="width: 320px; border: none; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);">
+            <img src="https://venturerush-tech.netlify.app/vrLogo.png" alt="Logo" style="width: 70px; height: 70px; border-radius: 50%; margin-bottom: 10px; border: 3px solid #f0e6ff;">
+            <h3 style="color: #1e293b; margin-bottom: 5px; font-weight: 800;">Synchronizing</h3>
+            <p style="font-size: 0.85rem; color: #64748b;">Fetching latest restaurant data...</p>
+            
+            <div class="sync-progress-container">
+                <div id="syncProgressBar"></div>
+            </div>
+            <div id="syncProgressText" style="font-weight: 900; color: #764ba2; font-size: 1.4rem; letter-spacing: 1px;">0%</div>
+        </div>
+    </div>
+
     <!-- Notification Stack -->
     <div id="notificationStack">
         <!-- Order Success Popup HTML -->
@@ -3545,6 +3620,20 @@
         </div>
     </div>
 
+    <!-- Timeout Modal -->
+    <div id="timeoutModal" class="modal" style="display: none; z-index: 300000; align-items: center; justify-content: center; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(10px);">
+        <div class="modal-content" style="max-width: 320px; border-radius: 28px; text-align: center; padding: 35px; animation: slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
+            <div style="width: 80px; height: 80px; background: #fff7ed; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto;">
+                <i class="fa-solid fa-hourglass-end" style="font-size: 2.5rem; color: #ff9800;"></i>
+            </div>
+            <h2 style="margin-bottom: 10px; color: #1e293b;">Opss Timeout!!</h2>
+            <p style="font-size: 1rem; color: #64748b; line-height: 1.5; margin-bottom: 30px;">Your session has been idle. Please refresh.</p>
+            <button class="primary-btn" style="width: 100%; padding: 15px;" onclick="location.reload()">
+                <i class="fas fa-sync-alt"></i> Refresh
+            </button>
+        </div>
+    </div>
+
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
         import { 
@@ -3554,13 +3643,13 @@
         } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
         const firebaseConfig = {
-            apiKey: "AIzaSyDFFVP_UqpIzXbWv9dNpLkB4Ot3Z9aC7aE",
-            authDomain: "caferealtime-43213.firebaseapp.com",
-            projectId: "caferealtime-43213",
-            storageBucket: "caferealtime-43213.firebasestorage.app",
-            messagingSenderId: "813540068315",
-            appId: "1:813540068315:web:76271282255545550735fe"
-        };
+  apiKey: "AIzaSyDT83uFAy-r-Kj6o8sv-fA3CiSw0VNh6_U",
+  authDomain: "vrposdemo.firebaseapp.com",
+  projectId: "vrposdemo",
+  storageBucket: "vrposdemo.firebasestorage.app",
+  messagingSenderId: "101880448949",
+  appId: "1:101880448949:web:ca46267c27476291c1fbfc"
+};
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
@@ -3737,18 +3826,7 @@
                     });
                 }
 
-                await loadAllSettings();
-                await loadGlobalVariants();
-                await loadGlobalModifiers();
-                setupShiftListener();
-                loadDiscounts();
-                setupOrderNotificationListener();
-                setupTransactionNotificationListener();
-                setupLicenseMonitor();
-                setupPrinterQueueListener();
-                setupTopBarPrinterListener();
-                showPage('takeOrder');
-                startTimerLoop();
+                  await runSyncSequence();
                 
             } catch (e) { errorEl.textContent = e.message; }
         };
@@ -3791,6 +3869,58 @@
                 }
             });
         };
+
+        async function runSyncSequence() {
+            const overlay = document.getElementById('syncLoadingOverlay');
+            const bar = document.getElementById('syncProgressBar');
+            const text = document.getElementById('syncProgressText');
+            
+            overlay.style.display = 'flex';
+            overlay.style.opacity = '1';
+
+            const setProgress = (val) => {
+                bar.style.width = val + '%';
+                text.innerText = val + '%';
+            };
+
+            try {
+                setProgress(5);
+                await loadAllSettings();
+                
+                setProgress(25);
+                await loadGlobalVariants();
+                
+                setProgress(45);
+                await loadGlobalModifiers();
+                
+                setProgress(65);
+                setupShiftListener();
+                loadDiscounts();
+                setupOrderNotificationListener();
+                setupTransactionNotificationListener();
+                setupLicenseMonitor();
+                setupPrinterQueueListener();
+                setupTopBarPrinterListener();
+                
+                setProgress(85);
+                showPage('takeOrder');
+                startTimerLoop();
+                
+                setProgress(100);
+                
+                setTimeout(() => {
+                    overlay.style.opacity = '0';
+                    setTimeout(() => {
+                        overlay.style.display = 'none';
+                    }, 500);
+                }, 600);
+                
+            } catch (e) {
+                console.error("Sync failed", e);
+                alert("Synchronization error: " + e.message);
+                overlay.style.display = 'none';
+            }
+        }
 
         async function loadTaxRate() {
     const taxRef = doc(db, 'licenses', currentClientId, 'tax_settings', 'settings');
@@ -4816,7 +4946,8 @@
         };
 
         let currentAdjustmentType = 'add';
-        window.openEditFloatModal = function() {
+        window.openEditFloatModal = async function() {
+            await kickAllCashDrawers();
             if (!activeShiftData) return;
             document.getElementById('currentFloatDisplay').innerText = `RM ${parseFloat(activeShiftData.startFloat || 0).toFixed(2)}`;
             document.getElementById('floatAdjustmentForm').style.display = 'none';
@@ -4910,6 +5041,7 @@
         };
 
         window.showStartShiftModal = async function() {
+            await kickAllCashDrawers();
             document.getElementById('startShiftTimeDisplay').value = new Date().toLocaleString();
             document.getElementById('startShiftFloatInput').value = '';
             
@@ -4973,6 +5105,7 @@
         };
 
         window.showEndShiftModal = async function() {
+            await kickAllCashDrawers();
             const shiftRef = doc(db, 'licenses', currentClientId, 'settings', 'shift');
             const shiftSnap = await getDoc(shiftRef);
             if (!shiftSnap.exists()) return;
@@ -5088,6 +5221,11 @@
                 }, { merge: true });
                 
                 closeModal('endShiftModal');
+
+                if (document.getElementById('printShiftReportToggle').checked) {
+                    openShiftReportPrinterSelector(shiftRecord);
+                }
+
                 cartTakeOrder = [];
                 updateOrdersUITakeOrder();
                 showPrinterStatusPopup("Shift Ended", "Shift summary saved to history.", true);
@@ -5122,7 +5260,10 @@
                         <td style="font-weight:bold; color:${total >= 0 ? '#38a169' : '#e53e3e'}">RM ${total.toFixed(2)}</td>
                         <td>${s.endTime.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</td>
                         <td>${s.endedBy}</td>
-                        <td><button class="btn-view" style="padding: 5px 10px; font-size: 0.7rem; border-radius: 8px;" onclick="viewShiftDetails('${doc.id}')">View Details</button></td>
+                        <td>
+                            <button class="btn-view" style="padding: 5px 10px; font-size: 0.7rem; border-radius: 8px; margin-bottom: 4px; display: block; width: 100%;" onclick="viewShiftDetails('${doc.id}')">View Details</button>
+                            <button class="btn-view" style="padding: 5px 10px; font-size: 0.7rem; border-radius: 8px; background: #764ba2; display: block; width: 100%;" onclick="selectPrinterForShiftReport('${doc.id}')">Print Shift Report</button>
+                        </td>
                     </tr>`;
                 }).join('');
             });
@@ -5882,6 +6023,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             const order = orderSnap.data();
             const itemsRef = collection(db, 'licenses', currentClientId, 'orders', orderId, 'items');
             const itemsSnap = await getDocs(itemsRef);
+            const isMixOrder = order.orderType === 'mix';
             
             const itemsData = [];
             for (const doc of itemsSnap.docs) {
@@ -5922,8 +6064,10 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                     remark = '(Paid)';
                 }
 
+                    const typeSuffix = (isMixOrder && item.orderType) ? ` (${item.orderType === 'dine-in' ? 'Dine In' : 'Takeaway'})` : '';
+
                 itemsHtml += `<div class="order-item-detail" style="${itemStyle}">
-                    <span>${item.name} x ${item.qty} ${remark}</span>
+                        <span>${item.name}${typeSuffix} x ${item.qty} ${remark}</span>
                     <span>RM ${item.total || (parseFloat(item.basePrice) * parseInt(item.qty)).toFixed(2)}</span>
                 </div>`;
                 
@@ -7545,11 +7689,16 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             document.querySelectorAll(`.type-option-takeorder[data-type="${type}"]`).forEach(el => el.classList.add('selected'));
             const deliveryFields = document.getElementById('deliveryFieldsTakeOrder');
             if (deliveryFields) deliveryFields.style.display = type === 'delivery' ? 'block' : 'none';
+            
+            // Refresh summary if type changes to/from mix
+            if (document.getElementById('orderSummaryModalTakeOrder').style.display === 'flex') {
+                showOrderSummaryTakeOrder();
+            }
 
             const label = document.getElementById('summaryTableLabelTakeOrder');
             const select = document.getElementById('summaryTableSelectTakeOrder');
             if (label && select) {
-                const showDropdown = isCounterSummaryFlow && (type === 'dine-in' || type === 'takeaway');
+                const showDropdown = isCounterSummaryFlow && (type === 'dine-in' || type === 'takeaway' || type === 'mix');
                 label.style.display = showDropdown ? 'none' : 'inline';
                 select.style.display = showDropdown ? 'inline-block' : 'none';
                 if (type === 'delivery') {
@@ -7962,8 +8111,15 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
                 `<option value="${t.id}" ${t.id === selectedTableIdTakeOrder ? 'selected' : ''}>${t.id.toLowerCase() === 'counter' ? 'Counter' : t.id.toUpperCase()}</option>`
             ).join('');
 
+            const typeOptions = [
+                {id: 'dine-in', label: 'Dine In', icon: 'utensils'},
+                {id: 'takeaway', label: 'Takeaway', icon: 'bag-shopping'},
+                {id: 'mix', label: 'Mix', icon: 'layer-group'}
+            ];
+            if (isCounterSummaryFlow) typeOptions.push({id: 'delivery', label: 'Delivery', icon: 'motorcycle'});
+
             let itemsHtml = '';
-            cartTakeOrder.forEach(item => {
+            cartTakeOrder.forEach((item, idx) => {
                 let details = '';
                 if (item.variants && item.variants.length) {
                     item.variants.forEach(v => details += `<div style="font-size:11px;color:#666;margin-left:10px;">• ${v.variantGroupName}: ${v.optionName}</div>`);
@@ -7974,12 +8130,22 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
                 if (item.notes) {
                     details += `<div style="font-size:11px;color:#764ba2;margin-left:10px;font-style:italic;">Request: ${item.notes}</div>`;
                 }
+                
+                const isMix = selectedOrderTypeTakeOrder === 'mix';
+                if (isMix && !item.itemOrderType) item.itemOrderType = 'dine-in'; // default for mix
 
                 itemsHtml += `
                     <div style="padding:8px 0; border-bottom:1px dashed #eee;">
                         <div style="display:flex; justify-content:space-between;">
-                            <span style="font-weight:600;">${item.name} x ${item.qty}</span>
-                            <span>RM ${item.total.toFixed(2)}</span>
+                            <div style="flex: 1;">
+                                <span style="font-weight:600;">${item.name} x ${item.qty}</span>
+                                ${isMix ? `
+                                <div class="item-mix-toggle">
+                                    <div class="mix-type-btn ${item.itemOrderType === 'dine-in' ? 'active' : ''}" onclick="setItemOrderType(${idx}, 'dine-in')">Dine In</div>
+                                    <div class="mix-type-btn ${item.itemOrderType === 'takeaway' ? 'active' : ''}" onclick="setItemOrderType(${idx}, 'takeaway')">Takeaway</div>
+                                </div>` : ''}
+                            </div>
+                            <span style="font-weight: 700;">RM ${item.total.toFixed(2)}</span>
                         </div>
                         ${details}
                     </div>
@@ -7990,7 +8156,7 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
                 <div style="background:#f8f9fa; padding:15px; border-radius:12px; margin-bottom:15px;">
                     <div style="margin-bottom:12px;">
                         <strong>Table:</strong> 
-                        <span id="summaryTableLabelTakeOrder">${(selectedOrderTypeTakeOrder === 'dine-in' || selectedOrderTypeTakeOrder === 'takeaway') ? (selectedTableNumberTakeOrder || 'N/A') : 'N/A'}</span>
+                        <span id="summaryTableLabelTakeOrder">${(selectedOrderTypeTakeOrder !== 'delivery') ? (selectedTableNumberTakeOrder || 'N/A') : 'N/A'}</span>
                         <select id="summaryTableSelectTakeOrder" onchange="updateSummaryTableSelection(this.value)" style="display:none; margin-left: 5px; padding: 2px 5px; border-radius: 8px; border: 1px solid #ccc; font-size: 0.85rem;">
                             ${tableOptionsHtml}
                         </select>
@@ -7998,19 +8164,11 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
                     <div class="form-group">
                         <label><strong>Order Type:</strong></label>
                         <div class="order-type-switch-takeorder" style="background:#e9ecef; margin-top:5px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);">
-                            <!-- Dine In and Takeaway are always available -->
-                            <div class="type-option-takeorder ${selectedOrderTypeTakeOrder === 'dine-in' ? 'selected' : ''}" data-type="dine-in" onclick="selectOrderTypeTakeOrder('dine-in')">
-                                <i class="fas fa-utensils"></i> Dine In
-                            </div>
-                            <div class="type-option-takeorder ${selectedOrderTypeTakeOrder === 'takeaway' ? 'selected' : ''}" data-type="takeaway" onclick="selectOrderTypeTakeOrder('takeaway')">
-                                <i class="fas fa-bag-shopping"></i> Takeaway
-                            </div>
-                            <!-- Delivery is ONLY available if starting from the Counter -->
-                            ${isCounterSummaryFlow ? `
-                                <div class="type-option-takeorder ${selectedOrderTypeTakeOrder === 'delivery' ? 'selected' : ''}" data-type="delivery" onclick="selectOrderTypeTakeOrder('delivery')">
-                                    <i class="fas fa-motorcycle"></i> Delivery
+                            ${typeOptions.map(opt => `
+                                <div class="type-option-takeorder ${selectedOrderTypeTakeOrder === opt.id ? 'selected' : ''}" data-type="${opt.id}" onclick="selectOrderTypeTakeOrder('${opt.id}')">
+                                    <i class="fas fa-${opt.icon}"></i> ${opt.label}
                                 </div>
-                            ` : ''}
+                            `).join('')}
                         </div>
                     </div>
                     <div id="deliveryFieldsTakeOrder" class="delivery-fields-takeorder" style="display:${selectedOrderTypeTakeOrder === 'delivery' ? 'block' : 'none'}; background:white; padding:15px; margin-top:10px; border-radius:12px; border: 1px solid #e0e0e0;">
@@ -8048,6 +8206,15 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
             if (isCounterSummaryFlow) selectOrderTypeTakeOrder(selectedOrderTypeTakeOrder);
         };
 
+        window.setItemOrderType = function(idx, type) {
+            if (cartTakeOrder[idx]) {
+                cartTakeOrder[idx].itemOrderType = type;
+                // Refresh the summary UI without recreating the whole modal body if possible, 
+                // but re-calling showOrderSummaryTakeOrder is the safest way to sync all states.
+                showOrderSummaryTakeOrder();
+            }
+        };
+
         window.confirmAndSubmitOrderTakeOrder = async function() {
             if (!cartTakeOrder.length) return;
             
@@ -8081,7 +8248,7 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
                 staffId: currentStaff.id,
                 staffName: currentStaff.name,
                 status: 'active',
-                tableId: (selectedOrderTypeTakeOrder === 'dine-in' || selectedOrderTypeTakeOrder === 'takeaway' || (selectedOrderTypeTakeOrder === 'delivery' && isCounterSummaryFlow)) ? selectedTableIdTakeOrder : null,
+                tableId: (selectedOrderTypeTakeOrder !== 'delivery' || (selectedOrderTypeTakeOrder === 'delivery' && isCounterSummaryFlow)) ? selectedTableIdTakeOrder : null,
                 orderType: selectedOrderTypeTakeOrder,
                 customerName: selectedOrderTypeTakeOrder === 'delivery' ? (document.getElementById('customerNameTakeOrder')?.value || null) : null,
                 customerPhone: selectedOrderTypeTakeOrder === 'delivery' ? (document.getElementById('customerPhoneTakeOrder')?.value || null) : null,
@@ -8103,7 +8270,8 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
                         qty: item.qty.toString(),
                         total: item.total.toFixed(2),
                         notes: item.notes || '',
-                        status: 'pending'
+                        status: 'pending',
+                        orderType: (selectedOrderTypeTakeOrder === 'mix' ? (item.itemOrderType || 'dine-in') : selectedOrderTypeTakeOrder)
                     });
                     
                     if (item.variants && item.variants.length) {
@@ -8126,7 +8294,7 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
                 }
                 
                 closeModal('orderSummaryModalTakeOrder');
-                if (selectedTableIdTakeOrder && (selectedOrderTypeTakeOrder === 'dine-in' || selectedOrderTypeTakeOrder === 'takeaway' || (selectedOrderTypeTakeOrder === 'delivery' && isCounterSummaryFlow))) {
+                if (selectedTableIdTakeOrder && (selectedOrderTypeTakeOrder !== 'delivery' || (selectedOrderTypeTakeOrder === 'delivery' && isCounterSummaryFlow))) {
                     await updateDoc(doc(db, 'licenses', currentClientId, 'tables', selectedTableIdTakeOrder), { status: 'occupied' });
                 }
                 
@@ -8265,6 +8433,7 @@ window.openSearchModalTakeOrder = function() {
             const waitId = waitingLists.length + 1;
             waitingLists.push({ 
                 id: waitId, 
+                orderType: selectedOrderTypeTakeOrder,
                 cart: JSON.parse(JSON.stringify(cartTakeOrder)), 
                 createdAt: new Date().toLocaleString() 
             });
@@ -8314,6 +8483,7 @@ window.openSearchModalTakeOrder = function() {
             if (cartTakeOrder.length > 0 && !confirm('Add these items to your current cart?')) return;
             
             cartTakeOrder = [...cartTakeOrder, ...waitOrder.cart];
+            selectedOrderTypeTakeOrder = waitOrder.orderType || 'dine-in';
             waitingLists.splice(index, 1);
             localStorage.setItem('waitingListsTakeOrder', JSON.stringify(waitingLists));
             
@@ -9644,7 +9814,10 @@ window.openSearchModalTakeOrder = function() {
 
             let itemsText = "";
             items.forEach(item => {
-                const nameStr = item.name.substring(0, width - 14).padEnd(width - 13);
+                const typeSuffix = (orderType === 'mix' && item.orderType) ? `(${item.orderType === 'dine-in' ? 'Dine In' : 'Takeaway'})` : '';
+                const displayName = `${item.name}${typeSuffix}`;
+                
+                const nameStr = displayName.substring(0, width - 14).padEnd(width - 13);
                 const qtyStr = item.qty.toString().padStart(3);
                 const amtStr = parseFloat(item.total).toFixed(2).padStart(10);
                 itemsText += `${nameStr}${qtyStr}${amtStr}\n`;
@@ -9965,10 +10138,14 @@ window.openSearchModalTakeOrder = function() {
             const fontCmd = (fontSize === '0') ? "\x1B\x4D\x01" : (fontSize === '2' ? "\x1B\x21\x10" : "\x1B\x4D\x00");
             const sep = "-".repeat(width) + "\n";
             
+            const orderTypeLabel = (orderType === 'mix') ? "MIX" : orderType.toUpperCase().replace('-', ' ');
             const printTime = new Date().toLocaleString();
             let itemsText = "";
             items.forEach(item => {
-                itemsText += `\x1B\x45\x01[    ] ${item.name.substring(0, width - 12).padEnd(width - 12)} ${item.qty}\x1B\x45\x00\n`;
+                const typeSuffix = (orderType === 'mix' && item.orderType) ? `(${item.orderType === 'dine-in' ? 'Dine In' : 'Takeaway'})` : '';
+                const displayName = `${item.name}${typeSuffix}`;
+
+                itemsText += `\x1B\x45\x01[    ] ${displayName.substring(0, width - 12).padEnd(width - 12)} ${item.qty}\x1B\x45\x00\n`;
                 if (item.variants && item.variants.length) {
                     item.variants.forEach(v => itemsText += `\x1B\x45\x01       + ${v.optionName.substring(0, width - 9)}\x1B\x45\x00\n`);
                 }
@@ -9994,7 +10171,7 @@ window.openSearchModalTakeOrder = function() {
                 `Staff: ${staffName}\n`,
                 sep,
                 "\x1B\x61\x01", // Center align
-                `\x1B\x21\x10\x1B\x45\x01${orderType.toUpperCase().replace('-', ' ')}\x1B\x45\x00\x1B\x21\x00\n`,
+                `\x1B\x21\x10\x1B\x45\x01${orderTypeLabel}\x1B\x45\x00\x1B\x21\x00\n`,
                 "\x1B\x61\x00", // Left align
                 fontCmd, // Restore default font mode
                 sep,
@@ -10382,19 +10559,7 @@ window.openSearchModalTakeOrder = function() {
             if (currentStaff.role === 'manager') document.getElementById('managerMenu').style.display = 'block';
             else document.getElementById('managerMenu').style.display = 'none';
             document.getElementById('staffMenu').style.display = 'block'; // Operations is always visible
-            loadAllSettings().then(() => {
-                loadGlobalVariants();
-                loadGlobalModifiers();
-                setupShiftListener();
-                loadDiscounts();
-                setupOrderNotificationListener();
-                setupTransactionNotificationListener();
-                setupLicenseMonitor();
-                setupPrinterQueueListener();
-                setupTopBarPrinterListener();
-                showPage('takeOrder');
-                startTimerLoop();
-            });
+            runSyncSequence();
         }
 
         // Expose Take Order functions globally
@@ -10465,6 +10630,200 @@ window.openSearchModalTakeOrder = function() {
         window.deleteAttendanceRecord = deleteAttendanceRecord;
         window.resetOrderSequence = resetOrderSequence;
         
+        // ========== CASH DRAWER UTILITIES ==========
+        window.kickAllCashDrawers = async function() {
+            console.log("%c[Drawer] Shift event triggered. Searching for drawers to kick...", "color: #764ba2; font-weight: bold;");
+            try {
+                const printersSnap = await getDocs(collection(db, 'licenses', currentClientId, 'printers'));
+                for (const d of printersSnap.docs) {
+                    const p = d.data();
+                    // Only kick if printer has kickCashDrawer enabled AND is owned by this device or unowned
+                    if (p.kickCashDrawer && (!p.takenByStaffId || p.takenByStaffId === currentStaff.id)) {
+                        const device = connectedBluetoothDevices[p.bluetoothDeviceId];
+                        if (device) {
+                            console.log(`%c[Drawer] Kicking cash drawer on printer: ${p.name}`, "color: #38a169; font-weight: bold;");
+                            await sendToBluetoothPrinter(device, new Uint8Array([0x1B, 0x70, 0x00, 0x19, 0xFA]));
+                            // Disconnect after sending command to free the printer line
+                            if (device.gatt.connected) device.gatt.disconnect();
+                        }
+                    }
+                }
+            } catch (e) { console.error("[Drawer] Kick operation failed:", e); }
+        };
+        
+        // ========== SHIFT REPORT PRINTING ==========
+        window.currentPrintingShiftData = null;
+        window.openShiftReportPrinterSelector = async function(shiftData) {
+            window.currentPrintingShiftData = shiftData;
+            const container = document.getElementById('reportPrinterList');
+            container.innerHTML = '<div class="loading">Loading printers...</div>';
+            document.getElementById('selectReportPrinterModal').style.display = 'flex';
+            
+            try {
+                const printersSnap = await getDocs(collection(db, 'licenses', currentClientId, 'printers'));
+                if (printersSnap.empty) {
+                    container.innerHTML = '<div style="text-align:center; padding:20px; color:#666; font-size: 0.9rem;">No printers found.<br>Please configure one in Operations > Printers.</div>';
+                    return;
+                }
+                
+                let html = '';
+                printersSnap.forEach(d => {
+                    const p = d.data();
+                    html += `
+                        <button class="primary-btn" style="background:#f1f5f9; color:#1e293b; border:1px solid #e2e8f0; text-align:left; display:flex; justify-content:space-between; align-items:center; padding: 15px;" 
+                                onclick="printShiftReport('${d.id}')">
+                            <span><b style="font-size: 0.9rem;">${p.name}</b><br><small style="color: #64748b;">${p.paperWidth}mm Thermal Printer</small></span>
+                            <i class="fas fa-print" style="color:#764ba2;"></i>
+                        </button>
+                    `;
+                });
+                container.innerHTML = html;
+            } catch (e) { container.innerHTML = `<div style="color:red; padding:10px;">Error: ${e.message}</div>`; }
+        };
+
+        window.selectPrinterForShiftReport = async function(docId) {
+            const snap = await getDoc(doc(db, 'licenses', currentClientId, 'shifts', docId));
+            if (snap.exists()) {
+                openShiftReportPrinterSelector(snap.data());
+            }
+        };
+
+        window.printShiftReport = async function(printerId) {
+            const pSnap = await getDoc(doc(db, 'licenses', currentClientId, 'printers', printerId));
+            if (!pSnap.exists()) return;
+            const pConfig = pSnap.data();
+            const device = connectedBluetoothDevices[pConfig.bluetoothDeviceId];
+            
+            if (!device) {
+                alert("Printer not connected. Please ensure Bluetooth is ON and the printer is paired.");
+                return;
+            }
+            
+            try {
+                const s = window.currentPrintingShiftData;
+                const shiftId = s.shiftId || 'N/A';
+                
+                // Fetch Float Adjustments for this shift
+                const adjRef = collection(db, 'licenses', currentClientId, 'float_adjustments');
+                const adjSnap = await getDocs(query(adjRef, where('shiftId', '==', shiftId)));
+                const floatAdjustments = adjSnap.docs.map(d => d.data()).sort((a,b) => (a.createdAt?.toDate() || 0) - (b.createdAt?.toDate() || 0));
+
+                // Fetch Attendance for this shift
+                const attRef = collection(db, 'licenses', currentClientId, 'attendance');
+                const attSnap = await getDocs(query(attRef, where('shiftId', '==', shiftId)));
+                const attendanceRecords = attSnap.docs.map(d => d.data()).sort((a,b) => (a.clockIn?.toDate() || 0) - (b.clockIn?.toDate() || 0));
+
+                const commands = await generateShiftReportEscPos(s, pConfig, floatAdjustments, attendanceRecords);
+                const success = await sendToBluetoothPrinter(device, commands);
+                
+                if (success) {
+                    showPrinterStatusPopup("Print Success", "Shift report sent to printer.", true);
+                    closeModal('selectReportPrinterModal');
+                } else {
+                    showPrinterStatusPopup("Print Failed", "Check printer power and connection.", false);
+                }
+                if (device.gatt.connected) device.gatt.disconnect();
+            } catch (e) { alert("Error: " + e.message); }
+        };
+
+        window.generateShiftReportEscPos = async function(s, p, floatLogs = [], staffLogs = []) {
+            let width = (p && p.paperWidth === '80') ? 48 : 32;
+            const fontSize = p ? p.fontSize : '1';
+            // Set to normal Font A or Font B (Small), excluding double height/width commands
+            const fontCmd = (fontSize === '0') ? "\x1B\x4D\x01" : "\x1B\x4D\x00";
+            const sep = "-".repeat(width) + "\n";
+            const startTime = (s.startTime?.toDate ? s.startTime.toDate() : new Date(s.startTime)).toLocaleString();
+            const endTime = (s.endTime?.toDate ? s.endTime.toDate() : new Date(s.endTime)).toLocaleString();
+            const staffNames = Array.isArray(s.staffNames) ? s.staffNames.join(', ') : (s.startedBy || 'N/A');
+            const totalProfit = parseFloat(s.profit || 0) - parseFloat(s.loss || 0);
+
+            let mainContent = combineCommands(
+                "\x1B\x40", fontCmd, "\x1B\x61\x01",
+                "SHIFT REPORT\n",
+                sep, "\x1B\x61\x00", fontCmd,
+                `ID: ${s.shiftId || 'N/A'}\n`,
+                `Open : ${startTime}\n`,
+                `End  : ${endTime}\n`,
+                `Open By: ${s.startedBy || 'N/A'}\n`,
+                `End By : ${s.endedBy || 'N/A'}\n`,
+                `Staff: ${staffNames}\n`,
+                sep,
+                `Completed Orders: ${s.totalOrders || 0}\n`,
+                `Cancelled Orders: ${s.totalCancelled || 0}\n`,
+                `Total Transactions: ${s.totalTransactions || 0}\n`,
+                sep,
+                "Opening Float:".padEnd(width - 13) + `RM ${parseFloat(s.startFloat || 0).toFixed(2).padStart(9)}\n`,
+                "Cash Sales:".padEnd(width - 13) + `RM ${parseFloat(s.cashTotal || 0).toFixed(2).padStart(9)}\n`,
+                "E-Wallet:".padEnd(width - 13) + `RM ${parseFloat(s.ewalletTotal || 0).toFixed(2).padStart(9)}\n`,
+                "Card Sales:".padEnd(width - 13) + `RM ${parseFloat(s.cardTotal || 0).toFixed(2).padStart(9)}\n`,
+                sep,
+                "Total Profit:".padEnd(width - 13) + `RM ${parseFloat(s.profit || 0).toFixed(2).padStart(9)}\n`,
+                "Loss/Shortage:".padEnd(width - 13) + `RM ${parseFloat(s.loss || 0).toFixed(2).padStart(9)}\n`,
+                `NET TOTAL:`.padEnd(width - 13) + `RM ${totalProfit.toFixed(2).padStart(9)}\n`,
+                sep,
+                "\x1B\x61\x00",
+                `Drawer Cash: RM ${parseFloat(s.actualCash || 0).toFixed(2)}\n`
+            );
+
+            let floatLogContent = "\nCASH FLOAT LOG\nTime|Staff|Type|Amt|Reason\n" + sep;
+            if (floatLogs.length === 0) {
+                floatLogContent += "No float logs recorded.\n";
+            } else {
+                floatLogs.forEach(l => {
+                    const time = l.createdAt?.toDate ? l.createdAt.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'N/A';
+                    floatLogContent += `${time}|${l.staffName}|${l.type}|${l.amount}|${l.reason}\n`;
+                });
+            }
+
+            let staffLogContent = "\nSTAFF LOG\nStaff|In|Out|Total|Remark\n" + sep;
+            if (staffLogs.length === 0) {
+                staffLogContent += "No staff logs recorded.\n";
+            } else {
+                staffLogs.forEach(l => {
+                    const cin = l.clockIn?.toDate ? l.clockIn.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'N/A';
+                    const cout = l.clockOut?.toDate ? l.clockOut.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '---';
+                    let total = "---";
+                    if (l.clockIn && l.clockOut) {
+                        const diffMs = l.clockOut.toDate() - l.clockIn.toDate();
+                        const hrs = Math.floor(diffMs / 3600000);
+                        const mins = Math.floor((diffMs % 3600000) / 60000);
+                        total = `${hrs}h${mins}m`;
+                    }
+                    staffLogContent += `${l.staffName}|${cin}|${cout}|${total}|_____\n`;
+                });
+            }
+
+            return combineCommands(
+                mainContent,
+                floatLogContent,
+                staffLogContent,
+                "\n\n\n\n",
+                (p && p.cutterAlarm) ? "\x1B\x42\x03\x02" : "",
+                "\x1D\x56\x41\x03"
+            );
+        };
+
+        // ========== IDLE TIMEOUT LOGIC ==========
+        let lastInteractionTime = Date.now();
+        const IDLE_LIMIT = 60000; // 1 minute inactivity limit
+
+        function resetIdleTimer() {
+            lastInteractionTime = Date.now();
+        }
+
+        function checkInactivity() {
+            if (currentStaff && document.getElementById('appContainer').style.display === 'block') {
+                const idleDuration = Date.now() - lastInteractionTime;
+                if (idleDuration > IDLE_LIMIT) {
+                    document.getElementById('timeoutModal').style.display = 'flex';
+                }
+            }
+        }
+
+        ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'].forEach(evt => document.addEventListener(evt, resetIdleTimer, true));
+        document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkInactivity(); });
+        setInterval(checkInactivity, 15000); // Check every 15 seconds
+
         // ========== WIFI STATUS LOGIC ==========
         window.updateWifiStatus = function() {
             const wifiIcon = document.getElementById('wifiIcon');
@@ -10522,15 +10881,5 @@ window.openSearchModalTakeOrder = function() {
         // Initial check
         updateWifiStatus();
     </script>
-     <script>
-              // Register the Service Worker (sw.js)
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
-          .then(reg => console.log('Service Worker Registered!', reg.scope))
-          .catch(err => console.log('Service Worker Failed!', err));
-      });
-    }
-</script>
 </body>
 </html>
