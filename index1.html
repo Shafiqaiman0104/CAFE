@@ -10824,7 +10824,7 @@ window.openSearchModalTakeOrder = function() {
 
         // ========== IDLE TIMEOUT LOGIC ==========
         let lastInteractionTime = Date.now();
-        const IDLE_LIMIT = 60000; // 1 minute inactivity limit
+        const IDLE_LIMIT = 300000; // 5 minutes inactivity limit
 
         function resetIdleTimer() {
             lastInteractionTime = Date.now();
