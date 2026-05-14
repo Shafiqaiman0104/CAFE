@@ -4923,7 +4923,8 @@
         };
 
         let currentAdjustmentType = 'add';
-        window.openEditFloatModal = function() {
+        window.openEditFloatModal = async function() {
+            await kickAllCashDrawers();
             if (!activeShiftData) return;
             document.getElementById('currentFloatDisplay').innerText = `RM ${parseFloat(activeShiftData.startFloat || 0).toFixed(2)}`;
             document.getElementById('floatAdjustmentForm').style.display = 'none';
@@ -5017,6 +5018,7 @@
         };
 
         window.showStartShiftModal = async function() {
+            await kickAllCashDrawers();
             document.getElementById('startShiftTimeDisplay').value = new Date().toLocaleString();
             document.getElementById('startShiftFloatInput').value = '';
             
@@ -5080,6 +5082,7 @@
         };
 
         window.showEndShiftModal = async function() {
+            await kickAllCashDrawers();
             const shiftRef = doc(db, 'licenses', currentClientId, 'settings', 'shift');
             const shiftSnap = await getDoc(shiftRef);
             if (!shiftSnap.exists()) return;
@@ -10567,6 +10570,27 @@ window.openSearchModalTakeOrder = function() {
         window.saveAttendanceTime = saveAttendanceTime;
         window.deleteAttendanceRecord = deleteAttendanceRecord;
         window.resetOrderSequence = resetOrderSequence;
+        
+        // ========== CASH DRAWER UTILITIES ==========
+        window.kickAllCashDrawers = async function() {
+            console.log("%c[Drawer] Shift event triggered. Searching for drawers to kick...", "color: #764ba2; font-weight: bold;");
+            try {
+                const printersSnap = await getDocs(collection(db, 'licenses', currentClientId, 'printers'));
+                for (const d of printersSnap.docs) {
+                    const p = d.data();
+                    // Only kick if printer has kickCashDrawer enabled AND is owned by this device or unowned
+                    if (p.kickCashDrawer && (!p.takenByStaffId || p.takenByStaffId === currentStaff.id)) {
+                        const device = connectedBluetoothDevices[p.bluetoothDeviceId];
+                        if (device) {
+                            console.log(`%c[Drawer] Kicking cash drawer on printer: ${p.name}`, "color: #38a169; font-weight: bold;");
+                            await sendToBluetoothPrinter(device, new Uint8Array([0x1B, 0x70, 0x00, 0x19, 0xFA]));
+                            // Disconnect after sending command to free the printer line
+                            if (device.gatt.connected) device.gatt.disconnect();
+                        }
+                    }
+                }
+            } catch (e) { console.error("[Drawer] Kick operation failed:", e); }
+        };
         
         // ========== SHIFT REPORT PRINTING ==========
         window.currentPrintingShiftData = null;
