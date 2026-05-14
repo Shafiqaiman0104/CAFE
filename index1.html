@@ -10641,7 +10641,20 @@ window.openSearchModalTakeOrder = function() {
             }
             
             try {
-                const commands = await generateShiftReportEscPos(window.currentPrintingShiftData, pConfig);
+                const s = window.currentPrintingShiftData;
+                const shiftId = s.shiftId || 'N/A';
+                
+                // Fetch Float Adjustments for this shift
+                const adjRef = collection(db, 'licenses', currentClientId, 'float_adjustments');
+                const adjSnap = await getDocs(query(adjRef, where('shiftId', '==', shiftId)));
+                const floatAdjustments = adjSnap.docs.map(d => d.data()).sort((a,b) => (a.createdAt?.toDate() || 0) - (b.createdAt?.toDate() || 0));
+
+                // Fetch Attendance for this shift
+                const attRef = collection(db, 'licenses', currentClientId, 'attendance');
+                const attSnap = await getDocs(query(attRef, where('shiftId', '==', shiftId)));
+                const attendanceRecords = attSnap.docs.map(d => d.data()).sort((a,b) => (a.clockIn?.toDate() || 0) - (b.clockIn?.toDate() || 0));
+
+                const commands = await generateShiftReportEscPos(s, pConfig, floatAdjustments, attendanceRecords);
                 const success = await sendToBluetoothPrinter(device, commands);
                 
                 if (success) {
@@ -10654,42 +10667,77 @@ window.openSearchModalTakeOrder = function() {
             } catch (e) { alert("Error: " + e.message); }
         };
 
-        window.generateShiftReportEscPos = async function(s, p) {
+        window.generateShiftReportEscPos = async function(s, p, floatLogs = [], staffLogs = []) {
             let width = (p && p.paperWidth === '80') ? 48 : 32;
             const fontSize = p ? p.fontSize : '1';
-            const fontCmd = (fontSize === '0') ? "\x1B\x4D\x01" : (fontSize === '2' ? "\x1B\x21\x10" : "\x1B\x4D\x00");
+            // Set to normal Font A or Font B (Small), excluding double height/width commands
+            const fontCmd = (fontSize === '0') ? "\x1B\x4D\x01" : "\x1B\x4D\x00";
             const sep = "-".repeat(width) + "\n";
             const startTime = (s.startTime?.toDate ? s.startTime.toDate() : new Date(s.startTime)).toLocaleString();
             const endTime = (s.endTime?.toDate ? s.endTime.toDate() : new Date(s.endTime)).toLocaleString();
             const staffNames = Array.isArray(s.staffNames) ? s.staffNames.join(', ') : (s.startedBy || 'N/A');
             const totalProfit = parseFloat(s.profit || 0) - parseFloat(s.loss || 0);
 
-            return combineCommands(
+            let mainContent = combineCommands(
                 "\x1B\x40", fontCmd, "\x1B\x61\x01",
-                "\x1B\x21\x10\x1B\x45\x01SHIFT REPORT\x1B\x45\x00\n",
+                "SHIFT REPORT\n",
                 sep, "\x1B\x61\x00", fontCmd,
                 `ID: ${s.shiftId || 'N/A'}\n`,
-                `Start: ${startTime}\n`,
+                `Open : ${startTime}\n`,
                 `End  : ${endTime}\n`,
                 `Open By: ${s.startedBy || 'N/A'}\n`,
                 `End By : ${s.endedBy || 'N/A'}\n`,
                 `Staff: ${staffNames}\n`,
                 sep,
-                `Orders Completed: ${s.totalOrders || 0}\n`,
-                `Orders Cancelled: ${s.totalCancelled || 0}\n`,
-                `Total Trans     : ${s.totalTransactions || 0}\n`,
+                `Completed Orders: ${s.totalOrders || 0}\n`,
+                `Cancelled Orders: ${s.totalCancelled || 0}\n`,
+                `Total Transactions: ${s.totalTransactions || 0}\n`,
                 sep,
                 "Opening Float:".padEnd(width - 13) + `RM ${parseFloat(s.startFloat || 0).toFixed(2).padStart(9)}\n`,
                 "Cash Sales:".padEnd(width - 13) + `RM ${parseFloat(s.cashTotal || 0).toFixed(2).padStart(9)}\n`,
                 "E-Wallet:".padEnd(width - 13) + `RM ${parseFloat(s.ewalletTotal || 0).toFixed(2).padStart(9)}\n`,
                 "Card Sales:".padEnd(width - 13) + `RM ${parseFloat(s.cardTotal || 0).toFixed(2).padStart(9)}\n`,
                 sep,
-                "TOTAL PROFIT:".padEnd(width - 13) + `RM ${parseFloat(s.profit || 0).toFixed(2).padStart(9)}\n`,
-                "LOSS/SHORTAGE:".padEnd(width - 13) + `RM ${parseFloat(s.loss || 0).toFixed(2).padStart(9)}\n`,
-                `\x1B\x45\x01NET TOTAL:`.padEnd(width - 13) + `RM ${totalProfit.toFixed(2).padStart(9)}\x1B\x45\x00\n`,
+                "Total Profit:".padEnd(width - 13) + `RM ${parseFloat(s.profit || 0).toFixed(2).padStart(9)}\n`,
+                "Loss/Shortage:".padEnd(width - 13) + `RM ${parseFloat(s.loss || 0).toFixed(2).padStart(9)}\n`,
+                `NET TOTAL:`.padEnd(width - 13) + `RM ${totalProfit.toFixed(2).padStart(9)}\n`,
                 sep,
-                "\x1B\x61\x01",
-                `Actual Cash in Drawer: RM ${parseFloat(s.actualCash || 0).toFixed(2)}\n`,
+                "\x1B\x61\x00",
+                `Drawer Cash: RM ${parseFloat(s.actualCash || 0).toFixed(2)}\n`
+            );
+
+            let floatLogContent = "\nCASH FLOAT LOG\nTime|Staff|Type|Amt|Reason\n" + sep;
+            if (floatLogs.length === 0) {
+                floatLogContent += "No float logs recorded.\n";
+            } else {
+                floatLogs.forEach(l => {
+                    const time = l.createdAt?.toDate ? l.createdAt.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'N/A';
+                    floatLogContent += `${time}|${l.staffName}|${l.type}|${l.amount}|${l.reason}\n`;
+                });
+            }
+
+            let staffLogContent = "\nSTAFF LOG\nStaff|In|Out|Total|Remark\n" + sep;
+            if (staffLogs.length === 0) {
+                staffLogContent += "No staff logs recorded.\n";
+            } else {
+                staffLogs.forEach(l => {
+                    const cin = l.clockIn?.toDate ? l.clockIn.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'N/A';
+                    const cout = l.clockOut?.toDate ? l.clockOut.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '---';
+                    let total = "---";
+                    if (l.clockIn && l.clockOut) {
+                        const diffMs = l.clockOut.toDate() - l.clockIn.toDate();
+                        const hrs = Math.floor(diffMs / 3600000);
+                        const mins = Math.floor((diffMs % 3600000) / 60000);
+                        total = `${hrs}h${mins}m`;
+                    }
+                    staffLogContent += `${l.staffName}|${cin}|${cout}|${total}|_____\n`;
+                });
+            }
+
+            return combineCommands(
+                mainContent,
+                floatLogContent,
+                staffLogContent,
                 "\n\n\n\n",
                 (p && p.cutterAlarm) ? "\x1B\x42\x03\x02" : "",
                 "\x1D\x56\x41\x03"
