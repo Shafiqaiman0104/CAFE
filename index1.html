@@ -2921,7 +2921,16 @@
     <div id="endShiftModal" class="modal">
         <div class="modal-content" style="max-width: 450px; border-radius: 28px;">
             <div class="modal-header">
-                <h3><i class="fas fa-stop"></i> End Shift</h3>
+                <div style="display: flex; align-items: center; gap: 15px; flex: 1;">
+                    <h3><i class="fas fa-stop"></i> End Shift</h3>
+                    <div style="display: flex; align-items: center; gap: 8px; background: #f1f5f9; padding: 4px 12px; border-radius: 20px;">
+                        <span style="font-size: 0.7rem; font-weight: 800; color: #475569; text-transform: uppercase;">Print Report</span>
+                        <label class="switch" style="transform: scale(0.7); width: 50px; height: 24px; display: inline-block; margin-bottom: -5px;">
+                            <input type="checkbox" id="printShiftReportToggle" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
                 <button class="modal-close" onclick="closeEndShiftModal()">&times;</button>
             </div>
             <div id="endShiftSummary"></div>
@@ -2931,6 +2940,18 @@
             </div>
             <div id="liveShiftLossDisplay" style="text-align: center; font-weight: bold; font-size: 1.1rem; margin-bottom: 20px;"></div>
             <button class="primary-btn" style="width: 100%; background: #e53e3e;" onclick="confirmEndShift()">End Shift</button>
+        </div>
+    </div>
+
+    <!-- Select Report Printer Modal -->
+    <div id="selectReportPrinterModal" class="modal" style="align-items: center; justify-content: center; z-index: 10006;">
+        <div class="modal-content" style="max-width: 400px; border-radius: 24px; padding: 30px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-print"></i> Print to which printer?</h3>
+                <button class="modal-close" onclick="closeModal('selectReportPrinterModal')">&times;</button>
+            </div>
+            <div id="reportPrinterList" style="display: flex; flex-direction: column; gap: 10px; margin-top: 20px;"></div>
+            <button class="secondary-btn" style="width: 100%; margin-top: 20px;" onclick="closeModal('selectReportPrinterModal')">Cancel</button>
         </div>
     </div>
 
@@ -5174,6 +5195,11 @@
                 }, { merge: true });
                 
                 closeModal('endShiftModal');
+
+                if (document.getElementById('printShiftReportToggle').checked) {
+                    openShiftReportPrinterSelector(shiftRecord);
+                }
+
                 cartTakeOrder = [];
                 updateOrdersUITakeOrder();
                 showPrinterStatusPopup("Shift Ended", "Shift summary saved to history.", true);
@@ -5208,7 +5234,10 @@
                         <td style="font-weight:bold; color:${total >= 0 ? '#38a169' : '#e53e3e'}">RM ${total.toFixed(2)}</td>
                         <td>${s.endTime.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</td>
                         <td>${s.endedBy}</td>
-                        <td><button class="btn-view" style="padding: 5px 10px; font-size: 0.7rem; border-radius: 8px;" onclick="viewShiftDetails('${doc.id}')">View Details</button></td>
+                        <td>
+                            <button class="btn-view" style="padding: 5px 10px; font-size: 0.7rem; border-radius: 8px; margin-bottom: 4px; display: block; width: 100%;" onclick="viewShiftDetails('${doc.id}')">View Details</button>
+                            <button class="btn-view" style="padding: 5px 10px; font-size: 0.7rem; border-radius: 8px; background: #764ba2; display: block; width: 100%;" onclick="selectPrinterForShiftReport('${doc.id}')">Print Shift Report</button>
+                        </td>
                     </tr>`;
                 }).join('');
             });
@@ -10539,6 +10568,110 @@ window.openSearchModalTakeOrder = function() {
         window.deleteAttendanceRecord = deleteAttendanceRecord;
         window.resetOrderSequence = resetOrderSequence;
         
+        // ========== SHIFT REPORT PRINTING ==========
+        window.currentPrintingShiftData = null;
+        window.openShiftReportPrinterSelector = async function(shiftData) {
+            window.currentPrintingShiftData = shiftData;
+            const container = document.getElementById('reportPrinterList');
+            container.innerHTML = '<div class="loading">Loading printers...</div>';
+            document.getElementById('selectReportPrinterModal').style.display = 'flex';
+            
+            try {
+                const printersSnap = await getDocs(collection(db, 'licenses', currentClientId, 'printers'));
+                if (printersSnap.empty) {
+                    container.innerHTML = '<div style="text-align:center; padding:20px; color:#666; font-size: 0.9rem;">No printers found.<br>Please configure one in Operations > Printers.</div>';
+                    return;
+                }
+                
+                let html = '';
+                printersSnap.forEach(d => {
+                    const p = d.data();
+                    html += `
+                        <button class="primary-btn" style="background:#f1f5f9; color:#1e293b; border:1px solid #e2e8f0; text-align:left; display:flex; justify-content:space-between; align-items:center; padding: 15px;" 
+                                onclick="printShiftReport('${d.id}')">
+                            <span><b style="font-size: 0.9rem;">${p.name}</b><br><small style="color: #64748b;">${p.paperWidth}mm Thermal Printer</small></span>
+                            <i class="fas fa-print" style="color:#764ba2;"></i>
+                        </button>
+                    `;
+                });
+                container.innerHTML = html;
+            } catch (e) { container.innerHTML = `<div style="color:red; padding:10px;">Error: ${e.message}</div>`; }
+        };
+
+        window.selectPrinterForShiftReport = async function(docId) {
+            const snap = await getDoc(doc(db, 'licenses', currentClientId, 'shifts', docId));
+            if (snap.exists()) {
+                openShiftReportPrinterSelector(snap.data());
+            }
+        };
+
+        window.printShiftReport = async function(printerId) {
+            const pSnap = await getDoc(doc(db, 'licenses', currentClientId, 'printers', printerId));
+            if (!pSnap.exists()) return;
+            const pConfig = pSnap.data();
+            const device = connectedBluetoothDevices[pConfig.bluetoothDeviceId];
+            
+            if (!device) {
+                alert("Printer not connected. Please ensure Bluetooth is ON and the printer is paired.");
+                return;
+            }
+            
+            try {
+                const commands = await generateShiftReportEscPos(window.currentPrintingShiftData, pConfig);
+                const success = await sendToBluetoothPrinter(device, commands);
+                
+                if (success) {
+                    showPrinterStatusPopup("Print Success", "Shift report sent to printer.", true);
+                    closeModal('selectReportPrinterModal');
+                } else {
+                    showPrinterStatusPopup("Print Failed", "Check printer power and connection.", false);
+                }
+                if (device.gatt.connected) device.gatt.disconnect();
+            } catch (e) { alert("Error: " + e.message); }
+        };
+
+        window.generateShiftReportEscPos = async function(s, p) {
+            let width = (p && p.paperWidth === '80') ? 48 : 32;
+            const fontSize = p ? p.fontSize : '1';
+            const fontCmd = (fontSize === '0') ? "\x1B\x4D\x01" : (fontSize === '2' ? "\x1B\x21\x10" : "\x1B\x4D\x00");
+            const sep = "-".repeat(width) + "\n";
+            const startTime = (s.startTime?.toDate ? s.startTime.toDate() : new Date(s.startTime)).toLocaleString();
+            const endTime = (s.endTime?.toDate ? s.endTime.toDate() : new Date(s.endTime)).toLocaleString();
+            const staffNames = Array.isArray(s.staffNames) ? s.staffNames.join(', ') : (s.startedBy || 'N/A');
+            const totalProfit = parseFloat(s.profit || 0) - parseFloat(s.loss || 0);
+
+            return combineCommands(
+                "\x1B\x40", fontCmd, "\x1B\x61\x01",
+                "\x1B\x21\x10\x1B\x45\x01SHIFT REPORT\x1B\x45\x00\n",
+                sep, "\x1B\x61\x00", fontCmd,
+                `ID: ${s.shiftId || 'N/A'}\n`,
+                `Start: ${startTime}\n`,
+                `End  : ${endTime}\n`,
+                `Open By: ${s.startedBy || 'N/A'}\n`,
+                `End By : ${s.endedBy || 'N/A'}\n`,
+                `Staff: ${staffNames}\n`,
+                sep,
+                `Orders Completed: ${s.totalOrders || 0}\n`,
+                `Orders Cancelled: ${s.totalCancelled || 0}\n`,
+                `Total Trans     : ${s.totalTransactions || 0}\n`,
+                sep,
+                "Opening Float:".padEnd(width - 13) + `RM ${parseFloat(s.startFloat || 0).toFixed(2).padStart(9)}\n`,
+                "Cash Sales:".padEnd(width - 13) + `RM ${parseFloat(s.cashTotal || 0).toFixed(2).padStart(9)}\n`,
+                "E-Wallet:".padEnd(width - 13) + `RM ${parseFloat(s.ewalletTotal || 0).toFixed(2).padStart(9)}\n`,
+                "Card Sales:".padEnd(width - 13) + `RM ${parseFloat(s.cardTotal || 0).toFixed(2).padStart(9)}\n`,
+                sep,
+                "TOTAL PROFIT:".padEnd(width - 13) + `RM ${parseFloat(s.profit || 0).toFixed(2).padStart(9)}\n`,
+                "LOSS/SHORTAGE:".padEnd(width - 13) + `RM ${parseFloat(s.loss || 0).toFixed(2).padStart(9)}\n`,
+                `\x1B\x45\x01NET TOTAL:`.padEnd(width - 13) + `RM ${totalProfit.toFixed(2).padStart(9)}\x1B\x45\x00\n`,
+                sep,
+                "\x1B\x61\x01",
+                `Actual Cash in Drawer: RM ${parseFloat(s.actualCash || 0).toFixed(2)}\n`,
+                "\n\n\n\n",
+                (p && p.cutterAlarm) ? "\x1B\x42\x03\x02" : "",
+                "\x1D\x56\x41\x03"
+            );
+        };
+
         // ========== IDLE TIMEOUT LOGIC ==========
         let lastInteractionTime = Date.now();
         const IDLE_LIMIT = 60000; // 1 minute inactivity limit
