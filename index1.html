@@ -3576,6 +3576,20 @@
         </div>
     </div>
 
+    <!-- Timeout Modal -->
+    <div id="timeoutModal" class="modal" style="display: none; z-index: 300000; align-items: center; justify-content: center; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(10px);">
+        <div class="modal-content" style="max-width: 320px; border-radius: 28px; text-align: center; padding: 35px; animation: slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
+            <div style="width: 80px; height: 80px; background: #fff7ed; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto;">
+                <i class="fa-solid fa-hourglass-end" style="font-size: 2.5rem; color: #ff9800;"></i>
+            </div>
+            <h2 style="margin-bottom: 10px; color: #1e293b;">Opss Timeout!!</h2>
+            <p style="font-size: 1rem; color: #64748b; line-height: 1.5; margin-bottom: 30px;">Your session has been idle. Please refresh.</p>
+            <button class="primary-btn" style="width: 100%; padding: 15px;" onclick="location.reload()">
+                <i class="fas fa-sync-alt"></i> Refresh
+            </button>
+        </div>
+    </div>
+
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
         import { 
@@ -10525,6 +10539,27 @@ window.openSearchModalTakeOrder = function() {
         window.deleteAttendanceRecord = deleteAttendanceRecord;
         window.resetOrderSequence = resetOrderSequence;
         
+        // ========== IDLE TIMEOUT LOGIC ==========
+        let lastInteractionTime = Date.now();
+        const IDLE_LIMIT = 60000; // 1 minute inactivity limit
+
+        function resetIdleTimer() {
+            lastInteractionTime = Date.now();
+        }
+
+        function checkInactivity() {
+            if (currentStaff && document.getElementById('appContainer').style.display === 'block') {
+                const idleDuration = Date.now() - lastInteractionTime;
+                if (idleDuration > IDLE_LIMIT) {
+                    document.getElementById('timeoutModal').style.display = 'flex';
+                }
+            }
+        }
+
+        ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'].forEach(evt => document.addEventListener(evt, resetIdleTimer, true));
+        document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkInactivity(); });
+        setInterval(checkInactivity, 15000); // Check every 15 seconds
+
         // ========== WIFI STATUS LOGIC ==========
         window.updateWifiStatus = function() {
             const wifiIcon = document.getElementById('wifiIcon');
