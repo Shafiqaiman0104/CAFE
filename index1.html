@@ -1914,6 +1914,28 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             transition: width 0.4s ease;
         }
+        /* Mix Order Type Toggle Styles */
+        .item-mix-toggle {
+            display: flex;
+            background: #f1f5f9;
+            border-radius: 30px;
+            padding: 2px;
+            margin-top: 5px;
+            width: fit-content;
+        }
+        .mix-type-btn {
+            padding: 4px 10px;
+            border-radius: 25px;
+            font-size: 0.65rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #64748b;
+        }
+        .mix-type-btn.active {
+            background: #764ba2;
+            color: white;
+        }
     </style>
 </head>
 <body>
@@ -3302,6 +3324,7 @@
             <div id="orderSummaryBodyTakeOrder" style="margin-bottom: 20px;"></div>
             <div class="action-buttons">
                 <button class="secondary-btn" onclick="closeModal('orderSummaryModalTakeOrder')">Back</button>
+                <button class="secondary-btn" style="background:#ed8936; color:white;" onclick="saveToWaitingListTakeOrder(); closeModal('orderSummaryModalTakeOrder');">Save to List</button>
                 <button class="primary-btn" onclick="confirmAndSubmitOrderTakeOrder()">Confirm & Submit</button>
             </div>
         </div>
@@ -6000,6 +6023,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             const order = orderSnap.data();
             const itemsRef = collection(db, 'licenses', currentClientId, 'orders', orderId, 'items');
             const itemsSnap = await getDocs(itemsRef);
+            const isMixOrder = order.orderType === 'mix';
             
             const itemsData = [];
             for (const doc of itemsSnap.docs) {
@@ -6040,8 +6064,10 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                     remark = '(Paid)';
                 }
 
+                    const typeSuffix = (isMixOrder && item.orderType) ? ` (${item.orderType === 'dine-in' ? 'Dine In' : 'Takeaway'})` : '';
+
                 itemsHtml += `<div class="order-item-detail" style="${itemStyle}">
-                    <span>${item.name} x ${item.qty} ${remark}</span>
+                        <span>${item.name}${typeSuffix} x ${item.qty} ${remark}</span>
                     <span>RM ${item.total || (parseFloat(item.basePrice) * parseInt(item.qty)).toFixed(2)}</span>
                 </div>`;
                 
@@ -7657,17 +7683,22 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             renderMenuGridTakeOrder();
         };
 
-        window.selectOrderTypeTakeOrder = function(type) {
+        window.selectOrderTypeTakeOrder = function(type, preventRefresh = false) {
             selectedOrderTypeTakeOrder = type;
             document.querySelectorAll('.type-option-takeorder').forEach(opt => opt.classList.remove('selected'));
             document.querySelectorAll(`.type-option-takeorder[data-type="${type}"]`).forEach(el => el.classList.add('selected'));
             const deliveryFields = document.getElementById('deliveryFieldsTakeOrder');
             if (deliveryFields) deliveryFields.style.display = type === 'delivery' ? 'block' : 'none';
+            
+            // Refresh summary if type changes to/from mix
+            if (!preventRefresh && document.getElementById('orderSummaryModalTakeOrder').style.display === 'flex') {
+                showOrderSummaryTakeOrder();
+            }
 
             const label = document.getElementById('summaryTableLabelTakeOrder');
             const select = document.getElementById('summaryTableSelectTakeOrder');
             if (label && select) {
-                const showDropdown = isCounterSummaryFlow && (type === 'dine-in' || type === 'takeaway');
+                const showDropdown = isCounterSummaryFlow && (type === 'dine-in' || type === 'takeaway' || type === 'mix');
                 label.style.display = showDropdown ? 'none' : 'inline';
                 select.style.display = showDropdown ? 'inline-block' : 'none';
                 if (type === 'delivery') {
@@ -8080,8 +8111,15 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
                 `<option value="${t.id}" ${t.id === selectedTableIdTakeOrder ? 'selected' : ''}>${t.id.toLowerCase() === 'counter' ? 'Counter' : t.id.toUpperCase()}</option>`
             ).join('');
 
+            const typeOptions = [
+                {id: 'dine-in', label: 'Dine In', icon: 'utensils'},
+                {id: 'takeaway', label: 'Takeaway', icon: 'bag-shopping'},
+                {id: 'mix', label: 'Mix', icon: 'layer-group'}
+            ];
+            if (isCounterSummaryFlow) typeOptions.push({id: 'delivery', label: 'Delivery', icon: 'motorcycle'});
+
             let itemsHtml = '';
-            cartTakeOrder.forEach(item => {
+            cartTakeOrder.forEach((item, idx) => {
                 let details = '';
                 if (item.variants && item.variants.length) {
                     item.variants.forEach(v => details += `<div style="font-size:11px;color:#666;margin-left:10px;">• ${v.variantGroupName}: ${v.optionName}</div>`);
@@ -8092,12 +8130,22 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
                 if (item.notes) {
                     details += `<div style="font-size:11px;color:#764ba2;margin-left:10px;font-style:italic;">Request: ${item.notes}</div>`;
                 }
+                
+                const isMix = selectedOrderTypeTakeOrder === 'mix';
+                if (isMix && !item.itemOrderType) item.itemOrderType = 'dine-in'; // default for mix
 
                 itemsHtml += `
                     <div style="padding:8px 0; border-bottom:1px dashed #eee;">
                         <div style="display:flex; justify-content:space-between;">
-                            <span style="font-weight:600;">${item.name} x ${item.qty}</span>
-                            <span>RM ${item.total.toFixed(2)}</span>
+                            <div style="flex: 1;">
+                                <span style="font-weight:600;">${item.name} x ${item.qty}</span>
+                                ${isMix ? `
+                                <div class="item-mix-toggle">
+                                    <div class="mix-type-btn ${item.itemOrderType === 'dine-in' ? 'active' : ''}" onclick="setItemOrderType(${idx}, 'dine-in')">Dine In</div>
+                                    <div class="mix-type-btn ${item.itemOrderType === 'takeaway' ? 'active' : ''}" onclick="setItemOrderType(${idx}, 'takeaway')">Takeaway</div>
+                                </div>` : ''}
+                            </div>
+                            <span style="font-weight: 700;">RM ${item.total.toFixed(2)}</span>
                         </div>
                         ${details}
                     </div>
@@ -8108,7 +8156,7 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
                 <div style="background:#f8f9fa; padding:15px; border-radius:12px; margin-bottom:15px;">
                     <div style="margin-bottom:12px;">
                         <strong>Table:</strong> 
-                        <span id="summaryTableLabelTakeOrder">${(selectedOrderTypeTakeOrder === 'dine-in' || selectedOrderTypeTakeOrder === 'takeaway') ? (selectedTableNumberTakeOrder || 'N/A') : 'N/A'}</span>
+                        <span id="summaryTableLabelTakeOrder">${(selectedOrderTypeTakeOrder !== 'delivery') ? (selectedTableNumberTakeOrder || 'N/A') : 'N/A'}</span>
                         <select id="summaryTableSelectTakeOrder" onchange="updateSummaryTableSelection(this.value)" style="display:none; margin-left: 5px; padding: 2px 5px; border-radius: 8px; border: 1px solid #ccc; font-size: 0.85rem;">
                             ${tableOptionsHtml}
                         </select>
@@ -8116,19 +8164,11 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
                     <div class="form-group">
                         <label><strong>Order Type:</strong></label>
                         <div class="order-type-switch-takeorder" style="background:#e9ecef; margin-top:5px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);">
-                            <!-- Dine In and Takeaway are always available -->
-                            <div class="type-option-takeorder ${selectedOrderTypeTakeOrder === 'dine-in' ? 'selected' : ''}" data-type="dine-in" onclick="selectOrderTypeTakeOrder('dine-in')">
-                                <i class="fas fa-utensils"></i> Dine In
-                            </div>
-                            <div class="type-option-takeorder ${selectedOrderTypeTakeOrder === 'takeaway' ? 'selected' : ''}" data-type="takeaway" onclick="selectOrderTypeTakeOrder('takeaway')">
-                                <i class="fas fa-bag-shopping"></i> Takeaway
-                            </div>
-                            <!-- Delivery is ONLY available if starting from the Counter -->
-                            ${isCounterSummaryFlow ? `
-                                <div class="type-option-takeorder ${selectedOrderTypeTakeOrder === 'delivery' ? 'selected' : ''}" data-type="delivery" onclick="selectOrderTypeTakeOrder('delivery')">
-                                    <i class="fas fa-motorcycle"></i> Delivery
+                            ${typeOptions.map(opt => `
+                                <div class="type-option-takeorder ${selectedOrderTypeTakeOrder === opt.id ? 'selected' : ''}" data-type="${opt.id}" onclick="selectOrderTypeTakeOrder('${opt.id}')">
+                                    <i class="fas fa-${opt.icon}"></i> ${opt.label}
                                 </div>
-                            ` : ''}
+                            `).join('')}
                         </div>
                     </div>
                     <div id="deliveryFieldsTakeOrder" class="delivery-fields-takeorder" style="display:${selectedOrderTypeTakeOrder === 'delivery' ? 'block' : 'none'}; background:white; padding:15px; margin-top:10px; border-radius:12px; border: 1px solid #e0e0e0;">
@@ -8163,7 +8203,16 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
             document.getElementById('orderSummaryBodyTakeOrder').innerHTML = summaryHtml;
             document.getElementById('orderSummaryModalTakeOrder').style.display = 'flex';
 
-            if (isCounterSummaryFlow) selectOrderTypeTakeOrder(selectedOrderTypeTakeOrder);
+            if (isCounterSummaryFlow) selectOrderTypeTakeOrder(selectedOrderTypeTakeOrder, true);
+        };
+
+        window.setItemOrderType = function(idx, type) {
+            if (cartTakeOrder[idx]) {
+                cartTakeOrder[idx].itemOrderType = type;
+                // Refresh the summary UI without recreating the whole modal body if possible, 
+                // but re-calling showOrderSummaryTakeOrder is the safest way to sync all states.
+                showOrderSummaryTakeOrder();
+            }
         };
 
         window.confirmAndSubmitOrderTakeOrder = async function() {
@@ -8199,7 +8248,7 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
                 staffId: currentStaff.id,
                 staffName: currentStaff.name,
                 status: 'active',
-                tableId: (selectedOrderTypeTakeOrder === 'dine-in' || selectedOrderTypeTakeOrder === 'takeaway' || (selectedOrderTypeTakeOrder === 'delivery' && isCounterSummaryFlow)) ? selectedTableIdTakeOrder : null,
+                tableId: (selectedOrderTypeTakeOrder !== 'delivery' || (selectedOrderTypeTakeOrder === 'delivery' && isCounterSummaryFlow)) ? selectedTableIdTakeOrder : null,
                 orderType: selectedOrderTypeTakeOrder,
                 customerName: selectedOrderTypeTakeOrder === 'delivery' ? (document.getElementById('customerNameTakeOrder')?.value || null) : null,
                 customerPhone: selectedOrderTypeTakeOrder === 'delivery' ? (document.getElementById('customerPhoneTakeOrder')?.value || null) : null,
@@ -8221,7 +8270,8 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
                         qty: item.qty.toString(),
                         total: item.total.toFixed(2),
                         notes: item.notes || '',
-                        status: 'pending'
+                        status: 'pending',
+                        orderType: (selectedOrderTypeTakeOrder === 'mix' ? (item.itemOrderType || 'dine-in') : selectedOrderTypeTakeOrder)
                     });
                     
                     if (item.variants && item.variants.length) {
@@ -8244,7 +8294,7 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
                 }
                 
                 closeModal('orderSummaryModalTakeOrder');
-                if (selectedTableIdTakeOrder && (selectedOrderTypeTakeOrder === 'dine-in' || selectedOrderTypeTakeOrder === 'takeaway' || (selectedOrderTypeTakeOrder === 'delivery' && isCounterSummaryFlow))) {
+                if (selectedTableIdTakeOrder && (selectedOrderTypeTakeOrder !== 'delivery' || (selectedOrderTypeTakeOrder === 'delivery' && isCounterSummaryFlow))) {
                     await updateDoc(doc(db, 'licenses', currentClientId, 'tables', selectedTableIdTakeOrder), { status: 'occupied' });
                 }
                 
@@ -8383,6 +8433,7 @@ window.openSearchModalTakeOrder = function() {
             const waitId = waitingLists.length + 1;
             waitingLists.push({ 
                 id: waitId, 
+                orderType: selectedOrderTypeTakeOrder,
                 cart: JSON.parse(JSON.stringify(cartTakeOrder)), 
                 createdAt: new Date().toLocaleString() 
             });
@@ -8432,6 +8483,7 @@ window.openSearchModalTakeOrder = function() {
             if (cartTakeOrder.length > 0 && !confirm('Add these items to your current cart?')) return;
             
             cartTakeOrder = [...cartTakeOrder, ...waitOrder.cart];
+            selectedOrderTypeTakeOrder = waitOrder.orderType || 'dine-in';
             waitingLists.splice(index, 1);
             localStorage.setItem('waitingListsTakeOrder', JSON.stringify(waitingLists));
             
@@ -9762,7 +9814,10 @@ window.openSearchModalTakeOrder = function() {
 
             let itemsText = "";
             items.forEach(item => {
-                const nameStr = item.name.substring(0, width - 14).padEnd(width - 13);
+                const typeSuffix = (orderType === 'mix' && item.orderType) ? `(${item.orderType === 'dine-in' ? 'Dine In' : 'Takeaway'})` : '';
+                const displayName = `${item.name}${typeSuffix}`;
+                
+                const nameStr = displayName.substring(0, width - 14).padEnd(width - 13);
                 const qtyStr = item.qty.toString().padStart(3);
                 const amtStr = parseFloat(item.total).toFixed(2).padStart(10);
                 itemsText += `${nameStr}${qtyStr}${amtStr}\n`;
@@ -10083,10 +10138,14 @@ window.openSearchModalTakeOrder = function() {
             const fontCmd = (fontSize === '0') ? "\x1B\x4D\x01" : (fontSize === '2' ? "\x1B\x21\x10" : "\x1B\x4D\x00");
             const sep = "-".repeat(width) + "\n";
             
+            const orderTypeLabel = (orderType === 'mix') ? "MIX" : orderType.toUpperCase().replace('-', ' ');
             const printTime = new Date().toLocaleString();
             let itemsText = "";
             items.forEach(item => {
-                itemsText += `\x1B\x45\x01[    ] ${item.name.substring(0, width - 12).padEnd(width - 12)} ${item.qty}\x1B\x45\x00\n`;
+                const typeSuffix = (orderType === 'mix' && item.orderType) ? `(${item.orderType === 'dine-in' ? 'Dine In' : 'Takeaway'})` : '';
+                const displayName = `${item.name}${typeSuffix}`;
+
+                itemsText += `\x1B\x45\x01[    ] ${displayName.substring(0, width - 12).padEnd(width - 12)} ${item.qty}\x1B\x45\x00\n`;
                 if (item.variants && item.variants.length) {
                     item.variants.forEach(v => itemsText += `\x1B\x45\x01       + ${v.optionName.substring(0, width - 9)}\x1B\x45\x00\n`);
                 }
@@ -10112,7 +10171,7 @@ window.openSearchModalTakeOrder = function() {
                 `Staff: ${staffName}\n`,
                 sep,
                 "\x1B\x61\x01", // Center align
-                `\x1B\x21\x10\x1B\x45\x01${orderType.toUpperCase().replace('-', ' ')}\x1B\x45\x00\x1B\x21\x00\n`,
+                `\x1B\x21\x10\x1B\x45\x01${orderTypeLabel}\x1B\x45\x00\x1B\x21\x00\n`,
                 "\x1B\x61\x00", // Left align
                 fontCmd, // Restore default font mode
                 sep,
