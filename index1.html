@@ -9824,7 +9824,7 @@ window.openSearchModalTakeOrder = function() {
             let itemsText = "";
             items.forEach(item => {
                 const itemType = item.orderType || 'dine-in';
-                const typeSuffix = ` (${itemType === 'dine-in' ? 'Dine In' : 'Takeaway'})`;
+                const typeSuffix = ` (${itemType === 'dine-in' ? 'Dine In' : (itemType === 'delivery' ? 'Delivery' : 'Takeaway')})`;
                 const displayName = `${item.name}${typeSuffix}`;
                 
                 const nameStr = displayName.substring(0, width - 14).padEnd(width - 13);
@@ -10161,7 +10161,7 @@ window.openSearchModalTakeOrder = function() {
             let itemsText = "";
             items.forEach(item => {
                 const itemType = item.orderType || 'dine-in';
-                const typeSuffix = ` (${itemType === 'dine-in' ? 'Dine In' : 'Takeaway'})`;
+                const typeSuffix = ` (${itemType === 'dine-in' ? 'Dine In' : (itemType === 'delivery' ? 'Delivery' : 'Takeaway')})`;
                 const displayName = `${item.name}${typeSuffix}`;
 
                 itemsText += `\x1B\x45\x01[    ] ${displayName.substring(0, width - 12).padEnd(width - 12)} ${item.qty}\x1B\x45\x00\n`;
