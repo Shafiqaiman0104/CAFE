@@ -6597,7 +6597,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                         itemsHtml += `
                             <div style="margin-bottom:8px; ${itemStyles}">
                                 <div style="font-weight:600;">
-                                    ${(order.orderType === 'mix' && item.orderType) ? `${item.name}(${item.orderType === 'dine-in' ? 'D' : 'TA'})(${item.qty})` : `${item.name} (x${item.qty})`} 
+                                    ${(order.orderType === 'mix' && item.orderType) ? `${item.name} (${item.orderType === 'dine-in' ? 'D' : 'TA'}) (${item.qty})` : `${item.name} (x${item.qty})`} 
                                     ${paidText}${(isOrderCancelledGlobal || isItemCancelled) ? '<span style="font-size:0.7rem; font-weight:bold; text-decoration: none; display: inline-block;">(Cancelled)</span>' : ''}
                                 </div>
                                 ${selectionHtml}
