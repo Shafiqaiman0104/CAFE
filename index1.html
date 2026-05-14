@@ -4636,17 +4636,18 @@
 
             unsubscribers['myAttendance'] = onSnapshot(q, (snap) => {
                 const myDocs = snap.docs.map(d => ({id: d.id, ...d.data()}));
-                const activeRecord = myDocs.find(d => d.clockOut === null);
+                // Sort by clockIn descending to always evaluate the most recent activity
+                const sortedDocs = myDocs.sort((a, b) => b.clockIn.toMillis() - a.clockIn.toMillis());
+                const latestRecord = sortedDocs[0];
                 
-                if (activeRecord) {
+                if (latestRecord && latestRecord.clockOut === null) {
                     localStorage.setItem('isClockedIn', 'true');
-                    staffClockInTime = activeRecord.clockIn.toDate();
+                    staffClockInTime = latestRecord.clockIn.toDate();
                     document.getElementById('sidebarClockOutBtn').style.display = 'flex';
                 } else {
-                    // Check if we were just kicked
-                    const kickedRecord = myDocs.find(d => d.kickedBy);
-                    if (kickedRecord && localStorage.getItem('isClockedIn') === 'true') {
-                        const kickedBy = kickedRecord.kickedBy;
+                    // Check if we were just kicked (on the most recent attendance record only)
+                    if (latestRecord && latestRecord.kickedBy && localStorage.getItem('isClockedIn') === 'true') {
+                        const kickedBy = latestRecord.kickedBy;
                         alert(`You been kick from this shift by ${kickedBy}`);
                         logout();
                         return;
@@ -4699,6 +4700,8 @@
 
         async function performClockOut(staffId, shiftId, doLogout = true) {
             try {
+                // Clear local flag immediately to prevent listener race conditions
+                localStorage.removeItem('isClockedIn');
                 // Find active attendance record for this staff and shift
                 const q = query(
                     collection(db, 'licenses', currentClientId, 'attendance'),
