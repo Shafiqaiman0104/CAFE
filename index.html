@@ -3636,6 +3636,20 @@
         </div>
     </div>
 
+    <!-- Other Device Login Modal -->
+    <div id="otherDeviceLoginModal" class="modal" style="display: none; z-index: 400000; align-items: center; justify-content: center; background: rgba(15, 23, 42, 0.9); backdrop-filter: blur(15px);">
+        <div class="modal-content" style="max-width: 320px; border-radius: 28px; text-align: center; padding: 35px; border: 2px solid #764ba2;">
+            <div style="width: 80px; height: 80px; background: #f0e6ff; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto;">
+                <i class="fa-solid fa-right-from-bracket" style="font-size: 2.5rem; color: #764ba2;"></i>
+            </div>
+            <h2 style="margin-bottom: 10px; color: #1e293b;">Logged Out!</h2>
+            <p style="font-size: 1rem; color: #64748b; line-height: 1.5; margin-bottom: 30px;">Your account login to other device.</p>
+            <button class="primary-btn" style="width: 100%; padding: 15px;" onclick="location.reload()">
+                <i class="fas fa-sync-alt"></i> Back to Login
+            </button>
+        </div>
+    </div>
+
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
         import { 
@@ -3794,12 +3808,16 @@
                 if (snapshot.empty) { errorEl.textContent = 'Invalid PIN'; return; }
                 
                 const staffDoc = snapshot.docs[0];
+                const newSessionId = Date.now().toString();
+                await updateDoc(staffDoc.ref, { sessionId: newSessionId });
+                
                 currentStaff = { id: staffDoc.id, ...staffDoc.data() };
                 
                 const roleRef = doc(db, 'licenses', currentClientId, 'roles', currentStaff.role);
                 const roleSnap = await getDoc(roleRef);
                 currentStaff.permissions = roleSnap.exists() ? roleSnap.data() : {};
                 
+                localStorage.setItem('sessionId', newSessionId);
                 localStorage.setItem('currentStaff', JSON.stringify(currentStaff));
                 
                 document.getElementById('pinScreen').style.display = 'none';
@@ -3830,6 +3848,7 @@
                 }
 
                   await runSyncSequence();
+                  setupStaffSessionMonitor();
                 
             } catch (e) { errorEl.textContent = e.message; }
         };
@@ -8548,7 +8567,8 @@ window.openSearchModalTakeOrder = function() {
                             name: itemData.name,
                             qty: itemData.qty,
                             notes: itemData.notes,
-                            selections: selections
+                            selections: selections,
+                            orderType: itemData.orderType
                         });
                     }
                     allActiveOrdersWithItems.push({
@@ -8665,13 +8685,15 @@ window.openSearchModalTakeOrder = function() {
 
             resultsContainer.innerHTML = filtered.map(order => {
                 const tableNum = order.tableId ? order.tableId.toUpperCase() : 'N/A';
-                const itemsHtml = order.items.map(it => `
+                const itemsHtml = order.items.map(it => {
+                    const typeLabel = (order.orderType === 'mix' && it.orderType) ? (it.orderType === 'dine-in' ? ' (D)' : ' (TA)') : '';
+                    return `
                     <div style="margin-bottom:8px; font-size: 0.85rem; border-bottom: 1px dashed #eee; padding-bottom: 5px;">
-                        <div><b>${it.name} x ${it.qty}</b></div>
+                        <div><b>${it.name}${typeLabel} x ${it.qty}</b></div>
                         ${it.selections.length ? `<div style="font-size:0.75rem; color:#666; margin-left:10px;">• ${it.selections.join(', ')}</div>` : ''}
                         ${it.notes ? `<div style="font-size:0.75rem; color:#764ba2; margin-left:10px; font-style:italic;">Request: ${it.notes}</div>` : ''}
                     </div>
-                `).join('');
+                `}).join('');
 
                 return `
                     <div class="order-detail-card" style="cursor:pointer; border-left: 6px solid #764ba2;" onclick="selectOrderFromSearch('${order.id}', '${order.tableId}', '${tableNum}')">
@@ -10375,6 +10397,32 @@ window.openSearchModalTakeOrder = function() {
             location.reload();
         };
 
+        window.setupStaffSessionMonitor = function() {
+            if (unsubscribers['staffSession']) unsubscribers['staffSession']();
+            if (!currentStaff || !currentClientId) return;
+
+            const staffRef = doc(db, 'licenses', currentClientId, 'staff', currentStaff.id);
+            unsubscribers['staffSession'] = onSnapshot(staffRef, (snap) => {
+                if (!snap.exists()) return;
+                const remoteSessionId = snap.data().sessionId;
+                const localSessionId = localStorage.getItem('sessionId');
+                
+                if (remoteSessionId && localSessionId && remoteSessionId !== localSessionId) {
+                    showOtherDeviceLoginPopup();
+                }
+            });
+        };
+
+        window.showOtherDeviceLoginPopup = function() {
+            Object.values(unsubscribers).forEach(u => u?.());
+            if (timerInterval) clearInterval(timerInterval);
+            localStorage.removeItem('currentStaff');
+            localStorage.removeItem('sessionId');
+            localStorage.removeItem('isClockedIn');
+            document.getElementById('appContainer').style.display = 'none';
+            document.getElementById('otherDeviceLoginModal').style.display = 'flex';
+        };
+
         window.setupOrderNotificationListener = function() {
             if (unsubscribers['orderNotifications']) unsubscribers['orderNotifications']();
             isInitialLoadOrders = true;
@@ -10584,6 +10632,7 @@ window.openSearchModalTakeOrder = function() {
             if (currentStaff.role === 'manager') document.getElementById('managerMenu').style.display = 'block';
             else document.getElementById('managerMenu').style.display = 'none';
             document.getElementById('staffMenu').style.display = 'block'; // Operations is always visible
+            setupStaffSessionMonitor();
             runSyncSequence();
         }
 
@@ -10905,8 +10954,8 @@ window.openSearchModalTakeOrder = function() {
         }
         // Initial check
         updateWifiStatus();
-    </script>
-    <script>
+    </script>  
+ <script>
               // Register the Service Worker (sw.js)
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
