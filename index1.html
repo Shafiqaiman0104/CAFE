@@ -8564,7 +8564,8 @@ window.openSearchModalTakeOrder = function() {
                             name: itemData.name,
                             qty: itemData.qty,
                             notes: itemData.notes,
-                            selections: selections
+                            selections: selections,
+                            orderType: itemData.orderType
                         });
                     }
                     allActiveOrdersWithItems.push({
@@ -8681,13 +8682,15 @@ window.openSearchModalTakeOrder = function() {
 
             resultsContainer.innerHTML = filtered.map(order => {
                 const tableNum = order.tableId ? order.tableId.toUpperCase() : 'N/A';
-                const itemsHtml = order.items.map(it => `
+                const itemsHtml = order.items.map(it => {
+                    const typeLabel = (order.orderType === 'mix' && it.orderType) ? (it.orderType === 'dine-in' ? ' (D)' : ' (TA)') : '';
+                    return `
                     <div style="margin-bottom:8px; font-size: 0.85rem; border-bottom: 1px dashed #eee; padding-bottom: 5px;">
-                        <div><b>${it.name} x ${it.qty}</b></div>
+                        <div><b>${it.name}${typeLabel} x ${it.qty}</b></div>
                         ${it.selections.length ? `<div style="font-size:0.75rem; color:#666; margin-left:10px;">• ${it.selections.join(', ')}</div>` : ''}
                         ${it.notes ? `<div style="font-size:0.75rem; color:#764ba2; margin-left:10px; font-style:italic;">Request: ${it.notes}</div>` : ''}
                     </div>
-                `).join('');
+                `}).join('');
 
                 return `
                     <div class="order-detail-card" style="cursor:pointer; border-left: 6px solid #764ba2;" onclick="selectOrderFromSearch('${order.id}', '${order.tableId}', '${tableNum}')">
