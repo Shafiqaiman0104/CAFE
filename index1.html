@@ -6942,21 +6942,23 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             const index = selectedCheckoutItems.findIndex(i => i.itemId === itemId);
             const el = document.getElementById(`chk-item-${itemId}`);
             const icon = document.getElementById(`icon-item-${itemId}`);
-            const maxQty = parseInt(el.getAttribute('data-max-qty'));
+            const maxQty = parseFloat(el.getAttribute('data-max-qty'));
             const unitPrice = parseFloat(el.getAttribute('data-unit-price'));
+            const isMeasurement = el.getAttribute('data-sold-by') === 'measurement';
 
             if (index > -1) {
                 selectedCheckoutItems.splice(index, 1);
                 if (el) el.classList.remove('checkout-item-selected');
                 if (icon) { icon.classList.remove('fa-check-circle'); icon.classList.add('fa-circle'); icon.style.opacity = "0.3"; }
             } else {
-                // Default to 1 qty when selecting in split mode
-                const qtyToPay = 1;
+                // Default to full amount for measurement items, or 1 for standard items
+                const qtyToPay = isMeasurement ? maxQty : 1;
                 selectedCheckoutItems.push({ orderId, itemId, unitPrice, qtyToPay, maxQty });
                 if (el) el.classList.add('checkout-item-selected');
                 if (icon) { icon.classList.remove('fa-circle'); icon.classList.add('fa-check-circle'); icon.style.opacity = "1"; }
                 
-                document.getElementById(`chk-qty-val-${itemId}`).innerText = qtyToPay;
+                const qtyValEl = document.getElementById(`chk-qty-val-${itemId}`);
+                if (qtyValEl) qtyValEl.innerText = qtyToPay;
                 document.getElementById(`chk-price-display-${itemId}`).innerText = `RM ${(qtyToPay * unitPrice).toFixed(2)}`;
             }
             recalculateCheckoutTotals();
