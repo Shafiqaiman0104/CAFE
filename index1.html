@@ -7893,7 +7893,11 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
         html += `
             <div class="form-group">
                 <label>Amount (${currentMenuObjTakeOrder.unit}):</label>
-                <input type="number" id="measurementAmountTakeOrder" value="1.00" step="0.01" min="0.01" style="font-size:1.5rem; text-align:center; border:2px solid #764ba2; border-radius:12px; padding:10px;">
+                <div style="display: flex; align-items: center; justify-content: center; gap: 15px; margin-top: 10px;">
+                    <button type="button" onclick="adjustMeasurementInput(0.1)" style="width: 45px; height: 45px; border-radius: 50%; border: 2px solid #e2e8f0; background: white; font-size: 1.5rem; cursor: pointer; color: #764ba2; display: flex; align-items: center; justify-content: center;">+</button>
+                    <input type="number" id="measurementAmountTakeOrder" value="1.00" step="0.01" min="0.01" style="width: 120px; font-size:1.5rem; text-align:center; border:2px solid #764ba2; border-radius:12px; padding:10px; -moz-appearance: textfield;">
+                    <button type="button" onclick="adjustMeasurementInput(-0.1)" style="width: 45px; height: 45px; border-radius: 50%; border: 2px solid #e2e8f0; background: white; font-size: 1.5rem; cursor: pointer; color: #764ba2; display: flex; align-items: center; justify-content: center;">-</button>
+                </div>
             </div>
         `;
     }
@@ -8056,6 +8060,14 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
             currentSelectedModifiersTakeOrder = [];
         };
 
+        window.adjustMeasurementInput = function(delta) {
+            const input = document.getElementById('measurementAmountTakeOrder');
+            if (input) {
+                let val = parseFloat(input.value) || 0;
+                input.value = (Math.max(0.01, val + delta)).toFixed(2);
+            }
+        };
+
         function updateOrdersUITakeOrder() {
             const container = document.getElementById('ordersListTakeOrder');
             const subtotalSpan = document.getElementById('orderSubtotalTakeOrder');
@@ -8100,7 +8112,6 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
                 
                 const isMeasurement = item.soldBy === 'measurement';
                 const qtyDisplay = isMeasurement ? `${item.qty}${item.unit}` : `x ${item.qty}`;
-                const controlDisplay = isMeasurement ? 'none' : 'flex';
 
                 html += `
                     <div class="order-item-card-takeorder">
@@ -8110,12 +8121,11 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
                         </div>
                         <div class="order-item-details-takeorder">${details}</div>
                         <div class="order-item-actions-takeorder">
-                            <div class="qty-control-takeorder" style="display: ${controlDisplay};">
-                                <button class="qty-btn-takeorder" onclick="updateQtyTakeOrder(${idx}, -1)">-</button>
-                                <span>${item.qty}</span>
-                                <button class="qty-btn-takeorder" onclick="updateQtyTakeOrder(${idx}, 1)">+</button>
+                            <div class="qty-control-takeorder" style="display: flex;">
+                                <button class="qty-btn-takeorder" onclick="updateQtyTakeOrder(${idx}, ${isMeasurement ? 0.1 : 1})">+</button>
+                                <span>${item.qty}${isMeasurement ? item.unit : ''}</span>
+                                <button class="qty-btn-takeorder" onclick="updateQtyTakeOrder(${idx}, -${isMeasurement ? 0.1 : 1})">-</button>
                             </div>
-                            ${isMeasurement ? `<button class="edit-note-btn" onclick="openItemModalTakeOrder('${item.id}')" title="Adjust Amount"><i class="fas fa-weight-hanging"></i></button>` : ''}
                             <button class="edit-note-btn" onclick="openNotesEditTakeOrder(${idx})"><i class="fas fa-edit"></i></button>
                             <button class="remove-item-btn" onclick="removeCartItemTakeOrder(${idx})"><i class="fas fa-trash"></i></button>
                         </div>
@@ -8135,8 +8145,10 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
 
         window.updateQtyTakeOrder = function(index, delta) {
             const item = cartTakeOrder[index];
-            let newQty = item.qty + delta;
-            if (newQty < 1) {
+            // Use precision to avoid floating point errors (e.g. 0.30000000000000004)
+            let newQty = parseFloat((item.qty + delta).toFixed(2));
+            
+            if (newQty <= 0) {
                 cartTakeOrder.splice(index, 1);
             } else {
                 item.qty = newQty;
