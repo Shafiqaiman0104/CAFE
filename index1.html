@@ -6110,7 +6110,8 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                 const isCancelled = item.status === 'cancelled';
                 const isPaid = item.isPaid === true;
                 const isPaidEarly = item.isPaidEarly === true;
-                itemCount += 1;
+                const isMeasurement = item.soldBy === 'measurement';
+                itemCount += isMeasurement ? 1 : (parseInt(item.qty) || 0);
 
                 if (!isCancelled) {
                     runningSubtotal += parseFloat(item.total) || (parseFloat(item.basePrice) * parseFloat(item.qty));
@@ -6130,7 +6131,6 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                 }
 
                     const typeSuffix = (isMixOrder && item.orderType) ? ` (${item.orderType === 'dine-in' ? 'Dine In' : 'Takeaway'})` : '';
-                    const isMeasurement = item.soldBy === 'measurement';
                     const qtyDisplay = isMeasurement ? `X ${item.qty}${item.unit || ''}` : `x ${item.qty}`;
 
                 itemsHtml += `<div class="order-item-detail" style="${itemStyle}">
