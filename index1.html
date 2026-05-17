@@ -6880,7 +6880,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
 
                         orderItemsHtml += `
                             <div id="chk-item-${itemDoc.id}" class="checkout-item-row checkout-item-selected"
-                                 data-order-id="${orderDoc.id}" data-price="${itemPrice}" data-max-qty="${maxQty}" data-unit-price="${unitPrice}"
+                                 data-order-id="${orderDoc.id}" data-price="${itemPrice}" data-max-qty="${maxQty}" data-unit-price="${unitPrice}" data-sold-by="${item.soldBy || 'item'}"
                                  onclick="toggleItemSelectionCheckout('${orderDoc.id}', '${itemDoc.id}')">
                                 <div style="display:flex; justify-content:space-between; font-size:0.9rem; align-items:center;">
                                     <div style="display: flex; align-items: center; gap: 8px;">
@@ -6980,8 +6980,9 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                 const icon = document.getElementById(`icon-item-${itemId}`);
                 const qtyCtrl = document.getElementById(`qty-ctrl-${itemId}`);
                 const qtyLabel = document.getElementById(`chk-qty-label-${itemId}`);
-                const maxQty = parseInt(row.getAttribute('data-max-qty'));
+                const maxQty = parseFloat(row.getAttribute('data-max-qty'));
                 const unitPrice = parseFloat(row.getAttribute('data-unit-price'));
+                const isMeasurement = row.getAttribute('data-sold-by') === 'measurement';
                 
                 if (isFull) {
                     const orderId = row.getAttribute('data-order-id');
@@ -6995,7 +6996,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                     document.getElementById(`chk-price-display-${itemId}`).innerText = `RM ${(maxQty * unitPrice).toFixed(2)}`;
                 } else {
                     row.classList.remove('checkout-item-selected');
-                    if (qtyCtrl && maxQty > 1) {
+                    if (qtyCtrl && maxQty > 1 && !isMeasurement) {
                         qtyCtrl.style.display = 'flex';
                         qtyLabel.style.display = 'none';
                     } else {
@@ -7231,10 +7232,11 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
 
         window.voidItemFromCheckout = async function(orderId, itemId, price) {
             const row = document.getElementById(`chk-item-${itemId}`);
-            const maxQty = parseInt(row.getAttribute('data-max-qty'));
+            const maxQty = parseFloat(row.getAttribute('data-max-qty'));
+            const isMeasurement = row.getAttribute('data-sold-by') === 'measurement';
             const name = row.querySelector('span[style*="font-weight:600"]').innerText;
             const unitPrice = parseFloat(row.getAttribute('data-unit-price'));
-            if (maxQty > 1) {
+            if (maxQty > 1 && !isMeasurement) {
                 voidingItemData = { orderId, itemId, maxQty, unitPrice, name, source: 'checkout' };
                 document.getElementById('voidQtyItemName').innerText = name;
                 document.getElementById('voidModalQtyVal').innerText = "1";
@@ -8922,7 +8924,7 @@ window.openSearchModalTakeOrder = function() {
                                     <div style="display: flex; align-items: center; gap: 8px;">
                                         ${isVoidModeOrdersTab ? (
                                             (!isItemCancelled && !isItemPaid && !isItemPaidEarly) ? `
-                                                <i class="fas fa-trash-alt" style="color: #e53e3e; cursor: pointer; padding: 5px;" title="Cancel Item" onclick="voidItemFromOrdersTab('${orderId}', '${item.docId}', '${item.total}', '${item.qty}', '${item.name.replace(/'/g, "\\'")}')"></i>
+                                                <i class="fas fa-trash-alt" style="color: #e53e3e; cursor: pointer; padding: 5px;" title="Cancel Item" onclick="voidItemFromOrdersTab('${orderId}', '${item.docId}', '${item.total}', '${item.qty}', '${item.name.replace(/'/g, "\\'")}', '${item.soldBy || 'item'}')"></i>
                                             ` : (isItemCancelled && o.status !== 'cancelled') ? `
                                                 <i class="fas fa-plus-circle" style="color: #38a169; cursor: pointer; padding: 5px;" title="Uncancel Item" onclick="updateItemStatusOrdersTab('${orderId}', '${item.docId}', 'pending')"></i>
                                             ` : ''
@@ -9100,11 +9102,11 @@ window.openSearchModalTakeOrder = function() {
             loadActiveOrders();
         };
 
-        window.voidItemFromOrdersTab = async function(orderId, itemId, itemTotal, itemQty, itemName) {
-            const maxQty = parseInt(itemQty);
+        window.voidItemFromOrdersTab = async function(orderId, itemId, itemTotal, itemQty, itemName, soldBy) {
+            const maxQty = parseFloat(itemQty);
             const unitPrice = parseFloat(itemTotal) / maxQty;
             
-            if (maxQty > 1) {
+            if (maxQty > 1 && soldBy !== 'measurement') {
                 voidingItemData = { orderId, itemId, maxQty, unitPrice, name: itemName, source: 'orders' };
                 document.getElementById('voidQtyItemName').innerText = itemName;
                 document.getElementById('voidModalQtyVal').innerText = "1";
