@@ -2648,7 +2648,21 @@
                 <input type="text" id="menuItemImage" placeholder="https://example.com/image.jpg">
             </div>
             <div class="form-group">
-                <label>Price (RM)</label>
+                <label>Sold By</label>
+                <div style="display: flex; gap: 20px; margin-bottom: 10px;">
+                    <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;"><input type="radio" name="soldBy" value="item" checked onclick="toggleSoldBy('item')"> Item</label>
+                    <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;"><input type="radio" name="soldBy" value="measurement" onclick="toggleSoldBy('measurement')"> Measurement</label>
+                </div>
+            </div>
+            <div class="form-group" id="unitSelectGroup" style="display: none;">
+                <label>Select Unit</label>
+                <select id="menuItemUnit" onchange="handleUnitChange(this.value)">
+                    <option value="">Select unit...</option>
+                    <option value="g">Gram (g)</option><option value="kg">Kilogram (kg)</option><option value="ml">Milliliter (ml)</option><option value="l">Liter (l)</option>
+                </select>
+            </div>
+            <div class="form-group" id="priceInputGroup">
+                <label id="priceLabel">Price (RM)</label>
                 <input type="number" id="menuItemPrice" step="0.01">
             </div>
             <div class="form-group">
@@ -4397,6 +4411,9 @@
             document.getElementById('menuItemDesc').value = '';
             document.getElementById('menuItemImage').value = '';
             document.getElementById('menuItemPrice').value = '';
+            document.querySelectorAll('input[name="soldBy"]').forEach(r => r.checked = r.value === 'item');
+            document.getElementById('menuItemUnit').value = '';
+            toggleSoldBy('item');
             document.getElementById('menuItemPrepTime').value = '15';
             document.getElementById('menuItemTags').value = '';
             document.getElementById('menuItemRecommended').checked = false;
@@ -4428,6 +4445,9 @@
             document.getElementById('menuItemDesc').value = item.description || '';
             document.getElementById('menuItemImage').value = item.image || '';
             document.getElementById('menuItemPrice').value = item.price || '';
+            document.querySelectorAll('input[name="soldBy"]').forEach(r => r.checked = r.value === (item.soldBy || 'item'));
+            document.getElementById('menuItemUnit').value = item.unit || '';
+            toggleSoldBy(item.soldBy || 'item', !!item.unit);
             document.getElementById('menuItemPrepTime').value = item.preparationTime || '15';
             document.getElementById('menuItemTags').value = item.tags || '';
             document.getElementById('menuItemRecommended').checked = item.recommend || false;
@@ -4446,6 +4466,27 @@
             });
             
             document.getElementById('addMenuItemModal').style.display = 'flex';
+        };
+
+        window.toggleSoldBy = function(val, hasUnit = false) {
+            const unitGroup = document.getElementById('unitSelectGroup');
+            const priceGroup = document.getElementById('priceInputGroup');
+            const priceLabel = document.getElementById('priceLabel');
+            
+            if (val === 'measurement') {
+                unitGroup.style.display = 'block';
+                priceGroup.style.display = hasUnit ? 'block' : 'none';
+                priceLabel.innerText = `Price (RM) per ${document.getElementById('menuItemUnit').value || 'Unit'}`;
+            } else {
+                unitGroup.style.display = 'none';
+                priceGroup.style.display = 'block';
+                priceLabel.innerText = 'Price (RM)';
+            }
+        };
+
+        window.handleUnitChange = function(val) {
+            document.getElementById('priceInputGroup').style.display = val ? 'block' : 'none';
+            document.getElementById('priceLabel').innerText = `Price (RM) per ${val}`;
         };
 
         window.showVariantSelector = function() {
@@ -4562,6 +4603,8 @@
                 name: document.getElementById('menuItemName').value,
                 description: document.getElementById('menuItemDesc').value,
                 image: document.getElementById('menuItemImage').value,
+                soldBy: document.querySelector('input[name="soldBy"]:checked').value,
+                unit: document.getElementById('menuItemUnit').value,
                 price: document.getElementById('menuItemPrice').value,
                 categoryId: document.getElementById('menuItemCategory').value,
                 preparationTime: document.getElementById('menuItemPrepTime').value,
@@ -6069,10 +6112,11 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                 const isCancelled = item.status === 'cancelled';
                 const isPaid = item.isPaid === true;
                 const isPaidEarly = item.isPaidEarly === true;
-                itemCount += parseInt(item.qty) || 0;
+                const isMeasurement = item.soldBy === 'measurement';
+                itemCount += isMeasurement ? 1 : (parseInt(item.qty) || 0);
 
                 if (!isCancelled) {
-                    runningSubtotal += parseFloat(item.total) || (parseFloat(item.basePrice) * parseInt(item.qty));
+                    runningSubtotal += parseFloat(item.total) || (parseFloat(item.basePrice) * parseFloat(item.qty));
                 }
 
                 let itemStyle = '';
@@ -6089,10 +6133,11 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                 }
 
                     const typeSuffix = (isMixOrder && item.orderType) ? ` (${item.orderType === 'dine-in' ? 'Dine In' : 'Takeaway'})` : '';
+                    const qtyDisplay = isMeasurement ? `X ${item.qty}${item.unit || ''}` : `x ${item.qty}`;
 
                 itemsHtml += `<div class="order-item-detail" style="${itemStyle}">
-                        <span>${item.name}${typeSuffix} x ${item.qty} ${remark}</span>
-                    <span>RM ${item.total || (parseFloat(item.basePrice) * parseInt(item.qty)).toFixed(2)}</span>
+                        <span>${item.name}${typeSuffix} ${qtyDisplay} ${remark}</span>
+                    <span>RM ${parseFloat(item.total || (parseFloat(item.basePrice) * parseFloat(item.qty))).toFixed(2)}</span>
                 </div>`;
                 
                 if (item.notes) {
@@ -6598,6 +6643,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                         
                         let itemStyles = '';
                         let paidText = '';
+                        const qtyLabel = item.soldBy === 'measurement' ? `${item.qty}${item.unit}` : `x${item.qty}`;
                         if (isOrderCancelledGlobal || isItemCancelled) {
                             itemStyles = 'color: #e53e3e; text-decoration: line-through;';
                         } else if (isItemPaidEarly) {
@@ -6621,7 +6667,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                         itemsHtml += `
                             <div style="margin-bottom:8px; ${itemStyles}">
                                 <div style="font-weight:600;">
-                                    ${(order.orderType === 'mix' && item.orderType) ? `${item.name} (${item.orderType === 'dine-in' ? 'D' : 'TA'}) (${item.qty})` : `${item.name} (x${item.qty})`} 
+                                    ${(order.orderType === 'mix' && item.orderType) ? `${item.name} (${item.orderType === 'dine-in' ? 'D' : 'TA'}) (${qtyLabel})` : `${item.name} (${qtyLabel})`} 
                                     ${paidText}${(isOrderCancelledGlobal || isItemCancelled) ? '<span style="font-size:0.7rem; font-weight:bold; text-decoration: none; display: inline-block;">(Cancelled)</span>' : ''}
                                 </div>
                                 ${selectionHtml}
@@ -6780,6 +6826,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             itemsContainer.innerHTML = '<div class="loading">Loading orders...</div>';
             selectedCheckoutItems = []; // Reset previous selection
 
+            isEarlyPaymentMode = false;
             // Use specific selected orders if any, otherwise get all for the table
             const hasSelection = selectedOrderIdsForCheckout.length > 0;
 
@@ -6819,12 +6866,14 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                         if (item.isPaid || item.isPaidEarly || item.status === 'cancelled') continue; // Skip paid or cancelled items
                         
                         hasUnpaidItems = true;
-                        const maxQty = parseInt(item.qty);
+                        const isMeasurement = item.soldBy === 'measurement';
+                        const maxQty = parseFloat(item.qty);
                         const unitPrice = parseFloat(item.total) / maxQty;
                         const itemPrice = parseFloat(item.total);
                         // Select by default
                         selectedCheckoutItems.push({ orderId: orderDoc.id, itemId: itemDoc.id, unitPrice, qtyToPay: maxQty, maxQty });
 
+                        const qtyLabel = isMeasurement ? `${item.qty}${item.unit}` : `x ${item.qty}`;
                         const variantsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderDoc.id, 'items', itemDoc.id, 'selectedVariants'));
                         const modifiersSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderDoc.id, 'items', itemDoc.id, 'selectedModifiers'));
                         
@@ -6835,20 +6884,20 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
 
                         orderItemsHtml += `
                             <div id="chk-item-${itemDoc.id}" class="checkout-item-row checkout-item-selected"
-                                 data-order-id="${orderDoc.id}" data-price="${itemPrice}" data-max-qty="${maxQty}" data-unit-price="${unitPrice}"
+                                 data-order-id="${orderDoc.id}" data-price="${itemPrice}" data-max-qty="${maxQty}" data-unit-price="${unitPrice}" data-sold-by="${item.soldBy || 'item'}"
                                  onclick="toggleItemSelectionCheckout('${orderDoc.id}', '${itemDoc.id}')">
                                 <div style="display:flex; justify-content:space-between; font-size:0.9rem; align-items:center;">
                                     <div style="display: flex; align-items: center; gap: 8px;">
                                         <i id="icon-item-${itemDoc.id}" class="fas fa-check-circle"></i>
                                         <span style="font-weight:600;">${(order.orderType === 'mix' && item.orderType) ? `${item.name} (${item.orderType === 'dine-in' ? 'D' : 'TA'})` : item.name}</span>
-                                        <div class="chk-qty-container" id="qty-ctrl-${itemDoc.id}" style="display:none; align-items:center; gap:8px; margin-left:10px; background:#f1f5f9; padding:2px 8px; border-radius:20px;">
+                                        <div class="chk-qty-container" id="qty-ctrl-${itemDoc.id}" style="display:none; align-items:center; gap:8px; margin-left:10px; background:#f1f5f9; padding:2px 8px; border-radius:20px; ${isMeasurement ? 'display:none!important;' : ''}">
                                             <button onclick="event.stopPropagation(); updateCheckoutItemQty('${orderDoc.id}', '${itemDoc.id}', -1)" 
                                                     style="border:none; background:none; cursor:pointer; padding:0 5px; font-weight:bold; color:#764ba2;">-</button>
                                             <span id="chk-qty-val-${itemDoc.id}" style="font-size:0.8rem; font-weight:bold; min-width:15px; text-align:center;">${item.qty}</span>
                                             <button onclick="event.stopPropagation(); updateCheckoutItemQty('${orderDoc.id}', '${itemDoc.id}', 1)" 
                                                     style="border:none; background:none; cursor:pointer; padding:0 5px; font-weight:bold; color:#764ba2;">+</button>
                                         </div>
-                                        <span id="chk-qty-label-${itemDoc.id}" style="font-weight:600;"> x ${item.qty}</span>
+                                        <span id="chk-qty-label-${itemDoc.id}" style="font-weight:600;"> ${qtyLabel}</span>
                                     </div>
                                     <div style="display: flex; align-items: center; gap: 10px;">
                                         <span id="chk-price-display-${itemDoc.id}">RM ${itemPrice.toFixed(2)}</span>
@@ -6897,21 +6946,23 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             const index = selectedCheckoutItems.findIndex(i => i.itemId === itemId);
             const el = document.getElementById(`chk-item-${itemId}`);
             const icon = document.getElementById(`icon-item-${itemId}`);
-            const maxQty = parseInt(el.getAttribute('data-max-qty'));
+            const maxQty = parseFloat(el.getAttribute('data-max-qty'));
             const unitPrice = parseFloat(el.getAttribute('data-unit-price'));
+            const isMeasurement = el.getAttribute('data-sold-by') === 'measurement';
 
             if (index > -1) {
                 selectedCheckoutItems.splice(index, 1);
                 if (el) el.classList.remove('checkout-item-selected');
                 if (icon) { icon.classList.remove('fa-check-circle'); icon.classList.add('fa-circle'); icon.style.opacity = "0.3"; }
             } else {
-                // Default to 1 qty when selecting in split mode
-                const qtyToPay = 1;
+                // Default to full amount for measurement items, or 1 for standard items
+                const qtyToPay = isMeasurement ? maxQty : 1;
                 selectedCheckoutItems.push({ orderId, itemId, unitPrice, qtyToPay, maxQty });
                 if (el) el.classList.add('checkout-item-selected');
                 if (icon) { icon.classList.remove('fa-circle'); icon.classList.add('fa-check-circle'); icon.style.opacity = "1"; }
                 
-                document.getElementById(`chk-qty-val-${itemId}`).innerText = qtyToPay;
+                const qtyValEl = document.getElementById(`chk-qty-val-${itemId}`);
+                if (qtyValEl) qtyValEl.innerText = qtyToPay;
                 document.getElementById(`chk-price-display-${itemId}`).innerText = `RM ${(qtyToPay * unitPrice).toFixed(2)}`;
             }
             recalculateCheckoutTotals();
@@ -6935,8 +6986,9 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                 const icon = document.getElementById(`icon-item-${itemId}`);
                 const qtyCtrl = document.getElementById(`qty-ctrl-${itemId}`);
                 const qtyLabel = document.getElementById(`chk-qty-label-${itemId}`);
-                const maxQty = parseInt(row.getAttribute('data-max-qty'));
+                const maxQty = parseFloat(row.getAttribute('data-max-qty'));
                 const unitPrice = parseFloat(row.getAttribute('data-unit-price'));
+                const isMeasurement = row.getAttribute('data-sold-by') === 'measurement';
                 
                 if (isFull) {
                     const orderId = row.getAttribute('data-order-id');
@@ -6950,7 +7002,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                     document.getElementById(`chk-price-display-${itemId}`).innerText = `RM ${(maxQty * unitPrice).toFixed(2)}`;
                 } else {
                     row.classList.remove('checkout-item-selected');
-                    if (qtyCtrl && maxQty > 1) {
+                    if (qtyCtrl && maxQty > 1 && !isMeasurement) {
                         qtyCtrl.style.display = 'flex';
                         qtyLabel.style.display = 'none';
                     } else {
@@ -7186,10 +7238,11 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
 
         window.voidItemFromCheckout = async function(orderId, itemId, price) {
             const row = document.getElementById(`chk-item-${itemId}`);
-            const maxQty = parseInt(row.getAttribute('data-max-qty'));
+            const maxQty = parseFloat(row.getAttribute('data-max-qty'));
+            const isMeasurement = row.getAttribute('data-sold-by') === 'measurement';
             const name = row.querySelector('span[style*="font-weight:600"]').innerText;
             const unitPrice = parseFloat(row.getAttribute('data-unit-price'));
-            if (maxQty > 1) {
+            if (maxQty > 1 && !isMeasurement) {
                 voidingItemData = { orderId, itemId, maxQty, unitPrice, name, source: 'checkout' };
                 document.getElementById('voidQtyItemName').innerText = name;
                 document.getElementById('voidModalQtyVal').innerText = "1";
@@ -7841,9 +7894,21 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
     currentSelectedModifiersTakeOrder = [];
     
     const modalBody = document.getElementById('modalBodyTakeOrder');
-    let html = `
-        <div class="form-group"><strong>${currentMenuObjTakeOrder.name}</strong><br>Base Price: RM ${parseFloat(currentMenuObjTakeOrder.price).toFixed(2)}</div>
-    `;
+    const isMeasurement = currentMenuObjTakeOrder.soldBy === 'measurement';
+    let html = `<div class="form-group"><strong>${currentMenuObjTakeOrder.name}</strong><br>Base Price: RM ${parseFloat(currentMenuObjTakeOrder.price).toFixed(2)}${isMeasurement ? ' per ' + currentMenuObjTakeOrder.unit : ''}</div>`;
+    
+    if (isMeasurement) {
+        html += `
+            <div class="form-group">
+                <label>Amount (${currentMenuObjTakeOrder.unit}):</label>
+                <div style="display: flex; align-items: center; justify-content: center; gap: 15px; margin-top: 10px;">
+                    <button type="button" onclick="adjustMeasurementInput(0.1)" style="width: 45px; height: 45px; border-radius: 50%; border: 2px solid #e2e8f0; background: white; font-size: 1.5rem; cursor: pointer; color: #764ba2; display: flex; align-items: center; justify-content: center;">+</button>
+                    <input type="number" id="measurementAmountTakeOrder" value="1.00" step="0.01" min="0.01" style="width: 120px; font-size:1.5rem; text-align:center; border:2px solid #764ba2; border-radius:12px; padding:10px; -moz-appearance: textfield;">
+                    <button type="button" onclick="adjustMeasurementInput(-0.1)" style="width: 45px; height: 45px; border-radius: 50%; border: 2px solid #e2e8f0; background: white; font-size: 1.5rem; cursor: pointer; color: #764ba2; display: flex; align-items: center; justify-content: center;">-</button>
+                </div>
+            </div>
+        `;
+    }
     
     if (currentMenuObjTakeOrder.variants && currentMenuObjTakeOrder.variants.length > 0) {
         for (const v of currentMenuObjTakeOrder.variants) {
@@ -7967,7 +8032,8 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
                 }
             }
             
-            const qty = 1;
+            const isMeasurement = currentMenuObjTakeOrder.soldBy === 'measurement';
+            const qty = isMeasurement ? parseFloat(document.getElementById('measurementAmountTakeOrder').value) || 1 : 1;
             const notes = document.getElementById('itemNotesModalTakeOrder')?.value || '';
             
             const basePrice = parseFloat(currentMenuObjTakeOrder.price);
@@ -7978,6 +8044,8 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
             cartTakeOrder.push({
                 id: currentMenuObjTakeOrder.id,
                 categoryId: currentMenuObjTakeOrder.categoryId,
+                soldBy: currentMenuObjTakeOrder.soldBy || 'item',
+                unit: currentMenuObjTakeOrder.unit || '',
                 name: currentMenuObjTakeOrder.name,
                 basePrice,
                 qty,
@@ -8000,6 +8068,14 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
             currentSelectedModifiersTakeOrder = [];
         };
 
+        window.adjustMeasurementInput = function(delta) {
+            const input = document.getElementById('measurementAmountTakeOrder');
+            if (input) {
+                let val = parseFloat(input.value) || 0;
+                input.value = (Math.max(0.01, val + delta)).toFixed(2);
+            }
+        };
+
         function updateOrdersUITakeOrder() {
             const container = document.getElementById('ordersListTakeOrder');
             const subtotalSpan = document.getElementById('orderSubtotalTakeOrder');
@@ -8008,7 +8084,7 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
             const badgeBottom = document.getElementById('orderCountBadgeBottomTakeOrder');
             const badgeTop = document.getElementById('orderCountBadgeTakeOrder');
             
-            const totalItems = cartTakeOrder.reduce((s, i) => s + i.qty, 0);
+            const totalItems = cartTakeOrder.length;
             if (badgeBottom) badgeBottom.innerText = totalItems;
             if (badgeTop) badgeTop.innerText = totalItems;
             
@@ -8042,18 +8118,21 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
                 }
                 if (item.notes) details += `<div class="notes-text"><strong>Special Request:</strong> ${item.notes}</div>`;
                 
+                const isMeasurement = item.soldBy === 'measurement';
+                const qtyDisplay = isMeasurement ? `${item.qty}${item.unit}` : `x ${item.qty}`;
+
                 html += `
                     <div class="order-item-card-takeorder">
                         <div class="order-item-header-takeorder">
-                            <span class="order-item-name-takeorder">${item.name} x ${item.qty}</span>
+                            <span class="order-item-name-takeorder">${item.name} ${qtyDisplay}</span>
                             <span class="order-item-price-takeorder">RM ${item.total.toFixed(2)}</span>
                         </div>
                         <div class="order-item-details-takeorder">${details}</div>
                         <div class="order-item-actions-takeorder">
-                            <div class="qty-control-takeorder">
-                                <button class="qty-btn-takeorder" onclick="updateQtyTakeOrder(${idx}, -1)">-</button>
-                                <span>${item.qty}</span>
-                                <button class="qty-btn-takeorder" onclick="updateQtyTakeOrder(${idx}, 1)">+</button>
+                            <div class="qty-control-takeorder" style="display: flex;">
+                                <button class="qty-btn-takeorder" onclick="updateQtyTakeOrder(${idx}, ${isMeasurement ? 0.1 : 1})">+</button>
+                                <span>${item.qty}${isMeasurement ? item.unit : ''}</span>
+                                <button class="qty-btn-takeorder" onclick="updateQtyTakeOrder(${idx}, -${isMeasurement ? 0.1 : 1})">-</button>
                             </div>
                             <button class="edit-note-btn" onclick="openNotesEditTakeOrder(${idx})"><i class="fas fa-edit"></i></button>
                             <button class="remove-item-btn" onclick="removeCartItemTakeOrder(${idx})"><i class="fas fa-trash"></i></button>
@@ -8074,8 +8153,10 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
 
         window.updateQtyTakeOrder = function(index, delta) {
             const item = cartTakeOrder[index];
-            let newQty = item.qty + delta;
-            if (newQty < 1) {
+            // Use precision to avoid floating point errors (e.g. 0.30000000000000004)
+            let newQty = parseFloat((item.qty + delta).toFixed(2));
+            
+            if (newQty <= 0) {
                 cartTakeOrder.splice(index, 1);
             } else {
                 item.qty = newQty;
@@ -8119,7 +8200,7 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
             }
 
             let subtotal = cartTakeOrder.reduce((s, i) => s + i.total, 0);
-            let totalQty = cartTakeOrder.reduce((s, i) => s + parseInt(i.qty), 0);
+            let totalLines = cartTakeOrder.length;
             const tax = taxActive ? subtotal * (currentTaxRate / 100) : 0;
             const total = subtotal + tax;
 
@@ -8161,11 +8242,13 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
                 const isMix = selectedOrderTypeTakeOrder === 'mix';
                 if (isMix && !item.itemOrderType) item.itemOrderType = 'dine-in'; // default for mix
 
+                const qtyLabel = item.soldBy === 'measurement' ? `${item.qty}${item.unit}` : `x ${item.qty}`;
+
                 itemsHtml += `
                     <div style="padding:8px 0; border-bottom:1px dashed #eee;">
                         <div style="display:flex; justify-content:space-between;">
                             <div style="flex: 1;">
-                                <span style="font-weight:600;">${item.name} x ${item.qty}</span>
+                                <span style="font-weight:600;">${item.name} ${qtyLabel}</span>
                                 ${isMix ? `
                                 <div class="item-mix-toggle">
                                     <div class="mix-type-btn ${item.itemOrderType === 'dine-in' ? 'active' : ''}" onclick="setItemOrderType(${idx}, 'dine-in')">Dine In</div>
@@ -8210,7 +8293,7 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
                 </div>
                 <div style="background:#eee; padding:12px; border-radius:8px;">
                     <div style="display:flex; justify-content:space-between; margin-bottom:4px; font-size:0.9rem; color:#666;">
-                        <span>Total Items:</span><span>${totalQty}</span>
+                        <span>Total Items:</span><span>${totalLines}</span>
                     </div>
                     <div style="display:flex; justify-content:space-between; margin-bottom:10px; font-size:0.9rem; color:#666; border-bottom: 1px solid #ccc; padding-bottom: 8px;">
                         <span>Est. Preparation:</span><span>${estPrepTime} mins</span>
@@ -8293,6 +8376,8 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
                     const itemRef = await addDoc(collection(db, 'licenses', currentClientId, 'orders', orderRef.id, 'items'), {
                         name: item.name,
                         categoryId: item.categoryId || '',
+                        soldBy: item.soldBy || 'item',
+                        unit: item.unit || '',
                         basePrice: item.basePrice.toString(),
                         qty: item.qty.toString(),
                         total: item.total.toFixed(2),
@@ -8845,7 +8930,7 @@ window.openSearchModalTakeOrder = function() {
                                     <div style="display: flex; align-items: center; gap: 8px;">
                                         ${isVoidModeOrdersTab ? (
                                             (!isItemCancelled && !isItemPaid && !isItemPaidEarly) ? `
-                                                <i class="fas fa-trash-alt" style="color: #e53e3e; cursor: pointer; padding: 5px;" title="Cancel Item" onclick="voidItemFromOrdersTab('${orderId}', '${item.docId}', '${item.total}', '${item.qty}', '${item.name.replace(/'/g, "\\'")}')"></i>
+                                                <i class="fas fa-trash-alt" style="color: #e53e3e; cursor: pointer; padding: 5px;" title="Cancel Item" onclick="voidItemFromOrdersTab('${orderId}', '${item.docId}', '${item.total}', '${item.qty}', '${item.name.replace(/'/g, "\\'")}', '${item.soldBy || 'item'}')"></i>
                                             ` : (isItemCancelled && o.status !== 'cancelled') ? `
                                                 <i class="fas fa-plus-circle" style="color: #38a169; cursor: pointer; padding: 5px;" title="Uncancel Item" onclick="updateItemStatusOrdersTab('${orderId}', '${item.docId}', 'pending')"></i>
                                             ` : ''
@@ -9023,11 +9108,11 @@ window.openSearchModalTakeOrder = function() {
             loadActiveOrders();
         };
 
-        window.voidItemFromOrdersTab = async function(orderId, itemId, itemTotal, itemQty, itemName) {
-            const maxQty = parseInt(itemQty);
+        window.voidItemFromOrdersTab = async function(orderId, itemId, itemTotal, itemQty, itemName, soldBy) {
+            const maxQty = parseFloat(itemQty);
             const unitPrice = parseFloat(itemTotal) / maxQty;
             
-            if (maxQty > 1) {
+            if (maxQty > 1 && soldBy !== 'measurement') {
                 voidingItemData = { orderId, itemId, maxQty, unitPrice, name: itemName, source: 'orders' };
                 document.getElementById('voidQtyItemName').innerText = itemName;
                 document.getElementById('voidModalQtyVal').innerText = "1";
@@ -9853,10 +9938,11 @@ window.openSearchModalTakeOrder = function() {
                 const itemType = item.orderType || 'dine-in';
                 const typeSuffix = ` (${itemType === 'dine-in' ? 'Dine In' : (itemType === 'delivery' ? 'Delivery' : 'Takeaway')})`;
                 const displayName = `${item.name}${typeSuffix}`;
+                const qtyDisplay = item.soldBy === 'measurement' ? `${item.qty}${item.unit}` : item.qty.toString();
                 
                 const nameStr = displayName.substring(0, width - 14).padEnd(width - 13);
-                const qtyStr = item.qty.toString().padStart(3);
-                const amtStr = parseFloat(item.total).toFixed(2).padStart(10);
+                const qtyStr = qtyDisplay.padStart(5);
+                const amtStr = parseFloat(item.total).toFixed(2).padStart(8);
                 itemsText += `${nameStr}${qtyStr}${amtStr}\n`;
                 
                 if (item.variants?.length) {
@@ -10954,7 +11040,7 @@ window.openSearchModalTakeOrder = function() {
         // Initial check
         updateWifiStatus();
     </script>
-     <script>
+    <script>
               // Register the Service Worker (sw.js)
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
