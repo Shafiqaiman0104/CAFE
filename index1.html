@@ -6110,10 +6110,10 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                 const isCancelled = item.status === 'cancelled';
                 const isPaid = item.isPaid === true;
                 const isPaidEarly = item.isPaidEarly === true;
-                itemCount += parseInt(item.qty) || 0;
+                itemCount += 1;
 
                 if (!isCancelled) {
-                    runningSubtotal += parseFloat(item.total) || (parseFloat(item.basePrice) * parseInt(item.qty));
+                    runningSubtotal += parseFloat(item.total) || (parseFloat(item.basePrice) * parseFloat(item.qty));
                 }
 
                 let itemStyle = '';
@@ -6130,10 +6130,12 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                 }
 
                     const typeSuffix = (isMixOrder && item.orderType) ? ` (${item.orderType === 'dine-in' ? 'Dine In' : 'Takeaway'})` : '';
+                    const isMeasurement = item.soldBy === 'measurement';
+                    const qtyDisplay = isMeasurement ? `X ${item.qty}${item.unit || ''}` : `x ${item.qty}`;
 
                 itemsHtml += `<div class="order-item-detail" style="${itemStyle}">
-                        <span>${item.name}${typeSuffix} x ${item.qty} ${remark}</span>
-                    <span>RM ${item.total || (parseFloat(item.basePrice) * parseInt(item.qty)).toFixed(2)}</span>
+                        <span>${item.name}${typeSuffix} ${qtyDisplay} ${remark}</span>
+                    <span>RM ${parseFloat(item.total || (parseFloat(item.basePrice) * parseFloat(item.qty))).toFixed(2)}</span>
                 </div>`;
                 
                 if (item.notes) {
