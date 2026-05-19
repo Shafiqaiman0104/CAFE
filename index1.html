@@ -4,6 +4,7 @@
     <title>Restaurant POS System</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
         * {
             margin: 0;
@@ -2536,6 +2537,9 @@
                                 <div id="voidToggleBtnOrdersTab" onclick="toggleVoidModeOrdersTab()" style="color: white; cursor: pointer; font-size: 1rem; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1.5px solid white;" title="Toggle Void Mode">
                                     <i class="fas fa-trash-alt"></i>
                                 </div>
+                                <div onclick="openOrderQRScanner()" style="color: white; cursor: pointer; font-size: 1.1rem; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1.5px solid white;" title="Scan Order QR">
+                                    <i class="fas fa-qrcode"></i>
+                                </div>
                                 <div onclick="toggleActiveOrdersSearch()" style="color: white; cursor: pointer; font-size: 1rem;" title="Search Orders">
                                     <i class="fas fa-search"></i>
                                 </div>
@@ -2712,6 +2716,13 @@
             <div class="form-group">
                 <label>Categories (Select which menu categories go to this printer)</label>
                 <div id="deptPrinterCategoriesCheckboxes" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 10px; background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0;"></div>
+            </div>
+            <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; background: #f8fafc; padding: 12px; border-radius: 14px; border: 1px solid #e2e8f0; margin-top: 15px;">
+                <label style="margin-bottom: 0; font-weight: 700;">QR ORDER ID</label>
+                <label class="switch">
+                    <input type="checkbox" id="deptPrinterQrEnabled">
+                    <span class="slider"></span>
+                </label>
             </div>
             <button class="btn" onclick="saveDeptPrinter()">Save</button>
         </div>
@@ -3538,6 +3549,22 @@
             <div style="display: flex; gap: 10px;">
                 <button class="primary-btn" style="background: #e53e3e;" onclick="confirmVoidQtyTakeOrder()">Confirm Void</button>
                 <button class="secondary-btn" onclick="closeModal('voidQtyModalTakeOrder')">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Order QR Scanner Modal -->
+    <div id="orderQRScannerModal" class="modal" style="align-items: center; justify-content: center; z-index: 10003;">
+        <div class="modal-content" style="max-width: 400px; border-radius: 24px; text-align: center; padding: 25px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-qrcode"></i> Scan Order QR</h3>
+                <button class="modal-close" onclick="closeOrderQRScanner()">&times;</button>
+            </div>
+            <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 20px;">Place the QR code on the receipt inside the frame to search for the order.</p>
+            <div id="qr-reader" style="width: 100%; border-radius: 16px; overflow: hidden; background: #000;"></div>
+            <div id="qr-reader-results"></div>
+            <div style="margin-top: 20px;">
+                <button class="secondary-btn" style="width: 100%;" onclick="closeOrderQRScanner()">Cancel</button>
             </div>
         </div>
     </div>
@@ -9567,6 +9594,7 @@ window.openSearchModalTakeOrder = function() {
             document.getElementById('deptPrinterModalTitle').innerText = 'Add Department Printer';
             document.getElementById('editingDeptPrinterId').value = '';
             document.getElementById('deptPrinterName').value = '';
+            document.getElementById('deptPrinterQrEnabled').checked = false;
             
             // Load categories to show checkboxes
             const catsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'menu_categories'));
@@ -9592,6 +9620,7 @@ window.openSearchModalTakeOrder = function() {
             document.getElementById('deptPrinterModalTitle').innerText = 'Edit Department Printer';
             document.getElementById('editingDeptPrinterId').value = id;
             document.getElementById('deptPrinterName').value = dp.name;
+            document.getElementById('deptPrinterQrEnabled').checked = dp.qrEnabled || false;
             
             const savedDeps = dp.department || [];
             const checkboxes = document.querySelectorAll('input[name="deptCat"]');
@@ -9604,10 +9633,11 @@ window.openSearchModalTakeOrder = function() {
             const id = document.getElementById('editingDeptPrinterId').value;
             const name = document.getElementById('deptPrinterName').value.trim();
             const selectedCats = Array.from(document.querySelectorAll('input[name="deptCat"]:checked')).map(cb => cb.value);
+            const qrEnabled = document.getElementById('deptPrinterQrEnabled').checked;
             
             if (!name) { alert('Please enter a name'); return; }
             
-            const data = { name, department: selectedCats, updatedAt: Timestamp.now() };
+            const data = { name, department: selectedCats, qrEnabled, updatedAt: Timestamp.now() };
             if (id) {
                 await updateDoc(doc(db, 'licenses', currentClientId, 'department_printer', id), data);
             } else {
@@ -10006,9 +10036,9 @@ window.openSearchModalTakeOrder = function() {
                                 return dept.department && dept.department.includes(catName);
                             });
                             if (deptItems.length > 0) {
-                                const qId = await addToPrintQueue(orderId, orderNumber, tableNumber, dept.name, deptId, null, null, staffName, orderType, null, orderSeq);
+                                const qId = await addToPrintQueue(orderId, orderNumber, tableNumber, dept.name, deptId, null, null, staffName, orderType, null, orderSeq, dept.qrEnabled);
                                 if (device) {
-                                    const commands = await generateReceiptCommands(orderNumber, tableNumber, deptItems, dept.name, orderTime, "AUTO PRINT", p, staffName, orderType, orderSeq);
+                                    const commands = await generateReceiptCommands(orderNumber, tableNumber, deptItems, dept.name, orderTime, "AUTO PRINT", p, staffName, orderType, orderSeq, dept.qrEnabled);
                                     const success = await sendToBluetoothPrinter(device, commands);
                                     await updateDoc(doc(db, 'licenses', currentClientId, 'print_queue', qId), { status: success ? 'success' : 'failed' });
                                     printActions.push({ label: dept.name, success });
@@ -10033,7 +10063,7 @@ window.openSearchModalTakeOrder = function() {
             }
         };
 
-        async function addToPrintQueue(orderId, orderNumber, tableNumber, deptName, deptId, cashierName = null, paymentMethod = null, staffName = null, orderType = null, paymentInfo = null, orderSeq = null) {
+        async function addToPrintQueue(orderId, orderNumber, tableNumber, deptName, deptId, cashierName = null, paymentMethod = null, staffName = null, orderType = null, paymentInfo = null, orderSeq = null, qrEnabled = false) {
             const docRef = await addDoc(collection(db, 'licenses', currentClientId, 'print_queue'), {
                 orderId,
                 orderNumber,
@@ -10048,6 +10078,7 @@ window.openSearchModalTakeOrder = function() {
                 staffName: staffName,
                 orderType: orderType,
                 paymentInfo: paymentInfo ? JSON.stringify(paymentInfo) : null,
+                qrEnabled: qrEnabled,
                 createdAt: Timestamp.now()
             });
             return docRef.id;
@@ -10283,7 +10314,7 @@ window.openSearchModalTakeOrder = function() {
                     const payMethod = item.paymentMethod || 'N/A'; // Retrieve from print queue item
                     commands = await generateMainReceiptCommands(item.orderNumber, item.tableNumber || 'N/A', itemsToPrint, orderTime, payMethod, statusLabel, cashierName, printerConfig, orderType, paymentInfo, orderSeq);
                 } else {
-                    commands = await generateReceiptCommands(item.orderNumber, item.tableNumber || 'N/A', itemsToPrint, item.printerDeptName || 'Receipt', orderTime, statusLabel, printerConfig, staffName, orderType, orderSeq);
+                    commands = await generateReceiptCommands(item.orderNumber, item.tableNumber || 'N/A', itemsToPrint, item.printerDeptName || 'Receipt', orderTime, statusLabel, printerConfig, staffName, orderType, orderSeq, item.qrEnabled || false);
                 }
                 printSuccess = await sendToBluetoothPrinter(device, commands);
                 if (device.gatt.connected) device.gatt.disconnect();
@@ -10427,7 +10458,7 @@ window.openSearchModalTakeOrder = function() {
         };
 
         // Helper to generate ESC/POS commands in the requested format
-        async function generateReceiptCommands(orderNumber, tableNumber, items, headerTitle, orderTime, statusLabel, p = null, staffName = 'N/A', orderType = 'dine-in', orderSeq = null) {
+        async function generateReceiptCommands(orderNumber, tableNumber, items, headerTitle, orderTime, statusLabel, p = null, staffName = 'N/A', orderType = 'dine-in', orderSeq = null, qrEnabled = false) {
             let width = (p && p.paperWidth === '80') ? 48 : 32;
             const fontSize = p ? p.fontSize : '1';
             if (fontSize === '0') width = (p.paperWidth === '80') ? 64 : 42;
@@ -10455,6 +10486,22 @@ window.openSearchModalTakeOrder = function() {
                 itemsText += "\n";
             });
 
+            let qrBytes = new Uint8Array(0);
+            if (qrEnabled) {
+                const qrData = `order id = ${orderNumber}`;
+                const dataBytes = new TextEncoder().encode(qrData);
+                const pL = (dataBytes.length + 3) & 0xFF;
+                const pH = (dataBytes.length + 3) >> 8;
+                qrBytes = combineCommands(
+                    "\n\n", "\x1B\x61\x01", "ORDER ID\n",
+                    new Uint8Array([0x1D, 0x28, 0x6B, 0x04, 0x00, 0x31, 0x41, 0x32, 0x00]), // Model 2
+                    new Uint8Array([0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x43, 0x06]),       // Size 6
+                    new Uint8Array([0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x45, 0x30]),       // Error correction L
+                    new Uint8Array([0x1D, 0x28, 0x6B, pL, pH, 0x31, 0x50, 0x30]), dataBytes, // Store data
+                    new Uint8Array([0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x51, 0x30])        // Print
+                );
+            }
+
             return combineCommands(
                 "\x1B\x40", // Initialize printer
                 fontCmd,
@@ -10477,6 +10524,7 @@ window.openSearchModalTakeOrder = function() {
                 sep,
                 `Print: ${printTime}\n`,
                 `Status: ${statusLabel}\n`,
+                qrBytes,
                 "\x1B\x61\x01", // Center align
                 `\x1B\x45\x01${headerTitle.toUpperCase()} | ${String(orderSeq).split(',').map(s => '#' + s.trim()).join(',')} | ${orderNumber} | ${tableNumber}\x1B\x45\x00\n`,
                 "\n\n\n\n", // Feed lines
@@ -11203,6 +11251,77 @@ window.openSearchModalTakeOrder = function() {
         };
 
         window.addEventListener('online', updateWifiStatus);
+
+        let html5QrCode = null;
+        window.openOrderQRScanner = function() {
+            document.getElementById('orderQRScannerModal').style.display = 'flex';
+            html5QrCode = new Html5Qrcode("qr-reader");
+            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+
+            html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess)
+                .catch(err => {
+                    console.error("QR Start Error", err);
+                    alert("Unable to start camera. Please ensure permissions are granted.");
+                    closeOrderQRScanner();
+                });
+        };
+
+        window.closeOrderQRScanner = function() {
+            if (html5QrCode) {
+                html5QrCode.stop().then(() => {
+                    document.getElementById('orderQRScannerModal').style.display = 'none';
+                    html5QrCode = null;
+                }).catch(err => {
+                    console.error("QR Stop Error", err);
+                    document.getElementById('orderQRScannerModal').style.display = 'none';
+                });
+            } else {
+                document.getElementById('orderQRScannerModal').style.display = 'none';
+            }
+        };
+
+        async function onScanSuccess(decodedText, decodedResult) {
+            // Expected format: "order id = ORD-123456"
+            console.log(`Code scanned = ${decodedText}`);
+            if (decodedText.toLowerCase().includes("order id =")) {
+                const orderNum = decodedText.split('=')[1].trim();
+                await closeOrderQRScanner();
+                highlightOrderFromNumber(orderNum);
+            } else {
+                alert("Invalid QR Code for Order ID.");
+            }
+        }
+
+        async function highlightOrderFromNumber(orderNumber) {
+            // Show searching overlay
+            const overlay = document.getElementById('searchingOrderOverlay');
+            if (overlay) overlay.style.display = 'flex';
+
+            try {
+                const q = query(collection(db, 'licenses', currentClientId, 'orders'), where('orderNumber', '==', orderNumber));
+                const snap = await getDocs(q);
+                
+                if (snap.empty) {
+                    if (overlay) overlay.style.display = 'none';
+                    alert(`Order ${orderNumber} not found.`);
+                    return;
+                }
+
+                const orderDoc = snap.docs[0];
+                const orderData = orderDoc.data();
+                
+                // Mark for highlight
+                window.pendingOrderHighlightId = orderDoc.id;
+                
+                // Switch to activeOrders tab and filter for the order status
+                setActiveOrdersFilter(orderData.status || 'All');
+                showPage('activeOrders', true);
+
+            } catch (e) {
+                if (overlay) overlay.style.display = 'none';
+                alert("Error searching order: " + e.message);
+            }
+        }
         window.addEventListener('offline', updateWifiStatus);
         if (navigator.connection) {
             navigator.connection.addEventListener('change', updateWifiStatus);
