@@ -10684,6 +10684,8 @@ window.openSearchModalTakeOrder = function() {
                     tableLine,
                     sep, 
                     "\x1B\x61\x00",
+                    `Staff : ${staffName}\nTime  : ${timestamp}\n`,
+                    sep,
                     itemsText, "\n\n\n\n",
                     (p && p.cutterAlarm) ? "\x1B\x42\x03\x02" : "",
                     "\x1D\x56\x41\x03"
