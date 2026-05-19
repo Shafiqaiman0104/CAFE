@@ -8103,6 +8103,18 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
             cartTakeOrder.forEach((item, idx) => {
                 subtotal += item.total;
                 
+                // Ensure item has an order type, default to global if not 'mix'
+                if (!item.itemOrderType) {
+                    item.itemOrderType = (selectedOrderTypeTakeOrder === 'mix') ? 'dine-in' : selectedOrderTypeTakeOrder;
+                }
+
+                const canSplit = item.qty > 1 && item.soldBy !== 'measurement';
+                const canMerge = idx > 0 && 
+                    item.id === cartTakeOrder[idx-1].id && 
+                    JSON.stringify(item.variants) === JSON.stringify(cartTakeOrder[idx-1].variants) &&
+                    JSON.stringify(item.modifiers) === JSON.stringify(cartTakeOrder[idx-1].modifiers) &&
+                    item.notes === cartTakeOrder[idx-1].notes;
+
                 let details = '';
                 if (item.variants && item.variants.length) {
                     item.variants.forEach(v => {
@@ -8122,7 +8134,19 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
                 html += `
                     <div class="order-item-card-takeorder">
                         <div class="order-item-header-takeorder">
-                            <span class="order-item-name-takeorder">${item.name} ${qtyDisplay}</span>
+                            <div style="flex: 1;">
+                                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px;">
+                                    <span class="order-item-name-takeorder">${item.name} ${qtyDisplay}</span>
+                                    <div style="display: flex; gap: 4px;">
+                                        ${canSplit ? `<button onclick="splitCartItem(${idx})" title="Split Item" style="padding: 2px 6px; font-size: 0.6rem; border-radius: 4px; border: 1px solid #764ba2; background: white; color: #764ba2; cursor: pointer;"><i class="fas fa-columns"></i> Split</button>` : ''}
+                                        ${canMerge ? `<button onclick="mergeCartItem(${idx})" title="Merge with Above" style="padding: 2px 6px; font-size: 0.6rem; border-radius: 4px; border: 1px solid #38a169; background: white; color: #38a169; cursor: pointer;"><i class="fas fa-object-group"></i> Merge</button>` : ''}
+                                    </div>
+                                </div>
+                                <div class="item-mix-toggle">
+                                    <div class="mix-type-btn ${item.itemOrderType === 'dine-in' ? 'active' : ''}" onclick="setItemOrderTypeInCart(${idx}, 'dine-in')">Dine In</div>
+                                    <div class="mix-type-btn ${item.itemOrderType === 'takeaway' ? 'active' : ''}" onclick="setItemOrderTypeInCart(${idx}, 'takeaway')">Takeaway</div>
+                                </div>
+                            </div>
                             <span class="order-item-price-takeorder">RM ${item.total.toFixed(2)}</span>
                         </div>
                         <div class="order-item-details-takeorder">${details}</div>
@@ -8149,6 +8173,61 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
             totalSpan.innerText = `RM ${total.toFixed(2)}`;
         }
 
+        window.splitCartItem = function(idx) {
+            const item = cartTakeOrder[idx];
+            if (!item || item.qty <= 1) return;
+
+            const newItem = JSON.parse(JSON.stringify(item));
+            newItem.qty = 1;
+            newItem.total = newItem.unitPrice;
+            newItem.itemOrderType = 'takeaway'; // Default the split-off item to takeaway
+
+            item.qty -= 1;
+            item.total = item.unitPrice * item.qty;
+
+            cartTakeOrder.splice(idx + 1, 0, newItem);
+            
+            checkAndSyncGlobalOrderType();
+            updateOrdersUITakeOrder();
+            renderMenuGridTakeOrder();
+        };
+
+        window.mergeCartItem = function(idx) {
+            if (idx <= 0) return;
+            const currentItem = cartTakeOrder[idx];
+            const prevItem = cartTakeOrder[idx - 1];
+
+            prevItem.qty += currentItem.qty;
+            prevItem.total = prevItem.unitPrice * prevItem.qty;
+
+            cartTakeOrder.splice(idx, 1);
+            
+            checkAndSyncGlobalOrderType();
+            updateOrdersUITakeOrder();
+            renderMenuGridTakeOrder();
+        };
+
+        window.setItemOrderTypeInCart = function(idx, type) {
+            if (cartTakeOrder[idx]) {
+                cartTakeOrder[idx].itemOrderType = type;
+                checkAndSyncGlobalOrderType();
+                updateOrdersUITakeOrder();
+            }
+        };
+
+        function checkAndSyncGlobalOrderType() {
+            if (cartTakeOrder.length === 0) return;
+            
+            const firstType = cartTakeOrder[0].itemOrderType;
+            const isMixed = cartTakeOrder.some(item => item.itemOrderType !== firstType);
+            
+            if (isMixed) {
+                selectOrderTypeTakeOrder('mix', true);
+            } else if (selectedOrderTypeTakeOrder === 'mix') {
+                selectOrderTypeTakeOrder(firstType, true);
+            }
+        }
+
         window.updateQtyTakeOrder = function(index, delta) {
             const item = cartTakeOrder[index];
             // Use precision to avoid floating point errors (e.g. 0.30000000000000004)
@@ -8160,6 +8239,7 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
                 item.qty = newQty;
                 item.total = item.unitPrice * newQty;
             }
+            checkAndSyncGlobalOrderType();
             updateOrdersUITakeOrder();
             renderMenuGridTakeOrder();
         };
@@ -8241,12 +8321,24 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
                 if (isMix && !item.itemOrderType) item.itemOrderType = 'dine-in'; // default for mix
 
                 const qtyLabel = item.soldBy === 'measurement' ? `${item.qty}${item.unit}` : `x ${item.qty}`;
+                const canSplit = isMix && item.qty > 1 && item.soldBy !== 'measurement';
+                const canMerge = isMix && idx > 0 && 
+                    item.id === cartTakeOrder[idx-1].id && 
+                    JSON.stringify(item.variants) === JSON.stringify(cartTakeOrder[idx-1].variants) &&
+                    JSON.stringify(item.modifiers) === JSON.stringify(cartTakeOrder[idx-1].modifiers) &&
+                    item.notes === cartTakeOrder[idx-1].notes;
 
                 itemsHtml += `
                     <div style="padding:8px 0; border-bottom:1px dashed #eee;">
                         <div style="display:flex; justify-content:space-between;">
                             <div style="flex: 1;">
-                                <span style="font-weight:600;">${item.name} ${qtyLabel}</span>
+                                <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
+                                    <span style="font-weight:600;">${item.name} ${qtyLabel}</span>
+                                    <div style="display: flex; gap: 5px;">
+                                        ${canSplit ? `<button onclick="splitCartItemInSummary(${idx})" style="padding: 2px 8px; font-size: 0.65rem; border-radius: 6px; border: 1px solid #764ba2; background: white; color: #764ba2; cursor: pointer; font-weight: bold;"><i class="fas fa-columns"></i> Split</button>` : ''}
+                                        ${canMerge ? `<button onclick="mergeCartItemInSummary(${idx})" style="padding: 2px 8px; font-size: 0.65rem; border-radius: 6px; border: 1px solid #38a169; background: white; color: #38a169; cursor: pointer; font-weight: bold;"><i class="fas fa-object-group"></i> Merge</button>` : ''}
+                                    </div>
+                                </div>
                                 ${isMix ? `
                                 <div class="item-mix-toggle">
                                     <div class="mix-type-btn ${item.itemOrderType === 'dine-in' ? 'active' : ''}" onclick="setItemOrderType(${idx}, 'dine-in')">Dine In</div>
@@ -8312,6 +8404,43 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
             document.getElementById('orderSummaryModalTakeOrder').style.display = 'flex';
 
             if (isCounterSummaryFlow) selectOrderTypeTakeOrder(selectedOrderTypeTakeOrder, true);
+        };
+
+        window.splitCartItemInSummary = function(idx) {
+            const item = cartTakeOrder[idx];
+            if (!item || item.qty <= 1) return;
+
+            // Create a copy of the item with qty 1
+            const newItem = JSON.parse(JSON.stringify(item));
+            newItem.qty = 1;
+            newItem.total = newItem.unitPrice;
+            newItem.itemOrderType = 'takeaway'; // Default the new split item to takeaway
+
+            // Reduce original item qty by 1
+            item.qty -= 1;
+            item.total = item.unitPrice * item.qty;
+
+            // Insert new item after the current one in the cart
+            cartTakeOrder.splice(idx + 1, 0, newItem);
+            
+            showOrderSummaryTakeOrder();
+            updateOrdersUITakeOrder();
+        };
+
+        window.mergeCartItemInSummary = function(idx) {
+            if (idx <= 0) return;
+            const currentItem = cartTakeOrder[idx];
+            const prevItem = cartTakeOrder[idx - 1];
+
+            // Add current qty back to previous item
+            prevItem.qty += currentItem.qty;
+            prevItem.total = prevItem.unitPrice * prevItem.qty;
+
+            // Remove the current split-off item
+            cartTakeOrder.splice(idx, 1);
+            
+            showOrderSummaryTakeOrder();
+            updateOrdersUITakeOrder();
         };
 
         window.setItemOrderType = function(idx, type) {
@@ -8593,7 +8722,11 @@ window.openSearchModalTakeOrder = function() {
             if (cartTakeOrder.length > 0 && !confirm('Add these items to your current cart?')) return;
             
             cartTakeOrder = [...cartTakeOrder, ...waitOrder.cart];
-            selectedOrderTypeTakeOrder = waitOrder.orderType || 'dine-in';
+            
+            const typeToSet = waitOrder.orderType || 'dine-in';
+            selectOrderTypeTakeOrder(typeToSet, true);
+            checkAndSyncGlobalOrderType();
+            
             waitingLists.splice(index, 1);
             localStorage.setItem('waitingListsTakeOrder', JSON.stringify(waitingLists));
             
@@ -10763,7 +10896,12 @@ window.openSearchModalTakeOrder = function() {
         window.showTableDetailsTakeOrder = showTableDetailsTakeOrder;
         window.updateSummaryTableSelection = updateSummaryTableSelection;
         window.navigateToOrderEdit = navigateToOrderEdit;
+        window.splitCartItem = splitCartItem;
+        window.mergeCartItem = mergeCartItem;
+        window.setItemOrderTypeInCart = setItemOrderTypeInCart;
         window.completeOrderFromTableDetails = completeOrderFromTableDetails;
+        window.splitCartItemInSummary = splitCartItemInSummary;
+        window.mergeCartItemInSummary = mergeCartItemInSummary;
         window.toggleActiveOrdersSort = toggleActiveOrdersSort;
         window.toggleActiveOrdersSearch = toggleActiveOrdersSearch;
         window.handleActiveOrdersSearchInput = handleActiveOrdersSearchInput;
