@@ -2791,6 +2791,10 @@
                 <input type="checkbox" id="printOrdersToggle" onchange="togglePrinterDeptList(this.checked)">
                 <label>Print Orders</label>
             </div>
+            <div class="checkbox-group" style="margin-bottom: 12px;">
+                <input type="checkbox" id="printMoveMergeTable">
+                <label>Move & Merge Table</label>
+            </div>
 
             <div id="printerDeptListContainer" style="display: none; background: #f1f5f9; padding: 15px; border-radius: 16px; margin-bottom: 15px; border: 1px solid #cbd5e0;">
                 <label style="font-size: 11px; font-weight: 700; color: #475569; margin-bottom: 8px; display: block; text-transform: uppercase;">Select Department Printers:</label>
@@ -7788,10 +7792,16 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             const q = query(collection(db, 'licenses', currentClientId, 'orders'), where('tableId', '==', oldTableId), where('status', 'in', ['active', 'preparing', 'served']));
             const snap = await getDocs(q);
             
+            const movedOrders = [];
             for (const orderDoc of snap.docs) {
                 // If specific orders are selected, only update those. Otherwise update all active orders.
                 if (!isSpecificMove || targetOrderIds.includes(orderDoc.id)) {
                     await updateDoc(orderDoc.ref, { tableId: newTableId });
+                    const oData = orderDoc.data();
+                    movedOrders.push({
+                        orderSequence: oData.orderSequence || '?',
+                        orderNumber: oData.orderNumber
+                    });
                 }
             }
 
@@ -7804,6 +7814,10 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             const snapRemaining = await getDocs(qRemaining);
             if (snapRemaining.empty) {
                 await updateDoc(doc(db, 'licenses', currentClientId, 'tables', oldTableId), { status: 'available' });
+            }
+
+            if (movedOrders.length > 0) {
+                await triggerMoveMergePrinting(selectedTableNumberTakeOrder, newTableNum, movedOrders, isMerging);
             }
 
             alert(`Order(s) successfully ${isMerging ? 'merged' : 'moved'}.`);
@@ -9790,6 +9804,7 @@ window.openSearchModalTakeOrder = function() {
             document.getElementById('printReceiptBills').checked = false;
             document.getElementById('autoPrintReceipt').checked = false;
             document.getElementById('printOrdersToggle').checked = false;
+            document.getElementById('printMoveMergeTable').checked = false;
             togglePrinterDeptList(false);
             
             // Load department printers for checkboxes
@@ -9824,6 +9839,7 @@ window.openSearchModalTakeOrder = function() {
             document.getElementById('printReceiptBills').checked = p.printReceipt || false;
             document.getElementById('autoPrintReceipt').checked = p.autoPrint || false;
             document.getElementById('printOrdersToggle').checked = p.printOrders || false;
+            document.getElementById('printMoveMergeTable').checked = p.printMoveMerge || false;
             togglePrinterDeptList(p.printOrders || false);
             
             const savedDepts = p.departmentPrinters || [];
@@ -9847,12 +9863,13 @@ window.openSearchModalTakeOrder = function() {
             const printReceipt = document.getElementById('printReceiptBills').checked;
             const autoPrint = document.getElementById('autoPrintReceipt').checked;
             const printOrders = document.getElementById('printOrdersToggle').checked;
+            const printMoveMerge = document.getElementById('printMoveMergeTable').checked;
             const bluetoothDeviceId = document.getElementById('printerNameField').getAttribute('data-bt-id') || '';
             const departmentPrinters = Array.from(document.querySelectorAll('input[name="printerDeptItem"]:checked')).map(cb => cb.value);
 
             if (!name) { alert('Please enter printer name'); return; }
 
-            const data = { name, paperWidth, fontSize, cutterAlarm, kickCashDrawer, printReceipt, autoPrint, printOrders, bluetoothDeviceId, departmentPrinters, updatedAt: Timestamp.now() };
+            const data = { name, paperWidth, fontSize, cutterAlarm, kickCashDrawer, printReceipt, autoPrint, printOrders, printMoveMerge, bluetoothDeviceId, departmentPrinters, updatedAt: Timestamp.now() };
             if (id) {
                 await updateDoc(doc(db, 'licenses', currentClientId, 'printers', id), data);
             } else {
@@ -10621,6 +10638,71 @@ window.openSearchModalTakeOrder = function() {
                 if (d.gatt.connected) d.gatt.disconnect();
             }
         };
+
+        window.triggerMoveMergePrinting = async function(fromTable, toTable, orders, isMerge) {
+            const printersSnap = await getDocs(query(collection(db, 'licenses', currentClientId, 'printers'), where('autoPrint', '==', true), where('printMoveMerge', '==', true)));
+            if (printersSnap.empty) return;
+
+            const devicesToCleanup = new Set();
+            const timestamp = new Date().toLocaleString();
+
+            for (const printerDoc of printersSnap.docs) {
+                const p = printerDoc.data();
+                if (p.takenByStaffId && p.takenByStaffId !== currentStaff.id) continue;
+
+                const device = connectedBluetoothDevices[p.bluetoothDeviceId];
+                if (device) {
+                    devicesToCleanup.add(device);
+                    const commands = generateMoveMergeCommands(fromTable, toTable, orders, isMerge, p, currentStaff.name, timestamp);
+                    await sendToBluetoothPrinter(device, commands);
+                }
+            }
+
+            for (const d of devicesToCleanup) {
+                if (d.gatt.connected) d.gatt.disconnect();
+            }
+        };
+
+        function generateMoveMergeCommands(fromTable, toTable, orders, isMerge, p, staffName, timestamp) {
+            let width = (p && p.paperWidth === '80') ? 48 : 32;
+            const fontSize = p ? p.fontSize : '1';
+            const fontCmd = (fontSize === '0') ? "\x1B\x4D\x01" : (fontSize === '2' ? "\x1B\x21\x10" : "\x1B\x4D\x00");
+            const sep = "-".repeat(width) + "\n";
+
+            let header = isMerge ? "MERGE TABLE" : "MOVE TABLE";
+            let tableLine = isMerge ? `Table[${fromTable}] to Table[${toTable}]\n` : `Table[${fromTable}] To Table[${toTable}]\n`;
+            
+            let itemsText = "No | Order Id\n";
+            orders.forEach(o => {
+                itemsText += `${String(o.orderSequence).padEnd(3)}| ${o.orderNumber}\n`;
+            });
+
+            if (isMerge) {
+                return combineCommands(
+                    "\x1B\x40", fontCmd, "\x1B\x61\x01",
+                    `\x1B\x21\x30\x1B\x45\x01${header}\x1B\x45\x00\x1B\x21\x00\n`,
+                    tableLine,
+                    sep, 
+                    "\x1B\x61\x00",
+                    itemsText, "\n\n\n\n",
+                    (p && p.cutterAlarm) ? "\x1B\x42\x03\x02" : "",
+                    "\x1D\x56\x41\x03"
+                );
+            } else {
+                return combineCommands(
+                    "\x1B\x40", fontCmd, "\x1B\x61\x01",
+                    `\x1B\x21\x30\x1B\x45\x01${header}\x1B\x45\x00\x1B\x21\x00\n`,
+                    tableLine,
+                    sep,
+                    "\x1B\x61\x00",
+                    `Staff : ${staffName}\nTime  : ${timestamp}\n`,
+                    sep,
+                    itemsText, "\n\n\n\n",
+                    (p && p.cutterAlarm) ? "\x1B\x42\x03\x02" : "",
+                    "\x1D\x56\x41\x03"
+                );
+            }
+        }
 
         async function generateVoidReceiptCommands(orderNumber, orderSeq, itemName, qty, deptName, p = null, staffName = 'N/A') {
             let width = (p && p.paperWidth === '80') ? 48 : 32;
