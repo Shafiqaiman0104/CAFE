@@ -4822,12 +4822,43 @@
             }
 
             if (container) container.style.display = (shiftShown || staffShown) ? 'flex' : 'none';
+            
+            updateOrderTimers();
+        }
+
+        function updateOrderTimers() {
+            const now = Date.now();
+            document.querySelectorAll('.order-live-timer').forEach(el => {
+                const created = parseInt(el.getAttribute('data-created'));
+                const status = (el.getAttribute('data-status') || '').toLowerCase();
+                if (!created || created === 0) return;
+
+                const diffMs = now - created;
+                const totalSeconds = Math.floor(diffMs / 1000);
+                const mins = Math.floor(totalSeconds / 60);
+                const secs = totalSeconds % 60;
+
+                el.innerText = `${mins.toString().padStart(2, '0')}m ${secs.toString().padStart(2, '0')}s`;
+
+                let bgColor = '#4caf50'; // Initial Green
+
+                if (status === 'active') {
+                    if (mins >= 5) bgColor = '#e53e3e'; // 5m+ Red
+                    else if (mins >= 3) bgColor = '#ff9800'; // 3m+ Orange
+                } else if (status === 'preparing') {
+                    if (mins >= 60) bgColor = '#e53e3e'; // 1h+ Red
+                    else if (mins >= 30) bgColor = '#ff9800'; // 30m+ Orange
+                }
+                // Other statuses like 'served' or 'cancelled' stay green or use default badge colors.
+
+                el.style.backgroundColor = bgColor;
+            });
         }
 
         function startTimerLoop() {
             if (timerInterval) clearInterval(timerInterval);
             updateLiveTimers();
-            timerInterval = setInterval(updateLiveTimers, 30000);
+            timerInterval = setInterval(updateLiveTimers, 1000);
         }
 
         window.joinShift = async function() {
@@ -9091,7 +9122,10 @@ window.openSearchModalTakeOrder = function() {
                             <div>
                                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                                     <span style="font-size:0.75rem; color:#666;"><i class="fas fa-clock"></i> ${timestamp}</span>
-                                    <span class="status-badge status-${o.status}">${o.status}</span>
+                                    <div style="display: flex; gap: 8px; align-items: center;">
+                                        <div class="order-live-timer" data-created="${o.createdAt?.toMillis() || 0}" data-status="${o.status}" style="padding: 2px 8px; border-radius: 20px; color: white; font-size: 0.7rem; font-weight: 800; min-width: 65px; text-align: center; background-color: #4caf50;">00m 00s</div>
+                                        <span class="status-badge status-${o.status}">${o.status}</span>
+                                    </div>
                                 </div>
                                 <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
                                     <div style="font-weight:800; font-size: 1.1rem; background: #764ba2; padding: 6px 14px; border-radius: 12px; display: inline-block; color: #fff; box-shadow: 0 2px 4px rgba(118,75,162,0.2);">#${o.orderSequence || '?'} (${o.orderNumber})</div>
