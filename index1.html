@@ -2724,6 +2724,13 @@
                     <span class="slider"></span>
                 </label>
             </div>
+            <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; background: #f8fafc; padding: 12px; border-radius: 14px; border: 1px solid #e2e8f0; margin-top: 10px;">
+                <label style="margin-bottom: 0; font-weight: 700;">VOID ITEM PRINTING</label>
+                <label class="switch">
+                    <input type="checkbox" id="deptPrinterVoidEnabled">
+                    <span class="slider"></span>
+                </label>
+            </div>
             <button class="btn" onclick="saveDeptPrinter()">Save</button>
         </div>
     </div>
@@ -7234,6 +7241,10 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
         async function performFullVoidLogic(orderId, itemId) {
             await updateDoc(doc(db, 'licenses', currentClientId, 'orders', orderId, 'items', itemId), { status: 'cancelled' });
             await updateOrderTotals(orderId);
+
+            // Trigger void print for department
+            triggerVoidItemPrinting(orderId, itemData, itemData.qty);
+
             const row = document.getElementById(`chk-item-${itemId}`);
             if (row) row.remove();
             selectedCheckoutItems = selectedCheckoutItems.filter(i => i.orderId !== orderId || i.itemId !== itemId);
@@ -7270,6 +7281,9 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                     const mSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderId, 'items', itemId, 'selectedModifiers'));
                     for (const m of mSnap.docs) await addDoc(collection(db, 'licenses', currentClientId, 'orders', orderId, 'items', newCancelledItemRef.id, 'selectedModifiers'), m.data());
                     await updateOrderTotals(orderId);
+
+                    // Trigger void print for department
+                    triggerVoidItemPrinting(orderId, itemData, qtyToVoid);
 
                     if (source === 'checkout') {
                         const row = document.getElementById(`chk-item-${itemId}`);
@@ -9322,7 +9336,16 @@ window.openSearchModalTakeOrder = function() {
 
         window.updateItemStatusOrdersTab = async function(orderId, itemId, newStatus) {
             if (newStatus === 'cancelled' && !confirm('Are you sure you want to cancel this item?')) return;
-            await updateDoc(doc(db, 'licenses', currentClientId, 'orders', orderId, 'items', itemId), { status: newStatus });
+
+            const itemRef = doc(db, 'licenses', currentClientId, 'orders', orderId, 'items', itemId);
+            const itemSnap = await getDoc(itemRef);
+            const itemData = itemSnap.data();
+
+            await updateDoc(itemRef, { status: newStatus });
+
+            if (newStatus === 'cancelled') {
+                triggerVoidItemPrinting(orderId, itemData, itemData.qty);
+            }
 
             // Recalculate order total whenever an item is cancelled/uncancelled
             const itemsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderId, 'items'));
@@ -9595,6 +9618,7 @@ window.openSearchModalTakeOrder = function() {
             document.getElementById('editingDeptPrinterId').value = '';
             document.getElementById('deptPrinterName').value = '';
             document.getElementById('deptPrinterQrEnabled').checked = false;
+            document.getElementById('deptPrinterVoidEnabled').checked = false;
             
             // Load categories to show checkboxes
             const catsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'menu_categories'));
@@ -9621,6 +9645,7 @@ window.openSearchModalTakeOrder = function() {
             document.getElementById('editingDeptPrinterId').value = id;
             document.getElementById('deptPrinterName').value = dp.name;
             document.getElementById('deptPrinterQrEnabled').checked = dp.qrEnabled || false;
+            document.getElementById('deptPrinterVoidEnabled').checked = dp.voidEnabled || false;
             
             const savedDeps = dp.department || [];
             const checkboxes = document.querySelectorAll('input[name="deptCat"]');
@@ -9634,10 +9659,11 @@ window.openSearchModalTakeOrder = function() {
             const name = document.getElementById('deptPrinterName').value.trim();
             const selectedCats = Array.from(document.querySelectorAll('input[name="deptCat"]:checked')).map(cb => cb.value);
             const qrEnabled = document.getElementById('deptPrinterQrEnabled').checked;
+            const voidEnabled = document.getElementById('deptPrinterVoidEnabled').checked;
             
             if (!name) { alert('Please enter a name'); return; }
             
-            const data = { name, department: selectedCats, qrEnabled, updatedAt: Timestamp.now() };
+            const data = { name, department: selectedCats, qrEnabled, voidEnabled, updatedAt: Timestamp.now() };
             if (id) {
                 await updateDoc(doc(db, 'licenses', currentClientId, 'department_printer', id), data);
             } else {
@@ -10530,6 +10556,90 @@ window.openSearchModalTakeOrder = function() {
                 "\n\n\n\n", // Feed lines
                 (p && p.cutterAlarm) ? "\x1B\x42\x03\x02" : "", // Alarm beeps
                 "\x1D\x56\x41\x03" // Cut paper command
+            );
+        }
+
+        window.triggerVoidItemPrinting = async function(orderId, itemData, qtyVoided) {
+            if (Object.keys(categoryMapTakeOrder).length === 0) {
+                categoryMapTakeOrder = await getCategoriesMap();
+            }
+
+            // 1. Get Order info
+            const orderSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', orderId));
+            if (!orderSnap.exists()) return;
+            const order = orderSnap.data();
+            
+            // 2. Find relevant Department Printers that have Void Enabled
+            const deptPrintersSnap = await getDocs(collection(db, 'licenses', currentClientId, 'department_printer'));
+            const catName = categoryMapTakeOrder[itemData.categoryId];
+            
+            const targetDepts = deptPrintersSnap.docs.filter(d => {
+                const dp = d.data();
+                return dp.voidEnabled === true && dp.department && dp.department.includes(catName);
+            });
+            
+            if (targetDepts.length === 0) return;
+
+            // 3. Get connected physical printers handling those departments
+            const printersSnap = await getDocs(query(collection(db, 'licenses', currentClientId, 'printers'), where('autoPrint', '==', true)));
+            
+            const devicesToCleanup = new Set();
+
+            for (const deptDoc of targetDepts) {
+                const dept = deptDoc.data();
+                const deptId = deptDoc.id;
+
+                for (const printerDoc of printersSnap.docs) {
+                    const p = printerDoc.data();
+                    if (p.takenByStaffId && p.takenByStaffId !== currentStaff.id) continue;
+                    
+                    if (p.departmentPrinters?.includes(deptId)) {
+                        const device = connectedBluetoothDevices[p.bluetoothDeviceId];
+                        if (device) {
+                            devicesToCleanup.add(device);
+                            const commands = await generateVoidReceiptCommands(
+                                order.orderNumber, 
+                                order.orderSequence || '?', 
+                                itemData.name,
+                                qtyVoided,
+                                dept.name,
+                                p,
+                                currentStaff.name
+                            );
+                            await sendToBluetoothPrinter(device, commands);
+                        }
+                    }
+                }
+            }
+            // Disconnect all physical devices used in this session once finished
+            for (const d of devicesToCleanup) {
+                if (d.gatt.connected) d.gatt.disconnect();
+            }
+        };
+
+        async function generateVoidReceiptCommands(orderNumber, orderSeq, itemName, qty, deptName, p = null, staffName = 'N/A') {
+            let width = (p && p.paperWidth === '80') ? 48 : 32;
+            const fontSize = p ? p.fontSize : '1';
+            const fontCmd = (fontSize === '0') ? "\x1B\x4D\x01" : (fontSize === '2' ? "\x1B\x21\x10" : "\x1B\x4D\x00");
+            const sep = "-".repeat(width) + "\n";
+            const timestamp = new Date().toLocaleString();
+
+            return combineCommands(
+                "\x1B\x40", // Initialize
+                "\x1B\x61\x01", // Center
+                "\x1B\x21\x30\x1B\x45\x01VOID ITEM\x1B\x45\x00\x1B\x21\x00\n", // Double height Bold
+                `${deptName.toUpperCase()}\n`,
+                `${orderSeq} | ${orderNumber}\n`,
+                sep,
+                "\x1B\x61\x00", // Left
+                `Staff : ${staffName}\n`,
+                `Time  : ${timestamp}\n`,
+                sep,
+                "Items:\n",
+                `\x1B\x45\x01${itemName.substring(0, width - 8).padEnd(width - 8)} x ${qty}\x1B\x45\x00\n`,
+                "\n\n\n\n",
+                (p && p.cutterAlarm) ? "\x1B\x42\x03\x02" : "",
+                "\x1D\x56\x41\x03" // Cut
             );
         }
 
