@@ -10493,12 +10493,13 @@ window.openSearchModalTakeOrder = function() {
                 const pL = (dataBytes.length + 3) & 0xFF;
                 const pH = (dataBytes.length + 3) >> 8;
                 qrBytes = combineCommands(
-                    "\n\n", "\x1B\x61\x01", "ORDER ID\n",
+                    "\x1B\x61\x01", "ORDER ID\n",
                     new Uint8Array([0x1D, 0x28, 0x6B, 0x04, 0x00, 0x31, 0x41, 0x32, 0x00]), // Model 2
                     new Uint8Array([0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x43, 0x06]),       // Size 6
                     new Uint8Array([0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x45, 0x30]),       // Error correction L
                     new Uint8Array([0x1D, 0x28, 0x6B, pL, pH, 0x31, 0x50, 0x30]), dataBytes, // Store data
-                    new Uint8Array([0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x51, 0x30])        // Print
+                    new Uint8Array([0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x51, 0x30]),         // Print
+                    "\n", sep, "\x1B\x61\x00"                
                 );
             }
 
@@ -10522,9 +10523,9 @@ window.openSearchModalTakeOrder = function() {
                 "Items:\n",
                 itemsText,
                 sep,
+                qrBytes,
                 `Print: ${printTime}\n`,
                 `Status: ${statusLabel}\n`,
-                qrBytes,
                 "\x1B\x61\x01", // Center align
                 `\x1B\x45\x01${headerTitle.toUpperCase()} | ${String(orderSeq).split(',').map(s => '#' + s.trim()).join(',')} | ${orderNumber} | ${tableNumber}\x1B\x45\x00\n`,
                 "\n\n\n\n", // Feed lines
