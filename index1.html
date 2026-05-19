@@ -7239,11 +7239,16 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
         }
 
         async function performFullVoidLogic(orderId, itemId) {
-            await updateDoc(doc(db, 'licenses', currentClientId, 'orders', orderId, 'items', itemId), { status: 'cancelled' });
+            const itemRef = doc(db, 'licenses', currentClientId, 'orders', orderId, 'items', itemId);
+            const itemSnap = await getDoc(itemRef);
+            if (!itemSnap.exists()) return;
+            const itemData = itemSnap.data();
+
+            await updateDoc(itemRef, { status: 'cancelled' });
             await updateOrderTotals(orderId);
 
             // Trigger void print for department
-            triggerVoidItemPrinting(orderId, itemData, itemData.qty);
+            await triggerVoidItemPrinting(orderId, itemData, itemData.qty);
 
             const row = document.getElementById(`chk-item-${itemId}`);
             if (row) row.remove();
@@ -7283,7 +7288,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                     await updateOrderTotals(orderId);
 
                     // Trigger void print for department
-                    triggerVoidItemPrinting(orderId, itemData, qtyToVoid);
+                    await triggerVoidItemPrinting(orderId, itemData, qtyToVoid);
 
                     if (source === 'checkout') {
                         const row = document.getElementById(`chk-item-${itemId}`);
@@ -9344,7 +9349,7 @@ window.openSearchModalTakeOrder = function() {
             await updateDoc(itemRef, { status: newStatus });
 
             if (newStatus === 'cancelled') {
-                triggerVoidItemPrinting(orderId, itemData, itemData.qty);
+                await triggerVoidItemPrinting(orderId, itemData, itemData.qty);
             }
 
             // Recalculate order total whenever an item is cancelled/uncancelled
