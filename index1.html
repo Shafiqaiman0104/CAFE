@@ -7687,12 +7687,15 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                 });
             }
 
-            // Trigger Automatic Printing for Main Receipt after payment
+            const orderNumsStr = (involvedOrderIds.length > 1) 
+                ? involvedOrderIds.map(id => checkoutOrdersToProcess.find(d => d.id === id)?.data().orderNumber).join(', ') 
+                : checkoutOrdersToProcess.find(d => d.id === involvedOrderIds[0])?.data().orderNumber;
+
+            // Save Receipt Data to Queue with Status Success (No Auto Print)
+            const qId = await createReceiptQueueItem(involvedOrderIds, orderNumsStr, paymentInfoForQueue, currentStaff.name);
+
+            // Identify unique orders involved in this payment
             if (involvedOrderIds.length > 1) {
-                const orderNums = involvedOrderIds.map(id => {
-                    const doc = checkoutOrdersToProcess.find(d => d.id === id);
-                    return doc ? doc.data().orderNumber : id.slice(-8);
-                });
                 const payDetails = {
                     method: checkoutPayMethod === 'mixed' ? 'Mixed' : checkoutPayMethod,
                     itemsPaid: selectedCheckoutItems,
@@ -7702,7 +7705,6 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                     paymentInfo: paymentInfoForQueue,
                     hasCashPayment: hasCashPayment
                 };
-                triggerAutoPrinting(involvedOrderIds[0], orderNums.join(', '), 'payment', payDetails, true);
             } else if (involvedOrderIds.length === 1) {
                 const orderId = involvedOrderIds[0];
                 const orderDoc = checkoutOrdersToProcess.find(d => d.id === orderId);
@@ -7714,7 +7716,6 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                     paymentInfo: paymentInfoForQueue,
                     hasCashPayment: hasCashPayment
                 };
-                triggerAutoPrinting(orderId, orderDoc ? orderDoc.data().orderNumber : 'N/A', 'payment', payDetails, true);
             }
 
             // Check each order to see if it is now fully paid or remaining items are cancelled
@@ -7744,17 +7745,14 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                 await updateDoc(doc(db, 'licenses', currentClientId, 'tables', selectedTableIdTakeOrder), { status: 'available' });
             }
             
-            const orderNumsStr = (involvedOrderIds.length > 1) 
-                ? involvedOrderIds.map(id => checkoutOrdersToProcess.find(d => d.id === id)?.data().orderNumber).join(', ') 
-                : checkoutOrdersToProcess.find(d => d.id === involvedOrderIds[0])?.data().orderNumber;
-
             // Store details for manual printing and success modal
             window.lastSuccessfulPaymentDetails = {
                 orderIds: involvedOrderIds,
                 orderNumbers: orderNumsStr,
                 paymentInfo: paymentInfoForQueue,
                 isEarly: isEarlyPaymentMode,
-                cashierName: currentStaff.name
+                cashierName: currentStaff.name,
+                queueId: qId
             };
 
             showPaymentSuccessModal(paymentInfoForQueue);
@@ -7798,40 +7796,72 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
 
         window.printFromSuccessModal = async function() {
             const d = window.lastSuccessfulPaymentDetails;
-            if (!d) return;
+            if (!d || !d.queueId) return;
 
+            // Look specifically for printers with 'Print Receipt & Bills' enabled
+            const printersSnap = await getDocs(query(collection(db, 'licenses', currentClientId, 'printers'), where('printReceipt', '==', true)));
+            
+            if (printersSnap.empty) {
+                // Scenario B: No receipt printer enabled, show selection popup
+                openManualPrinterSelector(d.queueId);
+                return;
+            }
+
+            // Scenario A: Receipt printers exist, print to all of them
             const btnText = document.getElementById('btnMainPrintText');
             const btnLoading = document.getElementById('btnMainPrintLoading');
             btnText.style.display = 'none';
             btnLoading.style.display = 'block';
 
             try {
-                // Re-triggering the logic but looking specifically for Receipt printers
-                const printersSnap = await getDocs(query(collection(db, 'licenses', currentClientId, 'printers'), where('printReceipt', '==', true)));
-                
-                if (printersSnap.empty) {
-                    alert("No printer found with 'Print Receipt & Bills' enabled.");
-                    return;
+                for (const printerDoc of printersSnap.docs) {
+                    const p = printerDoc.data();
+                    // Basic ownership check
+                    if (p.takenByStaffId && p.takenByStaffId !== currentStaff.id) continue;
+                    
+                    await executeReprint(d.queueId, null, printerDoc.id);
                 }
-
-                const orderId = d.orderIds[0];
-                const payDetails = {
-                    method: d.paymentInfo.method,
-                    itemsPaid: d.paymentInfo.itemsPaid,
-                    isEarly: d.isEarly,
-                    mergedOrderIds: d.orderIds,
-                    cashierName: d.cashierName,
-                    paymentInfo: d.paymentInfo,
-                    hasCashPayment: d.paymentInfo.hasCashPayment
-                };
-
-                // We call triggerAutoPrinting but with local context true to ensure it ignores autoPrint checkbox 
-                // for this manual request, and handles the Server Takeover logic properly.
-                await triggerAutoPrinting(orderId, d.orderNumbers, 'payment', payDetails, true);
             } finally {
                 btnText.style.display = 'inline-block';
                 btnLoading.style.display = 'none';
             }
+        };
+
+        window.openManualPrinterSelector = async function(queueId) {
+            const container = document.getElementById('reportPrinterList');
+            container.innerHTML = '<div class="loading">Loading printers...</div>';
+            document.getElementById('selectReportPrinterModal').style.display = 'flex';
+            
+            // Update modal title temporarily
+            const title = document.querySelector('#selectReportPrinterModal h3');
+            const originalTitle = title.innerHTML;
+            title.innerHTML = '<i class="fas fa-print"></i> Select Printer for Receipt';
+
+            try {
+                const printersSnap = await getDocs(collection(db, 'licenses', currentClientId, 'printers'));
+                if (printersSnap.empty) {
+                    container.innerHTML = '<div style="text-align:center; padding:20px; color:#666;">No printers found.</div>';
+                    return;
+                }
+                
+                let html = '';
+                printersSnap.forEach(d => {
+                    const p = d.data();
+                    html += `
+                        <button class="primary-btn" style="background:#f1f5f9; color:#1e293b; border:1px solid #e2e8f0; text-align:left; display:flex; justify-content:space-between; align-items:center; padding: 15px; margin-bottom: 8px;" 
+                                onclick="closeModal('selectReportPrinterModal'); executeReprint('${queueId}', null, '${d.id}')">
+                            <span><b style="font-size: 0.9rem;">${p.name}</b><br><small style="color: #64748b;">${p.paperWidth}mm Thermal Printer</small></span>
+                            <i class="fas fa-print" style="color:#764ba2;"></i>
+                        </button>
+                    `;
+                });
+                container.innerHTML = html;
+                
+                // Reset title when modal is closed
+                const closeBtn = document.querySelector('#selectReportPrinterModal .modal-close');
+                const oldClose = closeBtn.onclick;
+                closeBtn.onclick = () => { title.innerHTML = originalTitle; closeModal('selectReportPrinterModal'); if (oldClose) oldClose(); };
+            } catch (e) { container.innerHTML = `<div style="color:red; padding:10px;">Error: ${e.message}</div>`; }
         };
 
         window.openChangeTableModalTakeOrder = function(orderId = null, filterStatus = 'available') {
@@ -10223,36 +10253,6 @@ window.openSearchModalTakeOrder = function() {
                     if (device) await sendToBluetoothPrinter(device, new Uint8Array([0x1B, 0x70, 0x00, 0x19, 0xFA]));
                 }
 
-                // Handle Full Receipt Printing (Only on payment or early pay)
-                if (p.printReceipt && type === 'payment') {
-                    const qOrderId = (paymentDetails?.mergedOrderIds) ? paymentDetails.mergedOrderIds.join(',') : orderId;
-                    const qId = await addToPrintQueue(qOrderId, orderNumber, tableNumber, 'Receipt', null, cashierName, paymentDetails?.method, staffName, orderType, paymentDetails?.paymentInfo, orderSeq);
-                    if (device) {
-                        // If split payment, we only show items just paid in the receipt
-                        let itemsToPrint = fullItemsList;
-                        if (paymentDetails && paymentDetails.itemsPaid) {
-                            const paidItemsMap = {};
-                            paymentDetails.itemsPaid.forEach(p => paidItemsMap[p.itemId] = p.qtyToPay);
-                            
-                            itemsToPrint = fullItemsList.filter(it => paidItemsMap[it.docId] !== undefined).map(it => {
-                                const qtyToPay = paidItemsMap[it.docId];
-                                const unitPrice = parseFloat(it.total) / parseInt(it.qty);
-                                return {
-                                    ...it,
-                                    qty: qtyToPay.toString(),
-                                    total: (unitPrice * qtyToPay).toFixed(2)
-                                };
-                            });
-                        }
-                        
-                        const label = paymentDetails?.isEarly ? "EARLY PAYMENT" : "PAID";
-                        const commands = await generateMainReceiptCommands(orderNumber, tableNumber, itemsToPrint, orderTime, paymentDetails?.method || 'N/A', label, cashierName, p, orderType, paymentDetails?.paymentInfo, orderSeq);
-                        const success = await sendToBluetoothPrinter(device, commands);
-                        await updateDoc(doc(db, 'licenses', currentClientId, 'print_queue', qId), { status: success ? 'success' : 'failed' });
-                        printActions.push({ label: 'Main Receipt', success });
-                    }
-                }
-
                 // Handle Department Order Printing (Only when order is initially placed)
                 if (p.printOrders && p.departmentPrinters?.length && type === 'order') {
                     for (const deptId of p.departmentPrinters) {
@@ -10291,6 +10291,42 @@ window.openSearchModalTakeOrder = function() {
                 showPrinterStatusPopup("Queued", "No printer connected. Receipts added to queue.", 'warning');
             }
         };
+
+        async function createReceiptQueueItem(orderIds, orderNumbers, paymentInfo, cashierName) {
+            const firstOrderSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', orderIds[0]));
+            if (!firstOrderSnap.exists()) return null;
+            const firstOrder = firstOrderSnap.data();
+
+            const seqList = [];
+            const orderTypesSet = new Set();
+            for (const id of orderIds) {
+                const sSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', id));
+                if (sSnap.exists()) {
+                    const oData = sSnap.data();
+                    seqList.push(oData.orderSequence || '?');
+                    orderTypesSet.add(oData.orderType || 'dine-in');
+                }
+            }
+            
+            const docRef = await addDoc(collection(db, 'licenses', currentClientId, 'print_queue'), {
+                orderId: orderIds.join(','),
+                orderNumber: orderNumbers,
+                orderSequence: seqList.join(','),
+                tableNumber: (firstOrder.tableId || 'N/A').toUpperCase(),
+                printerDeptName: 'Receipt',
+                printerDeptId: null,
+                status: 'success',
+                attempts: 1,
+                cashierName: cashierName,
+                paymentMethod: paymentInfo.method,
+                staffName: firstOrder.staffName || 'N/A',
+                orderType: Array.from(orderTypesSet).join(', '),
+                paymentInfo: JSON.stringify(paymentInfo),
+                qrEnabled: false,
+                createdAt: Timestamp.now()
+            });
+            return docRef.id;
+        }
 
         async function addToPrintQueue(orderId, orderNumber, tableNumber, deptName, deptId, cashierName = null, paymentMethod = null, staffName = null, orderType = null, paymentInfo = null, orderSeq = null, qrEnabled = false) {
             const docRef = await addDoc(collection(db, 'licenses', currentClientId, 'print_queue'), {
@@ -10426,7 +10462,7 @@ window.openSearchModalTakeOrder = function() {
             );
         }
 
-        window.reprintQueueItem = async function(id) {
+        window.reprintQueueItem = async function(id, printerId = null) {
             const ref = doc(db, 'licenses', currentClientId, 'print_queue', id);
             const snap = await getDoc(ref);
             if (!snap.exists()) return;
@@ -10458,13 +10494,13 @@ window.openSearchModalTakeOrder = function() {
             }
 
             // Otherwise, I am the server or no one has ownership, print locally
-            await executeReprint(id, item);
+            await executeReprint(id, item, printerId);
         };
 
-        // Internal function to handle the physical printing of a queue item
-        async function executeReprint(id, item) {
+        async function executeReprint(id, itemParam = null, forcedPrinterId = null) {
             const ref = doc(db, 'licenses', currentClientId, 'print_queue', id);
-            
+            const item = itemParam || (await getDoc(ref)).data();
+
             const currentAttempts = item.attempts || 1;
             const statusLabel = item.printerDeptName === 'Receipt' ? 'REPRINT' : `MANUAL PRINT ${currentAttempts}`;
             const cashierName = item.cashierName || 'N/A';
@@ -10526,8 +10562,15 @@ window.openSearchModalTakeOrder = function() {
                 }
             }
 
-            const printersSnapFull = await getDocs(collection(db, 'licenses', currentClientId, 'printers'));
-            const printerConfig = printersSnapFull.docs.find(d => d.data().bluetoothDeviceId && (item.printerDeptId ? d.data().departmentPrinters?.includes(item.printerDeptId) : d.data().printReceipt))?.data();
+            let printerConfig;
+            if (forcedPrinterId) {
+                const pSnap = await getDoc(doc(db, 'licenses', currentClientId, 'printers', forcedPrinterId));
+                printerConfig = pSnap.exists() ? pSnap.data() : null;
+            } else {
+                const printersSnapFull = await getDocs(collection(db, 'licenses', currentClientId, 'printers'));
+                printerConfig = printersSnapFull.docs.find(d => d.data().bluetoothDeviceId && (item.printerDeptId ? d.data().departmentPrinters?.includes(item.printerDeptId) : d.data().printReceipt))?.data();
+            }
+            
             const device = printerConfig ? connectedBluetoothDevices[printerConfig.bluetoothDeviceId] : null;
 
             let printSuccess = false;
