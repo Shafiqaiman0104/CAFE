@@ -10718,7 +10718,11 @@ window.openSearchModalTakeOrder = function() {
             const timestamp = new Date().toLocaleString();
             let itemsText = "Items:\n";
             items.forEach(item => {
-                itemsText += `\x1B\x45\x01${item.name.substring(0, width - 8).padEnd(width - 8)} x ${item.qty}\x1B\x45\x00\n`;
+                const itemType = item.orderType || 'dine-in';
+                const typeSuffix = ` (${itemType === 'dine-in' ? 'Dine In' : (itemType === 'delivery' ? 'Delivery' : 'Takeaway')})`;
+                const displayName = `${item.name}${typeSuffix}`;
+
+                itemsText += `\x1B\x45\x01${displayName.substring(0, width - 8).padEnd(width - 8)} x ${item.qty}\x1B\x45\x00\n`;
                 if (item.variants?.length) item.variants.forEach(v => itemsText += `       + ${v.optionName}\n`);
                 if (item.modifiers?.length) item.modifiers.forEach(m => itemsText += `       + ${m.optionName}\n`);
                 if (item.notes) itemsText += `       * Req: ${item.notes}\n`;
@@ -10882,6 +10886,10 @@ window.openSearchModalTakeOrder = function() {
             if (item.modifiers?.length) item.modifiers.forEach(m => detailsText += `       + ${m.optionName}\n`);
             if (item.notes) detailsText += `       * Req: ${item.notes}\n`;
 
+            const itemType = item.orderType || 'dine-in';
+            const typeSuffix = ` (${itemType === 'dine-in' ? 'Dine In' : (itemType === 'delivery' ? 'Delivery' : 'Takeaway')})`;
+            const displayName = `${item.name}${typeSuffix}`;
+
             return combineCommands(
                 "\x1B\x40", // Initialize
                 "\x1B\x61\x01", // Center
@@ -10894,7 +10902,7 @@ window.openSearchModalTakeOrder = function() {
                 `Time  : ${timestamp}\n`,
                 sep,
                 "Items:\n",
-                `\x1B\x45\x01${item.name.substring(0, width - 8).padEnd(width - 8)} x ${qty}\x1B\x45\x00\n`,
+                `\x1B\x45\x01${displayName.substring(0, width - 8).padEnd(width - 8)} x ${qty}\x1B\x45\x00\n`,
                 detailsText,
                 "\n\n\n\n",
                 (p && p.cutterAlarm) ? "\x1B\x42\x03\x02" : "",
