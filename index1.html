@@ -2743,6 +2743,29 @@
         </div>
     </div>
 
+    <!-- Payment Success Modal -->
+    <div id="paymentSuccessModal" class="modal" style="align-items: center; justify-content: center; z-index: 10007;">
+        <div class="modal-content" style="max-width: 400px; border-radius: 28px; text-align: center; padding: 30px;">
+            <div style="width: 70px; height: 70px; background: #d1fae5; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto;">
+                <i class="fas fa-check-circle" style="font-size: 2.5rem; color: #10b981;"></i>
+            </div>
+            <h2 style="margin-bottom: 5px; color: #1e293b;">Payment Success!</h2>
+            <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 25px;">Transaction completed successfully.</p>
+            
+            <div id="paymentSuccessDetails" style="background: #f8fafc; border-radius: 20px; padding: 20px; text-align: left; margin-bottom: 25px; border: 1px solid #e2e8f0; font-size: 0.9rem; line-height: 1.6;">
+                <!-- Content populated by JS -->
+            </div>
+            
+            <div style="display: flex; gap: 12px;">
+                <button class="secondary-btn" style="flex: 1; padding: 15px;" onclick="closePaymentSuccessModal()">Close</button>
+                <button class="primary-btn" style="flex: 1; padding: 15px; background: #764ba2; box-shadow: 0 4px 12px rgba(118,75,162,0.3);" onclick="printFromSuccessModal()">
+                    <span id="btnMainPrintText"><i class="fas fa-print"></i> Print</span>
+                    <div id="btnMainPrintLoading" style="display:none;" class="loading-circle-orange" style="width:20px; height:20px; border-width:2px; border-top-color:white;"></div>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Add Department Printer Modal -->
     <div id="addDeptPrinterModal" class="modal">
         <div class="modal-content">
@@ -3832,6 +3855,7 @@
         let isInitialLoadOrders = true;
         let isInitialLoadTransactions = true;
         let showMenuImagesTakeOrder = true;
+        let lastSuccessfulPaymentDetails = null;
         
         const shapeClipPaths = {
             'square': 'none',
@@ -7719,12 +7743,95 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             if (activeSnap.empty) {
                 await updateDoc(doc(db, 'licenses', currentClientId, 'tables', selectedTableIdTakeOrder), { status: 'available' });
             }
+            
+            const orderNumsStr = (involvedOrderIds.length > 1) 
+                ? involvedOrderIds.map(id => checkoutOrdersToProcess.find(d => d.id === id)?.data().orderNumber).join(', ') 
+                : checkoutOrdersToProcess.find(d => d.id === involvedOrderIds[0])?.data().orderNumber;
 
-            alert(`Payment success! Change: RM ${(totalReceived - checkoutTotalTakeOrder).toFixed(2)}`);
+            // Store details for manual printing and success modal
+            window.lastSuccessfulPaymentDetails = {
+                orderIds: involvedOrderIds,
+                orderNumbers: orderNumsStr,
+                paymentInfo: paymentInfoForQueue,
+                isEarly: isEarlyPaymentMode,
+                cashierName: currentStaff.name
+            };
+
+            showPaymentSuccessModal(paymentInfoForQueue);
+        };
+
+        window.showPaymentSuccessModal = function(info) {
+            const container = document.getElementById('paymentSuccessDetails');
+            let methodHtml = '';
+            
+            if (info.method === 'MIX' && info.breakdown) {
+                methodHtml = info.breakdown.map(b => 
+                    `<div style="display:flex; justify-content:space-between;"><span>${b.type.charAt(0).toUpperCase() + b.type.slice(1)}</span><b>RM ${b.amount.toFixed(2)}</b></div>`
+                ).join('');
+            } else {
+                methodHtml = `<div style="display:flex; justify-content:space-between;"><span>Method</span><b>${info.method.toUpperCase()}</b></div>`;
+            }
+
+            container.innerHTML = `
+                <div style="display:flex; justify-content:space-between; margin-bottom:8px; border-bottom:1px dashed #cbd5e0; padding-bottom:8px;">
+                    <span>Total Amount</span><b style="color:#1e293b; font-size:1.1rem;">RM ${info.totalDue.toFixed(2)}</b>
+                </div>
+                <div style="margin-bottom:8px;">
+                    <div style="font-size:0.75rem; color:#64748b; font-weight:bold; text-transform:uppercase; margin-bottom:5px;">Amount Given</div>
+                    ${methodHtml}
+                </div>
+                <div style="display:flex; justify-content:space-between; border-top:1px solid #e2e8f0; padding-top:8px; margin-top:8px;">
+                    <span>Change</span><b style="color:#e53e3e; font-size:1.1rem;">RM ${info.change.toFixed(2)}</b>
+                </div>
+            `;
+
             closeModal('checkoutModalTakeOrder');
+            document.getElementById('paymentSuccessModal').style.display = 'flex';
+        };
+
+        window.closePaymentSuccessModal = async function() {
+            closeModal('paymentSuccessModal');
             selectedOrderIdsForCheckout = [];
             await loadTablesTakeOrder();
             showTableSectionTakeOrder();
+        };
+
+        window.printFromSuccessModal = async function() {
+            const d = window.lastSuccessfulPaymentDetails;
+            if (!d) return;
+
+            const btnText = document.getElementById('btnMainPrintText');
+            const btnLoading = document.getElementById('btnMainPrintLoading');
+            btnText.style.display = 'none';
+            btnLoading.style.display = 'block';
+
+            try {
+                // Re-triggering the logic but looking specifically for Receipt printers
+                const printersSnap = await getDocs(query(collection(db, 'licenses', currentClientId, 'printers'), where('printReceipt', '==', true)));
+                
+                if (printersSnap.empty) {
+                    alert("No printer found with 'Print Receipt & Bills' enabled.");
+                    return;
+                }
+
+                const orderId = d.orderIds[0];
+                const payDetails = {
+                    method: d.paymentInfo.method,
+                    itemsPaid: d.paymentInfo.itemsPaid,
+                    isEarly: d.isEarly,
+                    mergedOrderIds: d.orderIds,
+                    cashierName: d.cashierName,
+                    paymentInfo: d.paymentInfo,
+                    hasCashPayment: d.paymentInfo.hasCashPayment
+                };
+
+                // We call triggerAutoPrinting but with local context true to ensure it ignores autoPrint checkbox 
+                // for this manual request, and handles the Server Takeover logic properly.
+                await triggerAutoPrinting(orderId, d.orderNumbers, 'payment', payDetails, true);
+            } finally {
+                btnText.style.display = 'inline-block';
+                btnLoading.style.display = 'none';
+            }
         };
 
         window.openChangeTableModalTakeOrder = function(orderId = null, filterStatus = 'available') {
