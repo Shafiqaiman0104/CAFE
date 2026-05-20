@@ -10158,6 +10158,11 @@ window.openSearchModalTakeOrder = function() {
         window.triggerAutoPrinting = async function(orderId, orderNumber, type = 'order', paymentDetails = null, isLocalAction = false) {
             const cashierName = paymentDetails?.cashierName || currentStaff?.name || 'N/A';
             
+            // Ensure category map is populated for filtering logic, especially on server devices
+            if (Object.keys(categoryMapTakeOrder).length === 0) {
+                categoryMapTakeOrder = await getCategoriesMap();
+            }
+
             // Get table number from order
             const orderSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', orderId));
             const orderData = orderSnap.exists() ? orderSnap.data() : null;
@@ -11269,8 +11274,11 @@ window.openSearchModalTakeOrder = function() {
                         const orderData = change.doc.data();
                         if (orderData.staffId !== currentStaff.id) {
                             showRemoteOrderPopup(orderData);
-                            // Printer Server Logic: If I have taken over a printer, print the order placed by Device B
-                            triggerAutoPrinting(change.doc.id, orderData.orderNumber, 'order');
+                            // Add a delay for remote orders to ensure all sub-collection items 
+                            // (items, variants, modifiers) are fully written by Device B before printing.
+                            setTimeout(() => {
+                                triggerAutoPrinting(change.doc.id, orderData.orderNumber, 'order');
+                            }, 2000);
                         }
                     }
                 });
@@ -11362,7 +11370,10 @@ window.openSearchModalTakeOrder = function() {
                                     paymentInfo: paymentInfo,
                                     hasCashPayment: paymentInfo?.hasCashPayment
                                 };
-                                triggerAutoPrinting(orderIds[0], orderNums.join(', '), 'payment', payDetails);
+                                // Delay to ensure all split-item documents are synced
+                                setTimeout(() => {
+                                    triggerAutoPrinting(orderIds[0], orderNums.join(', '), 'payment', payDetails);
+                                }, 2000);
                             } else {
                                 // Single Order Printing
                                 const orderId = orderIds[0];
@@ -11377,7 +11388,10 @@ window.openSearchModalTakeOrder = function() {
                                         paymentInfo: paymentInfo,
                                         hasCashPayment: paymentInfo?.hasCashPayment
                                     };
-                                    triggerAutoPrinting(orderId, orderData.orderNumber, 'payment', payDetails);
+                                    // Delay to ensure all item updates are synced
+                                    setTimeout(() => {
+                                        triggerAutoPrinting(orderId, orderData.orderNumber, 'payment', payDetails);
+                                    }, 2000);
                                 }
                             }
                         }
