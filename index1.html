@@ -2707,6 +2707,10 @@
                 <label>Tags (comma separated)</label>
                 <input type="text" id="menuItemTags" placeholder="spicy,popular">
             </div>
+            <div class="form-group">
+                <label>Card Color (When images hidden)</label>
+                <input type="color" id="menuItemColor" value="#ffffff" style="height: 45px; width: 100%; border-radius: 12px; border: 2px solid #e0e0e0; cursor: pointer; padding: 4px;">
+            </div>
             <div class="checkbox-group">
                 <input type="checkbox" id="menuItemRecommended">
                 <label>Recommended</label>
@@ -4481,6 +4485,7 @@
             toggleSoldBy('item');
             document.getElementById('menuItemPrepTime').value = '15';
             document.getElementById('menuItemTags').value = '';
+            document.getElementById('menuItemColor').value = '#ffffff';
             document.getElementById('menuItemRecommended').checked = false;
             document.getElementById('menuItemActive').checked = true;
             
@@ -4515,6 +4520,7 @@
             toggleSoldBy(item.soldBy || 'item', !!item.unit);
             document.getElementById('menuItemPrepTime').value = item.preparationTime || '15';
             document.getElementById('menuItemTags').value = item.tags || '';
+            document.getElementById('menuItemColor').value = item.color || '#ffffff';
             document.getElementById('menuItemRecommended').checked = item.recommend || false;
             document.getElementById('menuItemActive').checked = item.active !== false;
             
@@ -4674,6 +4680,7 @@
                 categoryId: document.getElementById('menuItemCategory').value,
                 preparationTime: document.getElementById('menuItemPrepTime').value,
                 tags: document.getElementById('menuItemTags').value,
+                color: document.getElementById('menuItemColor').value,
                 recommend: document.getElementById('menuItemRecommended').checked,
                 active: document.getElementById('menuItemActive').checked,
                 variants: tempSelectedVariants,
@@ -7977,8 +7984,9 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                 const imageUrl = item.image || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=300&h=300&fit=crop';
                 
                 if (menuViewMode === 'list') {
+                    const bgColor = !showMenuImagesTakeOrder ? (item.color || '#ffffff') : '#ffffff';
                     return `
-                        <div class="menu-card-takeorder" onclick="openItemModalTakeOrder('${item.id}')" style="${!showMenuImagesTakeOrder ? 'aspect-ratio: auto; padding: 15px;' : ''}">
+                        <div class="menu-card-takeorder" onclick="openItemModalTakeOrder('${item.id}')" style="${!showMenuImagesTakeOrder ? `aspect-ratio: auto; padding: 15px; background-color: ${bgColor};` : ''}">
                             ${badgeHtml}
                             ${showMenuImagesTakeOrder ? `<img class="menu-image-takeorder" src="${imageUrl}" onerror="this.src='https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=300&h=300&fit=crop'">` : ''}
                             <div class="menu-content-takeorder" style="${!showMenuImagesTakeOrder ? 'padding: 0; background: transparent;' : ''}">
@@ -7990,8 +7998,9 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                 }
                 
                 if (!showMenuImagesTakeOrder) {
+                    const bgColor = item.color || '#ffffff';
                     return `
-                        <div class="menu-card-takeorder" onclick="openItemModalTakeOrder('${item.id}')" style="aspect-ratio: auto; height: 100px; justify-content: center; align-items: center; padding: 10px; text-align: center;">
+                        <div class="menu-card-takeorder" onclick="openItemModalTakeOrder('${item.id}')" style="aspect-ratio: auto; height: 100px; justify-content: center; align-items: center; padding: 10px; text-align: center; background-color: ${bgColor};">
                             ${badgeHtml}
                             <div class="menu-card-name" style="color: #1e293b; font-size: 0.85rem; margin-bottom: 4px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.2;">${item.name}</div>
                             <div class="menu-price-takeorder" style="font-size: 0.9rem;">RM ${parseFloat(item.price).toFixed(2)}</div>
