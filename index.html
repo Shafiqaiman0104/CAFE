@@ -1,11 +1,12 @@
 <!DOCTYPE html>
 <html>
 <head>
-     <meta charset="utf-8">
+    <meta charset="utf-8">
      <title>VRPOS</title>
      <link rel="manifest" href="/manifest.json">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
         * {
             margin: 0;
@@ -810,27 +811,36 @@
         }
         @media (min-width: 768px) {
             .active-orders-grid {
-                grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+                grid-template-columns: repeat(3, 1fr);
             }
+            .active-orders-grid > div { min-width: 0; }
+            .order-detail-card { padding: 12px !important; }
+            .order-detail-card [style*="font-size: 1.1rem"] { font-size: 0.85rem !important; padding: 5px 10px !important; }
+            .order-detail-card [style*="font-size:0.9rem"] { font-size: 0.8rem !important; }
+            .order-detail-card .status-badge { font-size: 10px !important; }
+            .order-detail-card b[style*="font-size: 0.9rem"] { font-size: 0.8rem !important; }
+            .active-orders-container { gap: 10px !important; }
         }
 
         /* Mobile refinements for Order Cards */
         @media (max-width: 767px) {
+            .section-card { padding: 12px !important; }
             .order-detail-card {
                 padding: 12px !important;
                 border-radius: 16px !important;
             }
             .order-detail-card [style*="font-size: 1.1rem"] {
-                font-size: 0.9rem !important;
-                padding: 4px 10px !important;
-                margin-bottom: 8px !important;
+                font-size: 0.75rem !important;
+                padding: 4px 8px !important;
+                margin-bottom: 6px !important;
+                border-radius: 10px !important;
             }
             .order-detail-card [style*="font-size:0.9rem"] {
-                font-size: 0.75rem !important;
-                margin-bottom: 8px !important;
+                font-size: 0.7rem !important;
+                margin-bottom: 6px !important;
             }
             .order-detail-card b[style*="font-size: 0.9rem"] {
-                font-size: 0.8rem !important;
+                font-size: 0.75rem !important;
             }
             .order-detail-card .status-badge {
                 padding: 2px 6px !important;
@@ -843,6 +853,14 @@
             .order-detail-card select {
                 padding: 6px !important;
                 font-size: 0.75rem !important;
+            }
+            .active-orders-container { gap: 8px !important; }
+            .active-orders-grid > div { min-width: 0; }
+            /* Adjust the sticky header in Active Orders to match reduced section-card padding */
+            #activeOrders .section-card > div[style*="position: sticky"] {
+                margin: -12px -12px 15px -12px !important;
+                padding: 15px 15px 10px 15px !important;
+                border-radius: 24px 24px 0 0 !important;
             }
         }
 
@@ -923,11 +941,14 @@
 @media (min-width: 640px) {
     .menu-grid-takeorder { grid-template-columns: repeat(3, 1fr); }
 }
-@media (min-width: 900px) {
-    .menu-grid-takeorder { grid-template-columns: repeat(4, 1fr); }
-}
-@media (min-width: 1200px) {
+/* Tablet and Desktop: 5 columns and more compact height */
+@media (min-width: 768px) {
     .menu-grid-takeorder { grid-template-columns: repeat(5, 1fr); }
+    .menu-card-takeorder { aspect-ratio: 1 / 0.75; }
+    .menu-name-overlay-takeorder { padding: 10px 6px 4px 8px; }
+    .menu-name-overlay-takeorder span { font-size: 0.75rem; }
+    .menu-content-takeorder { padding: 4px 8px; }
+    .menu-price-takeorder { font-size: 0.85rem; }
 }
 
 .menu-grid-takeorder.list-view {
@@ -1558,6 +1579,9 @@
     max-height: calc(100vh - 350px);
     overflow-y: auto;
     padding-right: 5px; /* space for scrollbar */
+}
+@media (min-width: 768px) {
+    .menu-scroll-content-takeorder { max-height: calc(100vh - 310px); }
 }
 
 /* Smooth scrollbar for the menu area */
@@ -2458,9 +2482,14 @@
                                     <button class="back-to-tables-btn" onclick="showTableSectionTakeOrder()" style="margin-bottom: 0;">
                                         <i class="fas fa-arrow-left"></i> Back to Tables
                                     </button>
-                                    <div class="view-toggle-takeorder">
-                                        <button class="view-btn-takeorder active" id="menuGridViewBtn" onclick="setMenuViewMode('grid')"><i class="fas fa-th"></i> Grid</button>
-                                        <button class="view-btn-takeorder" id="menuListViewBtn" onclick="setMenuViewMode('list')"><i class="fas fa-list"></i> List</button>
+                                    <div style="display: flex; align-items: center; gap: 10px;">
+                                        <div class="search-icon-takeorder" id="toggleMenuImagesBtn" onclick="toggleMenuImagesTakeOrder()" title="Toggle Images" style="width: 32px; height: 32px; font-size: 0.9rem; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3);">
+                                            <i class="fas fa-image"></i>
+                                        </div>
+                                        <div class="view-toggle-takeorder">
+                                            <button class="view-btn-takeorder active" id="menuGridViewBtn" onclick="setMenuViewMode('grid')"><i class="fas fa-th"></i> Grid</button>
+                                            <button class="view-btn-takeorder" id="menuListViewBtn" onclick="setMenuViewMode('list')"><i class="fas fa-list"></i> List</button>
+                                        </div>
                                     </div>
                                 </div>
                                 
@@ -2537,6 +2566,9 @@
                                 </div>
                                 <div id="voidToggleBtnOrdersTab" onclick="toggleVoidModeOrdersTab()" style="color: white; cursor: pointer; font-size: 1rem; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1.5px solid white;" title="Toggle Void Mode">
                                     <i class="fas fa-trash-alt"></i>
+                                </div>
+                                <div onclick="openOrderQRScanner()" style="color: white; cursor: pointer; font-size: 1.1rem; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1.5px solid white;" title="Scan Order QR">
+                                    <i class="fas fa-qrcode"></i>
                                 </div>
                                 <div onclick="toggleActiveOrdersSearch()" style="color: white; cursor: pointer; font-size: 1rem;" title="Search Orders">
                                     <i class="fas fa-search"></i>
@@ -2677,6 +2709,20 @@
                 <label>Tags (comma separated)</label>
                 <input type="text" id="menuItemTags" placeholder="spicy,popular">
             </div>
+            <div class="form-group">
+                <label>Card Color (When images hidden)</label>
+                <input type="color" id="menuItemColor" value="#ffffff" style="height: 45px; width: 100%; border-radius: 12px; border: 2px solid #e0e0e0; cursor: pointer; padding: 4px;">
+            </div>
+            <div class="form-group">
+                <label>Shape (When images hidden)</label>
+                <select id="menuItemShape">
+                    <option value="square">Square (NORMAL)</option>
+                    <option value="circle">Circle</option>
+                    <option value="hexagon">Hexagon</option>
+                    <option value="pentagon">Pentagon</option>
+                    <option value="nonagon">Nonagon</option>
+                </select>
+            </div>
             <div class="checkbox-group">
                 <input type="checkbox" id="menuItemRecommended">
                 <label>Recommended</label>
@@ -2699,6 +2745,29 @@
         </div>
     </div>
 
+    <!-- Payment Success Modal -->
+    <div id="paymentSuccessModal" class="modal" style="align-items: center; justify-content: center; z-index: 10007;">
+        <div class="modal-content" style="max-width: 400px; border-radius: 28px; text-align: center; padding: 30px;">
+            <div style="width: 70px; height: 70px; background: #d1fae5; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto;">
+                <i class="fas fa-check-circle" style="font-size: 2.5rem; color: #10b981;"></i>
+            </div>
+            <h2 style="margin-bottom: 5px; color: #1e293b;">Payment Success!</h2>
+            <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 25px;">Transaction completed successfully.</p>
+            
+            <div id="paymentSuccessDetails" style="background: #f8fafc; border-radius: 20px; padding: 20px; text-align: left; margin-bottom: 25px; border: 1px solid #e2e8f0; font-size: 0.9rem; line-height: 1.6;">
+                <!-- Content populated by JS -->
+            </div>
+            
+            <div style="display: flex; gap: 12px;">
+                <button class="secondary-btn" style="flex: 1; padding: 15px;" onclick="closePaymentSuccessModal()">Close</button>
+                <button class="primary-btn" style="flex: 1; padding: 15px; background: #764ba2; box-shadow: 0 4px 12px rgba(118,75,162,0.3);" onclick="printFromSuccessModal()">
+                    <span id="btnMainPrintText"><i class="fas fa-print"></i> Print</span>
+                    <div id="btnMainPrintLoading" style="display:none;" class="loading-circle-orange" style="width:20px; height:20px; border-width:2px; border-top-color:white;"></div>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Add Department Printer Modal -->
     <div id="addDeptPrinterModal" class="modal">
         <div class="modal-content">
@@ -2714,6 +2783,20 @@
             <div class="form-group">
                 <label>Categories (Select which menu categories go to this printer)</label>
                 <div id="deptPrinterCategoriesCheckboxes" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 10px; background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0;"></div>
+            </div>
+            <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; background: #f8fafc; padding: 12px; border-radius: 14px; border: 1px solid #e2e8f0; margin-top: 15px;">
+                <label style="margin-bottom: 0; font-weight: 700;">QR ORDER ID</label>
+                <label class="switch">
+                    <input type="checkbox" id="deptPrinterQrEnabled">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; background: #f8fafc; padding: 12px; border-radius: 14px; border: 1px solid #e2e8f0; margin-top: 10px;">
+                <label style="margin-bottom: 0; font-weight: 700;">VOID ITEM PRINTING</label>
+                <label class="switch">
+                    <input type="checkbox" id="deptPrinterVoidEnabled">
+                    <span class="slider"></span>
+                </label>
             </div>
             <button class="btn" onclick="saveDeptPrinter()">Save</button>
         </div>
@@ -2774,6 +2857,10 @@
             <div class="checkbox-group" style="margin-bottom: 12px;">
                 <input type="checkbox" id="printOrdersToggle" onchange="togglePrinterDeptList(this.checked)">
                 <label>Print Orders</label>
+            </div>
+            <div class="checkbox-group" style="margin-bottom: 12px;">
+                <input type="checkbox" id="printMoveMergeTable">
+                <label>Move & Merge Table</label>
             </div>
 
             <div id="printerDeptListContainer" style="display: none; background: #f1f5f9; padding: 15px; border-radius: 16px; margin-bottom: 15px; border: 1px solid #cbd5e0;">
@@ -2982,7 +3069,7 @@
     </div>
 
     <!-- Select Report Printer Modal -->
-    <div id="selectReportPrinterModal" class="modal" style="align-items: center; justify-content: center; z-index: 10006;">
+    <div id="selectReportPrinterModal" class="modal" style="align-items: center; justify-content: center; z-index: 10010;">
         <div class="modal-content" style="max-width: 400px; border-radius: 24px; padding: 30px;">
             <div class="modal-header">
                 <h3><i class="fas fa-print"></i> Print to which printer?</h3>
@@ -3544,6 +3631,22 @@
         </div>
     </div>
 
+    <!-- Order QR Scanner Modal -->
+    <div id="orderQRScannerModal" class="modal" style="align-items: center; justify-content: center; z-index: 10003;">
+        <div class="modal-content" style="max-width: 400px; border-radius: 24px; text-align: center; padding: 25px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-qrcode"></i> Scan Order QR</h3>
+                <button class="modal-close" onclick="closeOrderQRScanner()">&times;</button>
+            </div>
+            <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 20px;">Place the QR code on the receipt inside the frame to search for the order.</p>
+            <div id="qr-reader" style="width: 100%; border-radius: 16px; overflow: hidden; background: #000;"></div>
+            <div id="qr-reader-results"></div>
+            <div style="margin-top: 20px;">
+                <button class="secondary-btn" style="width: 100%;" onclick="closeOrderQRScanner()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <!-- No Connection Modal -->
     <div id="noConnectionModal" class="modal" style="z-index: 200001; align-items: center; justify-content: center; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(8px);">
         <div class="modal-content" style="max-width: 320px; border-radius: 28px; text-align: center; padding: 35px; animation: slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
@@ -3754,7 +3857,17 @@
         let voidingItemData = null;
         let isInitialLoadOrders = true;
         let isInitialLoadTransactions = true;
+        let showMenuImagesTakeOrder = true;
+        let lastSuccessfulPaymentDetails = null;
         
+        const shapeClipPaths = {
+            'square': 'none',
+            'circle': 'circle(50% at 50% 50%)',
+            'hexagon': 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)',
+            'pentagon': 'polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%)',
+            'nonagon': 'polygon(50% 0%, 83% 12%, 100% 43%, 94% 78%, 68% 100%, 32% 100%, 6% 78%, 0% 43%, 17% 12%)'
+        };
+
         // Takeover State
         let takeoverTargetPrinterId = null;
         let takeoverTargetStaffId = null;
@@ -4417,6 +4530,8 @@
             toggleSoldBy('item');
             document.getElementById('menuItemPrepTime').value = '15';
             document.getElementById('menuItemTags').value = '';
+            document.getElementById('menuItemColor').value = '#ffffff';
+            document.getElementById('menuItemShape').value = 'square';
             document.getElementById('menuItemRecommended').checked = false;
             document.getElementById('menuItemActive').checked = true;
             
@@ -4451,6 +4566,8 @@
             toggleSoldBy(item.soldBy || 'item', !!item.unit);
             document.getElementById('menuItemPrepTime').value = item.preparationTime || '15';
             document.getElementById('menuItemTags').value = item.tags || '';
+            document.getElementById('menuItemColor').value = item.color || '#ffffff';
+            document.getElementById('menuItemShape').value = item.shape || 'square';
             document.getElementById('menuItemRecommended').checked = item.recommend || false;
             document.getElementById('menuItemActive').checked = item.active !== false;
             
@@ -4610,6 +4727,8 @@
                 categoryId: document.getElementById('menuItemCategory').value,
                 preparationTime: document.getElementById('menuItemPrepTime').value,
                 tags: document.getElementById('menuItemTags').value,
+                color: document.getElementById('menuItemColor').value,
+                shape: document.getElementById('menuItemShape').value,
                 recommend: document.getElementById('menuItemRecommended').checked,
                 active: document.getElementById('menuItemActive').checked,
                 variants: tempSelectedVariants,
@@ -4825,12 +4944,43 @@
             }
 
             if (container) container.style.display = (shiftShown || staffShown) ? 'flex' : 'none';
+            
+            updateOrderTimers();
+        }
+
+        function updateOrderTimers() {
+            const now = Date.now();
+            document.querySelectorAll('.order-live-timer').forEach(el => {
+                const created = parseInt(el.getAttribute('data-created'));
+                const status = (el.getAttribute('data-status') || '').toLowerCase();
+                if (!created || created === 0) return;
+
+                const diffMs = now - created;
+                const totalSeconds = Math.floor(diffMs / 1000);
+                const mins = Math.floor(totalSeconds / 60);
+                const secs = totalSeconds % 60;
+
+                el.innerText = `${mins.toString().padStart(2, '0')}m ${secs.toString().padStart(2, '0')}s`;
+
+                let bgColor = '#4caf50'; // Initial Green
+
+                if (status === 'active') {
+                    if (mins >= 5) bgColor = '#e53e3e'; // 5m+ Red
+                    else if (mins >= 3) bgColor = '#ff9800'; // 3m+ Orange
+                } else if (status === 'preparing') {
+                    if (mins >= 60) bgColor = '#e53e3e'; // 1h+ Red
+                    else if (mins >= 30) bgColor = '#ff9800'; // 30m+ Orange
+                }
+                // Other statuses like 'served' or 'cancelled' stay green or use default badge colors.
+
+                el.style.backgroundColor = bgColor;
+            });
         }
 
         function startTimerLoop() {
             if (timerInterval) clearInterval(timerInterval);
             updateLiveTimers();
-            timerInterval = setInterval(updateLiveTimers, 30000);
+            timerInterval = setInterval(updateLiveTimers, 1000);
         }
 
         window.joinShift = async function() {
@@ -7177,8 +7327,17 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
         }
 
         async function performFullVoidLogic(orderId, itemId) {
-            await updateDoc(doc(db, 'licenses', currentClientId, 'orders', orderId, 'items', itemId), { status: 'cancelled' });
+            const itemRef = doc(db, 'licenses', currentClientId, 'orders', orderId, 'items', itemId);
+            const itemSnap = await getDoc(itemRef);
+            if (!itemSnap.exists()) return;
+            const itemData = itemSnap.data();
+
+            await updateDoc(itemRef, { status: 'cancelled' });
             await updateOrderTotals(orderId);
+
+            // Trigger void print for department
+            await triggerVoidItemPrinting(orderId, itemId, itemData.qty);
+
             const row = document.getElementById(`chk-item-${itemId}`);
             if (row) row.remove();
             selectedCheckoutItems = selectedCheckoutItems.filter(i => i.orderId !== orderId || i.itemId !== itemId);
@@ -7215,6 +7374,9 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                     const mSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderId, 'items', itemId, 'selectedModifiers'));
                     for (const m of mSnap.docs) await addDoc(collection(db, 'licenses', currentClientId, 'orders', orderId, 'items', newCancelledItemRef.id, 'selectedModifiers'), m.data());
                     await updateOrderTotals(orderId);
+
+                    // Trigger void print for department
+                    await triggerVoidItemPrinting(orderId, itemId, qtyToVoid);
 
                     if (source === 'checkout') {
                         const row = document.getElementById(`chk-item-${itemId}`);
@@ -7528,12 +7690,15 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                 });
             }
 
-            // Trigger Automatic Printing for Main Receipt after payment
+            const orderNumsStr = (involvedOrderIds.length > 1) 
+                ? involvedOrderIds.map(id => checkoutOrdersToProcess.find(d => d.id === id)?.data().orderNumber).join(', ') 
+                : checkoutOrdersToProcess.find(d => d.id === involvedOrderIds[0])?.data().orderNumber;
+
+            // Save Receipt Data to Queue with Status Success (No Auto Print)
+            const qId = await createReceiptQueueItem(involvedOrderIds, orderNumsStr, paymentInfoForQueue, currentStaff.name);
+
+            // Identify unique orders involved in this payment
             if (involvedOrderIds.length > 1) {
-                const orderNums = involvedOrderIds.map(id => {
-                    const doc = checkoutOrdersToProcess.find(d => d.id === id);
-                    return doc ? doc.data().orderNumber : id.slice(-8);
-                });
                 const payDetails = {
                     method: checkoutPayMethod === 'mixed' ? 'Mixed' : checkoutPayMethod,
                     itemsPaid: selectedCheckoutItems,
@@ -7543,7 +7708,6 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                     paymentInfo: paymentInfoForQueue,
                     hasCashPayment: hasCashPayment
                 };
-                triggerAutoPrinting(involvedOrderIds[0], orderNums.join(', '), 'payment', payDetails, true);
             } else if (involvedOrderIds.length === 1) {
                 const orderId = involvedOrderIds[0];
                 const orderDoc = checkoutOrdersToProcess.find(d => d.id === orderId);
@@ -7555,7 +7719,6 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                     paymentInfo: paymentInfoForQueue,
                     hasCashPayment: hasCashPayment
                 };
-                triggerAutoPrinting(orderId, orderDoc ? orderDoc.data().orderNumber : 'N/A', 'payment', payDetails, true);
             }
 
             // Check each order to see if it is now fully paid or remaining items are cancelled
@@ -7584,12 +7747,125 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             if (activeSnap.empty) {
                 await updateDoc(doc(db, 'licenses', currentClientId, 'tables', selectedTableIdTakeOrder), { status: 'available' });
             }
+            
+            // Store details for manual printing and success modal
+            window.lastSuccessfulPaymentDetails = {
+                orderIds: involvedOrderIds,
+                orderNumbers: orderNumsStr,
+                paymentInfo: paymentInfoForQueue,
+                isEarly: isEarlyPaymentMode,
+                cashierName: currentStaff.name,
+                queueId: qId
+            };
 
-            alert(`Payment success! Change: RM ${(totalReceived - checkoutTotalTakeOrder).toFixed(2)}`);
+            showPaymentSuccessModal(paymentInfoForQueue);
+        };
+
+        window.showPaymentSuccessModal = function(info) {
+            const container = document.getElementById('paymentSuccessDetails');
+            let methodHtml = '';
+            
+            if (info.method === 'MIX' && info.breakdown) {
+                methodHtml = info.breakdown.map(b => 
+                    `<div style="display:flex; justify-content:space-between;"><span>${b.type.charAt(0).toUpperCase() + b.type.slice(1)}</span><b>RM ${b.amount.toFixed(2)}</b></div>`
+                ).join('');
+            } else {
+                const displayMethod = info.method === 'ewallet' ? 'E-WALLET' : info.method.toUpperCase();
+                methodHtml = `<div style="display:flex; justify-content:space-between;"><span>${displayMethod}</span><b>RM ${info.give.toFixed(2)}</b></div>`;
+            }
+
+            container.innerHTML = `
+                <div style="display:flex; justify-content:space-between; margin-bottom:8px; border-bottom:1px dashed #cbd5e0; padding-bottom:8px;">
+                    <span>Total Amount</span><b style="color:#1e293b; font-size:1.1rem;">RM ${info.totalDue.toFixed(2)}</b>
+                </div>
+                <div style="margin-bottom:8px;">
+                    <div style="font-size:0.75rem; color:#64748b; font-weight:bold; text-transform:uppercase; margin-bottom:5px;">Amount Given</div>
+                    ${methodHtml}
+                </div>
+                <div style="display:flex; justify-content:space-between; border-top:1px solid #e2e8f0; padding-top:8px; margin-top:8px;">
+                    <span>Change</span><b style="color:#e53e3e; font-size:1.1rem;">RM ${info.change.toFixed(2)}</b>
+                </div>
+            `;
+
             closeModal('checkoutModalTakeOrder');
+            document.getElementById('paymentSuccessModal').style.display = 'flex';
+        };
+
+        window.closePaymentSuccessModal = async function() {
+            closeModal('paymentSuccessModal');
             selectedOrderIdsForCheckout = [];
             await loadTablesTakeOrder();
             showTableSectionTakeOrder();
+        };
+
+        window.printFromSuccessModal = async function() {
+            const d = window.lastSuccessfulPaymentDetails;
+            if (!d || !d.queueId) return;
+
+            // Look specifically for printers with 'Print Receipt & Bills' enabled
+            const printersSnap = await getDocs(query(collection(db, 'licenses', currentClientId, 'printers'), where('printReceipt', '==', true)));
+            
+            if (printersSnap.empty) {
+                // Scenario B: No receipt printer enabled, show selection popup
+                openManualPrinterSelector(d.queueId);
+                return;
+            }
+
+            // Scenario A: Receipt printers exist, print to all of them
+            const btnText = document.getElementById('btnMainPrintText');
+            const btnLoading = document.getElementById('btnMainPrintLoading');
+            btnText.style.display = 'none';
+            btnLoading.style.display = 'block';
+
+            try {
+                for (const printerDoc of printersSnap.docs) {
+                    const p = printerDoc.data();
+                    // Basic ownership check
+                    if (p.takenByStaffId && p.takenByStaffId !== currentStaff.id) continue;
+                    
+                    await executeReprint(d.queueId, null, printerDoc.id);
+                }
+            } finally {
+                btnText.style.display = 'inline-block';
+                btnLoading.style.display = 'none';
+            }
+        };
+
+        window.openManualPrinterSelector = async function(queueId) {
+            const container = document.getElementById('reportPrinterList');
+            container.innerHTML = '<div class="loading">Loading printers...</div>';
+            document.getElementById('selectReportPrinterModal').style.display = 'flex';
+            
+            // Update modal title temporarily
+            const title = document.querySelector('#selectReportPrinterModal h3');
+            const originalTitle = title.innerHTML;
+            title.innerHTML = '<i class="fas fa-print"></i> Select Printer for Receipt';
+
+            try {
+                const printersSnap = await getDocs(collection(db, 'licenses', currentClientId, 'printers'));
+                if (printersSnap.empty) {
+                    container.innerHTML = '<div style="text-align:center; padding:20px; color:#666;">No printers found.</div>';
+                    return;
+                }
+                
+                let html = '';
+                printersSnap.forEach(d => {
+                    const p = d.data();
+                    html += `
+                        <button class="primary-btn" style="background:#f1f5f9; color:#1e293b; border:1px solid #e2e8f0; text-align:left; display:flex; justify-content:space-between; align-items:center; padding: 15px; margin-bottom: 8px;" 
+                                onclick="closeModal('selectReportPrinterModal'); executeReprint('${queueId}', null, '${d.id}')">
+                            <span><b style="font-size: 0.9rem;">${p.name}</b><br><small style="color: #64748b;">${p.paperWidth}mm Thermal Printer</small></span>
+                            <i class="fas fa-print" style="color:#764ba2;"></i>
+                        </button>
+                    `;
+                });
+                container.innerHTML = html;
+                
+                // Reset title when modal is closed
+                const closeBtn = document.querySelector('#selectReportPrinterModal .modal-close');
+                const oldClose = closeBtn.onclick;
+                closeBtn.onclick = () => { title.innerHTML = originalTitle; closeModal('selectReportPrinterModal'); if (oldClose) oldClose(); };
+            } catch (e) { container.innerHTML = `<div style="color:red; padding:10px;">Error: ${e.message}</div>`; }
         };
 
         window.openChangeTableModalTakeOrder = function(orderId = null, filterStatus = 'available') {
@@ -7714,10 +7990,16 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             const q = query(collection(db, 'licenses', currentClientId, 'orders'), where('tableId', '==', oldTableId), where('status', 'in', ['active', 'preparing', 'served']));
             const snap = await getDocs(q);
             
+            const movedOrders = [];
             for (const orderDoc of snap.docs) {
                 // If specific orders are selected, only update those. Otherwise update all active orders.
                 if (!isSpecificMove || targetOrderIds.includes(orderDoc.id)) {
                     await updateDoc(orderDoc.ref, { tableId: newTableId });
+                    const oData = orderDoc.data();
+                    movedOrders.push({
+                        orderSequence: oData.orderSequence || '?',
+                        orderNumber: oData.orderNumber
+                    });
                 }
             }
 
@@ -7730,6 +8012,10 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             const snapRemaining = await getDocs(qRemaining);
             if (snapRemaining.empty) {
                 await updateDoc(doc(db, 'licenses', currentClientId, 'tables', oldTableId), { status: 'available' });
+            }
+
+            if (movedOrders.length > 0) {
+                await triggerMoveMergePrinting(selectedTableNumberTakeOrder, newTableNum, movedOrders, isMerging);
             }
 
             alert(`Order(s) successfully ${isMerging ? 'merged' : 'moved'}.`);
@@ -7860,18 +8146,33 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                 const imageUrl = item.image || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=300&h=300&fit=crop';
                 
                 if (menuViewMode === 'list') {
+                    const bgColor = !showMenuImagesTakeOrder ? (item.color || '#ffffff') : '#ffffff';
+                    // Force square shape in list view even if a custom shape is assigned
+                    const clipPath = 'none'; 
                     return `
-                        <div class="menu-card-takeorder" onclick="openItemModalTakeOrder('${item.id}')">
+                        <div class="menu-card-takeorder" onclick="openItemModalTakeOrder('${item.id}')" style="${!showMenuImagesTakeOrder ? `aspect-ratio: auto; padding: 15px; background-color: ${bgColor}; clip-path: ${clipPath};` : ''}">
                             ${badgeHtml}
-                            <img class="menu-image-takeorder" src="${imageUrl}" onerror="this.src='https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=300&h=300&fit=crop'">
-                            <div class="menu-content-takeorder">
-                                <div><div class="menu-card-name">${item.name}</div>
+                            ${showMenuImagesTakeOrder ? `<img class="menu-image-takeorder" src="${imageUrl}" onerror="this.src='https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=300&h=300&fit=crop'">` : ''}
+                            <div class="menu-content-takeorder" style="${!showMenuImagesTakeOrder ? 'padding: 0; background: transparent;' : ''}">
+                                <div><div class="menu-card-name" style="color: #1e293b;">${item.name}</div>
                                 <div class="menu-price-takeorder">RM ${parseFloat(item.price).toFixed(2)}</div></div>
                             </div>
                         </div>
                     `;
                 }
                 
+                if (!showMenuImagesTakeOrder) {
+                    const bgColor = item.color || '#ffffff';
+                    const clipPath = shapeClipPaths[item.shape] || 'none';
+                    return `
+                        <div class="menu-card-takeorder" onclick="openItemModalTakeOrder('${item.id}')" style="aspect-ratio: 1/1; width: 100%; height: auto; justify-content: center; align-items: center; padding: 10px; text-align: center; background-color: ${bgColor}; clip-path: ${clipPath};">
+                            ${badgeHtml}
+                            <div class="menu-card-name" style="color: #1e293b; font-size: 0.85rem; margin-bottom: 4px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.2;">${item.name}</div>
+                            <div class="menu-price-takeorder" style="font-size: 0.9rem;">RM ${parseFloat(item.price).toFixed(2)}</div>
+                        </div>
+                    `;
+                }
+
                 return `
                     <div class="menu-card-takeorder" onclick="openItemModalTakeOrder('${item.id}')">
                         ${badgeHtml}
@@ -8106,6 +8407,18 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
             cartTakeOrder.forEach((item, idx) => {
                 subtotal += item.total;
                 
+                // Ensure item has an order type, default to global if not 'mix'
+                if (!item.itemOrderType) {
+                    item.itemOrderType = (selectedOrderTypeTakeOrder === 'mix') ? 'dine-in' : selectedOrderTypeTakeOrder;
+                }
+
+                const canSplit = item.qty > 1 && item.soldBy !== 'measurement';
+                const canMerge = idx > 0 && 
+                    item.id === cartTakeOrder[idx-1].id && 
+                    JSON.stringify(item.variants) === JSON.stringify(cartTakeOrder[idx-1].variants) &&
+                    JSON.stringify(item.modifiers) === JSON.stringify(cartTakeOrder[idx-1].modifiers) &&
+                    item.notes === cartTakeOrder[idx-1].notes;
+
                 let details = '';
                 if (item.variants && item.variants.length) {
                     item.variants.forEach(v => {
@@ -8125,7 +8438,19 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
                 html += `
                     <div class="order-item-card-takeorder">
                         <div class="order-item-header-takeorder">
-                            <span class="order-item-name-takeorder">${item.name} ${qtyDisplay}</span>
+                            <div style="flex: 1;">
+                                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px;">
+                                    <span class="order-item-name-takeorder">${item.name} ${qtyDisplay}</span>
+                                    <div style="display: flex; gap: 4px;">
+                                        ${canSplit ? `<button onclick="splitCartItem(${idx})" title="Split Item" style="padding: 2px 6px; font-size: 0.6rem; border-radius: 4px; border: 1px solid #764ba2; background: white; color: #764ba2; cursor: pointer;"><i class="fas fa-columns"></i> Split</button>` : ''}
+                                        ${canMerge ? `<button onclick="mergeCartItem(${idx})" title="Merge with Above" style="padding: 2px 6px; font-size: 0.6rem; border-radius: 4px; border: 1px solid #38a169; background: white; color: #38a169; cursor: pointer;"><i class="fas fa-object-group"></i> Merge</button>` : ''}
+                                    </div>
+                                </div>
+                                <div class="item-mix-toggle">
+                                    <div class="mix-type-btn ${item.itemOrderType === 'dine-in' ? 'active' : ''}" onclick="setItemOrderTypeInCart(${idx}, 'dine-in')">Dine In</div>
+                                    <div class="mix-type-btn ${item.itemOrderType === 'takeaway' ? 'active' : ''}" onclick="setItemOrderTypeInCart(${idx}, 'takeaway')">Takeaway</div>
+                                </div>
+                            </div>
                             <span class="order-item-price-takeorder">RM ${item.total.toFixed(2)}</span>
                         </div>
                         <div class="order-item-details-takeorder">${details}</div>
@@ -8152,6 +8477,61 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
             totalSpan.innerText = `RM ${total.toFixed(2)}`;
         }
 
+        window.splitCartItem = function(idx) {
+            const item = cartTakeOrder[idx];
+            if (!item || item.qty <= 1) return;
+
+            const newItem = JSON.parse(JSON.stringify(item));
+            newItem.qty = 1;
+            newItem.total = newItem.unitPrice;
+            newItem.itemOrderType = 'takeaway'; // Default the split-off item to takeaway
+
+            item.qty -= 1;
+            item.total = item.unitPrice * item.qty;
+
+            cartTakeOrder.splice(idx + 1, 0, newItem);
+            
+            checkAndSyncGlobalOrderType();
+            updateOrdersUITakeOrder();
+            renderMenuGridTakeOrder();
+        };
+
+        window.mergeCartItem = function(idx) {
+            if (idx <= 0) return;
+            const currentItem = cartTakeOrder[idx];
+            const prevItem = cartTakeOrder[idx - 1];
+
+            prevItem.qty += currentItem.qty;
+            prevItem.total = prevItem.unitPrice * prevItem.qty;
+
+            cartTakeOrder.splice(idx, 1);
+            
+            checkAndSyncGlobalOrderType();
+            updateOrdersUITakeOrder();
+            renderMenuGridTakeOrder();
+        };
+
+        window.setItemOrderTypeInCart = function(idx, type) {
+            if (cartTakeOrder[idx]) {
+                cartTakeOrder[idx].itemOrderType = type;
+                checkAndSyncGlobalOrderType();
+                updateOrdersUITakeOrder();
+            }
+        };
+
+        function checkAndSyncGlobalOrderType() {
+            if (cartTakeOrder.length === 0) return;
+            
+            const firstType = cartTakeOrder[0].itemOrderType;
+            const isMixed = cartTakeOrder.some(item => item.itemOrderType !== firstType);
+            
+            if (isMixed) {
+                selectOrderTypeTakeOrder('mix', true);
+            } else if (selectedOrderTypeTakeOrder === 'mix') {
+                selectOrderTypeTakeOrder(firstType, true);
+            }
+        }
+
         window.updateQtyTakeOrder = function(index, delta) {
             const item = cartTakeOrder[index];
             // Use precision to avoid floating point errors (e.g. 0.30000000000000004)
@@ -8163,6 +8543,7 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
                 item.qty = newQty;
                 item.total = item.unitPrice * newQty;
             }
+            checkAndSyncGlobalOrderType();
             updateOrdersUITakeOrder();
             renderMenuGridTakeOrder();
         };
@@ -8244,12 +8625,24 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
                 if (isMix && !item.itemOrderType) item.itemOrderType = 'dine-in'; // default for mix
 
                 const qtyLabel = item.soldBy === 'measurement' ? `${item.qty}${item.unit}` : `x ${item.qty}`;
+                const canSplit = isMix && item.qty > 1 && item.soldBy !== 'measurement';
+                const canMerge = isMix && idx > 0 && 
+                    item.id === cartTakeOrder[idx-1].id && 
+                    JSON.stringify(item.variants) === JSON.stringify(cartTakeOrder[idx-1].variants) &&
+                    JSON.stringify(item.modifiers) === JSON.stringify(cartTakeOrder[idx-1].modifiers) &&
+                    item.notes === cartTakeOrder[idx-1].notes;
 
                 itemsHtml += `
                     <div style="padding:8px 0; border-bottom:1px dashed #eee;">
                         <div style="display:flex; justify-content:space-between;">
                             <div style="flex: 1;">
-                                <span style="font-weight:600;">${item.name} ${qtyLabel}</span>
+                                <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
+                                    <span style="font-weight:600;">${item.name} ${qtyLabel}</span>
+                                    <div style="display: flex; gap: 5px;">
+                                        ${canSplit ? `<button onclick="splitCartItemInSummary(${idx})" style="padding: 2px 8px; font-size: 0.65rem; border-radius: 6px; border: 1px solid #764ba2; background: white; color: #764ba2; cursor: pointer; font-weight: bold;"><i class="fas fa-columns"></i> Split</button>` : ''}
+                                        ${canMerge ? `<button onclick="mergeCartItemInSummary(${idx})" style="padding: 2px 8px; font-size: 0.65rem; border-radius: 6px; border: 1px solid #38a169; background: white; color: #38a169; cursor: pointer; font-weight: bold;"><i class="fas fa-object-group"></i> Merge</button>` : ''}
+                                    </div>
+                                </div>
                                 ${isMix ? `
                                 <div class="item-mix-toggle">
                                     <div class="mix-type-btn ${item.itemOrderType === 'dine-in' ? 'active' : ''}" onclick="setItemOrderType(${idx}, 'dine-in')">Dine In</div>
@@ -8315,6 +8708,43 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
             document.getElementById('orderSummaryModalTakeOrder').style.display = 'flex';
 
             if (isCounterSummaryFlow) selectOrderTypeTakeOrder(selectedOrderTypeTakeOrder, true);
+        };
+
+        window.splitCartItemInSummary = function(idx) {
+            const item = cartTakeOrder[idx];
+            if (!item || item.qty <= 1) return;
+
+            // Create a copy of the item with qty 1
+            const newItem = JSON.parse(JSON.stringify(item));
+            newItem.qty = 1;
+            newItem.total = newItem.unitPrice;
+            newItem.itemOrderType = 'takeaway'; // Default the new split item to takeaway
+
+            // Reduce original item qty by 1
+            item.qty -= 1;
+            item.total = item.unitPrice * item.qty;
+
+            // Insert new item after the current one in the cart
+            cartTakeOrder.splice(idx + 1, 0, newItem);
+            
+            showOrderSummaryTakeOrder();
+            updateOrdersUITakeOrder();
+        };
+
+        window.mergeCartItemInSummary = function(idx) {
+            if (idx <= 0) return;
+            const currentItem = cartTakeOrder[idx];
+            const prevItem = cartTakeOrder[idx - 1];
+
+            // Add current qty back to previous item
+            prevItem.qty += currentItem.qty;
+            prevItem.total = prevItem.unitPrice * prevItem.qty;
+
+            // Remove the current split-off item
+            cartTakeOrder.splice(idx, 1);
+            
+            showOrderSummaryTakeOrder();
+            updateOrdersUITakeOrder();
         };
 
         window.setItemOrderType = function(idx, type) {
@@ -8596,7 +9026,11 @@ window.openSearchModalTakeOrder = function() {
             if (cartTakeOrder.length > 0 && !confirm('Add these items to your current cart?')) return;
             
             cartTakeOrder = [...cartTakeOrder, ...waitOrder.cart];
-            selectedOrderTypeTakeOrder = waitOrder.orderType || 'dine-in';
+            
+            const typeToSet = waitOrder.orderType || 'dine-in';
+            selectOrderTypeTakeOrder(typeToSet, true);
+            checkAndSyncGlobalOrderType();
+            
             waitingLists.splice(index, 1);
             localStorage.setItem('waitingListsTakeOrder', JSON.stringify(waitingLists));
             
@@ -8961,7 +9395,10 @@ window.openSearchModalTakeOrder = function() {
                             <div>
                                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                                     <span style="font-size:0.75rem; color:#666;"><i class="fas fa-clock"></i> ${timestamp}</span>
-                                    <span class="status-badge status-${o.status}">${o.status}</span>
+                                    <div style="display: flex; gap: 8px; align-items: center;">
+                                        <div class="order-live-timer" data-created="${o.createdAt?.toMillis() || 0}" data-status="${o.status}" style="padding: 2px 8px; border-radius: 20px; color: white; font-size: 0.7rem; font-weight: 800; min-width: 65px; text-align: center; background-color: #4caf50;">00m 00s</div>
+                                        <span class="status-badge status-${o.status}">${o.status}</span>
+                                    </div>
                                 </div>
                                 <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
                                     <div style="font-weight:800; font-size: 1.1rem; background: #764ba2; padding: 6px 14px; border-radius: 12px; display: inline-block; color: #fff; box-shadow: 0 2px 4px rgba(118,75,162,0.2);">#${o.orderSequence || '?'} (${o.orderNumber})</div>
@@ -9067,6 +9504,8 @@ window.openSearchModalTakeOrder = function() {
                 const tax = taxActive ? subtotal * (currentTaxRate / 100) : 0;
                 const total = subtotal + tax;
                 await updateDoc(orderRef, { subtotal: subtotal.toFixed(2), tax: tax.toFixed(2), total: total.toFixed(2) });
+                // Trigger Cancelled Order Receipt for departments
+                await triggerOrderCancellationPrinting(orderId);
             }
 
             // Sync non-cancelled items to Preparing or Served
@@ -9131,7 +9570,16 @@ window.openSearchModalTakeOrder = function() {
 
         window.updateItemStatusOrdersTab = async function(orderId, itemId, newStatus) {
             if (newStatus === 'cancelled' && !confirm('Are you sure you want to cancel this item?')) return;
-            await updateDoc(doc(db, 'licenses', currentClientId, 'orders', orderId, 'items', itemId), { status: newStatus });
+
+            const itemRef = doc(db, 'licenses', currentClientId, 'orders', orderId, 'items', itemId);
+            const itemSnap = await getDoc(itemRef);
+            const itemData = itemSnap.data();
+
+            await updateDoc(itemRef, { status: newStatus });
+
+            if (newStatus === 'cancelled') {
+                await triggerVoidItemPrinting(orderId, itemId, itemData.qty);
+            }
 
             // Recalculate order total whenever an item is cancelled/uncancelled
             const itemsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderId, 'items'));
@@ -9403,6 +9851,8 @@ window.openSearchModalTakeOrder = function() {
             document.getElementById('deptPrinterModalTitle').innerText = 'Add Department Printer';
             document.getElementById('editingDeptPrinterId').value = '';
             document.getElementById('deptPrinterName').value = '';
+            document.getElementById('deptPrinterQrEnabled').checked = false;
+            document.getElementById('deptPrinterVoidEnabled').checked = false;
             
             // Load categories to show checkboxes
             const catsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'menu_categories'));
@@ -9428,6 +9878,8 @@ window.openSearchModalTakeOrder = function() {
             document.getElementById('deptPrinterModalTitle').innerText = 'Edit Department Printer';
             document.getElementById('editingDeptPrinterId').value = id;
             document.getElementById('deptPrinterName').value = dp.name;
+            document.getElementById('deptPrinterQrEnabled').checked = dp.qrEnabled || false;
+            document.getElementById('deptPrinterVoidEnabled').checked = dp.voidEnabled || false;
             
             const savedDeps = dp.department || [];
             const checkboxes = document.querySelectorAll('input[name="deptCat"]');
@@ -9440,10 +9892,12 @@ window.openSearchModalTakeOrder = function() {
             const id = document.getElementById('editingDeptPrinterId').value;
             const name = document.getElementById('deptPrinterName').value.trim();
             const selectedCats = Array.from(document.querySelectorAll('input[name="deptCat"]:checked')).map(cb => cb.value);
+            const qrEnabled = document.getElementById('deptPrinterQrEnabled').checked;
+            const voidEnabled = document.getElementById('deptPrinterVoidEnabled').checked;
             
             if (!name) { alert('Please enter a name'); return; }
             
-            const data = { name, department: selectedCats, updatedAt: Timestamp.now() };
+            const data = { name, department: selectedCats, qrEnabled, voidEnabled, updatedAt: Timestamp.now() };
             if (id) {
                 await updateDoc(doc(db, 'licenses', currentClientId, 'department_printer', id), data);
             } else {
@@ -9565,6 +10019,7 @@ window.openSearchModalTakeOrder = function() {
             document.getElementById('printReceiptBills').checked = false;
             document.getElementById('autoPrintReceipt').checked = false;
             document.getElementById('printOrdersToggle').checked = false;
+            document.getElementById('printMoveMergeTable').checked = false;
             togglePrinterDeptList(false);
             
             // Load department printers for checkboxes
@@ -9599,6 +10054,7 @@ window.openSearchModalTakeOrder = function() {
             document.getElementById('printReceiptBills').checked = p.printReceipt || false;
             document.getElementById('autoPrintReceipt').checked = p.autoPrint || false;
             document.getElementById('printOrdersToggle').checked = p.printOrders || false;
+            document.getElementById('printMoveMergeTable').checked = p.printMoveMerge || false;
             togglePrinterDeptList(p.printOrders || false);
             
             const savedDepts = p.departmentPrinters || [];
@@ -9622,12 +10078,13 @@ window.openSearchModalTakeOrder = function() {
             const printReceipt = document.getElementById('printReceiptBills').checked;
             const autoPrint = document.getElementById('autoPrintReceipt').checked;
             const printOrders = document.getElementById('printOrdersToggle').checked;
+            const printMoveMerge = document.getElementById('printMoveMergeTable').checked;
             const bluetoothDeviceId = document.getElementById('printerNameField').getAttribute('data-bt-id') || '';
             const departmentPrinters = Array.from(document.querySelectorAll('input[name="printerDeptItem"]:checked')).map(cb => cb.value);
 
             if (!name) { alert('Please enter printer name'); return; }
 
-            const data = { name, paperWidth, fontSize, cutterAlarm, kickCashDrawer, printReceipt, autoPrint, printOrders, bluetoothDeviceId, departmentPrinters, updatedAt: Timestamp.now() };
+            const data = { name, paperWidth, fontSize, cutterAlarm, kickCashDrawer, printReceipt, autoPrint, printOrders, printMoveMerge, bluetoothDeviceId, departmentPrinters, updatedAt: Timestamp.now() };
             if (id) {
                 await updateDoc(doc(db, 'licenses', currentClientId, 'printers', id), data);
             } else {
@@ -9800,36 +10257,6 @@ window.openSearchModalTakeOrder = function() {
                     if (device) await sendToBluetoothPrinter(device, new Uint8Array([0x1B, 0x70, 0x00, 0x19, 0xFA]));
                 }
 
-                // Handle Full Receipt Printing (Only on payment or early pay)
-                if (p.printReceipt && type === 'payment') {
-                    const qOrderId = (paymentDetails?.mergedOrderIds) ? paymentDetails.mergedOrderIds.join(',') : orderId;
-                    const qId = await addToPrintQueue(qOrderId, orderNumber, tableNumber, 'Receipt', null, cashierName, paymentDetails?.method, staffName, orderType, paymentDetails?.paymentInfo, orderSeq);
-                    if (device) {
-                        // If split payment, we only show items just paid in the receipt
-                        let itemsToPrint = fullItemsList;
-                        if (paymentDetails && paymentDetails.itemsPaid) {
-                            const paidItemsMap = {};
-                            paymentDetails.itemsPaid.forEach(p => paidItemsMap[p.itemId] = p.qtyToPay);
-                            
-                            itemsToPrint = fullItemsList.filter(it => paidItemsMap[it.docId] !== undefined).map(it => {
-                                const qtyToPay = paidItemsMap[it.docId];
-                                const unitPrice = parseFloat(it.total) / parseInt(it.qty);
-                                return {
-                                    ...it,
-                                    qty: qtyToPay.toString(),
-                                    total: (unitPrice * qtyToPay).toFixed(2)
-                                };
-                            });
-                        }
-                        
-                        const label = paymentDetails?.isEarly ? "EARLY PAYMENT" : "PAID";
-                        const commands = await generateMainReceiptCommands(orderNumber, tableNumber, itemsToPrint, orderTime, paymentDetails?.method || 'N/A', label, cashierName, p, orderType, paymentDetails?.paymentInfo, orderSeq);
-                        const success = await sendToBluetoothPrinter(device, commands);
-                        await updateDoc(doc(db, 'licenses', currentClientId, 'print_queue', qId), { status: success ? 'success' : 'failed' });
-                        printActions.push({ label: 'Main Receipt', success });
-                    }
-                }
-
                 // Handle Department Order Printing (Only when order is initially placed)
                 if (p.printOrders && p.departmentPrinters?.length && type === 'order') {
                     for (const deptId of p.departmentPrinters) {
@@ -9842,9 +10269,9 @@ window.openSearchModalTakeOrder = function() {
                                 return dept.department && dept.department.includes(catName);
                             });
                             if (deptItems.length > 0) {
-                                const qId = await addToPrintQueue(orderId, orderNumber, tableNumber, dept.name, deptId, null, null, staffName, orderType, null, orderSeq);
+                                const qId = await addToPrintQueue(orderId, orderNumber, tableNumber, dept.name, deptId, null, null, staffName, orderType, null, orderSeq, dept.qrEnabled);
                                 if (device) {
-                                    const commands = await generateReceiptCommands(orderNumber, tableNumber, deptItems, dept.name, orderTime, "AUTO PRINT", p, staffName, orderType, orderSeq);
+                                    const commands = await generateReceiptCommands(orderNumber, tableNumber, deptItems, dept.name, orderTime, "AUTO PRINT", p, staffName, orderType, orderSeq, dept.qrEnabled);
                                     const success = await sendToBluetoothPrinter(device, commands);
                                     await updateDoc(doc(db, 'licenses', currentClientId, 'print_queue', qId), { status: success ? 'success' : 'failed' });
                                     printActions.push({ label: dept.name, success });
@@ -9869,7 +10296,43 @@ window.openSearchModalTakeOrder = function() {
             }
         };
 
-        async function addToPrintQueue(orderId, orderNumber, tableNumber, deptName, deptId, cashierName = null, paymentMethod = null, staffName = null, orderType = null, paymentInfo = null, orderSeq = null) {
+        async function createReceiptQueueItem(orderIds, orderNumbers, paymentInfo, cashierName) {
+            const firstOrderSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', orderIds[0]));
+            if (!firstOrderSnap.exists()) return null;
+            const firstOrder = firstOrderSnap.data();
+
+            const seqList = [];
+            const orderTypesSet = new Set();
+            for (const id of orderIds) {
+                const sSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', id));
+                if (sSnap.exists()) {
+                    const oData = sSnap.data();
+                    seqList.push(oData.orderSequence || '?');
+                    orderTypesSet.add(oData.orderType || 'dine-in');
+                }
+            }
+            
+            const docRef = await addDoc(collection(db, 'licenses', currentClientId, 'print_queue'), {
+                orderId: orderIds.join(','),
+                orderNumber: orderNumbers,
+                orderSequence: seqList.join(','),
+                tableNumber: (firstOrder.tableId || 'N/A').toUpperCase(),
+                printerDeptName: 'Receipt',
+                printerDeptId: null,
+                status: 'success',
+                attempts: 1,
+                cashierName: cashierName,
+                paymentMethod: paymentInfo.method,
+                staffName: firstOrder.staffName || 'N/A',
+                orderType: Array.from(orderTypesSet).join(', '),
+                paymentInfo: JSON.stringify(paymentInfo),
+                qrEnabled: false,
+                createdAt: Timestamp.now()
+            });
+            return docRef.id;
+        }
+
+        async function addToPrintQueue(orderId, orderNumber, tableNumber, deptName, deptId, cashierName = null, paymentMethod = null, staffName = null, orderType = null, paymentInfo = null, orderSeq = null, qrEnabled = false) {
             const docRef = await addDoc(collection(db, 'licenses', currentClientId, 'print_queue'), {
                 orderId,
                 orderNumber,
@@ -9884,6 +10347,7 @@ window.openSearchModalTakeOrder = function() {
                 staffName: staffName,
                 orderType: orderType,
                 paymentInfo: paymentInfo ? JSON.stringify(paymentInfo) : null,
+                qrEnabled: qrEnabled,
                 createdAt: Timestamp.now()
             });
             return docRef.id;
@@ -10002,7 +10466,7 @@ window.openSearchModalTakeOrder = function() {
             );
         }
 
-        window.reprintQueueItem = async function(id) {
+        window.reprintQueueItem = async function(id, printerId = null) {
             const ref = doc(db, 'licenses', currentClientId, 'print_queue', id);
             const snap = await getDoc(ref);
             if (!snap.exists()) return;
@@ -10034,13 +10498,13 @@ window.openSearchModalTakeOrder = function() {
             }
 
             // Otherwise, I am the server or no one has ownership, print locally
-            await executeReprint(id, item);
+            await executeReprint(id, item, printerId);
         };
 
-        // Internal function to handle the physical printing of a queue item
-        async function executeReprint(id, item) {
+        window.executeReprint = async function(id, itemParam = null, forcedPrinterId = null) {
             const ref = doc(db, 'licenses', currentClientId, 'print_queue', id);
-            
+            const item = itemParam || (await getDoc(ref)).data();
+
             const currentAttempts = item.attempts || 1;
             const statusLabel = item.printerDeptName === 'Receipt' ? 'REPRINT' : `MANUAL PRINT ${currentAttempts}`;
             const cashierName = item.cashierName || 'N/A';
@@ -10102,8 +10566,15 @@ window.openSearchModalTakeOrder = function() {
                 }
             }
 
-            const printersSnapFull = await getDocs(collection(db, 'licenses', currentClientId, 'printers'));
-            const printerConfig = printersSnapFull.docs.find(d => d.data().bluetoothDeviceId && (item.printerDeptId ? d.data().departmentPrinters?.includes(item.printerDeptId) : d.data().printReceipt))?.data();
+            let printerConfig;
+            if (forcedPrinterId) {
+                const pSnap = await getDoc(doc(db, 'licenses', currentClientId, 'printers', forcedPrinterId));
+                printerConfig = pSnap.exists() ? pSnap.data() : null;
+            } else {
+                const printersSnapFull = await getDocs(collection(db, 'licenses', currentClientId, 'printers'));
+                printerConfig = printersSnapFull.docs.find(d => d.data().bluetoothDeviceId && (item.printerDeptId ? d.data().departmentPrinters?.includes(item.printerDeptId) : d.data().printReceipt))?.data();
+            }
+            
             const device = printerConfig ? connectedBluetoothDevices[printerConfig.bluetoothDeviceId] : null;
 
             let printSuccess = false;
@@ -10119,7 +10590,7 @@ window.openSearchModalTakeOrder = function() {
                     const payMethod = item.paymentMethod || 'N/A'; // Retrieve from print queue item
                     commands = await generateMainReceiptCommands(item.orderNumber, item.tableNumber || 'N/A', itemsToPrint, orderTime, payMethod, statusLabel, cashierName, printerConfig, orderType, paymentInfo, orderSeq);
                 } else {
-                    commands = await generateReceiptCommands(item.orderNumber, item.tableNumber || 'N/A', itemsToPrint, item.printerDeptName || 'Receipt', orderTime, statusLabel, printerConfig, staffName, orderType, orderSeq);
+                    commands = await generateReceiptCommands(item.orderNumber, item.tableNumber || 'N/A', itemsToPrint, item.printerDeptName || 'Receipt', orderTime, statusLabel, printerConfig, staffName, orderType, orderSeq, item.qrEnabled || false);
                 }
                 printSuccess = await sendToBluetoothPrinter(device, commands);
                 if (device.gatt.connected) device.gatt.disconnect();
@@ -10263,7 +10734,7 @@ window.openSearchModalTakeOrder = function() {
         };
 
         // Helper to generate ESC/POS commands in the requested format
-        async function generateReceiptCommands(orderNumber, tableNumber, items, headerTitle, orderTime, statusLabel, p = null, staffName = 'N/A', orderType = 'dine-in', orderSeq = null) {
+        async function generateReceiptCommands(orderNumber, tableNumber, items, headerTitle, orderTime, statusLabel, p = null, staffName = 'N/A', orderType = 'dine-in', orderSeq = null, qrEnabled = false) {
             let width = (p && p.paperWidth === '80') ? 48 : 32;
             const fontSize = p ? p.fontSize : '1';
             if (fontSize === '0') width = (p.paperWidth === '80') ? 64 : 42;
@@ -10291,6 +10762,22 @@ window.openSearchModalTakeOrder = function() {
                 itemsText += "\n";
             });
 
+            let qrBytes = new Uint8Array(0);
+            if (qrEnabled) {
+                const qrData = `order id = ${orderNumber}`;
+                const dataBytes = new TextEncoder().encode(qrData);
+                const pL = (dataBytes.length + 3) & 0xFF;
+                const pH = (dataBytes.length + 3) >> 8;
+                qrBytes = combineCommands(
+                    "\x1B\x61\x01", "ORDER ID\n",
+                    new Uint8Array([0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x43, 0x06]),       // Size 6
+                    new Uint8Array([0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x45, 0x30]),       // Error correction L
+                    new Uint8Array([0x1D, 0x28, 0x6B, pL, pH, 0x31, 0x50, 0x30]), dataBytes, // Store data
+                    new Uint8Array([0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x51, 0x30]),         // Print
+                    "\n", sep, "\x1B\x61\x00"                
+                );
+            }
+
             return combineCommands(
                 "\x1B\x40", // Initialize printer
                 fontCmd,
@@ -10311,6 +10798,7 @@ window.openSearchModalTakeOrder = function() {
                 "Items:\n",
                 itemsText,
                 sep,
+                qrBytes,
                 `Print: ${printTime}\n`,
                 `Status: ${statusLabel}\n`,
                 "\x1B\x61\x01", // Center align
@@ -10318,6 +10806,261 @@ window.openSearchModalTakeOrder = function() {
                 "\n\n\n\n", // Feed lines
                 (p && p.cutterAlarm) ? "\x1B\x42\x03\x02" : "", // Alarm beeps
                 "\x1D\x56\x41\x03" // Cut paper command
+            );
+        }
+
+        window.triggerOrderCancellationPrinting = async function(orderId) {
+            if (Object.keys(categoryMapTakeOrder).length === 0) {
+                categoryMapTakeOrder = await getCategoriesMap();
+            }
+            const orderSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', orderId));
+            if (!orderSnap.exists()) return;
+            const order = orderSnap.data();
+            const tableNumber = (order.tableId || 'N/A').toUpperCase();
+
+            const itemsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderId, 'items'));
+            const cancelledItems = [];
+            for (const itDoc of itemsSnap.docs) {
+                const it = itDoc.data();
+                // Only print items that were affected by the cancellation (unpaid items)
+                if (it.status === 'cancelled' && !it.isPaid && !it.isPaidEarly) {
+                    const vSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderId, 'items', itDoc.id, 'selectedVariants'));
+                    const mSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderId, 'items', itDoc.id, 'selectedModifiers'));
+                    cancelledItems.push({
+                        ...it,
+                        variants: vSnap.docs.map(v => v.data()),
+                        modifiers: mSnap.docs.map(m => m.data())
+                    });
+                }
+            }
+            if (cancelledItems.length === 0) return;
+
+            const deptPrintersSnap = await getDocs(collection(db, 'licenses', currentClientId, 'department_printer'));
+            const printersSnap = await getDocs(query(collection(db, 'licenses', currentClientId, 'printers'), where('autoPrint', '==', true)));
+            const devicesToCleanup = new Set();
+
+            for (const deptDoc of deptPrintersSnap.docs) {
+                const dept = deptDoc.data();
+                if (!dept.voidEnabled) continue;
+                const deptItems = cancelledItems.filter(it => {
+                    const catName = categoryMapTakeOrder[it.categoryId];
+                    return dept.department && dept.department.includes(catName);
+                });
+                if (deptItems.length === 0) continue;
+
+                for (const printerDoc of printersSnap.docs) {
+                    const p = printerDoc.data();
+                    if (p.takenByStaffId && p.takenByStaffId !== currentStaff.id) continue;
+                    if (p.departmentPrinters?.includes(deptDoc.id)) {
+                        const device = connectedBluetoothDevices[p.bluetoothDeviceId];
+                        if (device) {
+                            devicesToCleanup.add(device);
+                            const commands = await generateCancellationOrderReceiptCommands(order.orderNumber, order.orderSequence || '?', tableNumber, deptItems, dept.name, p, currentStaff.name);
+                            await sendToBluetoothPrinter(device, commands);
+                        }
+                    }
+                }
+            }
+            for (const d of devicesToCleanup) { if (d.gatt.connected) d.gatt.disconnect(); }
+        };
+
+        async function generateCancellationOrderReceiptCommands(orderNumber, orderSeq, tableNumber, items, deptName, p = null, staffName = 'N/A') {
+            let width = (p && p.paperWidth === '80') ? 48 : 32;
+            const fontSize = p ? p.fontSize : '1';
+            const fontCmd = (fontSize === '0') ? "\x1B\x4D\x01" : (fontSize === '2' ? "\x1B\x21\x10" : "\x1B\x4D\x00");
+            const sep = "-".repeat(width) + "\n";
+            const timestamp = new Date().toLocaleString();
+            let itemsText = "Items:\n";
+            items.forEach(item => {
+                const itemType = item.orderType || 'dine-in';
+                const typeSuffix = ` (${itemType === 'dine-in' ? 'Dine In' : (itemType === 'delivery' ? 'Delivery' : 'Takeaway')})`;
+                const displayName = `${item.name}${typeSuffix}`;
+
+                itemsText += `\x1B\x45\x01${displayName.substring(0, width - 8).padEnd(width - 8)} x ${item.qty}\x1B\x45\x00\n`;
+                if (item.variants?.length) item.variants.forEach(v => itemsText += `       + ${v.optionName}\n`);
+                if (item.modifiers?.length) item.modifiers.forEach(m => itemsText += `       + ${m.optionName}\n`);
+                if (item.notes) itemsText += `       * Req: ${item.notes}\n`;
+            });
+            return combineCommands("\x1B\x40", fontCmd, "\x1B\x61\x01", 
+                "\x1B\x21\x30\x1B\x45\x01CANCELLED ORDER\x1B\x45\x00\x1B\x21\x00\n",
+                `${deptName.toUpperCase()}\n`, `${orderSeq} | ${orderNumber} | ${tableNumber}\n`, sep, "\x1B\x61\x00",
+                `Staff : ${staffName}\n`, `Time  : ${timestamp}\n`, sep, itemsText, "\n\n\n\n",
+                (p && p.cutterAlarm) ? "\x1B\x42\x03\x02" : "", "\x1D\x56\x41\x03");
+        }
+
+        window.triggerVoidItemPrinting = async function(orderId, itemId, qtyVoided) {
+            if (Object.keys(categoryMapTakeOrder).length === 0) {
+                categoryMapTakeOrder = await getCategoriesMap();
+            }
+
+            const itemRef = doc(db, 'licenses', currentClientId, 'orders', orderId, 'items', itemId);
+            const itemSnap = await getDoc(itemRef);
+            if (!itemSnap.exists()) return;
+            const itemData = itemSnap.data();
+
+            const vSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderId, 'items', itemId, 'selectedVariants'));
+            const mSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderId, 'items', itemId, 'selectedModifiers'));
+            
+            const fullItem = {
+                ...itemData,
+                variants: vSnap.docs.map(v => v.data()),
+                modifiers: mSnap.docs.map(m => m.data())
+            };
+
+            // 1. Get Order info
+            const orderSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', orderId));
+            if (!orderSnap.exists()) return;
+            const order = orderSnap.data();
+            
+            // 2. Find relevant Department Printers that have Void Enabled
+            const deptPrintersSnap = await getDocs(collection(db, 'licenses', currentClientId, 'department_printer'));
+            const catName = categoryMapTakeOrder[fullItem.categoryId];
+            
+            const targetDepts = deptPrintersSnap.docs.filter(d => {
+                const dp = d.data();
+                return dp.voidEnabled === true && dp.department && dp.department.includes(catName);
+            });
+            
+            if (targetDepts.length === 0) return;
+
+            // 3. Get connected physical printers handling those departments
+            const printersSnap = await getDocs(query(collection(db, 'licenses', currentClientId, 'printers'), where('autoPrint', '==', true)));
+            
+            const devicesToCleanup = new Set();
+
+            for (const deptDoc of targetDepts) {
+                const dept = deptDoc.data();
+                const deptId = deptDoc.id;
+
+                for (const printerDoc of printersSnap.docs) {
+                    const p = printerDoc.data();
+                    if (p.takenByStaffId && p.takenByStaffId !== currentStaff.id) continue;
+                    
+                    if (p.departmentPrinters?.includes(deptId)) {
+                        const device = connectedBluetoothDevices[p.bluetoothDeviceId];
+                        if (device) {
+                            devicesToCleanup.add(device);
+                            const commands = await generateVoidReceiptCommands(
+                                order.orderNumber, 
+                                order.orderSequence || '?', 
+                                (order.tableId || 'N/A').toUpperCase(),
+                                fullItem,
+                                qtyVoided,
+                                dept.name,
+                                p,
+                                currentStaff.name
+                            );
+                            await sendToBluetoothPrinter(device, commands);
+                        }
+                    }
+                }
+            }
+            // Disconnect all physical devices used in this session once finished
+            for (const d of devicesToCleanup) {
+                if (d.gatt.connected) d.gatt.disconnect();
+            }
+        };
+
+        window.triggerMoveMergePrinting = async function(fromTable, toTable, orders, isMerge) {
+            const printersSnap = await getDocs(query(collection(db, 'licenses', currentClientId, 'printers'), where('autoPrint', '==', true), where('printMoveMerge', '==', true)));
+            if (printersSnap.empty) return;
+
+            const devicesToCleanup = new Set();
+            const timestamp = new Date().toLocaleString();
+
+            for (const printerDoc of printersSnap.docs) {
+                const p = printerDoc.data();
+                if (p.takenByStaffId && p.takenByStaffId !== currentStaff.id) continue;
+
+                const device = connectedBluetoothDevices[p.bluetoothDeviceId];
+                if (device) {
+                    devicesToCleanup.add(device);
+                    const commands = generateMoveMergeCommands(fromTable, toTable, orders, isMerge, p, currentStaff.name, timestamp);
+                    await sendToBluetoothPrinter(device, commands);
+                }
+            }
+
+            for (const d of devicesToCleanup) {
+                if (d.gatt.connected) d.gatt.disconnect();
+            }
+        };
+
+        function generateMoveMergeCommands(fromTable, toTable, orders, isMerge, p, staffName, timestamp) {
+            let width = (p && p.paperWidth === '80') ? 48 : 32;
+            const fontSize = p ? p.fontSize : '1';
+            const fontCmd = (fontSize === '0') ? "\x1B\x4D\x01" : (fontSize === '2' ? "\x1B\x21\x10" : "\x1B\x4D\x00");
+            const sep = "-".repeat(width) + "\n";
+
+            let header = isMerge ? "MERGE TABLE" : "MOVE TABLE";
+            let tableLine = isMerge ? `Table[${fromTable}] to Table[${toTable}]\n` : `Table[${fromTable}] To Table[${toTable}]\n`;
+            
+            let itemsText = "No | Order Id\n";
+            orders.forEach(o => {
+                itemsText += `${String(o.orderSequence).padEnd(3)}| ${o.orderNumber}\n`;
+            });
+
+            if (isMerge) {
+                return combineCommands(
+                    "\x1B\x40", fontCmd, "\x1B\x61\x01",
+                    `\x1B\x21\x30\x1B\x45\x01${header}\x1B\x45\x00\x1B\x21\x00\n`,
+                    tableLine,
+                    sep, 
+                    "\x1B\x61\x00",
+                    `Staff : ${staffName}\nTime  : ${timestamp}\n`,
+                    sep,
+                    itemsText, "\n\n\n\n",
+                    (p && p.cutterAlarm) ? "\x1B\x42\x03\x02" : "",
+                    "\x1D\x56\x41\x03"
+                );
+            } else {
+                return combineCommands(
+                    "\x1B\x40", fontCmd, "\x1B\x61\x01",
+                    `\x1B\x21\x30\x1B\x45\x01${header}\x1B\x45\x00\x1B\x21\x00\n`,
+                    tableLine,
+                    sep,
+                    "\x1B\x61\x00",
+                    `Staff : ${staffName}\nTime  : ${timestamp}\n`,
+                    sep,
+                    itemsText, "\n\n\n\n",
+                    (p && p.cutterAlarm) ? "\x1B\x42\x03\x02" : "",
+                    "\x1D\x56\x41\x03"
+                );
+            }
+        }
+
+        async function generateVoidReceiptCommands(orderNumber, orderSeq, tableNumber, item, qty, deptName, p = null, staffName = 'N/A') {
+            let width = (p && p.paperWidth === '80') ? 48 : 32;
+            const fontSize = p ? p.fontSize : '1';
+            const fontCmd = (fontSize === '0') ? "\x1B\x4D\x01" : (fontSize === '2' ? "\x1B\x21\x10" : "\x1B\x4D\x00");
+            const sep = "-".repeat(width) + "\n";
+            const timestamp = new Date().toLocaleString();
+
+            let detailsText = "";
+            if (item.variants?.length) item.variants.forEach(v => detailsText += `       + ${v.optionName}\n`);
+            if (item.modifiers?.length) item.modifiers.forEach(m => detailsText += `       + ${m.optionName}\n`);
+            if (item.notes) detailsText += `       * Req: ${item.notes}\n`;
+
+            const itemType = item.orderType || 'dine-in';
+            const typeSuffix = ` (${itemType === 'dine-in' ? 'Dine In' : (itemType === 'delivery' ? 'Delivery' : 'Takeaway')})`;
+            const displayName = `${item.name}${typeSuffix}`;
+
+            return combineCommands(
+                "\x1B\x40", // Initialize
+                "\x1B\x61\x01", // Center
+                "\x1B\x21\x30\x1B\x45\x01VOID ITEM\x1B\x45\x00\x1B\x21\x00\n", // Double height Bold
+                `${deptName.toUpperCase()}\n`,
+                `${orderSeq} | ${orderNumber} | ${tableNumber}\n`,
+                sep,
+                "\x1B\x61\x00", // Left
+                `Staff : ${staffName}\n`,
+                `Time  : ${timestamp}\n`,
+                sep,
+                "Items:\n",
+                `\x1B\x45\x01${displayName.substring(0, width - 8).padEnd(width - 8)} x ${qty}\x1B\x45\x00\n`,
+                detailsText,
+                "\n\n\n\n",
+                (p && p.cutterAlarm) ? "\x1B\x42\x03\x02" : "",
+                "\x1D\x56\x41\x03" // Cut
             );
         }
 
@@ -10766,7 +11509,12 @@ window.openSearchModalTakeOrder = function() {
         window.showTableDetailsTakeOrder = showTableDetailsTakeOrder;
         window.updateSummaryTableSelection = updateSummaryTableSelection;
         window.navigateToOrderEdit = navigateToOrderEdit;
+        window.splitCartItem = splitCartItem;
+        window.mergeCartItem = mergeCartItem;
+        window.setItemOrderTypeInCart = setItemOrderTypeInCart;
         window.completeOrderFromTableDetails = completeOrderFromTableDetails;
+        window.splitCartItemInSummary = splitCartItemInSummary;
+        window.mergeCartItemInSummary = mergeCartItemInSummary;
         window.toggleActiveOrdersSort = toggleActiveOrdersSort;
         window.toggleActiveOrdersSearch = toggleActiveOrdersSearch;
         window.handleActiveOrdersSearchInput = handleActiveOrdersSearchInput;
@@ -10789,6 +11537,21 @@ window.openSearchModalTakeOrder = function() {
         window.saveAttendanceTime = saveAttendanceTime;
         window.deleteAttendanceRecord = deleteAttendanceRecord;
         window.resetOrderSequence = resetOrderSequence;
+        
+        window.toggleMenuImagesTakeOrder = function() {
+            showMenuImagesTakeOrder = !showMenuImagesTakeOrder;
+            const btn = document.getElementById('toggleMenuImagesBtn');
+            if (btn) {
+                if (showMenuImagesTakeOrder) {
+                    btn.style.background = 'rgba(255,255,255,0.2)';
+                    btn.style.color = 'white';
+                } else {
+                    btn.style.background = 'white';
+                    btn.style.color = '#764ba2';
+                }
+            }
+            renderMenuGridTakeOrder();
+        };
         
         // ========== CASH DRAWER UTILITIES ==========
         window.kickAllCashDrawers = async function() {
@@ -11034,6 +11797,77 @@ window.openSearchModalTakeOrder = function() {
         };
 
         window.addEventListener('online', updateWifiStatus);
+
+        let html5QrCode = null;
+        window.openOrderQRScanner = function() {
+            document.getElementById('orderQRScannerModal').style.display = 'flex';
+            html5QrCode = new Html5Qrcode("qr-reader");
+            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+
+            html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess)
+                .catch(err => {
+                    console.error("QR Start Error", err);
+                    alert("Unable to start camera. Please ensure permissions are granted.");
+                    closeOrderQRScanner();
+                });
+        };
+
+        window.closeOrderQRScanner = function() {
+            if (html5QrCode) {
+                html5QrCode.stop().then(() => {
+                    document.getElementById('orderQRScannerModal').style.display = 'none';
+                    html5QrCode = null;
+                }).catch(err => {
+                    console.error("QR Stop Error", err);
+                    document.getElementById('orderQRScannerModal').style.display = 'none';
+                });
+            } else {
+                document.getElementById('orderQRScannerModal').style.display = 'none';
+            }
+        };
+
+        async function onScanSuccess(decodedText, decodedResult) {
+            // Expected format: "order id = ORD-123456"
+            console.log(`Code scanned = ${decodedText}`);
+            if (decodedText.toLowerCase().includes("order id =")) {
+                const orderNum = decodedText.split('=')[1].trim();
+                await closeOrderQRScanner();
+                highlightOrderFromNumber(orderNum);
+            } else {
+                alert("Invalid QR Code for Order ID.");
+            }
+        }
+
+        async function highlightOrderFromNumber(orderNumber) {
+            // Show searching overlay
+            const overlay = document.getElementById('searchingOrderOverlay');
+            if (overlay) overlay.style.display = 'flex';
+
+            try {
+                const q = query(collection(db, 'licenses', currentClientId, 'orders'), where('orderNumber', '==', orderNumber));
+                const snap = await getDocs(q);
+                
+                if (snap.empty) {
+                    if (overlay) overlay.style.display = 'none';
+                    alert(`Order ${orderNumber} not found.`);
+                    return;
+                }
+
+                const orderDoc = snap.docs[0];
+                const orderData = orderDoc.data();
+                
+                // Mark for highlight
+                window.pendingOrderHighlightId = orderDoc.id;
+                
+                // Switch to activeOrders tab and filter for the order status
+                setActiveOrdersFilter(orderData.status || 'All');
+                showPage('activeOrders', true);
+
+            } catch (e) {
+                if (overlay) overlay.style.display = 'none';
+                alert("Error searching order: " + e.message);
+            }
+        }
         window.addEventListener('offline', updateWifiStatus);
         if (navigator.connection) {
             navigator.connection.addEventListener('change', updateWifiStatus);
@@ -11041,7 +11875,7 @@ window.openSearchModalTakeOrder = function() {
         // Initial check
         updateWifiStatus();
     </script>
-      <script>
+     <script>
               // Register the Service Worker (sw.js)
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
