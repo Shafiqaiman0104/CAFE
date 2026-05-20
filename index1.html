@@ -8006,7 +8006,8 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                 
                 if (menuViewMode === 'list') {
                     const bgColor = !showMenuImagesTakeOrder ? (item.color || '#ffffff') : '#ffffff';
-                    const clipPath = !showMenuImagesTakeOrder ? (shapeClipPaths[item.shape] || 'none') : 'none';
+                    // Force square shape in list view even if a custom shape is assigned
+                    const clipPath = 'none'; 
                     return `
                         <div class="menu-card-takeorder" onclick="openItemModalTakeOrder('${item.id}')" style="${!showMenuImagesTakeOrder ? `aspect-ratio: auto; padding: 15px; background-color: ${bgColor}; clip-path: ${clipPath};` : ''}">
                             ${badgeHtml}
