@@ -7767,7 +7767,8 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                     `<div style="display:flex; justify-content:space-between;"><span>${b.type.charAt(0).toUpperCase() + b.type.slice(1)}</span><b>RM ${b.amount.toFixed(2)}</b></div>`
                 ).join('');
             } else {
-                methodHtml = `<div style="display:flex; justify-content:space-between;"><span>Method</span><b>${info.method.toUpperCase()}</b></div>`;
+                const displayMethod = info.method === 'ewallet' ? 'E-WALLET' : info.method.toUpperCase();
+                methodHtml = `<div style="display:flex; justify-content:space-between;"><span>${displayMethod}</span><b>RM ${info.give.toFixed(2)}</b></div>`;
             }
 
             container.innerHTML = `
