@@ -7309,7 +7309,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             await updateOrderTotals(orderId);
 
             // Trigger void print for department
-            await triggerVoidItemPrinting(orderId, itemData, itemData.qty);
+            await triggerVoidItemPrinting(orderId, itemId, itemData.qty);
 
             const row = document.getElementById(`chk-item-${itemId}`);
             if (row) row.remove();
@@ -7349,7 +7349,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                     await updateOrderTotals(orderId);
 
                     // Trigger void print for department
-                    await triggerVoidItemPrinting(orderId, itemData, qtyToVoid);
+                    await triggerVoidItemPrinting(orderId, itemId, qtyToVoid);
 
                     if (source === 'checkout') {
                         const row = document.getElementById(`chk-item-${itemId}`);
@@ -9363,6 +9363,8 @@ window.openSearchModalTakeOrder = function() {
                 const tax = taxActive ? subtotal * (currentTaxRate / 100) : 0;
                 const total = subtotal + tax;
                 await updateDoc(orderRef, { subtotal: subtotal.toFixed(2), tax: tax.toFixed(2), total: total.toFixed(2) });
+                // Trigger Cancelled Order Receipt for departments
+                await triggerOrderCancellationPrinting(orderId);
             }
 
             // Sync non-cancelled items to Preparing or Served
@@ -9435,7 +9437,7 @@ window.openSearchModalTakeOrder = function() {
             await updateDoc(itemRef, { status: newStatus });
 
             if (newStatus === 'cancelled') {
-                await triggerVoidItemPrinting(orderId, itemData, itemData.qty);
+                await triggerVoidItemPrinting(orderId, itemId, itemData.qty);
             }
 
             // Recalculate order total whenever an item is cancelled/uncancelled
@@ -10653,10 +10655,99 @@ window.openSearchModalTakeOrder = function() {
             );
         }
 
-        window.triggerVoidItemPrinting = async function(orderId, itemData, qtyVoided) {
+        window.triggerOrderCancellationPrinting = async function(orderId) {
             if (Object.keys(categoryMapTakeOrder).length === 0) {
                 categoryMapTakeOrder = await getCategoriesMap();
             }
+            const orderSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', orderId));
+            if (!orderSnap.exists()) return;
+            const order = orderSnap.data();
+            const tableNumber = (order.tableId || 'N/A').toUpperCase();
+
+            const itemsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderId, 'items'));
+            const cancelledItems = [];
+            for (const itDoc of itemsSnap.docs) {
+                const it = itDoc.data();
+                // Only print items that were affected by the cancellation (unpaid items)
+                if (it.status === 'cancelled' && !it.isPaid && !it.isPaidEarly) {
+                    const vSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderId, 'items', itDoc.id, 'selectedVariants'));
+                    const mSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderId, 'items', itDoc.id, 'selectedModifiers'));
+                    cancelledItems.push({
+                        ...it,
+                        variants: vSnap.docs.map(v => v.data()),
+                        modifiers: mSnap.docs.map(m => m.data())
+                    });
+                }
+            }
+            if (cancelledItems.length === 0) return;
+
+            const deptPrintersSnap = await getDocs(collection(db, 'licenses', currentClientId, 'department_printer'));
+            const printersSnap = await getDocs(query(collection(db, 'licenses', currentClientId, 'printers'), where('autoPrint', '==', true)));
+            const devicesToCleanup = new Set();
+
+            for (const deptDoc of deptPrintersSnap.docs) {
+                const dept = deptDoc.data();
+                if (!dept.voidEnabled) continue;
+                const deptItems = cancelledItems.filter(it => {
+                    const catName = categoryMapTakeOrder[it.categoryId];
+                    return dept.department && dept.department.includes(catName);
+                });
+                if (deptItems.length === 0) continue;
+
+                for (const printerDoc of printersSnap.docs) {
+                    const p = printerDoc.data();
+                    if (p.takenByStaffId && p.takenByStaffId !== currentStaff.id) continue;
+                    if (p.departmentPrinters?.includes(deptDoc.id)) {
+                        const device = connectedBluetoothDevices[p.bluetoothDeviceId];
+                        if (device) {
+                            devicesToCleanup.add(device);
+                            const commands = await generateCancellationOrderReceiptCommands(order.orderNumber, order.orderSequence || '?', tableNumber, deptItems, dept.name, p, currentStaff.name);
+                            await sendToBluetoothPrinter(device, commands);
+                        }
+                    }
+                }
+            }
+            for (const d of devicesToCleanup) { if (d.gatt.connected) d.gatt.disconnect(); }
+        };
+
+        async function generateCancellationOrderReceiptCommands(orderNumber, orderSeq, tableNumber, items, deptName, p = null, staffName = 'N/A') {
+            let width = (p && p.paperWidth === '80') ? 48 : 32;
+            const fontSize = p ? p.fontSize : '1';
+            const fontCmd = (fontSize === '0') ? "\x1B\x4D\x01" : (fontSize === '2' ? "\x1B\x21\x10" : "\x1B\x4D\x00");
+            const sep = "-".repeat(width) + "\n";
+            const timestamp = new Date().toLocaleString();
+            let itemsText = "Items:\n";
+            items.forEach(item => {
+                itemsText += `\x1B\x45\x01${item.name.substring(0, width - 8).padEnd(width - 8)} x ${item.qty}\x1B\x45\x00\n`;
+                if (item.variants?.length) item.variants.forEach(v => itemsText += `       + ${v.optionName}\n`);
+                if (item.modifiers?.length) item.modifiers.forEach(m => itemsText += `       + ${m.optionName}\n`);
+                if (item.notes) itemsText += `       * Req: ${item.notes}\n`;
+            });
+            return combineCommands("\x1B\x40", fontCmd, "\x1B\x61\x01", 
+                "\x1B\x21\x30\x1B\x45\x01CANCELLED ORDER\x1B\x45\x00\x1B\x21\x00\n",
+                `${deptName.toUpperCase()}\n`, `${orderSeq} | ${orderNumber} | ${tableNumber}\n`, sep, "\x1B\x61\x00",
+                `Staff : ${staffName}\n`, `Time  : ${timestamp}\n`, sep, itemsText, "\n\n\n\n",
+                (p && p.cutterAlarm) ? "\x1B\x42\x03\x02" : "", "\x1D\x56\x41\x03");
+        }
+
+        window.triggerVoidItemPrinting = async function(orderId, itemId, qtyVoided) {
+            if (Object.keys(categoryMapTakeOrder).length === 0) {
+                categoryMapTakeOrder = await getCategoriesMap();
+            }
+
+            const itemRef = doc(db, 'licenses', currentClientId, 'orders', orderId, 'items', itemId);
+            const itemSnap = await getDoc(itemRef);
+            if (!itemSnap.exists()) return;
+            const itemData = itemSnap.data();
+
+            const vSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderId, 'items', itemId, 'selectedVariants'));
+            const mSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderId, 'items', itemId, 'selectedModifiers'));
+            
+            const fullItem = {
+                ...itemData,
+                variants: vSnap.docs.map(v => v.data()),
+                modifiers: mSnap.docs.map(m => m.data())
+            };
 
             // 1. Get Order info
             const orderSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', orderId));
@@ -10665,7 +10756,7 @@ window.openSearchModalTakeOrder = function() {
             
             // 2. Find relevant Department Printers that have Void Enabled
             const deptPrintersSnap = await getDocs(collection(db, 'licenses', currentClientId, 'department_printer'));
-            const catName = categoryMapTakeOrder[itemData.categoryId];
+            const catName = categoryMapTakeOrder[fullItem.categoryId];
             
             const targetDepts = deptPrintersSnap.docs.filter(d => {
                 const dp = d.data();
@@ -10694,7 +10785,8 @@ window.openSearchModalTakeOrder = function() {
                             const commands = await generateVoidReceiptCommands(
                                 order.orderNumber, 
                                 order.orderSequence || '?', 
-                                itemData.name,
+                                (order.tableId || 'N/A').toUpperCase(),
+                                fullItem,
                                 qtyVoided,
                                 dept.name,
                                 p,
@@ -10778,26 +10870,32 @@ window.openSearchModalTakeOrder = function() {
             }
         }
 
-        async function generateVoidReceiptCommands(orderNumber, orderSeq, itemName, qty, deptName, p = null, staffName = 'N/A') {
+        async function generateVoidReceiptCommands(orderNumber, orderSeq, tableNumber, item, qty, deptName, p = null, staffName = 'N/A') {
             let width = (p && p.paperWidth === '80') ? 48 : 32;
             const fontSize = p ? p.fontSize : '1';
             const fontCmd = (fontSize === '0') ? "\x1B\x4D\x01" : (fontSize === '2' ? "\x1B\x21\x10" : "\x1B\x4D\x00");
             const sep = "-".repeat(width) + "\n";
             const timestamp = new Date().toLocaleString();
 
+            let detailsText = "";
+            if (item.variants?.length) item.variants.forEach(v => detailsText += `       + ${v.optionName}\n`);
+            if (item.modifiers?.length) item.modifiers.forEach(m => detailsText += `       + ${m.optionName}\n`);
+            if (item.notes) detailsText += `       * Req: ${item.notes}\n`;
+
             return combineCommands(
                 "\x1B\x40", // Initialize
                 "\x1B\x61\x01", // Center
                 "\x1B\x21\x30\x1B\x45\x01VOID ITEM\x1B\x45\x00\x1B\x21\x00\n", // Double height Bold
                 `${deptName.toUpperCase()}\n`,
-                `${orderSeq} | ${orderNumber}\n`,
+                `${orderSeq} | ${orderNumber} | ${tableNumber}\n`,
                 sep,
                 "\x1B\x61\x00", // Left
                 `Staff : ${staffName}\n`,
                 `Time  : ${timestamp}\n`,
                 sep,
                 "Items:\n",
-                `\x1B\x45\x01${itemName.substring(0, width - 8).padEnd(width - 8)} x ${qty}\x1B\x45\x00\n`,
+                `\x1B\x45\x01${item.name.substring(0, width - 8).padEnd(width - 8)} x ${qty}\x1B\x45\x00\n`,
+                detailsText,
                 "\n\n\n\n",
                 (p && p.cutterAlarm) ? "\x1B\x42\x03\x02" : "",
                 "\x1D\x56\x41\x03" // Cut
