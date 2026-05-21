@@ -10167,10 +10167,38 @@ window.openSearchModalTakeOrder = function() {
                         orderDisplay = `#${item.orderSequence || '?'} (${item.orderNumber})`;
                     }
 
+                    const pType = item.printType || 'order';
+                    let typeLabel = pType;
+                    let labelBg = '#e2e8f0';
+                    let labelColor = '#475569';
+
+                    if (item.printerDeptName === 'Receipt') {
+                        typeLabel = "Bill receipt";
+                        labelBg = '#38a169';
+                        labelColor = '#ffffff';
+                    } else if (pType === 'order') {
+                        typeLabel = "order";
+                        labelBg = '#38a169';
+                        labelColor = '#ffffff';
+                    } else if (pType === 'cancel_order') {
+                        typeLabel = "cancelled order";
+                        labelBg = '#e53e3e';
+                        labelColor = '#ffffff';
+                    } else if (pType === 'void_item') {
+                        typeLabel = "void item";
+                        labelBg = '#e53e3e';
+                        labelColor = '#ffffff';
+                    } else if (pType === 'move_merge') {
+                        typeLabel = (item.printerDeptName === 'Merge') ? 'Merge' : 'Move';
+                        labelBg = '#3182ce';
+                        labelColor = '#ffffff';
+                    }
+
                     html += `<div class="order-detail-card" style="border-left: 5px solid ${statusColor};">
                         <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
                             <div>
                                 <div style="font-weight:bold; font-size:1rem;">[${item.printerDeptName || 'Receipt'}] ${orderDisplay}</div>
+                                <div style="margin: 5px 0;"><span style="background: ${labelBg}; color: ${labelColor}; padding: 2px 8px; border-radius: 6px; font-size: 10px; font-weight: 800; text-transform: uppercase;">${typeLabel}</span></div>
                                 <div style="font-size:12px; color:#64748b;">${time}</div>
                             </div>
                             <div style="text-align:right;">
