@@ -10952,10 +10952,10 @@ window.openSearchModalTakeOrder = function() {
                 });
                 if (deptItems.length === 0) continue;
 
-                // If I don't own the printer and someone else does, route to queue
+                const qId = await addToPrintQueue(orderId, order.orderNumber, tableNumber, dept.name, deptDoc.id, null, null, currentStaff.name, order.orderType, null, order.orderSequence, false, (!iOwnAPrinter && takeoverStaffName) ? 'reprint_requested' : 'pending', 'cancel_order');
+
                 if (!iOwnAPrinter && takeoverStaffName) {
                     showPrinterStatusPopup("Printer Server", `Send cancellation to ${takeoverStaffName} device...`, 'info', true);
-                    await addToPrintQueue(orderId, order.orderNumber, tableNumber, dept.name, deptDoc.id, null, null, currentStaff.name, order.orderType, null, order.orderSequence, false, 'reprint_requested', 'cancel_order');
                     continue;
                 }
 
@@ -10967,7 +10967,8 @@ window.openSearchModalTakeOrder = function() {
                         if (device) {
                             devicesToCleanup.add(device);
                             const commands = await generateCancellationOrderReceiptCommands(order.orderNumber, order.orderSequence || '?', tableNumber, deptItems, dept.name, p, currentStaff.name);
-                            await sendToBluetoothPrinter(device, commands);
+                            const success = await sendToBluetoothPrinter(device, commands);
+                            await updateDoc(doc(db, 'licenses', currentClientId, 'print_queue', qId), { status: success ? 'success' : 'failed' });
                         }
                     }
                 }
@@ -11053,10 +11054,10 @@ window.openSearchModalTakeOrder = function() {
                 const dept = deptDoc.data();
                 const deptId = deptDoc.id;
 
-                // If I don't own the printer and someone else does, route to queue
+                const qId = await addToPrintQueue(orderId, order.orderNumber, (order.tableId || 'N/A').toUpperCase(), dept.name, deptId, null, null, currentStaff.name, order.orderType, null, order.orderSequence, false, (!iOwnAPrinter && takeoverStaffName) ? 'reprint_requested' : 'pending', 'void_item', {itemId, qtyVoided});
+
                 if (!iOwnAPrinter && takeoverStaffName) {
                     showPrinterStatusPopup("Printer Server", `Send void request to ${takeoverStaffName} device...`, 'info', true);
-                    await addToPrintQueue(orderId, order.orderNumber, (order.tableId || 'N/A').toUpperCase(), dept.name, deptId, null, null, currentStaff.name, order.orderType, null, order.orderSequence, false, 'reprint_requested', 'void_item', {itemId, qtyVoided});
                     continue;
                 }
 
@@ -11078,7 +11079,8 @@ window.openSearchModalTakeOrder = function() {
                                 p,
                                 currentStaff.name
                             );
-                            await sendToBluetoothPrinter(device, commands);
+                            const success = await sendToBluetoothPrinter(device, commands);
+                            await updateDoc(doc(db, 'licenses', currentClientId, 'print_queue', qId), { status: success ? 'success' : 'failed' });
                         }
                     }
                 }
@@ -11104,11 +11106,11 @@ window.openSearchModalTakeOrder = function() {
                 else if (p.takenByStaffId) takeoverStaffName = p.takenByStaffName;
             }
 
-            // If Device B, route to queue
+            const firstOrder = orders[0];
+            const qId = await addToPrintQueue(firstOrder.orderId, firstOrder.orderNumber, toTable, isMerge ? 'Merge' : 'Move', null, null, null, currentStaff.name, 'N/A', null, null, false, (!iOwnAPrinter && takeoverStaffName) ? 'reprint_requested' : 'pending', 'move_merge', {fromTable, toTable, orders, isMerge});
+
             if (!iOwnAPrinter && takeoverStaffName) {
                 showPrinterStatusPopup("Printer Server", `Send ${isMerge ? 'merge' : 'move'} to ${takeoverStaffName} device...`, 'info', true);
-                const firstOrder = orders[0];
-                await addToPrintQueue(firstOrder.orderId, firstOrder.orderNumber, toTable, isMerge ? 'Merge' : 'Move', null, null, null, currentStaff.name, 'N/A', null, null, false, 'reprint_requested', 'move_merge', {fromTable, toTable, orders, isMerge});
                 return;
             }
 
@@ -11123,7 +11125,8 @@ window.openSearchModalTakeOrder = function() {
                 if (device) {
                     devicesToCleanup.add(device);
                     const commands = generateMoveMergeCommands(fromTable, toTable, orders, isMerge, p, currentStaff.name, timestamp);
-                    await sendToBluetoothPrinter(device, commands);
+                    const success = await sendToBluetoothPrinter(device, commands);
+                    await updateDoc(doc(db, 'licenses', currentClientId, 'print_queue', qId), { status: success ? 'success' : 'failed' });
                 }
             }
 
