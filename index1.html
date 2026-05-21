@@ -2450,6 +2450,7 @@
                         <div class="view-toggle-takeorder">
                             <button class="view-btn-takeorder active" id="gridViewBtnTakeOrder" onclick="setViewModeTakeOrder('grid')"><i class="fas fa-th"></i> Grid</button>
                             <button class="view-btn-takeorder" id="listViewBtnTakeOrder" onclick="setViewModeTakeOrder('list')"><i class="fas fa-list"></i> List</button>
+                            <button class="view-btn-takeorder" id="layoutViewBtnTakeOrder" onclick="setViewModeTakeOrder('layout')"><i class="fas fa-layer-group"></i> Layout</button>
                         </div>
                     </div>
                     
@@ -2462,12 +2463,26 @@
                         <div class="status-indicator"><span class="status-dot orange"></span><span>Occupied</span></div>
                         <div class="status-indicator"><span class="status-dot ready"></span><span>Ready</span></div>
                     </div>
+
+                    <!-- Layout Controls -->
+                    <div id="layoutControlsTakeOrder" style="display: none; justify-content: center; gap: 15px; margin-bottom: 20px; align-items: center; flex-wrap: wrap;">
+                        <div class="view-toggle-takeorder" style="background: rgba(255,255,255,0.15);">
+                            <button class="view-btn-takeorder active" id="layoutDevicePhoneBtn" onclick="setLayoutDevice('phone')">Phone</button>
+                            <button class="view-btn-takeorder" id="layoutDeviceTabletBtn" onclick="setLayoutDevice('tablet')">Tablet</button>
+                        </div>
+                        <button class="btn-small" id="editLayoutBtnTakeOrder" onclick="toggleEditLayout()" style="background: #ff9800; font-weight: 800; border-radius: 40px; height: 36px; padding: 0 20px;">EDIT LAYOUT</button>
+                        <button class="btn-small" id="saveLayoutBtnTakeOrder" onclick="saveTableLayout()" style="display: none; background: #38a169; font-weight: 800; border-radius: 40px; height: 36px; padding: 0 20px;">SAVE LAYOUT</button>
+                    </div>
                     
                     <!-- Persistent Counter Table -->
                     <div id="counterTableContainerTakeOrder" style="padding: 0 4px 12px 4px;"></div>
 
                     <div id="tableGridTakeOrder" class="table-grid-takeorder">
                         <div style="text-align:center;padding:40px;color:white;">Loading tables...</div>
+                    </div>
+
+                    <!-- Custom Layout View -->
+                    <div id="tableLayoutContainerTakeOrder" style="display: none; position: relative; width: 100%; min-height: 500px; background: rgba(0,0,0,0.1); border-radius: 28px; border: 2px dashed rgba(255,255,255,0.2); overflow: auto; margin-top: 15px; padding: 20px;">
                     </div>
                 </div>
                 
@@ -3838,6 +3853,9 @@
         let locationsTakeOrder = [];
         let currentMenuObjTakeOrder = null;
         let activeOrdersViewMode = 'grid';
+        let currentLayoutDevice = 'phone';
+        let isEditingLayout = false;
+        let tableLayouts = { phone: {}, tablet: {} };
         let activeOrdersStatusFilter = 'All';
         let unsubActiveOrders = null;
         let currentSelectedVariantsTakeOrder = [];
@@ -6702,6 +6720,19 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             } else {
                 grid.style.display = viewModeTakeOrder === 'list' ? 'flex' : 'grid';
             }
+
+            if (viewModeTakeOrder === 'layout') {
+                grid.style.display = 'none';
+                counterContainer.style.display = 'none';
+                document.getElementById('tableLayoutContainerTakeOrder').style.display = 'block';
+                document.getElementById('layoutControlsTakeOrder').style.display = 'flex';
+                renderTableLayout();
+                return;
+            } else {
+                document.getElementById('tableLayoutContainerTakeOrder').style.display = 'none';
+                document.getElementById('layoutControlsTakeOrder').style.display = 'none';
+                counterContainer.style.display = 'block';
+            }
             
             // Render persistent Counter table at the top
             const counterTable = tablesListTakeOrder.find(t => t.id.toLowerCase() === 'counter');
@@ -8145,8 +8176,142 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             viewModeTakeOrder = mode;
             document.getElementById('gridViewBtnTakeOrder').classList.toggle('active', mode === 'grid');
             document.getElementById('listViewBtnTakeOrder').classList.toggle('active', mode === 'list');
+            document.getElementById('layoutViewBtnTakeOrder').classList.toggle('active', mode === 'layout');
+            
+            if (mode === 'layout') {
+                loadTableLayout();
+            } else {
+                isEditingLayout = false;
+                updateLayoutEditButtons();
+                renderTableGridTakeOrder();
+            }
+        };
+
+        window.setLayoutDevice = function(device) {
+            currentLayoutDevice = device;
+            document.getElementById('layoutDevicePhoneBtn').classList.toggle('active', device === 'phone');
+            document.getElementById('layoutDeviceTabletBtn').classList.toggle('active', device === 'tablet');
+            renderTableLayout();
+        };
+
+        window.toggleEditLayout = function() {
+            isEditingLayout = !isEditingLayout;
+            updateLayoutEditButtons();
+            renderTableLayout();
+        };
+
+        function updateLayoutEditButtons() {
+            document.getElementById('editLayoutBtnTakeOrder').style.display = isEditingLayout ? 'none' : 'block';
+            document.getElementById('saveLayoutBtnTakeOrder').style.display = isEditingLayout ? 'block' : 'none';
+        }
+
+        window.loadTableLayout = async function() {
+            const ref = doc(db, 'licenses', currentClientId, 'settings', 'table_layout');
+            const snap = await getDoc(ref);
+            if (snap.exists()) {
+                tableLayouts = snap.data();
+            } else {
+                tableLayouts = { phone: {}, tablet: {} };
+            }
             renderTableGridTakeOrder();
         };
+
+        window.saveTableLayout = async function() {
+            try {
+                const ref = doc(db, 'licenses', currentClientId, 'settings', 'table_layout');
+                await setDoc(ref, tableLayouts, { merge: true });
+                isEditingLayout = false;
+                updateLayoutEditButtons();
+                renderTableLayout();
+                showPrinterStatusPopup("Layout Saved", `Table layout for ${currentLayoutDevice} saved successfully.`, true);
+            } catch (e) {
+                alert("Error saving layout: " + e.message);
+            }
+        };
+
+        window.renderTableLayout = function() {
+            const container = document.getElementById('tableLayoutContainerTakeOrder');
+            const deviceLayout = tableLayouts[currentLayoutDevice] || {};
+            
+            if (!isEditingLayout && Object.keys(deviceLayout).length === 0) {
+                container.innerHTML = '<div style="text-align:center;padding:100px;color:white;opacity:0.6;"><i class="fas fa-layer-group" style="font-size:3rem;margin-bottom:15px;display:block;"></i>No layout set for this device. Click EDIT LAYOUT to start.</div>';
+                return;
+            }
+
+            container.innerHTML = '';
+            
+            tablesListTakeOrder.forEach(table => {
+                const pos = deviceLayout[table.id] || { x: 20, y: 20 };
+                if (!isEditingLayout && !deviceLayout[table.id]) return;
+
+                const isCounter = table.id.toLowerCase() === 'counter';
+                const isOccupied = table.status === 'occupied';
+                let isServed = false;
+                if (isOccupied) {
+                    const ordersForTable = activeOrdersSnapshotTakeOrder.filter(o => o.tableId === table.id);
+                    if (ordersForTable.length > 0 && ordersForTable.every(o => o.status === 'served')) isServed = true;
+                }
+                
+                const tableEl = document.createElement('div');
+                const tWidth = isCounter ? 120 : 80;
+                tableEl.style.cssText = `position: absolute; width: ${tWidth}px; height: 80px; border-radius: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; left: ${pos.x}px; top: ${pos.y}px; z-index: ${isEditingLayout ? '10' : '1'}; cursor: ${isEditingLayout ? 'move' : 'pointer'}; box-shadow: 0 4px 10px rgba(0,0,0,0.1);`;
+                tableEl.style.background = isServed ? '#004fa6' : (isOccupied ? '#ff9800' : 'white');
+                tableEl.style.color = (isOccupied || isServed) ? 'white' : '#1e293b';
+                if (isEditingLayout) tableEl.style.border = '2px solid #764ba2';
+
+                const label = isCounter ? 'COUNTER' : table.id.toUpperCase();
+                const subLabel = isCounter ? 'WALK-IN' : `${table.capacity} PAX`;
+                tableEl.innerHTML = `<div style="font-weight: 800; font-size: 1.1rem;">${label}</div><div style="font-size: 0.6rem; opacity: 0.8;">${subLabel}</div>`;
+
+                if (!isCounter) {
+                    renderChairs(tableEl, parseInt(table.capacity) || 2, isOccupied || isServed);
+                }
+
+                if (isEditingLayout) setupLayoutDraggable(tableEl, table.id);
+                else tableEl.onclick = () => selectTableTakeOrder(table.id, table.id.toUpperCase());
+
+                container.appendChild(tableEl);
+            });
+        };
+
+        function renderChairs(tableEl, capacity, isOccupied) {
+            const chairsPerSide = { top: 0, bottom: 0, left: 0, right: 0 };
+            for (let i = 0; i < capacity; i++) {
+                if (i % 4 === 0) chairsPerSide.top++; else if (i % 4 === 1) chairsPerSide.bottom++; else if (i % 4 === 2) chairsPerSide.left++; else chairsPerSide.right++;
+            }
+            ['top', 'bottom', 'left', 'right'].forEach(side => {
+                const count = chairsPerSide[side];
+                for (let i = 0; i < count; i++) {
+                    const chair = document.createElement('div');
+                    chair.style.cssText = `position: absolute; width: 12px; height: 12px; background: ${isOccupied ? 'rgba(255,255,255,0.9)' : '#cbd5e0'}; border-radius: 4px; border: 1px solid rgba(0,0,0,0.1);`;
+                    const spacing = 80 / (count + 1);
+                    const pos = spacing * (i + 1) - 6;
+                    if (side === 'top') { chair.style.top = '-20px'; chair.style.left = pos + 'px'; }
+                    else if (side === 'bottom') { chair.style.bottom = '-20px'; chair.style.left = pos + 'px'; }
+                    else if (side === 'left') { chair.style.left = '-20px'; chair.style.top = pos + 'px'; }
+                    else if (side === 'right') { chair.style.right = '-20px'; chair.style.top = pos + 'px'; }
+                    tableEl.appendChild(chair);
+                }
+            });
+        }
+
+        function setupLayoutDraggable(el, tableId) {
+            let offsetX, offsetY;
+            const onMove = (e) => {
+                const clientX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
+                const clientY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
+                const container = document.getElementById('tableLayoutContainerTakeOrder');
+                let newX = clientX - offsetX; let newY = clientY - offsetY;
+                newX = Math.max(10, Math.min(newX, container.scrollWidth - el.offsetWidth)); newY = Math.max(10, Math.min(newY, container.scrollHeight - el.offsetHeight));
+                el.style.left = newX + 'px'; el.style.top = newY + 'px';
+                if (!tableLayouts[currentLayoutDevice]) tableLayouts[currentLayoutDevice] = {};
+                tableLayouts[currentLayoutDevice][tableId] = { x: newX, y: newY };
+            };
+            const onEnd = () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onEnd); document.removeEventListener('touchmove', onMove); document.removeEventListener('touchend', onEnd); };
+            const onStart = (e) => { const clientX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX; const clientY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY; offsetX = clientX - el.offsetLeft; offsetY = clientY - el.offsetTop; document.addEventListener('mousemove', onMove); document.addEventListener('mouseup', onEnd); document.addEventListener('touchmove', onMove, { passive: false }); document.addEventListener('touchend', onEnd); };
+            el.addEventListener('mousedown', onStart);
+            el.addEventListener('touchstart', onStart, { passive: false });
+        }
 
         window.setMenuViewMode = function(mode) {
             menuViewMode = mode;
