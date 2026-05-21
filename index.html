@@ -2615,6 +2615,16 @@
                         </div>
                     </div>
                     
+                    <div class="category-bar-takeorder" id="printerQueueTypeFilterBar" style="margin-bottom: 8px;">
+                        <button class="category-btn-takeorder active" onclick="filterPrinterQueueByType('All')">All</button>
+                        <button class="category-btn-takeorder" onclick="filterPrinterQueueByType('ORDER')">ORDER</button>
+                        <button class="category-btn-takeorder" onclick="filterPrinterQueueByType('BILL')">BILL</button>
+                        <button class="category-btn-takeorder" onclick="filterPrinterQueueByType('MOVE')">MOVE</button>
+                        <button class="category-btn-takeorder" onclick="filterPrinterQueueByType('MERGE')">MERGE</button>
+                        <button class="category-btn-takeorder" onclick="filterPrinterQueueByType('VOID')">VOID</button>
+                        <button class="category-btn-takeorder" onclick="filterPrinterQueueByType('CANCELLED')">CANCELLED</button>
+                    </div>
+
                     <div class="category-bar-takeorder" id="printerQueueFilterBar" style="margin-bottom: 15px;">
                         <button class="category-btn-takeorder active" onclick="filterPrinterQueue('All')">All</button>
                         <button class="category-btn-takeorder" onclick="filterPrinterQueue('pending')">Pending</button>
@@ -3860,6 +3870,28 @@
         let showMenuImagesTakeOrder = true;
         let lastSuccessfulPaymentDetails = null;
         
+        // ========== PRINT QUEUE SYSTEM (For Printer Server Stability) ==========
+        let printTaskQueue = [];
+        let isPrintingTaskActive = false;
+
+        async function enqueuePrintTask(taskFn) {
+            printTaskQueue.push(taskFn);
+            if (isPrintingTaskActive) return;
+            
+            isPrintingTaskActive = true;
+            while (printTaskQueue.length > 0) {
+                const task = printTaskQueue.shift();
+                try {
+                    await task();
+                } catch (e) {
+                    console.error("Print task error:", e);
+                }
+                // Cooldown between tasks to allow hardware to reset
+                await new Promise(res => setTimeout(res, 2000));
+            }
+            isPrintingTaskActive = false;
+        }
+
         const shapeClipPaths = {
             'square': 'none',
             'circle': 'circle(50% at 50% 50%)',
@@ -7841,7 +7873,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                     const p = printerDoc.data();
                     if (p.takenByStaffId && p.takenByStaffId !== currentStaff.id) continue;
                     
-                    await executeReprint(d.queueId, null, printerDoc.id);
+                    enqueuePrintTask(() => executeReprint(d.queueId, null, printerDoc.id));
                 }
             } finally {
                 btnText.style.display = 'inline-block';
@@ -8874,7 +8906,7 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
                 }, 2000);
 
                 // Trigger Automatic Printing for Kitchen/Department only on new order
-                triggerAutoPrinting(orderRef.id, orderData.orderNumber, 'order', null, true);
+                enqueuePrintTask(() => triggerAutoPrinting(orderRef.id, orderData.orderNumber, 'order', null, true));
 
                 cartTakeOrder = [];
                 updateOrdersUITakeOrder();
@@ -9524,7 +9556,7 @@ window.openSearchModalTakeOrder = function() {
                 const total = subtotal + tax;
                 await updateDoc(orderRef, { subtotal: subtotal.toFixed(2), tax: tax.toFixed(2), total: total.toFixed(2) });
                 // Trigger Cancelled Order Receipt for departments
-                await triggerOrderCancellationPrinting(orderId);
+                enqueuePrintTask(() => triggerOrderCancellationPrinting(orderId));
             }
 
             // Sync non-cancelled items to Preparing or Served
@@ -10121,6 +10153,7 @@ window.openSearchModalTakeOrder = function() {
 
         // ========== PRINTER QUEUE LOGIC ==========
         let printerQueueFilter = 'All';
+        let printerQueueTypeFilter = 'All';
 
         window.loadPrinterQueue = function() {
             const ref = collection(db, 'licenses', currentClientId, 'print_queue');
@@ -10132,10 +10165,27 @@ window.openSearchModalTakeOrder = function() {
             onSnapshot(q, (snapshot) => {
                 const container = document.getElementById('printerQueueList');
                 let html = '';
-                const sorted = snapshot.docs.sort((a,b) => (b.data().createdAt?.toDate() || 0) - (a.data().createdAt?.toDate() || 0));
                 
-                sorted.forEach(doc => {
-                    const item = doc.data();
+                let filteredItems = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+
+                if (printerQueueTypeFilter !== 'All') {
+                    filteredItems = filteredItems.filter(item => {
+                        const pType = item.printType || 'order';
+                        const isReceipt = item.printerDeptName === 'Receipt';
+                        
+                        if (printerQueueTypeFilter === 'ORDER') return pType === 'order' && !isReceipt;
+                        if (printerQueueTypeFilter === 'BILL') return isReceipt;
+                        if (printerQueueTypeFilter === 'MOVE') return pType === 'move_merge' && item.printerDeptName !== 'Merge';
+                        if (printerQueueTypeFilter === 'MERGE') return pType === 'move_merge' && item.printerDeptName === 'Merge';
+                        if (printerQueueTypeFilter === 'VOID') return pType === 'void_item';
+                        if (printerQueueTypeFilter === 'CANCELLED') return pType === 'cancel_order';
+                        return true;
+                    });
+                }
+
+                const sorted = filteredItems.sort((a,b) => (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0));
+                
+                sorted.forEach(item => {
                     const time = item.createdAt?.toDate().toLocaleString() || 'N/A';
                     const statusColor = item.status === 'success' ? '#38a169' : (item.status === 'failed' ? '#e53e3e' : '#ed8936');
                     
@@ -10148,10 +10198,38 @@ window.openSearchModalTakeOrder = function() {
                         orderDisplay = `#${item.orderSequence || '?'} (${item.orderNumber})`;
                     }
 
+                    const pType = item.printType || 'order';
+                    let typeLabel = pType;
+                    let labelBg = '#e2e8f0';
+                    let labelColor = '#475569';
+
+                    if (item.printerDeptName === 'Receipt') {
+                        typeLabel = "Bill receipt";
+                        labelBg = '#38a169';
+                        labelColor = '#ffffff';
+                    } else if (pType === 'order') {
+                        typeLabel = "order";
+                        labelBg = '#38a169';
+                        labelColor = '#ffffff';
+                    } else if (pType === 'cancel_order') {
+                        typeLabel = "cancelled order";
+                        labelBg = '#e53e3e';
+                        labelColor = '#ffffff';
+                    } else if (pType === 'void_item') {
+                        typeLabel = "void item";
+                        labelBg = '#e53e3e';
+                        labelColor = '#ffffff';
+                    } else if (pType === 'move_merge') {
+                        typeLabel = (item.printerDeptName === 'Merge') ? 'Merge' : 'Move';
+                        labelBg = '#3182ce';
+                        labelColor = '#ffffff';
+                    }
+
                     html += `<div class="order-detail-card" style="border-left: 5px solid ${statusColor};">
                         <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
                             <div>
                                 <div style="font-weight:bold; font-size:1rem;">[${item.printerDeptName || 'Receipt'}] ${orderDisplay}</div>
+                                <div style="margin: 5px 0;"><span style="background: ${labelBg}; color: ${labelColor}; padding: 2px 8px; border-radius: 6px; font-size: 10px; font-weight: 800; text-transform: uppercase;">${typeLabel}</span></div>
                                 <div style="font-size:12px; color:#64748b;">${time}</div>
                             </div>
                             <div style="text-align:right;">
@@ -10160,8 +10238,8 @@ window.openSearchModalTakeOrder = function() {
                             </div>
                         </div>
                         <div class="action-buttons">
-                            <button class="btn-edit" onclick="reprintQueueItem('${doc.id}')"><i class="fas fa-redo"></i> Reprint</button>
-                            <button class="btn-delete" onclick="deleteQueueItem('${doc.id}')">Delete</button>
+                            <button class="btn-edit" onclick="reprintQueueItem('${item.id}')"><i class="fas fa-redo"></i> Reprint</button>
+                            <button class="btn-delete" onclick="deleteQueueItem('${item.id}')">Delete</button>
                         </div>
                     </div>`;
                 });
@@ -10173,6 +10251,14 @@ window.openSearchModalTakeOrder = function() {
             printerQueueFilter = status;
             document.querySelectorAll('#printerQueueFilterBar button').forEach(btn => {
                 btn.classList.toggle('active', btn.innerText.toLowerCase() === status.toLowerCase());
+            });
+            loadPrinterQueue();
+        };
+
+        window.filterPrinterQueueByType = function(type) {
+            printerQueueTypeFilter = type;
+            document.querySelectorAll('#printerQueueTypeFilterBar button').forEach(btn => {
+                btn.classList.toggle('active', btn.innerText.toUpperCase() === type.toUpperCase());
             });
             loadPrinterQueue();
         };
@@ -10535,6 +10621,11 @@ window.openSearchModalTakeOrder = function() {
             const ref = doc(db, 'licenses', currentClientId, 'print_queue', id);
             const item = itemParam || (await getDoc(ref)).data();
 
+            // Ensure category map is populated for department filtering logic, especially on server devices
+            if (Object.keys(categoryMapTakeOrder).length === 0) {
+                categoryMapTakeOrder = await getCategoriesMap();
+            }
+
             // Determine the correct printer to use based on override ID or queue metadata
             const finalPrinterId = forcedPrinterId || item.targetPrinterId || null;
 
@@ -10544,7 +10635,10 @@ window.openSearchModalTakeOrder = function() {
             const cashierName = item.cashierName || 'N/A';
             const staffName = item.staffName || 'N/A';
             const paymentInfo = item.paymentInfo ? JSON.parse(item.paymentInfo) : null;
-            const metadata = item.metadata ? JSON.parse(item.metadata) : null;
+             let metadata = null;
+            try {
+                metadata = item.metadata ? (typeof item.metadata === 'string' ? JSON.parse(item.metadata) : item.metadata) : null;
+            } catch(e) { console.error("Metadata parse error", e); }
             const itemsPaid = paymentInfo?.itemsPaid || null;
             const orderSeq = item.orderSequence;
 
@@ -10570,6 +10664,17 @@ window.openSearchModalTakeOrder = function() {
             await updateDoc(ref, { status: 'processing', attempts: currentAttempts + 1 });
 
             let itemsToPrint = [];
+            
+            // RETRY LOGIC: If itemsToPrint is empty, wait and retry (handles Firestore sync lag for remote voids)
+            let retryCount = 0;
+            const maxRetries = 2;
+            
+            while (itemsToPrint.length === 0 && retryCount <= maxRetries && item.printType !== 'move_merge') {
+                if (retryCount > 0) {
+                    await new Promise(resolve => setTimeout(resolve, 1500)); // Wait 1.5s for sync
+                }
+                
+                itemsToPrint = [];
             for (const oId of orderIds) {
                 const itemsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', oId, 'items'));
                 for (const itDoc of itemsSnap.docs) {
@@ -10608,6 +10713,8 @@ window.openSearchModalTakeOrder = function() {
                     });
                 }
             }
+                retryCount++;
+            }
 
             let printerConfig;
             if (finalPrinterId) {
@@ -10615,9 +10722,16 @@ window.openSearchModalTakeOrder = function() {
                 printerConfig = pSnap.exists() ? pSnap.data() : null;
             } else {
                 const printersSnapFull = await getDocs(collection(db, 'licenses', currentClientId, 'printers'));
+                // PRINTER SERVER FIX: Find a printer that is PHYSICALLY CONNECTED to this device
+                // regardless of who "owns" it in the database.
                 printerConfig = printersSnapFull.docs.find(d => {
                     const pd = d.data();
                     if (!pd.bluetoothDeviceId) return false;
+                    
+                   // Only consider printers that are actually paired/connected to Device A right now
+                    if (!connectedBluetoothDevices[pd.bluetoothDeviceId]) return false;
+
+
                     if (item.printType === 'move_merge') return pd.printMoveMerge;
                     if (item.printerDeptId) return pd.departmentPrinters?.includes(item.printerDeptId);
                     return pd.printReceipt;
@@ -10627,6 +10741,11 @@ window.openSearchModalTakeOrder = function() {
             const device = printerConfig ? connectedBluetoothDevices[printerConfig.bluetoothDeviceId] : null;
 
             let printSuccess = false;
+            let failureReason = "";
+
+            if (!device) failureReason = "Printer not found or not owned by this device.";
+            else if (itemsToPrint.length === 0 && item.printType !== 'move_merge') failureReason = "No matching items found for this department/void.";
+
             if (device && (itemsToPrint.length > 0 || item.printType === 'move_merge')) {
                 // Cash Drawer Kick Logic for Reprints
                 if (printerConfig.kickCashDrawer && paymentInfo?.hasCashPayment) {
@@ -10641,8 +10760,14 @@ window.openSearchModalTakeOrder = function() {
                 } else if (item.printType === 'cancel_order') {
                     commands = await generateCancellationOrderReceiptCommands(item.orderNumber, orderSeq, item.tableNumber || 'N/A', itemsToPrint, item.printerDeptName, printerConfig, staffName);
                 } else if (item.printType === 'void_item') {
-                    const targetItem = itemsToPrint[0];
-                    commands = await generateVoidReceiptCommands(item.orderNumber, orderSeq, item.tableNumber || 'N/A', targetItem, targetItem.qty, item.printerDeptName, printerConfig, staffName);
+                    // Ensure we have the target item from metadata
+                    const targetItem = itemsToPrint.find(it => it.docId === metadata?.itemId) || itemsToPrint[0];
+                    if (targetItem) {
+                        const voidQty = metadata?.qtyVoided || targetItem.qty;
+                        commands = await generateVoidReceiptCommands(item.orderNumber, orderSeq, item.tableNumber || 'N/A', targetItem, voidQty, item.printerDeptName, printerConfig, staffName);
+                    } else {
+                        printSuccess = false;
+                    }
                 } else if (item.printType === 'move_merge') {
                     const timestamp = new Date().toLocaleString();
                     commands = generateMoveMergeCommands(metadata.fromTable, metadata.toTable, metadata.orders, metadata.isMerge, printerConfig, staffName, timestamp);
@@ -10658,8 +10783,8 @@ window.openSearchModalTakeOrder = function() {
                 await updateDoc(ref, { status: 'success' });
                 showPrinterStatusPopup(`Print ${item.orderNumber} SUCCESS`, `Printer Department: ${item.printerDeptName}\nPrint completed.`, true);
             } else {
-                await updateDoc(ref, { status: 'failed' });
-                showPrinterStatusPopup(`Print ${item.orderNumber} FAILED`, `Print failed. Ensure printer is connected.`, false);
+                await updateDoc(ref, { status: 'failed', error: failureReason });
+                showPrinterStatusPopup(`Print ${item.orderNumber} FAILED`, `${failureReason} Ensure printer is connected and owned.`, false);
             }
         };
 
@@ -10916,10 +11041,10 @@ window.openSearchModalTakeOrder = function() {
                 });
                 if (deptItems.length === 0) continue;
 
-                // If I don't own the printer and someone else does, route to queue
+                const qId = await addToPrintQueue(orderId, order.orderNumber, tableNumber, dept.name, deptDoc.id, null, null, currentStaff.name, order.orderType, null, order.orderSequence, false, (!iOwnAPrinter && takeoverStaffName) ? 'reprint_requested' : 'pending', 'cancel_order');
+
                 if (!iOwnAPrinter && takeoverStaffName) {
                     showPrinterStatusPopup("Printer Server", `Send cancellation to ${takeoverStaffName} device...`, 'info', true);
-                    await addToPrintQueue(orderId, order.orderNumber, tableNumber, dept.name, deptDoc.id, null, null, currentStaff.name, order.orderType, null, order.orderSequence, false, 'reprint_requested', 'cancel_order');
                     continue;
                 }
 
@@ -10931,7 +11056,8 @@ window.openSearchModalTakeOrder = function() {
                         if (device) {
                             devicesToCleanup.add(device);
                             const commands = await generateCancellationOrderReceiptCommands(order.orderNumber, order.orderSequence || '?', tableNumber, deptItems, dept.name, p, currentStaff.name);
-                            await sendToBluetoothPrinter(device, commands);
+                            const success = await sendToBluetoothPrinter(device, commands);
+                            await updateDoc(doc(db, 'licenses', currentClientId, 'print_queue', qId), { status: success ? 'success' : 'failed' });
                         }
                     }
                 }
@@ -11017,10 +11143,10 @@ window.openSearchModalTakeOrder = function() {
                 const dept = deptDoc.data();
                 const deptId = deptDoc.id;
 
-                // If I don't own the printer and someone else does, route to queue
+                const qId = await addToPrintQueue(orderId, order.orderNumber, (order.tableId || 'N/A').toUpperCase(), dept.name, deptId, null, null, currentStaff.name, order.orderType, null, order.orderSequence, false, (!iOwnAPrinter && takeoverStaffName) ? 'reprint_requested' : 'pending', 'void_item', {itemId, qtyVoided});
+
                 if (!iOwnAPrinter && takeoverStaffName) {
                     showPrinterStatusPopup("Printer Server", `Send void request to ${takeoverStaffName} device...`, 'info', true);
-                    await addToPrintQueue(orderId, order.orderNumber, (order.tableId || 'N/A').toUpperCase(), dept.name, deptId, null, null, currentStaff.name, order.orderType, null, order.orderSequence, false, 'reprint_requested', 'void_item', {itemId, qtyVoided});
                     continue;
                 }
 
@@ -11042,7 +11168,8 @@ window.openSearchModalTakeOrder = function() {
                                 p,
                                 currentStaff.name
                             );
-                            await sendToBluetoothPrinter(device, commands);
+                            const success = await sendToBluetoothPrinter(device, commands);
+                            await updateDoc(doc(db, 'licenses', currentClientId, 'print_queue', qId), { status: success ? 'success' : 'failed' });
                         }
                     }
                 }
@@ -11068,11 +11195,11 @@ window.openSearchModalTakeOrder = function() {
                 else if (p.takenByStaffId) takeoverStaffName = p.takenByStaffName;
             }
 
-            // If Device B, route to queue
+            const firstOrder = orders[0];
+            const qId = await addToPrintQueue(firstOrder.orderId, firstOrder.orderNumber, toTable, isMerge ? 'Merge' : 'Move', null, null, null, currentStaff.name, 'N/A', null, null, false, (!iOwnAPrinter && takeoverStaffName) ? 'reprint_requested' : 'pending', 'move_merge', {fromTable, toTable, orders, isMerge});
+
             if (!iOwnAPrinter && takeoverStaffName) {
                 showPrinterStatusPopup("Printer Server", `Send ${isMerge ? 'merge' : 'move'} to ${takeoverStaffName} device...`, 'info', true);
-                const firstOrder = orders[0];
-                await addToPrintQueue(firstOrder.orderId, firstOrder.orderNumber, toTable, isMerge ? 'Merge' : 'Move', null, null, null, currentStaff.name, 'N/A', null, null, false, 'reprint_requested', 'move_merge', {fromTable, toTable, orders, isMerge});
                 return;
             }
 
@@ -11087,7 +11214,8 @@ window.openSearchModalTakeOrder = function() {
                 if (device) {
                     devicesToCleanup.add(device);
                     const commands = generateMoveMergeCommands(fromTable, toTable, orders, isMerge, p, currentStaff.name, timestamp);
-                    await sendToBluetoothPrinter(device, commands);
+                    const success = await sendToBluetoothPrinter(device, commands);
+                    await updateDoc(doc(db, 'licenses', currentClientId, 'print_queue', qId), { status: success ? 'success' : 'failed' });
                 }
             }
 
@@ -11386,8 +11514,8 @@ window.openSearchModalTakeOrder = function() {
                             // Add a delay for remote orders to ensure all sub-collection items 
                             // (items, variants, modifiers) are fully written by Device B before printing.
                             setTimeout(() => {
-                                triggerAutoPrinting(change.doc.id, orderData.orderNumber, 'order');
-                            }, 2000);
+                                enqueuePrintTask(() => triggerAutoPrinting(change.doc.id, orderData.orderNumber, 'order'));
+                            }, 3000);
                         }
                     }
                 });
@@ -11422,7 +11550,7 @@ window.openSearchModalTakeOrder = function() {
                         }
                         
                         if (iShouldPrintThis) {
-                            await executeReprint(change.doc.id, item);
+                            enqueuePrintTask(() => executeReprint(change.doc.id, item));
                         }
                     }
                 });
