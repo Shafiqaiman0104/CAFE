@@ -11448,7 +11448,7 @@ window.openSearchModalTakeOrder = function() {
                             // (items, variants, modifiers) are fully written by Device B before printing.
                             setTimeout(() => {
                                 enqueuePrintTask(() => triggerAutoPrinting(change.doc.id, orderData.orderNumber, 'order'));
-                            }, 2000);
+                            }, 3000);
                         }
                     }
                 });
