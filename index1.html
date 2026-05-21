@@ -2608,9 +2608,21 @@
                 <div class="section-card">
                     <div class="section-header">
                         <span class="section-title">Printer Receipt Queue</span>
-                        <div class="view-toggle-takeorder">
-                            <button class="view-btn-takeorder" onclick="refreshPrinterQueue()"><i class="fas fa-sync-alt"></i></button>
+                        <div style="display: flex; gap: 10px;">
+                            <button id="printerQueueTableFilterBtn" onclick="togglePrinterQueueTableFilter()" title="Filter by Table" style="width: 40px; height: 40px; border-radius: 50%; border: none; background: rgba(255,255,255,0.2); color: white; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; justify-content: center; font-size: 1.1rem;"><i class="fas fa-chair"></i></button>
+                            <button onclick="refreshPrinterQueue()" title="Refresh Queue" style="width: 40px; height: 40px; border-radius: 50%; border: none; background: rgba(255,255,255,0.2); color: white; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; justify-content: center; font-size: 1.1rem;"><i class="fas fa-sync-alt"></i></button>
                         </div>
+                    </div>
+
+                    <!-- Global Search Bar -->
+                    <div id="printerQueueSearchContainer" style="margin-bottom: 15px;">
+                        <input type="text" id="printerQueueSearchInput" placeholder="Search order ID, table, type, status..." style="width: 100%; padding: 12px; border-radius: 14px; border: 2px solid #e2e8f0; font-size: 0.9rem;" oninput="handlePrinterQueueSearchInput(this.value)">
+                    </div>
+
+                    <!-- Table Dropdown Filter -->
+                    <div id="printerQueueTableFilterContainer" style="display: none; margin-bottom: 15px; background: #f8fafc; padding: 15px; border-radius: 16px; border: 1px solid #e2e8f0;">
+                         <label style="display: block; margin-bottom: 10px; font-weight: 700; font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Filter by Table:</label>
+                         <div id="printerQueueTableList" style="display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 8px; padding-bottom: 5px; scrollbar-width: thin;"></div>
                     </div>
                     
                     <div class="category-bar-takeorder" id="printerQueueTypeFilterBar" style="margin-bottom: 8px;">
@@ -3845,6 +3857,11 @@
         let activeShiftId = null;
         let checkoutPayMethod = "cash";
         let checkoutOrdersToProcess = [];
+        
+        let printerQueueFilter = 'All';
+        let printerQueueTypeFilter = 'All';
+        let printerQueueTableFilter = 'All';
+        let printerQueueSearchTerm = '';
         
         let shiftStartTime = null;
         let isVoidModeOrdersTab = false;
@@ -10149,17 +10166,68 @@ window.openSearchModalTakeOrder = function() {
         };
 
         // ========== PRINTER QUEUE LOGIC ==========
-        let printerQueueFilter = 'All';
-        let printerQueueTypeFilter = 'All';
+        window.togglePrinterQueueTableFilter = function() {
+            const container = document.getElementById('printerQueueTableFilterContainer');
+            const isHidden = container.style.display === 'none';
+            container.style.display = isHidden ? 'block' : 'none';
+            if (isHidden) renderPrinterQueueTableList();
+        };
+
+        window.renderPrinterQueueTableList = function() {
+            const container = document.getElementById('printerQueueTableList');
+            // Use tablesListTakeOrder which is already populated by the app sync
+            const tables = [...new Set(tablesListTakeOrder.map(t => t.id.toUpperCase()))].sort();
+            
+            let html = createPrinterQueueTableCircle('All');
+            
+            tables.forEach(t => {
+                html += createPrinterQueueTableCircle(t);
+            });
+            container.innerHTML = html;
+        };
+
+        window.createPrinterQueueTableCircle = function(t) {
+            const isActive = (printerQueueTableFilter === t);
+            const style = isActive 
+                ? 'background: #ff9800; color: white; border: 2px solid #ff9800;' 
+                : 'background: transparent; color: #ff9800; border: 2px solid #ff9800;';
+            
+            return `<button onclick="filterPrinterQueueByTable('${t}')" 
+                    style="width: 48px; height: 48px; border-radius: 50%; flex-shrink: 0; font-weight: 800; font-size: 0.7rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; overflow: hidden; white-space: nowrap; ${style}">
+                    ${t === 'All' ? 'ALL' : t}
+                </button>`;
+        };
+
+        window.filterPrinterQueueByTable = function(tableNum) {
+            printerQueueTableFilter = tableNum;
+            const iconBtn = document.getElementById('printerQueueTableFilterBtn');
+            if (iconBtn) {
+                iconBtn.style.backgroundColor = (tableNum !== 'All') ? '#ff9800' : 'rgba(255,255,255,0.2)';
+            }
+            renderPrinterQueueTableList();
+            loadPrinterQueue();
+        };
+
+        window.handlePrinterQueueSearchInput = function(val) {
+            printerQueueSearchTerm = val.toLowerCase().trim();
+            loadPrinterQueue();
+        };
 
         window.loadPrinterQueue = function() {
+            const iconBtn = document.getElementById('printerQueueTableFilterBtn');
+            if (iconBtn) {
+                iconBtn.style.backgroundColor = (printerQueueTableFilter !== 'All') ? '#ff9800' : 'rgba(255,255,255,0.2)';
+            }
+
+            if (unsubscribers['printerQueuePage']) unsubscribers['printerQueuePage']();
+
             const ref = collection(db, 'licenses', currentClientId, 'print_queue');
             let q = query(ref);
             if (printerQueueFilter !== 'All') {
                 q = query(ref, where('status', '==', printerQueueFilter));
             }
 
-            onSnapshot(q, (snapshot) => {
+            unsubscribers['printerQueuePage'] = onSnapshot(q, (snapshot) => {
                 const container = document.getElementById('printerQueueList');
                 let html = '';
                 
@@ -10177,6 +10245,25 @@ window.openSearchModalTakeOrder = function() {
                         if (printerQueueTypeFilter === 'VOID') return pType === 'void_item';
                         if (printerQueueTypeFilter === 'CANCELLED') return pType === 'cancel_order';
                         return true;
+                    });
+                }
+                
+                // Apply Table Filter
+                if (printerQueueTableFilter !== 'All') {
+                    filteredItems = filteredItems.filter(item => (item.tableNumber || '').toUpperCase() === printerQueueTableFilter.toUpperCase());
+                }
+
+                // Apply Search Filter
+                if (printerQueueSearchTerm) {
+                    filteredItems = filteredItems.filter(item => {
+                        const orderNum = (item.orderNumber || '').toLowerCase();
+                        const tableNum = (item.tableNumber || '').toLowerCase();
+                        const deptName = (item.printerDeptName || '').toLowerCase();
+                        const status = (item.status || '').toLowerCase();
+                        return orderNum.includes(printerQueueSearchTerm) || 
+                               tableNum.includes(printerQueueSearchTerm) || 
+                               deptName.includes(printerQueueSearchTerm) || 
+                               status.includes(printerQueueSearchTerm);
                     });
                 }
 
