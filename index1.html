@@ -10532,6 +10532,11 @@ window.openSearchModalTakeOrder = function() {
             const ref = doc(db, 'licenses', currentClientId, 'print_queue', id);
             const item = itemParam || (await getDoc(ref)).data();
 
+            // Ensure category map is populated for department filtering logic, especially on server devices
+            if (Object.keys(categoryMapTakeOrder).length === 0) {
+                categoryMapTakeOrder = await getCategoriesMap();
+            }
+
             // Determine the correct printer to use based on override ID or queue metadata
             const finalPrinterId = forcedPrinterId || item.targetPrinterId || null;
 
@@ -10541,7 +10546,10 @@ window.openSearchModalTakeOrder = function() {
             const cashierName = item.cashierName || 'N/A';
             const staffName = item.staffName || 'N/A';
             const paymentInfo = item.paymentInfo ? JSON.parse(item.paymentInfo) : null;
-            const metadata = item.metadata ? JSON.parse(item.metadata) : null;
+             let metadata = null;
+            try {
+                metadata = item.metadata ? (typeof item.metadata === 'string' ? JSON.parse(item.metadata) : item.metadata) : null;
+            } catch(e) { console.error("Metadata parse error", e); }
             const itemsPaid = paymentInfo?.itemsPaid || null;
             const orderSeq = item.orderSequence;
 
@@ -10567,6 +10575,17 @@ window.openSearchModalTakeOrder = function() {
             await updateDoc(ref, { status: 'processing', attempts: currentAttempts + 1 });
 
             let itemsToPrint = [];
+            
+            // RETRY LOGIC: If itemsToPrint is empty, wait and retry (handles Firestore sync lag for remote voids)
+            let retryCount = 0;
+            const maxRetries = 2;
+            
+            while (itemsToPrint.length === 0 && retryCount <= maxRetries && item.printType !== 'move_merge') {
+                if (retryCount > 0) {
+                    await new Promise(resolve => setTimeout(resolve, 1500)); // Wait 1.5s for sync
+                }
+                
+                itemsToPrint = [];
             for (const oId of orderIds) {
                 const itemsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', oId, 'items'));
                 for (const itDoc of itemsSnap.docs) {
@@ -10605,6 +10624,8 @@ window.openSearchModalTakeOrder = function() {
                     });
                 }
             }
+                retryCount++;
+            }
 
             let printerConfig;
             if (finalPrinterId) {
@@ -10612,9 +10633,16 @@ window.openSearchModalTakeOrder = function() {
                 printerConfig = pSnap.exists() ? pSnap.data() : null;
             } else {
                 const printersSnapFull = await getDocs(collection(db, 'licenses', currentClientId, 'printers'));
+                // PRINTER SERVER FIX: Find a printer that is PHYSICALLY CONNECTED to this device
+                // regardless of who "owns" it in the database.
                 printerConfig = printersSnapFull.docs.find(d => {
                     const pd = d.data();
                     if (!pd.bluetoothDeviceId) return false;
+                    
+                   // Only consider printers that are actually paired/connected to Device A right now
+                    if (!connectedBluetoothDevices[pd.bluetoothDeviceId]) return false;
+
+
                     if (item.printType === 'move_merge') return pd.printMoveMerge;
                     if (item.printerDeptId) return pd.departmentPrinters?.includes(item.printerDeptId);
                     return pd.printReceipt;
@@ -10624,6 +10652,11 @@ window.openSearchModalTakeOrder = function() {
             const device = printerConfig ? connectedBluetoothDevices[printerConfig.bluetoothDeviceId] : null;
 
             let printSuccess = false;
+            let failureReason = "";
+
+            if (!device) failureReason = "Printer not found or not owned by this device.";
+            else if (itemsToPrint.length === 0 && item.printType !== 'move_merge') failureReason = "No matching items found for this department/void.";
+
             if (device && (itemsToPrint.length > 0 || item.printType === 'move_merge')) {
                 // Cash Drawer Kick Logic for Reprints
                 if (printerConfig.kickCashDrawer && paymentInfo?.hasCashPayment) {
@@ -10638,8 +10671,14 @@ window.openSearchModalTakeOrder = function() {
                 } else if (item.printType === 'cancel_order') {
                     commands = await generateCancellationOrderReceiptCommands(item.orderNumber, orderSeq, item.tableNumber || 'N/A', itemsToPrint, item.printerDeptName, printerConfig, staffName);
                 } else if (item.printType === 'void_item') {
-                    const targetItem = itemsToPrint[0];
-                    commands = await generateVoidReceiptCommands(item.orderNumber, orderSeq, item.tableNumber || 'N/A', targetItem, targetItem.qty, item.printerDeptName, printerConfig, staffName);
+                    // Ensure we have the target item from metadata
+                    const targetItem = itemsToPrint.find(it => it.docId === metadata?.itemId) || itemsToPrint[0];
+                    if (targetItem) {
+                        const voidQty = metadata?.qtyVoided || targetItem.qty;
+                        commands = await generateVoidReceiptCommands(item.orderNumber, orderSeq, item.tableNumber || 'N/A', targetItem, voidQty, item.printerDeptName, printerConfig, staffName);
+                    } else {
+                        printSuccess = false;
+                    }
                 } else if (item.printType === 'move_merge') {
                     const timestamp = new Date().toLocaleString();
                     commands = generateMoveMergeCommands(metadata.fromTable, metadata.toTable, metadata.orders, metadata.isMerge, printerConfig, staffName, timestamp);
@@ -10655,8 +10694,8 @@ window.openSearchModalTakeOrder = function() {
                 await updateDoc(ref, { status: 'success' });
                 showPrinterStatusPopup(`Print ${item.orderNumber} SUCCESS`, `Printer Department: ${item.printerDeptName}\nPrint completed.`, true);
             } else {
-                await updateDoc(ref, { status: 'failed' });
-                showPrinterStatusPopup(`Print ${item.orderNumber} FAILED`, `Print failed. Ensure printer is connected.`, false);
+                await updateDoc(ref, { status: 'failed', error: failureReason });
+                showPrinterStatusPopup(`Print ${item.orderNumber} FAILED`, `${failureReason} Ensure printer is connected and owned.`, false);
             }
         };
 
