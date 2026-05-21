@@ -2613,6 +2613,16 @@
                         </div>
                     </div>
                     
+                    <div class="category-bar-takeorder" id="printerQueueTypeFilterBar" style="margin-bottom: 8px;">
+                        <button class="category-btn-takeorder active" onclick="filterPrinterQueueByType('All')">All</button>
+                        <button class="category-btn-takeorder" onclick="filterPrinterQueueByType('ORDER')">ORDER</button>
+                        <button class="category-btn-takeorder" onclick="filterPrinterQueueByType('BILL')">BILL</button>
+                        <button class="category-btn-takeorder" onclick="filterPrinterQueueByType('MOVE')">MOVE</button>
+                        <button class="category-btn-takeorder" onclick="filterPrinterQueueByType('MERGE')">MERGE</button>
+                        <button class="category-btn-takeorder" onclick="filterPrinterQueueByType('VOID')">VOID</button>
+                        <button class="category-btn-takeorder" onclick="filterPrinterQueueByType('CANCELLED')">CANCELLED</button>
+                    </div>
+
                     <div class="category-bar-takeorder" id="printerQueueFilterBar" style="margin-bottom: 15px;">
                         <button class="category-btn-takeorder active" onclick="filterPrinterQueue('All')">All</button>
                         <button class="category-btn-takeorder" onclick="filterPrinterQueue('pending')">Pending</button>
@@ -10140,6 +10150,7 @@ window.openSearchModalTakeOrder = function() {
 
         // ========== PRINTER QUEUE LOGIC ==========
         let printerQueueFilter = 'All';
+        let printerQueueTypeFilter = 'All';
 
         window.loadPrinterQueue = function() {
             const ref = collection(db, 'licenses', currentClientId, 'print_queue');
@@ -10151,10 +10162,27 @@ window.openSearchModalTakeOrder = function() {
             onSnapshot(q, (snapshot) => {
                 const container = document.getElementById('printerQueueList');
                 let html = '';
-                const sorted = snapshot.docs.sort((a,b) => (b.data().createdAt?.toDate() || 0) - (a.data().createdAt?.toDate() || 0));
                 
-                sorted.forEach(doc => {
-                    const item = doc.data();
+                let filteredItems = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+
+                if (printerQueueTypeFilter !== 'All') {
+                    filteredItems = filteredItems.filter(item => {
+                        const pType = item.printType || 'order';
+                        const isReceipt = item.printerDeptName === 'Receipt';
+                        
+                        if (printerQueueTypeFilter === 'ORDER') return pType === 'order' && !isReceipt;
+                        if (printerQueueTypeFilter === 'BILL') return isReceipt;
+                        if (printerQueueTypeFilter === 'MOVE') return pType === 'move_merge' && item.printerDeptName !== 'Merge';
+                        if (printerQueueTypeFilter === 'MERGE') return pType === 'move_merge' && item.printerDeptName === 'Merge';
+                        if (printerQueueTypeFilter === 'VOID') return pType === 'void_item';
+                        if (printerQueueTypeFilter === 'CANCELLED') return pType === 'cancel_order';
+                        return true;
+                    });
+                }
+
+                const sorted = filteredItems.sort((a,b) => (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0));
+                
+                sorted.forEach(item => {
                     const time = item.createdAt?.toDate().toLocaleString() || 'N/A';
                     const statusColor = item.status === 'success' ? '#38a169' : (item.status === 'failed' ? '#e53e3e' : '#ed8936');
                     
@@ -10207,8 +10235,8 @@ window.openSearchModalTakeOrder = function() {
                             </div>
                         </div>
                         <div class="action-buttons">
-                            <button class="btn-edit" onclick="reprintQueueItem('${doc.id}')"><i class="fas fa-redo"></i> Reprint</button>
-                            <button class="btn-delete" onclick="deleteQueueItem('${doc.id}')">Delete</button>
+                            <button class="btn-edit" onclick="reprintQueueItem('${item.id}')"><i class="fas fa-redo"></i> Reprint</button>
+                            <button class="btn-delete" onclick="deleteQueueItem('${item.id}')">Delete</button>
                         </div>
                     </div>`;
                 });
@@ -10220,6 +10248,14 @@ window.openSearchModalTakeOrder = function() {
             printerQueueFilter = status;
             document.querySelectorAll('#printerQueueFilterBar button').forEach(btn => {
                 btn.classList.toggle('active', btn.innerText.toLowerCase() === status.toLowerCase());
+            });
+            loadPrinterQueue();
+        };
+
+        window.filterPrinterQueueByType = function(type) {
+            printerQueueTypeFilter = type;
+            document.querySelectorAll('#printerQueueTypeFilterBar button').forEach(btn => {
+                btn.classList.toggle('active', btn.innerText.toUpperCase() === type.toUpperCase());
             });
             loadPrinterQueue();
         };
