@@ -2484,7 +2484,8 @@
                     </div>
 
                     <!-- Custom Layout View -->
-                    <div id="tableLayoutContainerTakeOrder" style="display: none; position: relative; width: 100%; min-height: 500px; background: rgba(0,0,0,0.1); border-radius: 28px; border: 2px dashed rgba(255,255,255,0.2); overflow: auto; margin-top: 15px; padding: 20px;">
+                    <div id="tableLayoutContainerTakeOrder" style="display: none; position: relative; width: 100%; height: 70vh; max-height: 800px; background: rgba(0,0,0,0.15); border-radius: 28px; border: 2px dashed rgba(255,255,255,0.2); overflow: auto; margin-top: 15px; box-shadow: inset 0 4px 15px rgba(0,0,0,0.1);">
+                        <div id="tableLayoutCanvas" style="position: relative; width: 100%; height: 100%; min-width: 100%; min-height: 100%; padding: 20px;"></div>
                     </div>
                 </div>
                 
@@ -2779,6 +2780,41 @@
                 <button type="button" class="btn-small" onclick="showModifierSelector()">+ Add Modifier</button>
             </div>
             <button class="btn" onclick="saveMenuItem()">Save</button>
+        </div>
+    </div>
+
+    <!-- Table Style Modal -->
+    <div id="tableStyleModal" class="modal">
+        <div class="modal-content" style="max-width: 400px; border-radius: 28px;">
+            <div class="modal-header">
+                <h3>Modify Table Style: <span id="styleTableId"></span></h3>
+                <button class="modal-close" onclick="closeModal('tableStyleModal')">&times;</button>
+            </div>
+            <div class="form-group">
+                <label>Shape</label>
+                <select id="tableStyleShape" onchange="applyTableStylePreview()">
+                    <option value="square">Square</option>
+                    <option value="circle">Circle</option>
+                    <option value="long-square">Long Square</option>
+                    <option value="extra-long-square">Extra Long Square</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Size</label>
+                <select id="tableStyleSize" onchange="applyTableStylePreview()">
+                    <option value="smaller">Smaller</option>
+                    <option value="small">Small</option>
+                    <option value="normal">Normal</option>
+                    <option value="big">Big</option>
+                    <option value="extra-big">Extra Big</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Rotation (Degrees)</label>
+                <input type="range" id="tableStyleRotation" min="0" max="360" step="15" oninput="applyTableStylePreview()" style="accent-color: #764ba2; width: 100%;">
+                <div id="rotationValDisplay" style="text-align: center; font-weight: bold; margin-top: 5px;">0°</div>
+            </div>
+            <button class="primary-btn" style="width: 100%; margin-top: 10px;" onclick="saveTableStyle()">Apply & Close</button>
         </div>
     </div>
 
@@ -3858,6 +3894,7 @@
         let activeOrdersViewMode = 'grid';
         let currentLayoutDevice = 'phone';
         let isEditingLayout = false;
+        let editingTableStyleId = null;
         let tableLayouts = { phone: {}, tablet: {} };
         let activeOrdersStatusFilter = 'All';
         let unsubActiveOrders = null;
@@ -8234,60 +8271,98 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
 
         window.renderTableLayout = function() {
             const container = document.getElementById('tableLayoutContainerTakeOrder');
+            const canvas = document.getElementById('tableLayoutCanvas');
             const deviceLayout = tableLayouts[currentLayoutDevice] || {};
             
             if (!isEditingLayout && Object.keys(deviceLayout).length === 0) {
-                container.innerHTML = '<div style="text-align:center;padding:100px;color:white;opacity:0.6;"><i class="fas fa-layer-group" style="font-size:3rem;margin-bottom:15px;display:block;"></i>No layout set for this device. Click EDIT LAYOUT to start.</div>';
+                canvas.innerHTML = '<div style="text-align:center;padding:100px;color:white;opacity:0.6;"><i class="fas fa-layer-group" style="font-size:3rem;margin-bottom:15px;display:block;"></i>No layout set for this device. Click EDIT LAYOUT to start.</div>';
                 return;
             }
 
-            container.innerHTML = '';
+            canvas.innerHTML = '';
+            let maxX = container.clientWidth;
+            let maxY = container.clientHeight;
             
             tablesListTakeOrder.forEach(table => {
-                const pos = deviceLayout[table.id] || { x: 20, y: 20 };
+                const pos = deviceLayout[table.id] || { x: 20, y: 20, shape: 'square', size: 'normal', rotation: 0 };
                 if (!isEditingLayout && !deviceLayout[table.id]) return;
 
                 const isCounter = table.id.toLowerCase() === 'counter';
                 const isOccupied = table.status === 'occupied';
+                const shape = pos.shape || (isCounter ? 'long-square' : 'square');
+                const size = pos.size || 'normal';
+                const rotation = pos.rotation || 0;
+
                 let isServed = false;
                 if (isOccupied) {
                     const ordersForTable = activeOrdersSnapshotTakeOrder.filter(o => o.tableId === table.id);
                     if (ordersForTable.length > 0 && ordersForTable.every(o => o.status === 'served')) isServed = true;
                 }
                 
+                let tWidth = 80;
+                let tHeight = 80;
+                if (shape === 'long-square') tWidth = 120;
+                else if (shape === 'extra-long-square') tWidth = 160;
+
+                const sizeScales = { 'smaller': 0.6, 'small': 0.8, 'normal': 1.0, 'big': 1.25, 'extra-big': 1.5 };
+                const scale = sizeScales[size] || 1.0;
+
                 const tableEl = document.createElement('div');
-                const tWidth = isCounter ? 120 : 80;
-                tableEl.style.cssText = `position: absolute; width: ${tWidth}px; height: 80px; border-radius: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; left: ${pos.x}px; top: ${pos.y}px; z-index: ${isEditingLayout ? '10' : '1'}; cursor: ${isEditingLayout ? 'move' : 'pointer'}; box-shadow: 0 4px 10px rgba(0,0,0,0.1);`;
+                tableEl.id = `layout-table-${table.id}`;
+                tableEl.style.cssText = `position: absolute; width: ${tWidth}px; height: ${tHeight}px; border-radius: ${shape === 'circle' ? '50%' : '16px'}; display: flex; flex-direction: column; align-items: center; justify-content: center; left: ${pos.x}px; top: ${pos.y}px; z-index: ${isEditingLayout ? '10' : '1'}; cursor: ${isEditingLayout ? 'move' : 'pointer'}; box-shadow: 0 4px 10px rgba(0,0,0,0.1); transform: rotate(${rotation}deg) scale(${scale}); transition: background 0.3s;`;
                 tableEl.style.background = isServed ? '#004fa6' : (isOccupied ? '#ff9800' : 'white');
                 tableEl.style.color = (isOccupied || isServed) ? 'white' : '#1e293b';
                 if (isEditingLayout) tableEl.style.border = '2px solid #764ba2';
 
                 const label = isCounter ? 'COUNTER' : table.id.toUpperCase();
                 const subLabel = isCounter ? 'WALK-IN' : `${table.capacity} PAX`;
-                tableEl.innerHTML = `<div style="font-weight: 800; font-size: 1.1rem;">${label}</div><div style="font-size: 0.6rem; opacity: 0.8;">${subLabel}</div>`;
+                tableEl.innerHTML = `<div style="font-weight: 800; font-size: 1.1rem;">${label}</div><div style="font-size: 0.6rem; opacity: 0.8;">${subLabel}</div>${isEditingLayout ? '<div style="position:absolute; top:-5px; right:-5px; width:20px; height:20px; background:#764ba2; color:white; border-radius:50%; font-size:10px; display:flex; align-items:center; justify-content:center;"><i class="fas fa-cog"></i></div>' : ''}`;
 
                 if (!isCounter) {
-                    renderChairs(tableEl, parseInt(table.capacity) || 2, isOccupied || isServed);
+                    renderChairs(tableEl, parseInt(table.capacity) || 2, isOccupied || isServed, shape, tWidth, tHeight);
                 }
 
                 if (isEditingLayout) setupLayoutDraggable(tableEl, table.id);
                 else tableEl.onclick = () => selectTableTakeOrder(table.id, table.id.toUpperCase());
 
-                container.appendChild(tableEl);
+                canvas.appendChild(tableEl);
+
+                // Calculate bounds for container auto-sizing
+                const scaleVal = sizeScales[size] || 1.0;
+                maxX = Math.max(maxX, pos.x + (tWidth * scaleVal) + 300);
+                maxY = Math.max(maxY, pos.y + (tHeight * scaleVal) + 300);
             });
+            
+            canvas.style.minWidth = maxX + 'px';
+            canvas.style.minHeight = maxY + 'px';
         };
 
-        function renderChairs(tableEl, capacity, isOccupied) {
+        function renderChairs(tableEl, capacity, isOccupied, shape, tWidth, tHeight) {
+            if (shape === 'circle') {
+                for (let i = 0; i < capacity; i++) {
+                    const angle = (i / capacity) * 2 * Math.PI;
+                    const radius = (tWidth / 2) + 14;
+                    const x = (tWidth / 2) + radius * Math.cos(angle) - 6;
+                    const y = (tHeight / 2) + radius * Math.sin(angle) - 6;
+                    const chair = document.createElement('div');
+                    chair.style.cssText = `position: absolute; width: 12px; height: 12px; background: ${isOccupied ? 'rgba(255,255,255,0.9)' : '#cbd5e0'}; border-radius: 4px; border: 1px solid rgba(0,0,0,0.1); left: ${x}px; top: ${y}px;`;
+                    tableEl.appendChild(chair);
+                }
+                return;
+            }
+
             const chairsPerSide = { top: 0, bottom: 0, left: 0, right: 0 };
             for (let i = 0; i < capacity; i++) {
                 if (i % 4 === 0) chairsPerSide.top++; else if (i % 4 === 1) chairsPerSide.bottom++; else if (i % 4 === 2) chairsPerSide.left++; else chairsPerSide.right++;
             }
             ['top', 'bottom', 'left', 'right'].forEach(side => {
                 const count = chairsPerSide[side];
+                const isVertical = side === 'left' || side === 'right';
+                const totalDim = isVertical ? tHeight : tWidth;
                 for (let i = 0; i < count; i++) {
                     const chair = document.createElement('div');
                     chair.style.cssText = `position: absolute; width: 12px; height: 12px; background: ${isOccupied ? 'rgba(255,255,255,0.9)' : '#cbd5e0'}; border-radius: 4px; border: 1px solid rgba(0,0,0,0.1);`;
-                    const spacing = 80 / (count + 1);
+                    const spacing = totalDim / (count + 1);
                     const pos = spacing * (i + 1) - 6;
                     if (side === 'top') { chair.style.top = '-20px'; chair.style.left = pos + 'px'; }
                     else if (side === 'bottom') { chair.style.bottom = '-20px'; chair.style.left = pos + 'px'; }
@@ -8298,20 +8373,101 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             });
         }
 
+        window.openTableStyleModal = function(tableId) {
+            editingTableStyleId = tableId;
+            const layout = tableLayouts[currentLayoutDevice][tableId] || { shape: 'square', size: 'normal', rotation: 0 };
+            document.getElementById('styleTableId').innerText = tableId.toUpperCase();
+            document.getElementById('tableStyleShape').value = layout.shape || 'square';
+            document.getElementById('tableStyleSize').value = layout.size || 'normal';
+            document.getElementById('tableStyleRotation').value = layout.rotation || 0;
+            document.getElementById('rotationValDisplay').innerText = (layout.rotation || 0) + '°';
+            document.getElementById('tableStyleModal').style.display = 'flex';
+        };
+
+        window.applyTableStylePreview = function() {
+            const rotation = document.getElementById('tableStyleRotation').value;
+            document.getElementById('rotationValDisplay').innerText = rotation + '°';
+        };
+
+        window.saveTableStyle = function() {
+            const tableId = editingTableStyleId;
+            if (!tableId) return;
+            
+            const shape = document.getElementById('tableStyleShape').value;
+            const size = document.getElementById('tableStyleSize').value;
+            const rotation = parseInt(document.getElementById('tableStyleRotation').value);
+            
+            if (!tableLayouts[currentLayoutDevice][tableId]) tableLayouts[currentLayoutDevice][tableId] = { x: 20, y: 20 };
+            
+            tableLayouts[currentLayoutDevice][tableId] = {
+                ...tableLayouts[currentLayoutDevice][tableId],
+                shape, size, rotation
+            };
+            
+            closeModal('tableStyleModal');
+            renderTableLayout();
+        };
+
         function setupLayoutDraggable(el, tableId) {
             let offsetX, offsetY;
+            let startX, startY;
+            let isDragging = false;
+
             const onMove = (e) => {
                 const clientX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
                 const clientY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
+                
+                if (Math.abs(clientX - startX) > 5 || Math.abs(clientY - startY) > 5) {
+                    isDragging = true;
+                }
+
+                const canvas = document.getElementById('tableLayoutCanvas');
                 const container = document.getElementById('tableLayoutContainerTakeOrder');
                 let newX = clientX - offsetX; let newY = clientY - offsetY;
-                newX = Math.max(10, Math.min(newX, container.scrollWidth - el.offsetWidth)); newY = Math.max(10, Math.min(newY, container.scrollHeight - el.offsetHeight));
+                
+                // Keep coordinates positive
+                newX = Math.max(10, newX); 
+                newY = Math.max(10, newY);
+                
+                // Expand canvas area when dragging near edges
+                const buffer = 300;
+                const currentW = parseInt(canvas.style.minWidth) || canvas.clientWidth;
+                const currentH = parseInt(canvas.style.minHeight) || canvas.clientHeight;
+
+                if (newX + el.offsetWidth > currentW - 50) {
+                    canvas.style.minWidth = (newX + el.offsetWidth + buffer) + 'px';
+                }
+                if (newY + el.offsetHeight > currentH - 50) {
+                    canvas.style.minHeight = (newY + el.offsetHeight + buffer) + 'px';
+                }
+                
                 el.style.left = newX + 'px'; el.style.top = newY + 'px';
-                if (!tableLayouts[currentLayoutDevice]) tableLayouts[currentLayoutDevice] = {};
-                tableLayouts[currentLayoutDevice][tableId] = { x: newX, y: newY };
+                
+                const existing = tableLayouts[currentLayoutDevice][tableId] || {};
+                tableLayouts[currentLayoutDevice][tableId] = { ...existing, x: newX, y: newY };
             };
-            const onEnd = () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onEnd); document.removeEventListener('touchmove', onMove); document.removeEventListener('touchend', onEnd); };
-            const onStart = (e) => { const clientX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX; const clientY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY; offsetX = clientX - el.offsetLeft; offsetY = clientY - el.offsetTop; document.addEventListener('mousemove', onMove); document.addEventListener('mouseup', onEnd); document.addEventListener('touchmove', onMove, { passive: false }); document.addEventListener('touchend', onEnd); };
+            const onEnd = () => { 
+                document.removeEventListener('mousemove', onMove); 
+                document.removeEventListener('mouseup', onEnd); 
+                document.removeEventListener('touchmove', onMove); 
+                document.removeEventListener('touchend', onEnd); 
+                
+                if (!isDragging) {
+                    openTableStyleModal(tableId);
+                }
+            };
+            const onStart = (e) => { 
+                const clientX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX; 
+                const clientY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY; 
+                startX = clientX; startY = clientY;
+                offsetX = clientX - el.offsetLeft; 
+                offsetY = clientY - el.offsetTop; 
+                isDragging = false;
+                document.addEventListener('mousemove', onMove); 
+                document.addEventListener('mouseup', onEnd); 
+                document.addEventListener('touchmove', onMove, { passive: false }); 
+                document.addEventListener('touchend', onEnd); 
+            };
             el.addEventListener('mousedown', onStart);
             el.addEventListener('touchstart', onStart, { passive: false });
         }
