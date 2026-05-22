@@ -8342,6 +8342,9 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                 const size = pos.size || 'normal';
                 const rotation = pos.rotation || 0;
 
+                // Check if table matches location filter for Layout View
+                const isFilteredOut = activeLocationTakeOrder !== 'All' && table.location !== activeLocationTakeOrder;
+
                 let isServed = false;
                 if (isOccupied) {
                     const ordersForTable = activeOrdersSnapshotTakeOrder.filter(o => o.tableId === table.id);
@@ -8358,9 +8361,18 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
 
                 const tableEl = document.createElement('div');
                 tableEl.id = `layout-table-${table.id}`;
-                tableEl.style.cssText = `position: absolute; width: ${tWidth}px; height: ${tHeight}px; border-radius: ${shape === 'circle' ? '50%' : '16px'}; display: flex; flex-direction: column; align-items: center; justify-content: center; left: ${pos.x}px; top: ${pos.y}px; z-index: ${isEditingLayout ? '10' : '1'}; cursor: ${isEditingLayout ? 'move' : 'pointer'}; box-shadow: 0 4px 10px rgba(0,0,0,0.1); transform: rotate(${rotation}deg) scale(${scale}); transition: background 0.3s;`;
-                tableEl.style.background = isServed ? '#004fa6' : (isOccupied ? '#ff9800' : 'white');
-                tableEl.style.color = (isOccupied || isServed) ? 'white' : '#1e293b';
+                tableEl.style.cssText = `position: absolute; width: ${tWidth}px; height: ${tHeight}px; border-radius: ${shape === 'circle' ? '50%' : '16px'}; display: flex; flex-direction: column; align-items: center; justify-content: center; left: ${pos.x}px; top: ${pos.y}px; z-index: ${isEditingLayout ? '10' : '1'}; cursor: ${isEditingLayout ? 'move' : 'pointer'}; box-shadow: 0 4px 10px rgba(0,0,0,0.1); transform: rotate(${rotation}deg) scale(${scale}); transition: background 0.3s, opacity 0.3s;`;
+                
+                if (isFilteredOut && !isEditingLayout) {
+                    tableEl.style.background = '#e2e8f0'; // Gray 200
+                    tableEl.style.color = '#94a3b8'; // Gray 400
+                    tableEl.style.opacity = '0.4';
+                    tableEl.style.cursor = 'default';
+                } else {
+                    tableEl.style.background = isServed ? '#004fa6' : (isOccupied ? '#ff9800' : 'white');
+                    tableEl.style.color = (isOccupied || isServed) ? 'white' : '#1e293b';
+                }
+
                 if (isEditingLayout) tableEl.style.border = '2px solid #764ba2';
 
                 const label = isCounter ? 'COUNTER' : table.id.toUpperCase();
@@ -8372,7 +8384,13 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                 }
 
                 if (isEditingLayout) setupLayoutDraggable(tableEl, table.id);
-                else tableEl.onclick = () => selectTableTakeOrder(table.id, table.id.toUpperCase());
+                else {
+                    if (!isFilteredOut) {
+                        tableEl.onclick = () => selectTableTakeOrder(table.id, table.id.toUpperCase());
+                    } else {
+                        tableEl.style.pointerEvents = 'none';
+                    }
+                }
 
                 canvas.appendChild(tableEl);
                 
