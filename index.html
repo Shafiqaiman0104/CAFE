@@ -2450,8 +2450,8 @@
                             <i class="fas fa-search-location"></i>
                         </div>
                         <div class="view-toggle-takeorder">
-                            <button class="view-btn-takeorder active" id="gridViewBtnTakeOrder" onclick="setViewModeTakeOrder('grid')"><i class="fas fa-th"></i> Grid</button>
-                            <button class="view-btn-takeorder" id="listViewBtnTakeOrder" onclick="setViewModeTakeOrder('list')"><i class="fas fa-list"></i> List</button>
+                            <button class="view-btn-takeorder active" id="gridViewBtnTakeOrder" onclick="setViewModeTakeOrder('grid')"><i class="fas fa-th"></i></button>
+                            <button class="view-btn-takeorder" id="listViewBtnTakeOrder" onclick="setViewModeTakeOrder('list')"><i class="fas fa-list"></i></button>
                             <button class="view-btn-takeorder" id="layoutViewBtnTakeOrder" onclick="setViewModeTakeOrder('layout')"><i class="fas fa-layer-group"></i></button>
                         </div>
                     </div>
@@ -2469,11 +2469,12 @@
                     <!-- Layout Controls -->
                     <div id="layoutControlsTakeOrder" style="display: none; justify-content: center; gap: 15px; margin-bottom: 20px; align-items: center; flex-wrap: wrap;">
                         <div class="view-toggle-takeorder" style="background: rgba(255,255,255,0.15);">
-                            <button class="view-btn-takeorder active" id="layoutDevicePhoneBtn" onclick="setLayoutDevice('phone')">Phone</button>
-                            <button class="view-btn-takeorder" id="layoutDeviceTabletBtn" onclick="setLayoutDevice('tablet')">Tablet</button>
+                            <button class="view-btn-takeorder active" id="layoutDevicePhoneBtn" onclick="setLayoutDevice('phone')"><i class="fa-solid fa-mobile-screen-button"></i></button>
+                            <button class="view-btn-takeorder" id="layoutDeviceTabletBtn" onclick="setLayoutDevice('tablet')"><i class="fa-solid fa-tv"></i></button>
                         </div>
-                        <button class="btn-small" id="editLayoutBtnTakeOrder" onclick="toggleEditLayout()" style="background: #ff9800; font-weight: 800; border-radius: 40px; height: 36px; padding: 0 20px;">EDIT LAYOUT</button>
-                        <button class="btn-small" id="saveLayoutBtnTakeOrder" onclick="saveTableLayout()" style="display: none; background: #38a169; font-weight: 800; border-radius: 40px; height: 36px; padding: 0 20px;">SAVE LAYOUT</button>
+                        <button class="btn-small" id="editLayoutBtnTakeOrder" onclick="toggleEditLayout()" style="background: #ff9800; font-weight: 800; border-radius: 40px; height: 36px; padding: 0 20px;"><i class="fa-solid fa-pen-to-square"></i> EDIT</button>
+                        <button class="btn-small" id="saveLayoutBtnTakeOrder" onclick="saveTableLayout()" style="display: none; background: #38a169; font-weight: 800; border-radius: 40px; height: 36px; padding: 0 20px;"><i class="fa-solid fa-floppy-disk"></i> SAVE</button>
+                        <button class="btn-small" id="addItemsBtnTakeOrder" onclick="openAddDecorModal()" style="display: none; background: #3182ce; font-weight: 800; border-radius: 40px; height: 36px; padding: 0 20px;"><i class="fa-solid fa-plus"></i> DECO</button>
                     </div>
                     
                     <!-- Persistent Counter Table -->
@@ -2503,8 +2504,8 @@
                                             <i class="fas fa-image"></i>
                                         </div>
                                         <div class="view-toggle-takeorder">
-                                            <button class="view-btn-takeorder active" id="menuGridViewBtn" onclick="setMenuViewMode('grid')"><i class="fas fa-th"></i> Grid</button>
-                                            <button class="view-btn-takeorder" id="menuListViewBtn" onclick="setMenuViewMode('list')"><i class="fas fa-list"></i> List</button>
+                                            <button class="view-btn-takeorder active" id="menuGridViewBtn" onclick="setMenuViewMode('grid')"><i class="fas fa-th"></i></button>
+                                            <button class="view-btn-takeorder" id="menuListViewBtn" onclick="setMenuViewMode('list')"><i class="fas fa-list"></i></button>
                                         </div>
                                     </div>
                                 </div>
@@ -2564,8 +2565,8 @@
                         <div class="section-header" style="margin-bottom: 15px;">
                             <span class="section-title" style="color: white;">Order Management</span>
                             <div class="view-toggle-takeorder">
-                              <button class="view-btn-takeorder active" id="activeOrdersGridViewBtn" onclick="setActiveOrdersViewMode('grid')"><i class="fas fa-th"></i> Grid</button>
-                              <button class="view-btn-takeorder" id="activeOrdersListViewBtn" onclick="setActiveOrdersViewMode('list')"><i class="fas fa-list"></i> List</button>
+                              <button class="view-btn-takeorder active" id="activeOrdersGridViewBtn" onclick="setActiveOrdersViewMode('grid')"><i class="fas fa-th"></i></button>
+                              <button class="view-btn-takeorder" id="activeOrdersListViewBtn" onclick="setActiveOrdersViewMode('list')"><i class="fas fa-list"></i></button>
                             </div>
                         </div>
                         <div class="category-bar-takeorder" id="activeOrdersFilterBar" style="margin-bottom: 0; padding-bottom: 5px;">
@@ -2780,6 +2781,55 @@
                 <button type="button" class="btn-small" onclick="showModifierSelector()">+ Add Modifier</button>
             </div>
             <button class="btn" onclick="saveMenuItem()">Save</button>
+        </div>
+    </div>
+
+    <!-- Add Decor Modal -->
+    <div id="addDecorModal" class="modal" style="align-items: center; justify-content: center;">
+        <div class="modal-content" style="max-width: 400px; border-radius: 28px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-plus-circle"></i> Add Layout Items</h3>
+                <button class="modal-close" onclick="closeModal('addDecorModal')">&times;</button>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 10px;">
+                <button class="primary-btn" style="background: #4a5568;" onclick="addDecoration('square')"><i class="fas fa-square"></i> Square</button>
+                <button class="primary-btn" style="background: #4a5568;" onclick="addDecoration('v-line')"><i class="fas fa-arrows-alt-v"></i> V-Line</button>
+                <button class="primary-btn" style="background: #4a5568;" onclick="addDecoration('h-line')"><i class="fas fa-arrows-alt-h"></i> H-Line</button>
+                <button class="primary-btn" style="background: #4a5568;" onclick="addDecoration('text')"><i class="fas fa-font"></i> Text</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Decor Style Modal -->
+    <div id="decorStyleModal" class="modal" style="align-items: center; justify-content: center;">
+        <div class="modal-content" style="max-width: 400px; border-radius: 28px;">
+            <div class="modal-header">
+                <h3>Modify Item Style</h3>
+                <button class="modal-close" onclick="closeModal('decorStyleModal')">&times;</button>
+            </div>
+            <div id="decorTextGroup" class="form-group" style="display: none;">
+                <label>Text Content</label>
+                <input type="text" id="decorTextInput" oninput="applyDecorStylePreview()">
+            </div>
+            <div class="form-group">
+                <label id="decorSizeLabel">Size/Length</label>
+                <input type="range" id="decorStyleSize" min="10" max="500" step="5" oninput="applyDecorStylePreview()" style="accent-color: #764ba2; width: 100%;">
+            </div>
+            <div class="form-group">
+                <label>Rotation (Degrees)</label>
+                <input type="range" id="decorStyleRotation" min="0" max="360" step="15" oninput="applyDecorStylePreview()" style="accent-color: #764ba2; width: 100%;">
+                <div id="decorRotationValDisplay" style="text-align: center; font-weight: bold; margin-top: 5px;">0°</div>
+            </div>
+            <div class="form-group">
+                <label>Color</label>
+                <input type="color" id="decorStyleColor" oninput="applyDecorStylePreview()" style="width: 100%; height: 40px; border-radius: 8px; border: 1px solid #ddd; cursor: pointer;">
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                <button class="primary-btn" onclick="saveDecorStyle()">Apply & Close</button>
+                <button class="btn-delete" style="flex: none; width: 50px; border-radius: 16px;" onclick="deleteDecoration()">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
         </div>
     </div>
 
@@ -3857,6 +3907,7 @@
   messagingSenderId: "813540068315",
   appId: "1:813540068315:web:76271282255545550735fe"
 };
+
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
@@ -3894,6 +3945,7 @@
         let currentLayoutDevice = 'phone';
         let isEditingLayout = false;
         let editingTableStyleId = null;
+        let currentEditingDecorId = null;
         let tableLayouts = { phone: {}, tablet: {} };
         let activeOrdersStatusFilter = 'All';
         let unsubActiveOrders = null;
@@ -8242,6 +8294,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
         function updateLayoutEditButtons() {
             document.getElementById('editLayoutBtnTakeOrder').style.display = isEditingLayout ? 'none' : 'block';
             document.getElementById('saveLayoutBtnTakeOrder').style.display = isEditingLayout ? 'block' : 'none';
+            document.getElementById('addItemsBtnTakeOrder').style.display = isEditingLayout ? 'block' : 'none';
         }
 
         window.loadTableLayout = async function() {
@@ -8292,6 +8345,9 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                 const size = pos.size || 'normal';
                 const rotation = pos.rotation || 0;
 
+                // Check if table matches location filter for Layout View
+                const isFilteredOut = activeLocationTakeOrder !== 'All' && table.location !== activeLocationTakeOrder;
+
                 let isServed = false;
                 if (isOccupied) {
                     const ordersForTable = activeOrdersSnapshotTakeOrder.filter(o => o.tableId === table.id);
@@ -8308,9 +8364,18 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
 
                 const tableEl = document.createElement('div');
                 tableEl.id = `layout-table-${table.id}`;
-                tableEl.style.cssText = `position: absolute; width: ${tWidth}px; height: ${tHeight}px; border-radius: ${shape === 'circle' ? '50%' : '16px'}; display: flex; flex-direction: column; align-items: center; justify-content: center; left: ${pos.x}px; top: ${pos.y}px; z-index: ${isEditingLayout ? '10' : '1'}; cursor: ${isEditingLayout ? 'move' : 'pointer'}; box-shadow: 0 4px 10px rgba(0,0,0,0.1); transform: rotate(${rotation}deg) scale(${scale}); transition: background 0.3s;`;
-                tableEl.style.background = isServed ? '#004fa6' : (isOccupied ? '#ff9800' : 'white');
-                tableEl.style.color = (isOccupied || isServed) ? 'white' : '#1e293b';
+                tableEl.style.cssText = `position: absolute; width: ${tWidth}px; height: ${tHeight}px; border-radius: ${shape === 'circle' ? '50%' : '16px'}; display: flex; flex-direction: column; align-items: center; justify-content: center; left: ${pos.x}px; top: ${pos.y}px; z-index: ${isEditingLayout ? '10' : '1'}; cursor: ${isEditingLayout ? 'move' : 'pointer'}; box-shadow: 0 4px 10px rgba(0,0,0,0.1); transform: rotate(${rotation}deg) scale(${scale}); transition: background 0.3s, opacity 0.3s;`;
+                
+                if (isFilteredOut && !isEditingLayout) {
+                    tableEl.style.background = '#e2e8f0'; // Gray 200
+                    tableEl.style.color = '#94a3b8'; // Gray 400
+                    tableEl.style.opacity = '0.4';
+                    tableEl.style.cursor = 'default';
+                } else {
+                    tableEl.style.background = isServed ? '#004fa6' : (isOccupied ? '#ff9800' : 'white');
+                    tableEl.style.color = (isOccupied || isServed) ? 'white' : '#1e293b';
+                }
+
                 if (isEditingLayout) tableEl.style.border = '2px solid #764ba2';
 
                 const label = isCounter ? 'COUNTER' : table.id.toUpperCase();
@@ -8322,14 +8387,62 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                 }
 
                 if (isEditingLayout) setupLayoutDraggable(tableEl, table.id);
-                else tableEl.onclick = () => selectTableTakeOrder(table.id, table.id.toUpperCase());
+                else {
+                    if (!isFilteredOut) {
+                        tableEl.onclick = () => selectTableTakeOrder(table.id, table.id.toUpperCase());
+                    } else {
+                        tableEl.style.pointerEvents = 'none';
+                    }
+                }
 
                 canvas.appendChild(tableEl);
+                
+                maxX = Math.max(maxX, pos.x + (tWidth * scale) + 300);
+                maxY = Math.max(maxY, pos.y + (tHeight * scale) + 300);
+            });
 
+            // Render Decorations
+            const decorations = deviceLayout.decorations || [];
+            decorations.forEach(decor => {
+                const decorEl = document.createElement('div');
+                decorEl.id = `layout-decor-${decor.id}`;
+                decorEl.style.position = 'absolute';
+                decorEl.style.left = decor.x + 'px';
+                decorEl.style.top = decor.y + 'px';
+                decorEl.style.transform = `rotate(${decor.rotation || 0}deg)`;
+                decorEl.style.backgroundColor = decor.color || '#4a5568';
+                decorEl.style.zIndex = isEditingLayout ? '11' : '0';
+                decorEl.style.cursor = isEditingLayout ? 'move' : 'default';
+
+                if (decor.type === 'square') {
+                    decorEl.style.width = decor.size + 'px';
+                    decorEl.style.height = decor.size + 'px';
+                    decorEl.style.borderRadius = '8px';
+                } else if (decor.type === 'v-line') {
+                    decorEl.style.width = '4px';
+                    decorEl.style.height = decor.size + 'px';
+                } else if (decor.type === 'h-line') {
+                    decorEl.style.width = decor.size + 'px';
+                    decorEl.style.height = '4px';
+                } else if (decor.type === 'text') {
+                    decorEl.style.background = 'none';
+                    decorEl.style.color = decor.color || '#ffffff';
+                    decorEl.style.fontSize = (decor.size / 5) + 'px';
+                    decorEl.style.fontWeight = 'bold';
+                    decorEl.innerText = decor.text || 'Label';
+                    decorEl.style.whiteSpace = 'nowrap';
+                }
+
+                if (isEditingLayout) {
+                    decorEl.style.border = '1px dashed white';
+                    setupLayoutDraggable(decorEl, decor.id, 'decor');
+                }
+
+                canvas.appendChild(decorEl);
+                
                 // Calculate bounds for container auto-sizing
-                const scaleVal = sizeScales[size] || 1.0;
-                maxX = Math.max(maxX, pos.x + (tWidth * scaleVal) + 300);
-                maxY = Math.max(maxY, pos.y + (tHeight * scaleVal) + 300);
+                maxX = Math.max(maxX, decor.x + 300);
+                maxY = Math.max(maxY, decor.y + 300);
             });
             
             canvas.style.minWidth = maxX + 'px';
@@ -8407,7 +8520,81 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             renderTableLayout();
         };
 
-        function setupLayoutDraggable(el, tableId) {
+        window.openAddDecorModal = function() {
+            document.getElementById('addDecorModal').style.display = 'flex';
+        };
+
+        window.addDecoration = function(type) {
+            if (!tableLayouts[currentLayoutDevice].decorations) {
+                tableLayouts[currentLayoutDevice].decorations = [];
+            }
+            
+            const newDecor = {
+                id: 'decor-' + Date.now(),
+                type: type,
+                x: 50,
+                y: 50,
+                size: type === 'text' ? 100 : (type.includes('line') ? 150 : 80),
+                rotation: 0,
+                color: type === 'text' ? '#ffffff' : '#4a5568',
+                text: type === 'text' ? 'New Label' : ''
+            };
+            
+            tableLayouts[currentLayoutDevice].decorations.push(newDecor);
+            closeModal('addDecorModal');
+            renderTableLayout();
+            openDecorStyleModal(newDecor.id);
+        };
+
+        window.openDecorStyleModal = function(id) {
+            currentEditingDecorId = id;
+            const decor = tableLayouts[currentLayoutDevice].decorations.find(d => d.id === id);
+            if (!decor) return;
+
+            document.getElementById('decorTextGroup').style.display = decor.type === 'text' ? 'block' : 'none';
+            document.getElementById('decorTextInput').value = decor.text || '';
+            document.getElementById('decorStyleSize').value = decor.size;
+            document.getElementById('decorStyleRotation').value = decor.rotation;
+            document.getElementById('decorRotationValDisplay').innerText = decor.rotation + '°';
+            document.getElementById('decorStyleColor').value = decor.color || (decor.type === 'text' ? '#ffffff' : '#4a5568');
+            
+            document.getElementById('decorSizeLabel').innerText = decor.type === 'text' ? 'Font Size' : (decor.type.includes('line') ? 'Length' : 'Size');
+
+            document.getElementById('decorStyleModal').style.display = 'flex';
+        };
+
+        window.applyDecorStylePreview = function() {
+            const rotation = document.getElementById('decorStyleRotation').value;
+            document.getElementById('decorRotationValDisplay').innerText = rotation + '°';
+            
+            if (currentEditingDecorId) {
+                const decor = tableLayouts[currentLayoutDevice].decorations.find(d => d.id === currentEditingDecorId);
+                if (decor) {
+                    decor.text = document.getElementById('decorTextInput').value;
+                    decor.size = parseInt(document.getElementById('decorStyleSize').value);
+                    decor.rotation = parseInt(rotation);
+                    decor.color = document.getElementById('decorStyleColor').value;
+                    renderTableLayout();
+                }
+            }
+        };
+
+        window.saveDecorStyle = function() {
+            applyDecorStylePreview();
+            closeModal('decorStyleModal');
+            currentEditingDecorId = null;
+        };
+
+        window.deleteDecoration = function() {
+            if (currentEditingDecorId && confirm('Delete this layout item?')) {
+                tableLayouts[currentLayoutDevice].decorations = tableLayouts[currentLayoutDevice].decorations.filter(d => d.id !== currentEditingDecorId);
+                closeModal('decorStyleModal');
+                renderTableLayout();
+                currentEditingDecorId = null;
+            }
+        };
+
+        function setupLayoutDraggable(el, itemId, mode = 'table') {
             let offsetX, offsetY;
             let startX, startY;
             let isDragging = false;
@@ -8442,8 +8629,16 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                 
                 el.style.left = newX + 'px'; el.style.top = newY + 'px';
                 
-                const existing = tableLayouts[currentLayoutDevice][tableId] || {};
-                tableLayouts[currentLayoutDevice][tableId] = { ...existing, x: newX, y: newY };
+                if (mode === 'table') {
+                    const existing = tableLayouts[currentLayoutDevice][itemId] || {};
+                    tableLayouts[currentLayoutDevice][itemId] = { ...existing, x: newX, y: newY };
+                } else {
+                    const decor = tableLayouts[currentLayoutDevice].decorations.find(d => d.id === itemId);
+                    if (decor) {
+                        decor.x = newX;
+                        decor.y = newY;
+                    }
+                }
             };
             const onEnd = () => { 
                 document.removeEventListener('mousemove', onMove); 
@@ -8452,7 +8647,11 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                 document.removeEventListener('touchend', onEnd); 
                 
                 if (!isDragging) {
-                    openTableStyleModal(tableId);
+                    if (mode === 'table') {
+                        openTableStyleModal(itemId);
+                    } else {
+                        openDecorStyleModal(itemId);
+                    }
                 }
             };
             const onStart = (e) => { 
