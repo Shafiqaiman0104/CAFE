@@ -2482,7 +2482,8 @@
                     </div>
 
                     <!-- Custom Layout View -->
-                    <div id="tableLayoutContainerTakeOrder" style="display: none; position: relative; width: 100%; min-height: 500px; background: rgba(0,0,0,0.1); border-radius: 28px; border: 2px dashed rgba(255,255,255,0.2); overflow: auto; margin-top: 15px; padding: 20px;">
+                    <div id="tableLayoutContainerTakeOrder" style="display: none; position: relative; width: 100%; height: 70vh; max-height: 800px; background: rgba(0,0,0,0.15); border-radius: 28px; border: 2px dashed rgba(255,255,255,0.2); overflow: auto; margin-top: 15px; box-shadow: inset 0 4px 15px rgba(0,0,0,0.1);">
+                        <div id="tableLayoutCanvas" style="position: relative; width: 100%; height: 100%; min-width: 100%; min-height: 100%; padding: 20px;"></div>
                     </div>
                 </div>
                 
@@ -8267,14 +8268,17 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
 
         window.renderTableLayout = function() {
             const container = document.getElementById('tableLayoutContainerTakeOrder');
+            const canvas = document.getElementById('tableLayoutCanvas');
             const deviceLayout = tableLayouts[currentLayoutDevice] || {};
             
             if (!isEditingLayout && Object.keys(deviceLayout).length === 0) {
-                container.innerHTML = '<div style="text-align:center;padding:100px;color:white;opacity:0.6;"><i class="fas fa-layer-group" style="font-size:3rem;margin-bottom:15px;display:block;"></i>No layout set for this device. Click EDIT LAYOUT to start.</div>';
+                canvas.innerHTML = '<div style="text-align:center;padding:100px;color:white;opacity:0.6;"><i class="fas fa-layer-group" style="font-size:3rem;margin-bottom:15px;display:block;"></i>No layout set for this device. Click EDIT LAYOUT to start.</div>';
                 return;
             }
 
-            container.innerHTML = '';
+            canvas.innerHTML = '';
+            let maxX = container.clientWidth;
+            let maxY = container.clientHeight;
             
             tablesListTakeOrder.forEach(table => {
                 const pos = deviceLayout[table.id] || { x: 20, y: 20, shape: 'square', size: 'normal', rotation: 0 };
@@ -8318,8 +8322,16 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                 if (isEditingLayout) setupLayoutDraggable(tableEl, table.id);
                 else tableEl.onclick = () => selectTableTakeOrder(table.id, table.id.toUpperCase());
 
-                container.appendChild(tableEl);
+                canvas.appendChild(tableEl);
+
+                // Calculate bounds for container auto-sizing
+                const scaleVal = sizeScales[size] || 1.0;
+                maxX = Math.max(maxX, pos.x + (tWidth * scaleVal) + 300);
+                maxY = Math.max(maxY, pos.y + (tHeight * scaleVal) + 300);
             });
+            
+            canvas.style.minWidth = maxX + 'px';
+            canvas.style.minHeight = maxY + 'px';
         };
 
         function renderChairs(tableEl, capacity, isOccupied, shape, tWidth, tHeight) {
@@ -8406,10 +8418,25 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                     isDragging = true;
                 }
 
+                const canvas = document.getElementById('tableLayoutCanvas');
                 const container = document.getElementById('tableLayoutContainerTakeOrder');
                 let newX = clientX - offsetX; let newY = clientY - offsetY;
-                newX = Math.max(10, Math.min(newX, container.scrollWidth - el.offsetWidth)); 
-                newY = Math.max(10, Math.min(newY, container.scrollHeight - el.offsetHeight));
+                
+                // Keep coordinates positive
+                newX = Math.max(10, newX); 
+                newY = Math.max(10, newY);
+                
+                // Expand canvas area when dragging near edges
+                const buffer = 300;
+                const currentW = parseInt(canvas.style.minWidth) || canvas.clientWidth;
+                const currentH = parseInt(canvas.style.minHeight) || canvas.clientHeight;
+
+                if (newX + el.offsetWidth > currentW - 50) {
+                    canvas.style.minWidth = (newX + el.offsetWidth + buffer) + 'px';
+                }
+                if (newY + el.offsetHeight > currentH - 50) {
+                    canvas.style.minHeight = (newY + el.offsetHeight + buffer) + 'px';
+                }
                 
                 el.style.left = newX + 'px'; el.style.top = newY + 'px';
                 
