@@ -2084,9 +2084,6 @@
                         <div class="menu-item" onclick="showPage('activeOrders')">
                             <i class="fas fa-clock"></i> Orders
                         </div>
-                        <div class="menu-item" onclick="showPage('cashier')">
-                            <i class="fas fa-cash-register"></i> Cashier
-                        </div>
                         <div class="menu-item" onclick="showPage('receipt')">
                             <i class="fas fa-file-invoice"></i> Receipt
                         </div>
@@ -2661,36 +2658,6 @@
                     </div>
 
                     <div id="printerQueueList"></div>
-                </div>
-            </div>
-
-            <!-- Cashier Page -->
-            <div id="cashier" class="page">
-                <div class="section-card">
-                    <div class="section-header">
-                        <span class="section-title">Process Payment</span>
-                    </div>
-                    <div class="form-group">
-                        <label>Select Order</label>
-                        <select id="paymentOrderSelect">
-                            <option value="">Select order...</option>
-                        </select>
-                    </div>
-                    <div id="paymentOrderDetails"></div>
-                    <div class="form-group">
-                        <label>Payment Method</label>
-                        <select id="paymentMethod">
-                            <option value="cash">Cash</option>
-                            <option value="card">Credit/Debit Card</option>
-                            <option value="ewallet">E-Wallet</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Amount Received (RM)</label>
-                        <input type="number" id="amountReceived" step="0.01">
-                    </div>
-                    <div id="changeAmount" style="margin:15px 0;"></div>
-                    <button class="btn" onclick="processPayment()">Process Payment</button>
                 </div>
             </div>
         </div>
@@ -4319,7 +4286,6 @@
             else if (pageId === 'departmentPrinter') loadDeptPrinters();
             else if (pageId === 'printers') loadPrintersPage();
             else if (pageId === 'printerQueue') loadPrinterQueue();
-            else if (pageId === 'cashier') loadCashierPage();
             else if (pageId === 'allOrders') loadAllOrders();
             else if (pageId === 'receipt') loadReceiptSettingsPage();
             else if (pageId === 'allTransactions') loadAllTransactions();
@@ -10218,68 +10184,6 @@ window.openSearchModalTakeOrder = function() {
             }
 
             activeEditItemIdOrdersTab = null;
-        };
-
-        // ========== CASHIER ==========
-        async function loadCashierPage() {
-            const ref = collection(db, 'licenses', currentClientId, 'orders');
-            const q = query(ref, where('status', '==', 'active'));
-            const snapshot = await getDocs(q);
-            
-            const select = document.getElementById('paymentOrderSelect');
-            select.innerHTML = '<option value="">Select order...</option>';
-            snapshot.forEach(doc => {
-                const o = doc.data();
-                select.innerHTML += `<option value="${doc.id}" data-total="${o.total}">${o.orderNumber} - RM ${o.total}</option>`;
-            });
-            
-            document.getElementById('paymentOrderSelect').onchange = function() {
-                const total = this.options[this.selectedIndex]?.dataset.total;
-                if (total) {
-                    document.getElementById('paymentOrderDetails').innerHTML = `<p>Total Amount: <b>RM ${total}</b></p>`;
-                }
-            };
-            
-            document.getElementById('amountReceived').oninput = function() {
-                const total = parseFloat(document.getElementById('paymentOrderSelect').options[document.getElementById('paymentOrderSelect').selectedIndex]?.dataset.total) || 0;
-                const received = parseFloat(this.value) || 0;
-                const change = received - total;
-                document.getElementById('changeAmount').innerHTML = change >= 0 ? 
-                    `<p style="color:green;">Change: RM ${change.toFixed(2)}</p>` : 
-                    `<p style="color:red;">Insufficient: RM ${Math.abs(change).toFixed(2)}</p>`;
-            };
-        }
-
-        window.processPayment = async function() {
-            const orderId = document.getElementById('paymentOrderSelect').value;
-            const total = parseFloat(document.getElementById('paymentOrderSelect').options[document.getElementById('paymentOrderSelect').selectedIndex]?.dataset.total) || 0;
-            const received = parseFloat(document.getElementById('amountReceived').value) || 0;
-            
-            if (!orderId) { alert('Select order'); return; }
-            if (received < total) { alert('Insufficient amount'); return; }
-            
-            await updateDoc(doc(db, 'licenses', currentClientId, 'orders', orderId), { 
-                status: 'completed',
-                cashierBy: currentStaff.name
-            });
-            
-            await addDoc(collection(db, 'licenses', currentClientId, 'transactions'), {
-                orderId: orderId,
-                amount: total.toString(),
-                paymentMethod: document.getElementById('paymentMethod').value,
-                status: 'completed',
-                type: 'payment',
-                createdAt: Timestamp.now()
-            });
-            
-            const orderSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', orderId));
-            const tableId = orderSnap.data()?.tableId;
-            if (tableId) {
-                await updateDoc(doc(db, 'licenses', currentClientId, 'tables', tableId), { status: 'available' });
-            }
-            
-            alert('Payment processed! Change: RM ' + (received - total).toFixed(2));
-            loadCashierPage();
         };
 
         // ========== RECEIPT SETTINGS ==========
