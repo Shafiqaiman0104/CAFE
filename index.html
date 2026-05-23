@@ -2075,7 +2075,7 @@
             <div class="sidebar-menu">
                 <!-- OPERATIONS Section -->
                 <div class="menu-section" id="staffMenu">
-                    <div class="menu-section-header" onclick="toggleSubMenu('operationsSubMenu', this)">
+                    <div class="menu-section-header" onclick="toggleSubMenu('operationsSubMenu', this, event)">
                         <div class="menu-section-title">OPERATIONS</div>
                         <i class="fas fa-chevron-down menu-toggle-icon"></i>
                     </div>
@@ -2086,27 +2086,40 @@
                         <div class="menu-item" onclick="showPage('activeOrders')">
                             <i class="fas fa-clock"></i> Orders
                         </div>
-                        <div class="menu-item" onclick="showPage('cashier')">
-                            <i class="fas fa-cash-register"></i> Cashier
+                        <!-- Printer & Receipt Dropdown -->
+                        <div class="menu-item" onclick="toggleSubMenu('printerSubMenu', this, event)">
+                            <i class="fas fa-print"></i> Printer & Receipt
+                            <i class="fas fa-chevron-down menu-toggle-icon" style="margin-left: auto; font-size: 0.8rem;"></i>
                         </div>
-                        <div class="menu-item" onclick="showPage('receipt')">
-                            <i class="fas fa-file-invoice"></i> Receipt
+                        <div class="menu-sub-section" id="printerSubMenu" style="max-height: 0; background: rgba(0,0,0,0.02); border-radius: 14px; margin: 0 12px;">
+                            <div class="menu-item" onclick="showPage('receipt')">
+                                <i class="fas fa-file-invoice"></i> Receipt
+                            </div>
+                            <div class="menu-item" onclick="showPage('departmentPrinter')">
+                                <i class="fas fa-print"></i> Dept. Printer
+                            </div>
+                            <div class="menu-item" onclick="showPage('printers')">
+                                <i class="fas fa-receipt"></i> Printers
+                            </div>
+                            <div class="menu-item" onclick="showPage('printerQueue')">
+                                <i class="fas fa-list-check"></i> Printer Queue
+                            </div>
                         </div>
-                        <div class="menu-item" onclick="showPage('departmentPrinter')">
-                            <i class="fas fa-print"></i> Department Printer
+                        <div class="menu-item" onclick="showPage('allOrders')">
+                            <i class="fas fa-clipboard-list"></i> All Orders
                         </div>
-                        <div class="menu-item" onclick="showPage('printers')">
-                            <i class="fas fa-receipt"></i> Printers
+                        <div class="menu-item" onclick="showPage('allTransactions')">
+                            <i class="fas fa-money-bill-wave"></i> All Transactions
                         </div>
-                        <div class="menu-item" onclick="showPage('printerQueue')">
-                            <i class="fas fa-list-check"></i> Printer Receipt Queue
+                        <div class="menu-item" onclick="showPage('shift')">
+                            <i class="fas fa-history"></i> Shift
                         </div>
                     </div>
                 </div>
 
                 <!-- MANAGEMENT Section -->
                 <div class="menu-section" id="managerMenu">
-                    <div class="menu-section-header" onclick="toggleSubMenu('managementSubMenu', this)">
+                    <div class="menu-section-header" onclick="toggleSubMenu('managementSubMenu', this, event)">
                         <div class="menu-section-title">MANAGEMENT</div>
                         <i class="fas fa-chevron-down menu-toggle-icon"></i>
                     </div>
@@ -2114,9 +2127,6 @@
                         <div class="menu-item" onclick="showPage('dashboard')">
                         <i class="fas fa-chart-pie"></i> Dashboard
                     </div>
-                        <div class="menu-item" onclick="showPage('shift')">
-                            <i class="fas fa-history"></i> Shift
-                        </div>
                         <div class="menu-item" onclick="showPage('menu')">
                             <i class="fas fa-utensils"></i> Menu Items
                         </div>
@@ -2143,12 +2153,6 @@
                         </div>
                         <div class="menu-item" onclick="showPage('tax')">
                             <i class="fas fa-percent"></i> Tax Settings
-                        </div>
-                        <div class="menu-item" onclick="showPage('allOrders')">
-                            <i class="fas fa-clipboard-list"></i> All Orders
-                        </div>
-                        <div class="menu-item" onclick="showPage('allTransactions')">
-                            <i class="fas fa-money-bill-wave"></i> All Transactions
                         </div>
                         <div class="menu-item" onclick="showPage('reports')">
                             <i class="fas fa-chart-bar"></i> Reports
@@ -2663,36 +2667,6 @@
                     </div>
 
                     <div id="printerQueueList"></div>
-                </div>
-            </div>
-
-            <!-- Cashier Page -->
-            <div id="cashier" class="page">
-                <div class="section-card">
-                    <div class="section-header">
-                        <span class="section-title">Process Payment</span>
-                    </div>
-                    <div class="form-group">
-                        <label>Select Order</label>
-                        <select id="paymentOrderSelect">
-                            <option value="">Select order...</option>
-                        </select>
-                    </div>
-                    <div id="paymentOrderDetails"></div>
-                    <div class="form-group">
-                        <label>Payment Method</label>
-                        <select id="paymentMethod">
-                            <option value="cash">Cash</option>
-                            <option value="card">Credit/Debit Card</option>
-                            <option value="ewallet">E-Wallet</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Amount Received (RM)</label>
-                        <input type="number" id="amountReceived" step="0.01">
-                    </div>
-                    <div id="changeAmount" style="margin:15px 0;"></div>
-                    <button class="btn" onclick="processPayment()">Process Payment</button>
                 </div>
             </div>
         </div>
@@ -4072,6 +4046,8 @@
         };
 
         window.backToLicense = function() {
+            localStorage.removeItem('clientId');
+            localStorage.removeItem('restaurantName');
             document.getElementById('pinScreen').style.display = 'none';
             document.getElementById('licenseScreen').style.display = 'flex';
         };
@@ -4260,16 +4236,32 @@
             panel.classList.toggle('show-mobile');
         };
 
-        window.toggleSubMenu = function(subMenuId, headerElement) {
+        window.toggleSubMenu = function(subMenuId, headerElement, event) {
+            if (event) event.stopPropagation();
+
             const subMenu = document.getElementById(subMenuId);
             const icon = headerElement.querySelector('.menu-toggle-icon');
 
-            if (subMenu.style.maxHeight === '0px' || subMenu.style.maxHeight === '') {
+            // Robust check for collapsed state (handles '0', '0px', or empty string)
+            const isCollapsed = !subMenu.style.maxHeight || subMenu.style.maxHeight === '0px' || subMenu.style.maxHeight === '0';
+
+            if (isCollapsed) {
                 subMenu.style.maxHeight = subMenu.scrollHeight + 'px';
-                icon.classList.add('rotated');
+                if (icon) icon.classList.add('rotated');
+                
+                // Set to 'none' after expansion to allow nested children to expand without parent clipping
+                setTimeout(() => {
+                    if (subMenu.style.maxHeight !== '0px') {
+                        subMenu.style.maxHeight = 'none';
+                    }
+                }, 300);
             } else {
+                if (subMenu.style.maxHeight === 'none') {
+                    subMenu.style.maxHeight = subMenu.scrollHeight + 'px';
+                    subMenu.offsetHeight; // Force reflow
+                }
                 subMenu.style.maxHeight = '0px';
-                icon.classList.remove('rotated');
+                if (icon) icon.classList.remove('rotated');
             }
         };
 
@@ -4290,12 +4282,14 @@
 
             if (targetItem) {
                 targetItem.classList.add('active');
-                // Ensure the parent sub-menu is open
+                // Ensure all parent sub-menus are open
                 let parentSubMenu = targetItem.closest('.menu-sub-section');
-                if (parentSubMenu) {
-                    parentSubMenu.style.maxHeight = parentSubMenu.scrollHeight + 'px';
-                    let icon = parentSubMenu.previousElementSibling.querySelector('.menu-toggle-icon');
+                while (parentSubMenu) {
+                    parentSubMenu.style.maxHeight = 'none';
+                    let header = parentSubMenu.previousElementSibling;
+                    let icon = header?.querySelector('.menu-toggle-icon');
                     if (icon) icon.classList.add('rotated');
+                    parentSubMenu = parentSubMenu.parentElement?.closest('.menu-sub-section');
                 }
             }
             if (!skipSidebar && window.innerWidth < 768) toggleSidebar();
@@ -4322,7 +4316,6 @@
             else if (pageId === 'departmentPrinter') loadDeptPrinters();
             else if (pageId === 'printers') loadPrintersPage();
             else if (pageId === 'printerQueue') loadPrinterQueue();
-            else if (pageId === 'cashier') loadCashierPage();
             else if (pageId === 'allOrders') loadAllOrders();
             else if (pageId === 'receipt') loadReceiptSettingsPage();
             else if (pageId === 'allTransactions') loadAllTransactions();
@@ -10223,68 +10216,6 @@ window.openSearchModalTakeOrder = function() {
             activeEditItemIdOrdersTab = null;
         };
 
-        // ========== CASHIER ==========
-        async function loadCashierPage() {
-            const ref = collection(db, 'licenses', currentClientId, 'orders');
-            const q = query(ref, where('status', '==', 'active'));
-            const snapshot = await getDocs(q);
-            
-            const select = document.getElementById('paymentOrderSelect');
-            select.innerHTML = '<option value="">Select order...</option>';
-            snapshot.forEach(doc => {
-                const o = doc.data();
-                select.innerHTML += `<option value="${doc.id}" data-total="${o.total}">${o.orderNumber} - RM ${o.total}</option>`;
-            });
-            
-            document.getElementById('paymentOrderSelect').onchange = function() {
-                const total = this.options[this.selectedIndex]?.dataset.total;
-                if (total) {
-                    document.getElementById('paymentOrderDetails').innerHTML = `<p>Total Amount: <b>RM ${total}</b></p>`;
-                }
-            };
-            
-            document.getElementById('amountReceived').oninput = function() {
-                const total = parseFloat(document.getElementById('paymentOrderSelect').options[document.getElementById('paymentOrderSelect').selectedIndex]?.dataset.total) || 0;
-                const received = parseFloat(this.value) || 0;
-                const change = received - total;
-                document.getElementById('changeAmount').innerHTML = change >= 0 ? 
-                    `<p style="color:green;">Change: RM ${change.toFixed(2)}</p>` : 
-                    `<p style="color:red;">Insufficient: RM ${Math.abs(change).toFixed(2)}</p>`;
-            };
-        }
-
-        window.processPayment = async function() {
-            const orderId = document.getElementById('paymentOrderSelect').value;
-            const total = parseFloat(document.getElementById('paymentOrderSelect').options[document.getElementById('paymentOrderSelect').selectedIndex]?.dataset.total) || 0;
-            const received = parseFloat(document.getElementById('amountReceived').value) || 0;
-            
-            if (!orderId) { alert('Select order'); return; }
-            if (received < total) { alert('Insufficient amount'); return; }
-            
-            await updateDoc(doc(db, 'licenses', currentClientId, 'orders', orderId), { 
-                status: 'completed',
-                cashierBy: currentStaff.name
-            });
-            
-            await addDoc(collection(db, 'licenses', currentClientId, 'transactions'), {
-                orderId: orderId,
-                amount: total.toString(),
-                paymentMethod: document.getElementById('paymentMethod').value,
-                status: 'completed',
-                type: 'payment',
-                createdAt: Timestamp.now()
-            });
-            
-            const orderSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', orderId));
-            const tableId = orderSnap.data()?.tableId;
-            if (tableId) {
-                await updateDoc(doc(db, 'licenses', currentClientId, 'tables', tableId), { status: 'available' });
-            }
-            
-            alert('Payment processed! Change: RM ' + (received - total).toFixed(2));
-            loadCashierPage();
-        };
-
         // ========== RECEIPT SETTINGS ==========
         window.loadReceiptSettingsPage = async function() {
             const ref = doc(db, 'licenses', currentClientId, 'settings', 'receipt');
@@ -12067,7 +11998,9 @@ window.openSearchModalTakeOrder = function() {
         window.logout = function() {
             Object.values(unsubscribers).forEach(u => u?.());
             if (timerInterval) clearInterval(timerInterval);
-            localStorage.clear();
+            localStorage.removeItem('currentStaff');
+            localStorage.removeItem('sessionId');
+            localStorage.removeItem('isClockedIn');
             location.reload();
         };
 
@@ -12296,14 +12229,16 @@ window.openSearchModalTakeOrder = function() {
         const savedStaff = localStorage.getItem('currentStaff');
         const savedRestaurantName = localStorage.getItem('restaurantName');
 
-        if (savedClientId && savedStaff) {
+        if (savedClientId) {
             currentClientId = savedClientId;
+            document.getElementById('restaurantNameDisplay').textContent = savedRestaurantName || 'Restaurant';
+            document.getElementById('appRestaurantName').textContent = savedRestaurantName || 'Restaurant';
+
+            if (savedStaff) {
             currentStaff = JSON.parse(savedStaff);
             document.getElementById('licenseScreen').style.display = 'none';
             document.getElementById('pinScreen').style.display = 'none';
             document.getElementById('appContainer').style.display = 'block';
-            document.getElementById('restaurantNameDisplay').textContent = savedRestaurantName || 'Restaurant';
-            document.getElementById('appRestaurantName').textContent = savedRestaurantName || 'Restaurant';
             
             // Open sidebar by default on Tablet/PC
             if (window.innerWidth >= 768) {
@@ -12318,6 +12253,11 @@ window.openSearchModalTakeOrder = function() {
             document.getElementById('staffMenu').style.display = 'block'; // Operations is always visible
             setupStaffSessionMonitor();
             runSyncSequence();
+            } else {
+                document.getElementById('licenseScreen').style.display = 'none';
+                document.getElementById('pinScreen').style.display = 'flex';
+                setupLicenseMonitor();
+            }
         }
 
         // Expose Take Order functions globally
