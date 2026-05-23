@@ -4043,6 +4043,8 @@
         };
 
         window.backToLicense = function() {
+            localStorage.removeItem('clientId');
+            localStorage.removeItem('restaurantName');
             document.getElementById('pinScreen').style.display = 'none';
             document.getElementById('licenseScreen').style.display = 'flex';
         };
@@ -11993,7 +11995,9 @@ window.openSearchModalTakeOrder = function() {
         window.logout = function() {
             Object.values(unsubscribers).forEach(u => u?.());
             if (timerInterval) clearInterval(timerInterval);
-            localStorage.clear();
+            localStorage.removeItem('currentStaff');
+            localStorage.removeItem('sessionId');
+            localStorage.removeItem('isClockedIn');
             location.reload();
         };
 
@@ -12222,14 +12226,16 @@ window.openSearchModalTakeOrder = function() {
         const savedStaff = localStorage.getItem('currentStaff');
         const savedRestaurantName = localStorage.getItem('restaurantName');
 
-        if (savedClientId && savedStaff) {
+        if (savedClientId) {
             currentClientId = savedClientId;
+            document.getElementById('restaurantNameDisplay').textContent = savedRestaurantName || 'Restaurant';
+            document.getElementById('appRestaurantName').textContent = savedRestaurantName || 'Restaurant';
+
+            if (savedStaff) {
             currentStaff = JSON.parse(savedStaff);
             document.getElementById('licenseScreen').style.display = 'none';
             document.getElementById('pinScreen').style.display = 'none';
             document.getElementById('appContainer').style.display = 'block';
-            document.getElementById('restaurantNameDisplay').textContent = savedRestaurantName || 'Restaurant';
-            document.getElementById('appRestaurantName').textContent = savedRestaurantName || 'Restaurant';
             
             // Open sidebar by default on Tablet/PC
             if (window.innerWidth >= 768) {
@@ -12244,6 +12250,11 @@ window.openSearchModalTakeOrder = function() {
             document.getElementById('staffMenu').style.display = 'block'; // Operations is always visible
             setupStaffSessionMonitor();
             runSyncSequence();
+            } else {
+                document.getElementById('licenseScreen').style.display = 'none';
+                document.getElementById('pinScreen').style.display = 'flex';
+                setupLicenseMonitor();
+            }
         }
 
         // Expose Take Order functions globally
