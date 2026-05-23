@@ -2073,7 +2073,7 @@
             <div class="sidebar-menu">
                 <!-- OPERATIONS Section -->
                 <div class="menu-section" id="staffMenu">
-                    <div class="menu-section-header" onclick="toggleSubMenu('operationsSubMenu', this)">
+                    <div class="menu-section-header" onclick="toggleSubMenu('operationsSubMenu', this, event)">
                         <div class="menu-section-title">OPERATIONS</div>
                         <i class="fas fa-chevron-down menu-toggle-icon"></i>
                     </div>
@@ -2084,24 +2084,31 @@
                         <div class="menu-item" onclick="showPage('activeOrders')">
                             <i class="fas fa-clock"></i> Orders
                         </div>
-                        <div class="menu-item" onclick="showPage('receipt')">
-                            <i class="fas fa-file-invoice"></i> Receipt
+                        <!-- Printer & Receipt Dropdown -->
+                        <div class="menu-item" onclick="toggleSubMenu('printerSubMenu', this, event)">
+                            <i class="fas fa-print"></i> Printer & Receipt
+                            <i class="fas fa-chevron-down menu-toggle-icon" style="margin-left: auto; font-size: 0.8rem;"></i>
                         </div>
-                        <div class="menu-item" onclick="showPage('departmentPrinter')">
-                            <i class="fas fa-print"></i> Department Printer
-                        </div>
-                        <div class="menu-item" onclick="showPage('printers')">
-                            <i class="fas fa-receipt"></i> Printers
-                        </div>
-                        <div class="menu-item" onclick="showPage('printerQueue')">
-                            <i class="fas fa-list-check"></i> Printer Receipt Queue
+                        <div class="menu-sub-section" id="printerSubMenu" style="max-height: 0; background: rgba(0,0,0,0.02); border-radius: 14px; margin: 0 12px;">
+                            <div class="menu-item" onclick="showPage('receipt')">
+                                <i class="fas fa-file-invoice"></i> Receipt
+                            </div>
+                            <div class="menu-item" onclick="showPage('departmentPrinter')">
+                                <i class="fas fa-print"></i> Dept. Printer
+                            </div>
+                            <div class="menu-item" onclick="showPage('printers')">
+                                <i class="fas fa-receipt"></i> Printers
+                            </div>
+                            <div class="menu-item" onclick="showPage('printerQueue')">
+                                <i class="fas fa-list-check"></i> Printer Queue
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- MANAGEMENT Section -->
                 <div class="menu-section" id="managerMenu">
-                    <div class="menu-section-header" onclick="toggleSubMenu('managementSubMenu', this)">
+                    <div class="menu-section-header" onclick="toggleSubMenu('managementSubMenu', this, event)">
                         <div class="menu-section-title">MANAGEMENT</div>
                         <i class="fas fa-chevron-down menu-toggle-icon"></i>
                     </div>
@@ -4224,16 +4231,32 @@
             panel.classList.toggle('show-mobile');
         };
 
-        window.toggleSubMenu = function(subMenuId, headerElement) {
+        window.toggleSubMenu = function(subMenuId, headerElement, event) {
+            if (event) event.stopPropagation();
+
             const subMenu = document.getElementById(subMenuId);
             const icon = headerElement.querySelector('.menu-toggle-icon');
 
-            if (subMenu.style.maxHeight === '0px' || subMenu.style.maxHeight === '') {
+            // Robust check for collapsed state (handles '0', '0px', or empty string)
+            const isCollapsed = !subMenu.style.maxHeight || subMenu.style.maxHeight === '0px' || subMenu.style.maxHeight === '0';
+
+            if (isCollapsed) {
                 subMenu.style.maxHeight = subMenu.scrollHeight + 'px';
-                icon.classList.add('rotated');
+                if (icon) icon.classList.add('rotated');
+                
+                // Set to 'none' after expansion to allow nested children to expand without parent clipping
+                setTimeout(() => {
+                    if (subMenu.style.maxHeight !== '0px') {
+                        subMenu.style.maxHeight = 'none';
+                    }
+                }, 300);
             } else {
+                if (subMenu.style.maxHeight === 'none') {
+                    subMenu.style.maxHeight = subMenu.scrollHeight + 'px';
+                    subMenu.offsetHeight; // Force reflow
+                }
                 subMenu.style.maxHeight = '0px';
-                icon.classList.remove('rotated');
+                if (icon) icon.classList.remove('rotated');
             }
         };
 
@@ -4254,12 +4277,14 @@
 
             if (targetItem) {
                 targetItem.classList.add('active');
-                // Ensure the parent sub-menu is open
+                // Ensure all parent sub-menus are open
                 let parentSubMenu = targetItem.closest('.menu-sub-section');
-                if (parentSubMenu) {
-                    parentSubMenu.style.maxHeight = parentSubMenu.scrollHeight + 'px';
-                    let icon = parentSubMenu.previousElementSibling.querySelector('.menu-toggle-icon');
+                while (parentSubMenu) {
+                    parentSubMenu.style.maxHeight = 'none';
+                    let header = parentSubMenu.previousElementSibling;
+                    let icon = header?.querySelector('.menu-toggle-icon');
                     if (icon) icon.classList.add('rotated');
+                    parentSubMenu = parentSubMenu.parentElement?.closest('.menu-sub-section');
                 }
             }
             if (!skipSidebar && window.innerWidth < 768) toggleSidebar();
