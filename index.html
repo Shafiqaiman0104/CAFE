@@ -6,7 +6,9 @@
      <link rel="manifest" href="/manifest.json">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pocketbase/dist/pocketbase.umd.js"></script>
     <style>
         * {
             margin: 0;
@@ -16,14 +18,18 @@
         
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f8fafc;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
             min-height: 100vh;
         }
-        
+
+        .glass-card { 
+            background: rgba(255, 255, 255, 0.95); 
+            backdrop-filter: blur(10px); 
+            border: 1px solid rgba(255, 255, 255, 0.2); 
+        }
+
         .login-container {
             width: 100%;
-            min-height: 100vh;
-            display: flex;
             align-items: center;
             justify-content: center;
             padding: 20px;
@@ -1965,43 +1971,145 @@
     </style>
 </head>
 <body>
-    <!-- License Screen -->
-    <div id="licenseScreen" class="login-container">
-        <div class="login-box">
-            <h2>🔐 VentureRush POS</h2>
-            <div class="input-group">
-                <label>License Key</label>
-                <input type="text" id="licenseInput" placeholder="Enter license key">
+    <!-- Welcome Screen -->
+    <div id="welcomeScreen" class="min-h-screen flex items-center justify-center p-4">
+        <div class="glass-card rounded-[2.5rem] shadow-2xl p-8 w-full max-w-md text-center space-y-8 py-10 transition-all duration-500 overflow-hidden">
+            <div class="space-y-2">
+                <div class="w-20 h-20 bg-blue-600 rounded-3xl mx-auto flex items-center justify-center text-white text-4xl shadow-lg shadow-blue-200 mb-4 animate-bounce">
+                    <i class="fas fa-shop"></i>
+                </div>
+                <h1 class="text-3xl font-black text-slate-800 tracking-tight">VRPOS</h1>
+                <p class="text-slate-500 font-medium uppercase tracking-widest text-xs">by VentureRush Tech</p>
             </div>
-            <button class="btn" onclick="checkLicense()">Verify</button>
+            
+            <div class="space-y-4">
+                <button onclick="showLogin()" class="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold text-lg hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-slate-200">
+                    Login
+                </button>
+                <button onclick="showRegister()" class="w-full py-4 bg-white text-blue-600 border-2 border-blue-600 rounded-2xl font-bold text-lg hover:bg-blue-50 active:scale-95 transition-all">
+                    Register
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Register Screen -->
+    <div id="registerScreen" class="min-h-screen flex items-center justify-center p-4" style="display: none;">
+        <div class="glass-card rounded-[2.5rem] shadow-2xl p-8 w-full max-w-md space-y-6 overflow-hidden">
+            <div class="flex items-center justify-between">
+                <h2 class="text-2xl font-bold text-slate-800">New Registration</h2>
+                <button onclick="backToWelcome()" class="p-2 text-slate-400 hover:bg-slate-100 rounded-full transition-colors">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div id="registrationForm" class="space-y-4 max-h-[60vh] overflow-y-auto px-1 pr-2">
+                <div>
+                    <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Business Owner</label>
+                    <input type="text" id="regOwnerName" placeholder="Full Name" class="w-full px-4 py-3 bg-slate-100 border-transparent rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Contact No.</label>
+                        <input type="number" id="regOwnerPhone" placeholder="0123..." class="w-full px-4 py-3 bg-slate-100 border-transparent rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">SSM Number</label>
+                        <input type="text" id="regSSM" placeholder="2024XXXX..." class="w-full px-4 py-3 bg-slate-100 border-transparent rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Email Address</label>
+                    <input type="email" id="regOwnerEmail" placeholder="name@example.com" class="w-full px-4 py-3 bg-slate-100 border-transparent rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div class="pt-2"><hr class="border-slate-100"></div>
+                <div>
+                    <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Restaurant Name</label>
+                    <input type="text" id="regRestaurantName" placeholder="Venture Rush Cafe" class="w-full px-4 py-3 bg-slate-100 border-transparent rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Restaurant Phone</label>
+                    <input type="number" id="regRestaurantPhone" placeholder="Outlet Number" class="w-full px-4 py-3 bg-slate-100 border-transparent rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Business Address</label>
+                    <textarea id="regRestaurantAddress" rows="2" placeholder="Full operating address..." class="w-full px-4 py-3 bg-slate-100 border-transparent rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none"></textarea>
+                </div>
+            </div>
+            
+            <button id="btnSubmitRegistration" onclick="submitRegistration()" class="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold text-lg hover:bg-blue-700 active:scale-[0.98] transition-all shadow-lg shadow-blue-100">
+                Submit Application
+            </button>
+            <p id="registerError" class="error"></p>
+            <div id="registerSuccess" class="hidden text-center space-y-4 py-4">
+                <div class="w-16 h-16 bg-green-100 text-green-600 rounded-full mx-auto flex items-center justify-center text-3xl shadow-inner">
+                    <i class="fas fa-check"></i>
+                </div>
+                <h2 class="text-xl font-bold text-slate-800">Submitted!</h2>
+                <p class="text-slate-500 text-sm leading-relaxed">Thank you. Your registration is now <span class="font-bold text-orange-500">Pending</span>. Our team will verify your SSM and contact you via email shortly.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- License Screen -->
+    <div id="licenseScreen" class="min-h-screen flex items-center justify-center p-4" style="display: none;">
+        <div class="glass-card rounded-[2.5rem] shadow-2xl p-8 w-full max-w-md space-y-6 transition-all duration-500">
+            <div class="text-center space-y-2">
+                <div class="w-16 h-16 bg-slate-100 rounded-2xl mx-auto flex items-center justify-center text-slate-600 text-2xl">
+                    <i class="fas fa-key"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-slate-800">Activation</h2>
+                <p class="text-slate-500 text-sm">Please enter your unique License Key</p>
+            </div>
+            
+            <div class="space-y-4">
+                <input type="text" id="licenseInput" placeholder="VR-XXXX-XXXX" class="w-full px-6 py-4 bg-slate-100 border-2 border-transparent rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all text-center font-mono font-bold tracking-widest uppercase">
+                <button onclick="checkLicense()" class="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold text-lg hover:bg-blue-700 transition-all">
+                    Verify License
+                </button>
+            </div>
+
+            <button onclick="backToWelcome()" class="text-blue-600 font-bold hover:underline underline-offset-4 flex items-center justify-center mx-auto">
+                <i class="fas fa-arrow-left mr-2"></i> Back
+            </button>
             <p id="licenseError" class="error"></p>
         </div>
     </div>
 
     <!-- PIN Screen -->
-    <div id="pinScreen" class="login-container" style="display: none;">
-        <div class="login-box">
-            <h2 id="restaurantNameDisplay">Restaurant</h2>
-            <div class="input-group">
-                <label>Enter PIN</label>
-                <input type="password" id="pinInput" placeholder="6-digit PIN" maxlength="6">
+    <div id="pinScreen" class="min-h-screen flex items-center justify-center p-4" style="display: none;">
+        <div class="glass-card rounded-[2.5rem] shadow-2xl p-8 w-full max-w-md space-y-6">
+            <div class="text-center space-y-2">
+                <div class="w-16 h-16 bg-slate-100 rounded-2xl mx-auto flex items-center justify-center text-slate-600 text-2xl">
+                    <i class="fas fa-lock"></i>
+                </div>
+                <h2 id="restaurantNameDisplay" class="text-2xl font-bold text-slate-800">Restaurant</h2>
+                <p class="text-slate-500 text-sm">Enter Staff PIN to Login</p>
             </div>
-            <div class="pin-numpad">
-                <button class="btn-numpad" onclick="pressPinKey('1')">1</button>
-                <button class="btn-numpad" onclick="pressPinKey('2')">2</button>
-                <button class="btn-numpad" onclick="pressPinKey('3')">3</button>
-                <button class="btn-numpad" onclick="pressPinKey('4')">4</button>
-                <button class="btn-numpad" onclick="pressPinKey('5')">5</button>
-                <button class="btn-numpad" onclick="pressPinKey('6')">6</button>
-                <button class="btn-numpad" onclick="pressPinKey('7')">7</button>
-                <button class="btn-numpad" onclick="pressPinKey('8')">8</button>
-                <button class="btn-numpad" onclick="pressPinKey('9')">9</button>
-                <button class="btn-numpad" style="color: #e53e3e;" onclick="pressPinKey('C')"><i class="fas fa-backspace"></i></button>
-                <button class="btn-numpad" onclick="pressPinKey('0')">0</button>
-                <button class="btn-numpad" style="color: #38a169;" onclick="loginWithPin()"><i class="fas fa-check"></i></button>
+
+            <div class="space-y-4">
+                <input type="password" id="pinInput" placeholder="••••••" readonly class="w-full px-6 py-4 bg-slate-100 border-2 border-transparent rounded-2xl focus:bg-white focus:border-blue-500 outline-none transition-all text-center text-2xl tracking-[1em] font-bold">
+                
+                <div class="grid grid-cols-3 gap-3">
+                    <button class="py-4 bg-white border border-slate-200 rounded-2xl font-bold text-xl hover:bg-slate-50 active:scale-95 transition-all" onclick="pressPinKey('1')">1</button>
+                    <button class="py-4 bg-white border border-slate-200 rounded-2xl font-bold text-xl hover:bg-slate-50 active:scale-95 transition-all" onclick="pressPinKey('2')">2</button>
+                    <button class="py-4 bg-white border border-slate-200 rounded-2xl font-bold text-xl hover:bg-slate-50 active:scale-95 transition-all" onclick="pressPinKey('3')">3</button>
+                    <button class="py-4 bg-white border border-slate-200 rounded-2xl font-bold text-xl hover:bg-slate-50 active:scale-95 transition-all" onclick="pressPinKey('4')">4</button>
+                    <button class="py-4 bg-white border border-slate-200 rounded-2xl font-bold text-xl hover:bg-slate-50 active:scale-95 transition-all" onclick="pressPinKey('5')">5</button>
+                    <button class="py-4 bg-white border border-slate-200 rounded-2xl font-bold text-xl hover:bg-slate-50 active:scale-95 transition-all" onclick="pressPinKey('6')">6</button>
+                    <button class="py-4 bg-white border border-slate-200 rounded-2xl font-bold text-xl hover:bg-slate-50 active:scale-95 transition-all" onclick="pressPinKey('7')">7</button>
+                    <button class="py-4 bg-white border border-slate-200 rounded-2xl font-bold text-xl hover:bg-slate-50 active:scale-95 transition-all" onclick="pressPinKey('8')">8</button>
+                    <button class="py-4 bg-white border border-slate-200 rounded-2xl font-bold text-xl hover:bg-slate-50 active:scale-95 transition-all" onclick="pressPinKey('9')">9</button>
+                    <button class="py-4 bg-red-50 text-red-600 rounded-2xl font-bold text-xl hover:bg-red-100 active:scale-95 transition-all" onclick="pressPinKey('C')"><i class="fas fa-backspace"></i></button>
+                    <button class="py-4 bg-white border border-slate-200 rounded-2xl font-bold text-xl hover:bg-slate-50 active:scale-95 transition-all" onclick="pressPinKey('0')">0</button>
+                    <button class="py-4 bg-green-600 text-white rounded-2xl font-bold text-xl hover:bg-green-700 active:scale-95 transition-all" onclick="loginWithPin()"><i class="fas fa-check"></i></button>
+                </div>
             </div>
-            <button class="btn" onclick="loginWithPin()">Login</button>
-            <button class="btn btn-secondary" onclick="backToLicense()">← Change License</button>
+
+            <div class="flex flex-col gap-3">
+                <button onclick="loginWithPin()" class="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold text-lg hover:bg-blue-700 transition-all">Login</button>
+                <button onclick="backToLicense()" class="text-slate-500 font-bold text-sm hover:underline text-center">Change License</button>
+            </div>
             <p id="pinError" class="error"></p>
         </div>
     </div>
@@ -3872,18 +3980,72 @@
             orderBy, limit, runTransaction
         } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
-        const firebaseConfig = {
-  apiKey: "AIzaSyDFFVP_UqpIzXbWv9dNpLkB4Ot3Z9aC7aE",
-  authDomain: "caferealtime-43213.firebaseapp.com",
-  databaseURL: "https://caferealtime-43213-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "caferealtime-43213",
-  storageBucket: "caferealtime-43213.firebasestorage.app",
-  messagingSenderId: "813540068315",
-  appId: "1:813540068315:web:76271282255545550735fe"
-};
+        const pb = new window.PocketBase('http://pocketbase.mkrimbacamp-vr.com:8090');
 
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
+        let app = null;
+        let db = null;
+        let pbRecordId = '';
+
+        window.initializeFirebase = function(configStr) {
+            if (!configStr) return;
+            try {
+                const config = typeof configStr === 'string' ? JSON.parse(configStr) : configStr;
+                if (app) return; // Prevent multiple initializations
+                app = initializeApp(config);
+                db = getFirestore(app);
+            } catch (e) {
+                console.error("Firebase Initialization Failed:", e);
+                alert("Invalid configuration found. Please contact support.");
+            }
+        };
+
+        window.showLogin = function() {
+            document.getElementById('welcomeScreen').style.display = 'none';
+            document.getElementById('licenseScreen').style.display = 'flex';
+        };
+
+        window.showRegister = function() {
+            document.getElementById('welcomeScreen').style.display = 'none';
+            document.getElementById('registerScreen').style.display = 'flex';
+        };
+
+        window.backToWelcome = function() {
+            document.getElementById('licenseScreen').style.display = 'none';
+            document.getElementById('registerScreen').style.display = 'none';
+            document.getElementById('welcomeScreen').style.display = 'flex';
+        };
+
+        window.submitRegistration = async function() {
+            const btn = document.getElementById('btnSubmitRegistration');
+            const errorEl = document.getElementById('registerError');
+            const successEl = document.getElementById('registerSuccess');
+            
+            errorEl.textContent = '';
+            
+            const data = {
+                "ownerName": document.getElementById('regOwnerName').value,
+                "ownerPhone": parseInt(document.getElementById('regOwnerPhone').value),
+                "ownerEmail": document.getElementById('regOwnerEmail').value,
+                "SSM": document.getElementById('regSSM').value,
+                "restaurantName": document.getElementById('regRestaurantName').value,
+                "restaurantPhone": parseInt(document.getElementById('regRestaurantPhone').value),
+                "restaurantAddress": document.getElementById('regRestaurantAddress').value,
+                "status": "pending"
+            };
+
+            try {
+                btn.disabled = true;
+                btn.textContent = 'Submitting...';
+                await pb.collection('VRPOS_REGISTER_LIST').create(data);
+                successEl.style.display = 'block';
+                setTimeout(() => backToWelcome(), 3000);
+            } catch (err) {
+                errorEl.textContent = "Registration failed: " + (err.data?.message || err.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Submit Registration';
+            }
+        };
 
         let currentClientId = '';
         let currentStaff = null;
@@ -4010,28 +4172,37 @@
             if (!licenseKey) { errorEl.textContent = 'Enter license key'; return; }
             
             try {
-                const q = query(collection(db, 'licenses'), where('licenseKey', '==', licenseKey));
-                const snapshot = await getDocs(q);
+                const record = await pb.collection('VRPOS_CLIENT').getFirstListItem(`licenseKey = "${licenseKey}"`);
                 
-                if (snapshot.empty) { errorEl.textContent = 'Invalid license'; return; }
-                
-                const licenseDoc = snapshot.docs[0];
-                const data = licenseDoc.data();
-                
-                if (data.status !== 'active') { errorEl.textContent = 'License inactive'; return; }
-                if (data.expiryDate?.toDate() < new Date()) { errorEl.textContent = 'License expired'; return; }
-                
-                currentClientId = licenseDoc.id;
+                if (record.status !== 'active') { errorEl.textContent = 'License inactive'; return; }
+
+                const expiryDate = new Date(record.expiredLicenseKey);
+                if (expiryDate < new Date()) { errorEl.textContent = 'License expired'; return; }
+
+                pbRecordId = record.id;
+                currentClientId = record.clientId.trim();
+
+                localStorage.setItem('pbRecordId', pbRecordId);
                 localStorage.setItem('clientId', currentClientId);
-                localStorage.setItem('restaurantName', data.restaurantName);
-                document.getElementById('restaurantNameDisplay').textContent = data.restaurantName;
-                document.getElementById('appRestaurantName').textContent = data.restaurantName;
-                
+                localStorage.setItem('restaurantName', record.restaurantName);
+                localStorage.setItem('restaurantAddress', record.restaurantAddress);
+
+                // Ensure firebaseConfig is stringified before saving to localStorage
+                const configStr = typeof record.firebaseConfig === 'string' ? record.firebaseConfig : JSON.stringify(record.firebaseConfig);
+                localStorage.setItem('firebaseConfig', configStr);
+
+                document.getElementById('restaurantNameDisplay').textContent = record.restaurantName;
+                document.getElementById('appRestaurantName').textContent = record.restaurantName;
+
+                initializeFirebase(configStr);
+
                 document.getElementById('licenseScreen').style.display = 'none';
                 document.getElementById('pinScreen').style.display = 'flex';
-                setupLicenseMonitor();
+                setupLicenseMonitor(record);
                 
-            } catch (e) { errorEl.textContent = e.message; }
+            } catch (e) { 
+                errorEl.textContent = e.status === 404 ? 'Invalid license key' : e.message; 
+            }
         };
 
         window.pressPinKey = function(k) {
@@ -4046,10 +4217,8 @@
         };
 
         window.backToLicense = function() {
-            localStorage.removeItem('clientId');
-            localStorage.removeItem('restaurantName');
-            document.getElementById('pinScreen').style.display = 'none';
-            document.getElementById('licenseScreen').style.display = 'flex';
+            localStorage.clear();
+            location.reload();
         };
 
         // ========== PIN LOGIN ==========
@@ -4060,8 +4229,17 @@
             if (!pin) { errorEl.textContent = 'Enter PIN'; return; }
             
             try {
-                const q = query(collection(db, 'licenses', currentClientId, 'staff'), where('pin', '==', pin), where('active', '==', true));
-                const snapshot = await getDocs(q);
+                const staffRef = collection(db, 'licenses', currentClientId, 'staff');
+                
+                // Try matching PIN as string first
+                let q = query(staffRef, where('pin', '==', pin), where('active', '==', true));
+                let snapshot = await getDocs(q);
+                
+                // If not found, try matching as a Number (common in Firestore if data was manually entered)
+                if (snapshot.empty && !isNaN(parseInt(pin))) {
+                    q = query(staffRef, where('pin', '==', parseInt(pin)), where('active', '==', true));
+                    snapshot = await getDocs(q);
+                }
                 
                 if (snapshot.empty) { errorEl.textContent = 'Invalid PIN'; return; }
                 
@@ -4111,43 +4289,71 @@
             } catch (e) { errorEl.textContent = e.message; }
         };
 
-        window.setupLicenseMonitor = function() {
-            if (unsubscribers['licenseMonitor']) unsubscribers['licenseMonitor']();
-            if (!currentClientId) return;
+        window.setupLicenseMonitor = async function(initialData = null) {
+            if (unsubscribers['licenseMonitor']) {
+                unsubscribers['licenseMonitor']();
+                delete unsubscribers['licenseMonitor'];
+            }
+            if (!pbRecordId) return;
 
-            const licenseRef = doc(db, 'licenses', currentClientId);
-            unsubscribers['licenseMonitor'] = onSnapshot(licenseRef, (snap) => {
-                if (!snap.exists()) return;
-                const data = snap.data();
+            const checkLicenseStatus = (data) => {
                 const now = new Date();
-                const expiry = data.expiryDate ? data.expiryDate.toDate() : null;
+                const expiry = data.expiredLicenseKey ? new Date(data.expiredLicenseKey) : null;
                 const status = data.status;
                 const restaurantName = data.restaurantName || localStorage.getItem('restaurantName') || "Restaurant";
 
-                // Check Status: Show popup if NOT active
                 const inactiveOverlay = document.getElementById('licenseInactiveOverlay');
                 if (status !== 'active') {
                     inactiveOverlay.style.display = 'flex';
                     document.getElementById('whatsappActivateBtn').onclick = () => {
-                        const message = encodeURIComponent(`Hi my Licenses Key not active I want to activate my ${restaurantName}`);
+                        const message = encodeURIComponent(`Hi my Licenses Key is not active. I want to activate my ${restaurantName}`);
                         window.open(`https://wa.me/601160801477?text=${message}`, '_blank');
                     };
                 } else {
                     inactiveOverlay.style.display = 'none';
                 }
 
-                // Check Expiry: Show popup if expired
                 const expiredOverlay = document.getElementById('licenseExpiredOverlay');
                 if (expiry && expiry < now) {
                     expiredOverlay.style.display = 'flex';
                     document.getElementById('whatsappRenewBtn').onclick = () => {
-                        const message = encodeURIComponent(`Hi my Licenses Key expired I want to renew ${restaurantName}`);
+                        const message = encodeURIComponent(`Hi my Licenses Key expired. I want to renew ${restaurantName}`);
                         window.open(`https://wa.me/601160801477?text=${message}`, '_blank');
                     };
                 } else {
                     expiredOverlay.style.display = 'none';
                 }
+                
+                if (data.restaurantName) {
+                    document.getElementById('appRestaurantName').textContent = data.restaurantName;
+                    document.getElementById('restaurantNameDisplay').textContent = data.restaurantName;
+                    localStorage.setItem('restaurantName', data.restaurantName);
+                }
+                
+                if (data.restaurantAddress) {
+                    localStorage.setItem('restaurantAddress', data.restaurantAddress);
+                }
+            };
+
+            // Initial check: PocketBase subscribe doesn't trigger immediately like Firestore.
+            // If we have initialData (from checkLicense), use it. Otherwise, fetch current state.
+            if (initialData) {
+                checkLicenseStatus(initialData);
+            } else {
+                try {
+                    const record = await pb.collection('VRPOS_CLIENT').getOne(pbRecordId);
+                    checkLicenseStatus(record);
+                } catch (e) {
+                    console.error("Failed to perform initial license check:", e);
+                }
+            }
+
+            // Realtime subscription to PocketBase record for changes while app is running
+            pb.collection('VRPOS_CLIENT').subscribe(pbRecordId, (e) => {
+                checkLicenseStatus(e.record);
             });
+
+            unsubscribers['licenseMonitor'] = () => pb.collection('VRPOS_CLIENT').unsubscribe(pbRecordId);
         };
 
         async function runSyncSequence() {
@@ -6110,13 +6316,13 @@
 
         window.deleteStaff = async function(id) {
             if (confirm('Delete staff?')) {
-                await deleteDoc(doc(db, 'licenses', currentClientId, 'staff', id));
+                 await deleteDoc(doc(db, 'licenses', currentClientId, 'staff', id));
             }
         };
 
         // ========== DISCOUNTS ==========
         function loadDiscounts() {
-            const ref = collection(db, 'licenses', currentClientId, 'discounts');
+             const ref = collection(db, 'licenses', currentClientId, 'discounts');
             onSnapshot(ref, (snapshot) => {
                 allDiscounts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 const container = document.getElementById('discountsList');
@@ -11142,7 +11348,7 @@ window.openSearchModalTakeOrder = function() {
              // If another device has taken over and I don't own a printer, send the request to them
             if (!iOwnAPrinter && takeoverStaffName) {
                 showPrinterStatusPopup("Printer Server", `Send reprint printing to ${takeoverStaffName} device...`, 'info', true);
-                await updateDoc(ref, { 
+                await updateDoc(doc(db, 'licenses', currentClientId, 'print_queue', id), { 
                     status: 'reprint_requested',
                     targetPrinterId: printerId || null,
                     updatedAt: Timestamp.now() 
@@ -12228,13 +12434,22 @@ window.openSearchModalTakeOrder = function() {
         const savedClientId = localStorage.getItem('clientId');
         const savedStaff = localStorage.getItem('currentStaff');
         const savedRestaurantName = localStorage.getItem('restaurantName');
+        const savedFirebaseConfig = localStorage.getItem('firebaseConfig');
+        pbRecordId = localStorage.getItem('pbRecordId');
 
         if (savedClientId) {
+            const welcome = document.getElementById('welcomeScreen');
+            if (welcome) welcome.style.display = 'none';
             currentClientId = savedClientId;
             document.getElementById('restaurantNameDisplay').textContent = savedRestaurantName || 'Restaurant';
             document.getElementById('appRestaurantName').textContent = savedRestaurantName || 'Restaurant';
 
-            if (savedStaff) {
+            // Initialize Firebase with the tenant's specific config from local storage
+            if (savedFirebaseConfig) {
+                initializeFirebase(savedFirebaseConfig);
+            }
+
+            if (savedStaff && db) {
             currentStaff = JSON.parse(savedStaff);
             document.getElementById('licenseScreen').style.display = 'none';
             document.getElementById('pinScreen').style.display = 'none';
