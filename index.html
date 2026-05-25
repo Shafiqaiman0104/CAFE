@@ -1975,10 +1975,10 @@
     <div id="welcomeScreen" class="min-h-screen flex items-center justify-center p-4">
         <div class="glass-card rounded-[2.5rem] shadow-2xl p-8 w-full max-w-md text-center space-y-8 py-10 transition-all duration-500 overflow-hidden">
             <div class="space-y-2">
-                <div class="w-20 h-20 bg-blue-600 rounded-3xl mx-auto flex items-center justify-center text-white text-4xl shadow-lg shadow-blue-200 mb-4 animate-bounce">
-                    <i class="fas fa-shop"></i>
+                <div class="w-20 h-20 bg-blue-600 rounded-3xl mx-auto flex items-center justify-center shadow-lg shadow-blue-200 mb-4 animate-bounce overflow-hidden">
+                    <img src="vrLogoWhite.png" alt="Logo" class="w-full h-full object-cover">
                 </div>
-                <h1 class="text-3xl font-black text-slate-800 tracking-tight">VRPOS</h1>
+                <h1 class="text-3xl font-black tracking-tight"><span class="text-black">VR</span><span class="text-blue-600">POS</span></h1>
                 <p class="text-slate-500 font-medium uppercase tracking-widest text-xs">by VentureRush Tech</p>
             </div>
             
@@ -2006,34 +2006,34 @@
             <div id="registrationForm" class="space-y-4 max-h-[60vh] overflow-y-auto px-1 pr-2">
                 <div>
                     <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Business Owner</label>
-                    <input type="text" id="regOwnerName" placeholder="Full Name" class="w-full px-4 py-3 bg-slate-100 border-transparent rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all">
+                    <input type="text" id="regOwnerName" placeholder="Full Name" class="w-full px-4 py-3 bg-slate-100 border-transparent rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all" required>
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Contact No.</label>
-                        <input type="number" id="regOwnerPhone" placeholder="0123..." class="w-full px-4 py-3 bg-slate-100 border-transparent rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none">
+                        <input type="number" id="regOwnerPhone" placeholder="0123..." class="w-full px-4 py-3 bg-slate-100 border-transparent rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none" required>
                     </div>
                     <div>
                         <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">SSM Number</label>
-                        <input type="text" id="regSSM" placeholder="2024XXXX..." class="w-full px-4 py-3 bg-slate-100 border-transparent rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none">
+                        <input type="text" id="regSSM" placeholder="2024XXXX..." class="w-full px-4 py-3 bg-slate-100 border-transparent rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none" required>
                     </div>
                 </div>
                 <div>
                     <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Email Address</label>
-                    <input type="email" id="regOwnerEmail" placeholder="name@example.com" class="w-full px-4 py-3 bg-slate-100 border-transparent rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none">
+                    <input type="email" id="regOwnerEmail" placeholder="name@example.com" class="w-full px-4 py-3 bg-slate-100 border-transparent rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none" required>
                 </div>
                 <div class="pt-2"><hr class="border-slate-100"></div>
                 <div>
                     <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Restaurant Name</label>
-                    <input type="text" id="regRestaurantName" placeholder="Venture Rush Cafe" class="w-full px-4 py-3 bg-slate-100 border-transparent rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none">
+                    <input type="text" id="regRestaurantName" placeholder="Venture Rush Cafe" class="w-full px-4 py-3 bg-slate-100 border-transparent rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none" required>
                 </div>
                 <div>
                     <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Restaurant Phone</label>
-                    <input type="number" id="regRestaurantPhone" placeholder="Outlet Number" class="w-full px-4 py-3 bg-slate-100 border-transparent rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none">
+                    <input type="number" id="regRestaurantPhone" placeholder="Outlet Number" class="w-full px-4 py-3 bg-slate-100 border-transparent rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none" required>
                 </div>
                 <div>
                     <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Business Address</label>
-                    <textarea id="regRestaurantAddress" rows="2" placeholder="Full operating address..." class="w-full px-4 py-3 bg-slate-100 border-transparent rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none"></textarea>
+                    <textarea id="regRestaurantAddress" rows="2" placeholder="Full operating address..." class="w-full px-4 py-3 bg-slate-100 border-transparent rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none" required></textarea>
                 </div>
             </div>
             
@@ -2125,7 +2125,7 @@
                     <span></span>
                 </button>
                 <div class="top-bar-logo-group" style="white-space: nowrap; display: flex; align-items: center; gap: 10px;">
-                    <img src="https://venturerush-tech.netlify.app/vrLogo.png" alt="Logo" class="top-bar-logo" style="height: 35px; width: 35px; border-radius: 50%;">
+                    <img src="vrLogoBlue.png" alt="Logo" class="top-bar-logo" style="height: 35px; width: 35px; border-radius: 50%;">
                     <div class="restaurant-name">VentureRush P.O.S</div>
                 </div>
             </div>
@@ -2149,7 +2149,7 @@
         <!-- Sidebar -->
         <div class="sidebar" id="sidebar">
             <div class="sidebar-header" style="padding: 24px; text-align: center; border-bottom: 1px solid rgba(0,0,0,0.05);">
-                <img id="sidebarLogo" src="https://venturerush-tech.netlify.app/vrLogo.png" alt="Logo" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; margin: 0 auto 15px auto; display: block; border: 3px solid #0273e61a; box-shadow: 0 4px 10px rgb(15,103,208);">
+                <img id="sidebarLogo" src="vrLogoBlue.png" alt="Logo" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; margin: 0 auto 15px auto; display: block; border: 3px solid #0273e61a; box-shadow: 0 4px 10px rgb(15,103,208);">
                 <div class="restaurant-name" id="appRestaurantName" style="font-size: 20px; margin-bottom: 10px;"></div>
                 <div style="font-size: 14px; color: #555; margin-bottom: 10px;">
                     <span id="staffNameTop" style="font-weight: 600;"></span> | <span id="staffRoleTop" class="role-badge"></span>
@@ -3892,7 +3892,7 @@
     <!-- Sync Loading Overlay -->
     <div id="syncLoadingOverlay" class="modal" style="z-index: 999999; display: none; align-items: center; justify-content: center; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);">
         <div class="loading-popup" style="width: 320px; border: none; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);">
-            <img src="https://venturerush-tech.netlify.app/vrLogo.png" alt="Logo" style="width: 70px; height: 70px; border-radius: 50%; margin-bottom: 10px; border: 3px solid #f0e6ff;">
+            <img src="vrLogoBlue.png" alt="Logo" style="width: 70px; height: 70px; border-radius: 50%; margin-bottom: 10px; border: 3px solid #f0e6ff;">
             <h3 style="color: #1e293b; margin-bottom: 5px; font-weight: 800;">Synchronizing</h3>
             <p style="font-size: 0.85rem; color: #64748b;">Fetching latest restaurant data...</p>
             
@@ -4022,6 +4022,32 @@
             
             errorEl.textContent = '';
             
+            const fields = [
+                { id: 'regOwnerName', label: 'Business Owner' },
+                { id: 'regOwnerPhone', label: 'Contact No.' },
+                { id: 'regSSM', label: 'SSM Number' },
+                { id: 'regOwnerEmail', label: 'Email Address' },
+                { id: 'regRestaurantName', label: 'Restaurant Name' },
+                { id: 'regRestaurantPhone', label: 'Restaurant Phone' },
+                { id: 'regRestaurantAddress', label: 'Business Address' }
+            ];
+
+            // Validate required fields
+            for (const field of fields) {
+                if (!document.getElementById(field.id).value.trim()) {
+                    errorEl.textContent = `${field.label} is required.`;
+                    return;
+                }
+            }
+
+            // Validate email format
+            const email = document.getElementById('regOwnerEmail').value.trim();
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                errorEl.textContent = 'Please enter a valid email address.';
+                return;
+            }
+
             const data = {
                 "ownerName": document.getElementById('regOwnerName').value,
                 "ownerPhone": parseInt(document.getElementById('regOwnerPhone').value),
@@ -4037,13 +4063,15 @@
                 btn.disabled = true;
                 btn.textContent = 'Submitting...';
                 await pb.collection('VRPOS_REGISTER_LIST').create(data);
+                document.getElementById('registrationForm').style.display = 'none';
+                btn.style.display = 'none';
                 successEl.style.display = 'block';
                 setTimeout(() => backToWelcome(), 3000);
             } catch (err) {
                 errorEl.textContent = "Registration failed: " + (err.data?.message || err.message);
             } finally {
                 btn.disabled = false;
-                btn.textContent = 'Submit Registration';
+                btn.textContent = 'Submit Application';
             }
         };
 
@@ -5128,19 +5156,10 @@
                         await checkAttendanceStatus();
                     }
 
-                    const isClockedIn = localStorage.getItem('isClockedIn') === 'true';
-
-                    // Popup for other users joining
-                    if (isShiftActive && !isClockedIn) {
-                        showJoinShiftModal(data);
-                    } else {
-                        closeModal('joinShiftModal');
-                    }
-                    
                     // Handle Shift Ending logic
                     if (wasActive && !isShiftActive) {
-                        if (data.endedById !== currentStaff.id && currentlyClockedIn) {
-                            alert("The shift has been ended by the manager. You have been automatically clocked out and will be logged out.");
+                        if (data.endedById && data.endedById !== currentStaff.id) {
+                            alert("The shift has been ended. You have been automatically clocked out and will be logged out.");
                             logout();
                         } else {
                             // For the manager who ended the shift or staff already manually clocked out, just hide the button
@@ -5148,6 +5167,7 @@
                             const clockOutBtn = document.getElementById('sidebarClockOutBtn');
                             if (clockOutBtn) clockOutBtn.style.display = 'none';
                         }
+                        closeModal('joinShiftModal');
                         shiftStartTime = null;
                     }
                 } else {
@@ -5182,6 +5202,7 @@
                     localStorage.setItem('isClockedIn', 'true');
                     staffClockInTime = latestRecord.clockIn.toDate();
                     document.getElementById('sidebarClockOutBtn').style.display = 'flex';
+                    closeModal('joinShiftModal');
                 } else {
                     // Check if we were just kicked (on the most recent attendance record only)
                     if (latestRecord && latestRecord.kickedBy && localStorage.getItem('isClockedIn') === 'true') {
@@ -5194,6 +5215,11 @@
                     localStorage.removeItem('isClockedIn');
                     staffClockInTime = null;
                     document.getElementById('sidebarClockOutBtn').style.display = 'none';
+
+                    // Show popup if shift is active but this specific staff isn't currently clocked in
+                    if (isShiftActive && activeShiftData) {
+                        showJoinShiftModal(activeShiftData);
+                    }
                 }
                 updateLiveTimers();
             });
