@@ -2004,34 +2004,34 @@
             <div id="registrationForm" class="space-y-4 max-h-[60vh] overflow-y-auto px-1 pr-2">
                 <div>
                     <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Business Owner</label>
-                    <input type="text" id="regOwnerName" placeholder="Full Name" class="w-full px-4 py-3 bg-slate-100 border-transparent rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all">
+                    <input type="text" id="regOwnerName" placeholder="Full Name" class="w-full px-4 py-3 bg-slate-100 border-transparent rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all" required>
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Contact No.</label>
-                        <input type="number" id="regOwnerPhone" placeholder="0123..." class="w-full px-4 py-3 bg-slate-100 border-transparent rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none">
+                        <input type="number" id="regOwnerPhone" placeholder="0123..." class="w-full px-4 py-3 bg-slate-100 border-transparent rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none" required>
                     </div>
                     <div>
                         <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">SSM Number</label>
-                        <input type="text" id="regSSM" placeholder="2024XXXX..." class="w-full px-4 py-3 bg-slate-100 border-transparent rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none">
+                        <input type="text" id="regSSM" placeholder="2024XXXX..." class="w-full px-4 py-3 bg-slate-100 border-transparent rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none" required>
                     </div>
                 </div>
                 <div>
                     <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Email Address</label>
-                    <input type="email" id="regOwnerEmail" placeholder="name@example.com" class="w-full px-4 py-3 bg-slate-100 border-transparent rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none">
+                    <input type="email" id="regOwnerEmail" placeholder="name@example.com" class="w-full px-4 py-3 bg-slate-100 border-transparent rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none" required>
                 </div>
                 <div class="pt-2"><hr class="border-slate-100"></div>
                 <div>
                     <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Restaurant Name</label>
-                    <input type="text" id="regRestaurantName" placeholder="Venture Rush Cafe" class="w-full px-4 py-3 bg-slate-100 border-transparent rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none">
+                    <input type="text" id="regRestaurantName" placeholder="Venture Rush Cafe" class="w-full px-4 py-3 bg-slate-100 border-transparent rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none" required>
                 </div>
                 <div>
                     <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Restaurant Phone</label>
-                    <input type="number" id="regRestaurantPhone" placeholder="Outlet Number" class="w-full px-4 py-3 bg-slate-100 border-transparent rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none">
+                    <input type="number" id="regRestaurantPhone" placeholder="Outlet Number" class="w-full px-4 py-3 bg-slate-100 border-transparent rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none" required>
                 </div>
                 <div>
                     <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Business Address</label>
-                    <textarea id="regRestaurantAddress" rows="2" placeholder="Full operating address..." class="w-full px-4 py-3 bg-slate-100 border-transparent rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none"></textarea>
+                    <textarea id="regRestaurantAddress" rows="2" placeholder="Full operating address..." class="w-full px-4 py-3 bg-slate-100 border-transparent rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none" required></textarea>
                 </div>
             </div>
             
@@ -4020,6 +4020,32 @@
             
             errorEl.textContent = '';
             
+            const fields = [
+                { id: 'regOwnerName', label: 'Business Owner' },
+                { id: 'regOwnerPhone', label: 'Contact No.' },
+                { id: 'regSSM', label: 'SSM Number' },
+                { id: 'regOwnerEmail', label: 'Email Address' },
+                { id: 'regRestaurantName', label: 'Restaurant Name' },
+                { id: 'regRestaurantPhone', label: 'Restaurant Phone' },
+                { id: 'regRestaurantAddress', label: 'Business Address' }
+            ];
+
+            // Validate required fields
+            for (const field of fields) {
+                if (!document.getElementById(field.id).value.trim()) {
+                    errorEl.textContent = `${field.label} is required.`;
+                    return;
+                }
+            }
+
+            // Validate email format
+            const email = document.getElementById('regOwnerEmail').value.trim();
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                errorEl.textContent = 'Please enter a valid email address.';
+                return;
+            }
+
             const data = {
                 "ownerName": document.getElementById('regOwnerName').value,
                 "ownerPhone": parseInt(document.getElementById('regOwnerPhone').value),
@@ -4035,13 +4061,15 @@
                 btn.disabled = true;
                 btn.textContent = 'Submitting...';
                 await pb.collection('VRPOS_REGISTER_LIST').create(data);
+                document.getElementById('registrationForm').style.display = 'none';
+                btn.style.display = 'none';
                 successEl.style.display = 'block';
                 setTimeout(() => backToWelcome(), 3000);
             } catch (err) {
                 errorEl.textContent = "Registration failed: " + (err.data?.message || err.message);
             } finally {
                 btn.disabled = false;
-                btn.textContent = 'Submit Registration';
+                btn.textContent = 'Submit Application';
             }
         };
 
