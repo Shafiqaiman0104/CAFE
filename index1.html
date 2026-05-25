@@ -5156,8 +5156,8 @@
 
                     // Handle Shift Ending logic
                     if (wasActive && !isShiftActive) {
-                        if (data.endedById !== currentStaff.id && currentlyClockedIn) {
-                            alert("The shift has been ended by the manager. You have been automatically clocked out and will be logged out.");
+                        if (data.endedById && data.endedById !== currentStaff.id) {
+                            alert("The shift has been ended. You have been automatically clocked out and will be logged out.");
                             logout();
                         } else {
                             // For the manager who ended the shift or staff already manually clocked out, just hide the button
