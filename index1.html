@@ -5154,15 +5154,6 @@
                         await checkAttendanceStatus();
                     }
 
-                    const isClockedIn = localStorage.getItem('isClockedIn') === 'true';
-
-                    // Popup for other users joining
-                    if (isShiftActive && !isClockedIn) {
-                        showJoinShiftModal(data);
-                    } else {
-                        closeModal('joinShiftModal');
-                    }
-                    
                     // Handle Shift Ending logic
                     if (wasActive && !isShiftActive) {
                         if (data.endedById !== currentStaff.id && currentlyClockedIn) {
@@ -5174,6 +5165,7 @@
                             const clockOutBtn = document.getElementById('sidebarClockOutBtn');
                             if (clockOutBtn) clockOutBtn.style.display = 'none';
                         }
+                        closeModal('joinShiftModal');
                         shiftStartTime = null;
                     }
                 } else {
@@ -5208,6 +5200,7 @@
                     localStorage.setItem('isClockedIn', 'true');
                     staffClockInTime = latestRecord.clockIn.toDate();
                     document.getElementById('sidebarClockOutBtn').style.display = 'flex';
+                    closeModal('joinShiftModal');
                 } else {
                     // Check if we were just kicked (on the most recent attendance record only)
                     if (latestRecord && latestRecord.kickedBy && localStorage.getItem('isClockedIn') === 'true') {
@@ -5220,6 +5213,11 @@
                     localStorage.removeItem('isClockedIn');
                     staffClockInTime = null;
                     document.getElementById('sidebarClockOutBtn').style.display = 'none';
+
+                    // Show popup if shift is active but this specific staff isn't currently clocked in
+                    if (isShiftActive && activeShiftData) {
+                        showJoinShiftModal(activeShiftData);
+                    }
                 }
                 updateLiveTimers();
             });
