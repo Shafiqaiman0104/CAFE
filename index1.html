@@ -3446,6 +3446,7 @@
                 <select id="editOrderStatus">
                     <option value="active">Active</option>
                     <option value="preparing">Preparing</option>
+                    <option value="served">Served</option>
                     <option value="completed">Completed</option>
                     <option value="cancelled">Cancelled</option>
                 </select>
@@ -3456,6 +3457,7 @@
                     <option value="dine-in">Dine-in</option>
                     <option value="takeaway">Takeaway</option>
                     <option value="delivery">Delivery</option>
+                    <option value="mix">Mix</option>
                 </select>
             </div>
             <button class="btn" onclick="saveOrderEdit()">Save Changes</button>
@@ -6887,10 +6889,18 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             
             const orderSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', orderId));
             const tableId = orderSnap.data()?.tableId;
-            if (tableId && (status === 'completed' || status === 'cancelled')) {
-                await updateDoc(doc(db, 'licenses', currentClientId, 'tables', tableId), { status: 'available' });
-            } else if (tableId && status === 'active') {
-                await updateDoc(doc(db, 'licenses', currentClientId, 'tables', tableId), { status: 'occupied' });
+            if (tableId) {
+                if (['active', 'preparing', 'served'].includes(status)) {
+                    await updateDoc(doc(db, 'licenses', currentClientId, 'tables', tableId), { status: 'occupied' });
+                } else if (status === 'completed' || status === 'cancelled') {
+                    const qRemaining = query(collection(db, 'licenses', currentClientId, 'orders'), 
+                                         where('tableId', '==', tableId), 
+                                         where('status', 'in', ['active', 'preparing', 'served']));
+                    const snapRemaining = await getDocs(qRemaining);
+                    if (snapRemaining.empty) {
+                        await updateDoc(doc(db, 'licenses', currentClientId, 'tables', tableId), { status: 'available' });
+                    }
+                }
             }
             
             closeModal('editOrderModal');
