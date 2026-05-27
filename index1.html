@@ -4225,6 +4225,8 @@
                 localStorage.setItem('clientId', currentClientId);
                 localStorage.setItem('restaurantName', record.restaurantName);
                 localStorage.setItem('restaurantAddress', record.restaurantAddress);
+                localStorage.setItem('ssm', record.SSM || '');
+                localStorage.setItem('restaurantPhone', record.restaurantPhone || '');
 
                 // Ensure firebaseConfig is stringified before saving to localStorage
                 const configStr = typeof record.firebaseConfig === 'string' ? record.firebaseConfig : JSON.stringify(record.firebaseConfig);
@@ -10468,12 +10470,15 @@ window.openSearchModalTakeOrder = function() {
                 document.getElementById('receiptLogoUrl').value = data.restaurantLogo || '';
                 document.getElementById('receiptLogoScale').value = data.logoScale || 'normal';
                 document.getElementById('receiptRestName').value = data.restaurantName || localStorage.getItem('restaurantName') || '';
-                document.getElementById('receiptSSM').value = data.ssm || '';
-                document.getElementById('receiptRestPhone').value = data.restaurantPhone || '';
-                document.getElementById('receiptRestAddress').value = data.restaurantAddress || '';
+                document.getElementById('receiptSSM').value = data.ssm || localStorage.getItem('ssm') || '';
+                document.getElementById('receiptRestPhone').value = data.restaurantPhone || localStorage.getItem('restaurantPhone') || '';
+                document.getElementById('receiptRestAddress').value = data.restaurantAddress || localStorage.getItem('restaurantAddress') || '';
                 document.getElementById('receiptFooter').value = data.receiptFooter || 'Thank You\nPlease Come Again';
             } else {
                 document.getElementById('receiptRestName').value = localStorage.getItem('restaurantName') || '';
+                document.getElementById('receiptSSM').value = localStorage.getItem('ssm') || '';
+                document.getElementById('receiptRestPhone').value = localStorage.getItem('restaurantPhone') || '';
+                document.getElementById('receiptRestAddress').value = localStorage.getItem('restaurantAddress') || '';
                 document.getElementById('receiptFooter').value = 'Thank You\nPlease Come Again';
             }
             updateReceiptPreview();
@@ -12470,10 +12475,10 @@ window.openSearchModalTakeOrder = function() {
                     const data = snap.data();
                     localStorage.setItem('restaurantLogo', data.restaurantLogo || '');
                     localStorage.setItem('logoScale', data.logoScale || 'normal');
-                    localStorage.setItem('restaurantName', data.restaurantName || localStorage.getItem('restaurantName'));
-                    localStorage.setItem('ssm', data.ssm || '');
-                    localStorage.setItem('restaurantPhone', data.restaurantPhone || '');
-                    localStorage.setItem('restaurantAddress', data.restaurantAddress || '');
+                    if (data.restaurantName) localStorage.setItem('restaurantName', data.restaurantName);
+                    if (data.ssm) localStorage.setItem('ssm', data.ssm);
+                    if (data.restaurantPhone) localStorage.setItem('restaurantPhone', data.restaurantPhone);
+                    if (data.restaurantAddress) localStorage.setItem('restaurantAddress', data.restaurantAddress);
                     localStorage.setItem('receiptFooter', data.receiptFooter || 'Thank You\nPlease Come Again');
                     
                     document.getElementById('appRestaurantName').textContent = localStorage.getItem('restaurantName');
