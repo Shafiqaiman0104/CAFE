@@ -7806,11 +7806,18 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             }
 
             let filteredTables = activeLocationTakeOrder === 'All' 
-                ? tablesListTakeOrder 
+                ? [...tablesListTakeOrder] 
                 : tablesListTakeOrder.filter(t => t.location === activeLocationTakeOrder);
             
             // Filter out 'counter' from the main grid since it has its own persistent spot
             filteredTables = filteredTables.filter(t => t.id.toLowerCase() !== 'counter');
+
+            // Sort by createdAt (latest at bottom)
+            filteredTables.sort((a, b) => {
+                const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
+                const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
+                return timeA - timeB;
+            });
 
             grid.className = `table-grid-takeorder ${viewModeTakeOrder === 'list' ? 'list-view' : ''}`;
             
@@ -9661,8 +9668,17 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
         };
 
         function getFilteredMenuTakeOrder() {
-            if (activeCategoryTakeOrder === 'All') return menuItemsTakeOrder;
-            return menuItemsTakeOrder.filter(item => item.categoryId === activeCategoryTakeOrder);
+            let filtered = activeCategoryTakeOrder === 'All' 
+                ? [...menuItemsTakeOrder] 
+                : menuItemsTakeOrder.filter(item => item.categoryId === activeCategoryTakeOrder);
+            
+            // Sort by createdAt (latest at bottom)
+            filtered.sort((a, b) => {
+                const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
+                const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
+                return timeA - timeB;
+            });
+            return filtered;
         }
 
         function renderMenuGridTakeOrder() {
