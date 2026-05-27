@@ -6871,28 +6871,67 @@
 
         // ========== DISCOUNTS ==========
         function loadDiscounts() {
-             const ref = collection(db, 'licenses', currentClientId, 'discounts');
-            onSnapshot(ref, (snapshot) => {
+            if (unsubscribers['discounts']) unsubscribers['discounts']();
+            const ref = collection(db, 'licenses', currentClientId, 'discounts');
+            const q = query(ref, orderBy('createdAt', 'desc'));
+            unsubscribers['discounts'] = onSnapshot(q, (snapshot) => {
                 allDiscounts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 const container = document.getElementById('discountsList');
-                let html = '';
+                
+                let html = `
+                    <div style="overflow-x: auto; background: white; border-radius: 20px; padding: 15px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                            <thead>
+                                <tr style="border-bottom: 2px solid #f1f5f9; text-align: left; color: #64748b;">
+                                    <th style="padding: 12px 10px;">Name</th>
+                                    <th style="padding: 12px 10px;">Type</th>
+                                    <th style="padding: 12px 10px;">Value</th>
+                                    <th style="padding: 12px 10px;">Active</th>
+                                    <th style="padding: 12px 10px; text-align: right;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>`;
+
                 snapshot.forEach(doc => {
                     const d = doc.data();
+                    const isActive = d.active === true;
+                    const valueDisplay = d.type === 'percentage' ? `${d.value}%` : `RM ${parseFloat(d.value).toFixed(2)}`;
+                    const typeDisplay = d.type.charAt(0).toUpperCase() + d.type.slice(1);
+                    
                     let validityHtml = '';
                     if (d.startTime || d.endTime) {
-                        const start = d.startTime ? d.startTime.toDate().toLocaleString() : 'Anytime';
-                        const end = d.endTime ? d.endTime.toDate().toLocaleString() : 'Forever';
-                        validityHtml = `<br><small style="color:#64748b; font-size: 11px;">Valid: ${start} to ${end}</small>`;
+                        const start = d.startTime ? d.startTime.toDate().toLocaleString([], {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'}) : 'Any';
+                        const end = d.endTime ? d.endTime.toDate().toLocaleString([], {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'}) : 'Any';
+                        validityHtml = `<div style="font-size: 10px; color: #94a3b8; margin-top: 2px;">Valid: ${start} - ${end}</div>`;
                     }
-                    html += `<div style="padding:10px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;">
-                        <div><b>${d.name}</b> - ${d.type}: ${d.value}${d.type==='percentage'?'%':' RM'} ${d.active ? '✅' : '❌'}${validityHtml}</div>
-                        <div class="action-buttons">
-                            <button class="btn-edit" onclick="editDiscount('${doc.id}')">Edit</button>
-                            <button class="btn-delete" onclick="deleteDiscount('${doc.id}')">Delete</button>
-                        </div>
-                    </div>`;
+
+                    html += `
+                        <tr style="border-bottom: 1px solid #f1f5f9;">
+                            <td style="padding: 12px 10px; font-weight: 600; color: #1e293b;">
+                                ${d.name}
+                                ${validityHtml}
+                            </td>
+                            <td style="padding: 12px 10px; color: #64748b;">${typeDisplay}</td>
+                            <td style="padding: 12px 10px; font-weight: 700; color: #764ba2;">${valueDisplay}</td>
+                            <td style="padding: 12px 10px;">
+                                <span class="status-badge ${isActive ? 'status-completed' : 'status-cancelled'}" style="font-size: 10px;">${isActive ? 'Active' : 'Inactive'}</span>
+                            </td>
+                            <td style="padding: 12px 10px; text-align: right;">
+                                <div class="action-buttons" style="justify-content: flex-end;">
+                                    <button class="btn-edit" style="padding: 6px 12px;" onclick="editDiscount('${doc.id}')"><i class="fas fa-edit"></i></button>
+                                    <button class="btn-delete" style="padding: 6px 12px;" onclick="deleteDiscount('${doc.id}')"><i class="fas fa-trash"></i></button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
                 });
-                container.innerHTML = html || '<div class="loading">No discounts</div>';
+                
+                if (snapshot.empty) {
+                    html += '<tr><td colspan="5" style="text-align:center; padding:20px; color:#666;">No discounts found.</td></tr>';
+                }
+
+                html += `</tbody></table></div>`;
+                container.innerHTML = html;
             });
         }
 
