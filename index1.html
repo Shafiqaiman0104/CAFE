@@ -2341,6 +2341,9 @@
                                     <th style="padding: 10px;">Staff</th>
                                     <th style="padding: 10px;">Total Orders</th>
                                     <th style="padding: 10px;">Total Cancelled</th>
+                                    <th style="padding: 10px;">Total Failed</th>
+                                    <th style="padding: 10px;">Total Refunded</th>
+                                    <th style="padding: 10px;">Total Completed</th>
                                     <th style="padding: 10px;">Total Transaction</th>
                                     <th style="padding: 10px;">Cash</th>
                                     <th style="padding: 10px;">E-Wallet</th>
@@ -5832,12 +5835,34 @@
             
             let cashTotal = 0, ewalletTotal = 0, cardTotal = 0;
             let totalTransactions = transSnap.size;
+            let transTotalAmt = 0;
+            let transCompletedCount = 0;
+            let transRefundedCount = 0;
+            let transFailedCount = 0;
+            let transCompletedAmt = 0;
+            let transRefundedAmt = 0;
+            let transFailedAmt = 0;
+
             transSnap.forEach(d => {
                 const t = d.data();
                 const amt = parseFloat(t.amount) || 0;
-                if (t.paymentMethod === 'cash') cashTotal += amt;
-                else if (t.paymentMethod === 'ewallet') ewalletTotal += amt;
-                else if (t.paymentMethod === 'card') cardTotal += amt;
+                transTotalAmt += amt;
+
+                if (t.status === 'completed') {
+                    transCompletedCount++;
+                    transCompletedAmt += amt;
+                    if (t.paymentMethod === 'cash') cashTotal += amt;
+                    else if (t.paymentMethod === 'ewallet') ewalletTotal += amt;
+                    else if (t.paymentMethod === 'card') cardTotal += amt;
+                } else if (t.status === 'refunded') {
+                    transRefundedCount++;
+                    transRefundedAmt += amt;
+                    // Deduct from cash total if it was a cash refund to keep drawer tally accurate
+                    if (t.paymentMethod === 'cash') cashTotal -= amt;
+                } else if (t.status === 'failed') {
+                    transFailedCount++;
+                    transFailedAmt += amt;
+                }
             });
 
             const startFloat = parseFloat(shiftData.startFloat) || 0;
@@ -5873,7 +5898,14 @@
                 totalOrders: totalCompletedCount,
                 totalCancelled: totalCancelledCount,
                 totalTransactions: totalTransactions,
-                profit: cashTotal + ewalletTotal + cardTotal
+                transCompletedCount: transCompletedCount,
+                transRefundedCount: transRefundedCount,
+                transFailedCount: transFailedCount,
+                transTotalAmt: transTotalAmt,
+                transCompletedAmt: transCompletedAmt,
+                transRefundedAmt: transRefundedAmt,
+                transFailedAmt: transFailedAmt,
+                profit: transTotalAmt - transFailedAmt - transRefundedAmt
             };
         };
 
@@ -5947,6 +5979,9 @@
                         <td title="${staffNames}">${staffNames}</td>
                         <td>${s.totalOrders || 0}</td>
                         <td style="color:${(s.totalCancelled || 0) > 0 ? '#e53e3e' : '#64748b'}">${s.totalCancelled || 0}</td>
+                        <td>${s.transFailedCount || 0}</td>
+                        <td>${s.transRefundedCount || 0}</td>
+                        <td>${s.transCompletedCount || 0}</td>
                         <td>${s.totalTransactions || 0}</td>
                         <td>RM ${s.cashTotal.toFixed(2)}</td>
                         <td>RM ${s.ewalletTotal.toFixed(2)}</td>
@@ -6002,7 +6037,14 @@
             }
 
             if (tab === 'summary') {
-                const total = parseFloat(s.profit) - parseFloat(s.loss);
+                const totalTransAmt = parseFloat(s.transTotalAmt || 0);
+                const compAmt = parseFloat(s.transCompletedAmt || 0);
+                const refAmt = parseFloat(s.transRefundedAmt || 0);
+                const failAmt = parseFloat(s.transFailedAmt || 0);
+                const netProfit = parseFloat(s.profit || 0);
+                const loss = parseFloat(s.loss || 0);
+                const netTotal = netProfit - loss;
+                
                 const staffNames = Array.isArray(s.staffNames) ? s.staffNames.join(', ') : s.startedBy;
                 container.innerHTML = `
                     <div style="background: #f8fafc; padding: 20px; border-radius: 16px; font-size: 0.9rem; line-height: 1.6;">
@@ -6014,15 +6056,22 @@
                         <p><strong>Staff Involved:</strong> ${staffNames}</p>
                         <p><strong>Total Orders (Completed):</strong> <span style="color:#38a169;">${s.totalOrders || 0}</span></p>
                         <p><strong>Total Cancelled:</strong> <span style="color:#e53e3e;">${s.totalCancelled || 0}</span></p>
+                        <p><strong>Total Failed (Trans):</strong> <span style="color:#ed8936;">${s.transFailedCount || 0}</span></p>
+                        <p><strong>Total Refunded (Trans):</strong> <span style="color:#e53e3e;">${s.transRefundedCount || 0}</span></p>
+                        <p><strong>Total Completed (Trans):</strong> <span style="color:#38a169;">${s.transCompletedCount || 0}</span></p>
                         <p><strong>Total Transaction:</strong> <span style="color:#764ba2;">${s.totalTransactions || 0}</span></p>
                         <hr style="margin: 10px 0; border: none; border-top: 1px dashed #cbd5e0;">
                         <div style="display: flex; justify-content: space-between;"><span>Opening Float:</span> <b>RM ${parseFloat(s.startFloat).toFixed(2)}</b></div>
-                        <div style="display: flex; justify-content: space-between;"><span>Cash Sales:</span> <b>RM ${s.cashTotal.toFixed(2)}</b></div>
+                        <div style="display: flex; justify-content: space-between;"><span>Cash Sales (In Drawer):</span> <b>RM ${parseFloat(s.cashTotal || 0).toFixed(2)}</b></div>
                         <div style="display: flex; justify-content: space-between;"><span>E-Wallet Sales:</span> <b>RM ${s.ewalletTotal.toFixed(2)}</b></div>
                         <div style="display: flex; justify-content: space-between;"><span>Card Sales:</span> <b>RM ${s.cardTotal.toFixed(2)}</b></div>
-                        <div style="display: flex; justify-content: space-between; margin-top: 5px; color: #764ba2; font-weight: bold;"><span>Total Profit:</span> <span>RM ${s.profit.toFixed(2)}</span></div>
-                        <div style="display: flex; justify-content: space-between; color: #e53e3e;"><span>Loss/Shortage:</span> <span>RM ${s.loss}</span></div>
-                        <div style="display: flex; justify-content: space-between; font-size: 1.1rem; font-weight: 800; margin-top: 10px; padding-top: 10px; border-top: 2px solid #eee;"><span>Net Total:</span> <span>RM ${total.toFixed(2)}</span></div>
+                        <hr style="margin: 10px 0; border: none; border-top: 1px dashed #cbd5e0;">
+                        <div style="display: flex; justify-content: space-between; color: #475569;"><span>Total Gross Trans:</span> <b>RM ${totalTransAmt.toFixed(2)}</b></div>
+                        <div style="display: flex; justify-content: space-between; color: #ed8936;"><span>Failed Amount:</span> <b>- RM ${failAmt.toFixed(2)}</b></div>
+                        <div style="display: flex; justify-content: space-between; color: #e53e3e;"><span>Refunded Amount:</span> <b>- RM ${refAmt.toFixed(2)}</b></div>
+                        <div style="display: flex; justify-content: space-between; margin-top: 5px; color: #764ba2; font-weight: bold;"><span>Total Profit:</span> <span>RM ${netProfit.toFixed(2)}</span></div>
+                        <div style="display: flex; justify-content: space-between; color: #e53e3e;"><span>Loss/Shortage:</span> <span>RM ${loss.toFixed(2)}</span></div>
+                        <div style="display: flex; justify-content: space-between; font-size: 1.1rem; font-weight: 800; margin-top: 10px; padding-top: 10px; border-top: 2px solid #eee;"><span>Net Total:</span> <span>RM ${netTotal.toFixed(2)}</span></div>
                     </div>
                 `;
             } else if (tab === 'cashFloat') {
@@ -6118,6 +6167,7 @@
                             <tr style="text-align:left; border-bottom:2px solid #f1f5f9; color: #64748b;">
                                 <th style="padding:10px;">Transaction Id</th>
                                 <th style="padding:10px;">Amount</th>
+                                <th style="padding:10px;">Status</th>
                                 <th style="padding:10px;">Action</th>
                             </tr>
                         </thead>
@@ -6128,10 +6178,15 @@
                 } else {
                     transSnap.forEach(tDoc => {
                         const t = tDoc.data();
+                        let rowColor = "inherit";
+                        if (t.status === 'refunded') rowColor = "#e53e3e"; // Red
+                        else if (t.status === 'failed') rowColor = "#ed8936"; // Orange
+
                         tableHtml += `
-                            <tr style="border-bottom: 1px solid #f1f5f9;">
+                            <tr style="border-bottom: 1px solid #f1f5f9; color: ${rowColor};">
                                 <td style="padding:10px;">#${tDoc.id.slice(0,8)}</td>
                                 <td style="padding:10px;">RM ${parseFloat(t.amount).toFixed(2)}</td>
+                                <td style="padding:10px; font-weight:bold; text-transform:uppercase;">${t.status || 'completed'}</td>
                                 <td style="padding:10px;"><button class="btn-view" style="padding: 5px 10px; font-size: 0.7rem;" onclick="viewTransactionDetails('${tDoc.id}')">View Transaction</button></td>
                             </tr>`;
                     });
@@ -6205,6 +6260,7 @@
             content.innerHTML = `
                 <div style="background: #f8fafc; padding: 20px; border-radius: 16px; font-size: 0.95rem; line-height: 1.6;">
                     <p><strong>Transaction Id:</strong> ${transId}</p>
+                    <p><strong>Status:</strong> <span style="font-weight:bold; text-transform:uppercase;">${t.status || 'completed'}</span></p>
                     <p><strong>Order No:</strong> ${orderSeqs}</p>
                     <p><strong>Order ID:</strong> ${orderNumbers}</p>
                     <p><strong>Date:</strong> ${t.createdAt?.toDate().toLocaleString() || 'N/A'}</p>
