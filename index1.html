@@ -9770,7 +9770,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                 const reqText = variant.required ? ' <span style="color:#e53e3e;">* (Required)</span>' : '';
                 html += `<div class="variant-section" data-variant-id="${v.id}" data-variant-name="${variant.name}"><label><strong>${variant.name}</strong>${reqText}</label>`;
                 const optionsRef = collection(db, 'licenses', currentClientId, 'global_variants', v.id, 'options');
-                const optionsSnap = await getDocs(optionsRef);
+                const optionsSnap = await getDocs(query(optionsRef, orderBy('createdAt', 'asc')));
                 optionsSnap.forEach(opt => {
                     const optData = opt.data();
                     html += `<div class="variant-option-takeorder" data-variant-id="${v.id}" data-option-id="${opt.id}" data-option-name="${optData.name}" data-price="${optData.priceAdjustment || 0}" onclick="selectVariantTakeOrder(event, '${v.id}', '${variant.name}', '${opt.id}', '${optData.name}', ${optData.priceAdjustment || 0})">
@@ -9790,7 +9790,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                 const reqText = (parseInt(modifier.minSelections) > 0) ? ' <span style="color:#e53e3e;">* (Required)</span>' : '';
                 html += `<div class="modifier-section" data-modifier-id="${m.id}" data-modifier-name="${modifier.name}" data-max="${modifier.maxSelections || 0}"><label><strong>${modifier.name}</strong>${selectionInfo}${reqText}</label>`;
                 const optionsRef = collection(db, 'licenses', currentClientId, 'global_modifiers', m.id, 'options');
-                const optionsSnap = await getDocs(optionsRef);
+                const optionsSnap = await getDocs(query(optionsRef, orderBy('createdAt', 'asc')));
                 optionsSnap.forEach(opt => {
                     const optData = opt.data();
                     html += `<div class="addon-option-takeorder" data-modifier-id="${m.id}" data-option-id="${opt.id}" data-option-name="${optData.name}" data-price="${optData.price}" onclick="toggleModifierTakeOrder(event, '${m.id}', '${modifier.name}', '${opt.id}', '${optData.name}', ${optData.price})">
