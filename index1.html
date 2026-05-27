@@ -6248,8 +6248,10 @@
                             const it = itDoc.data();
                             if (it.status !== 'cancelled') {
                                 const name = it.name;
-                                const qty = parseFloat(it.qty) || 0;
-                                itemCounts[name] = (itemCounts[name] || 0) + qty;
+                                // For items sold by measurement (e.g., weight), we count the number of orders (1 per item entry)
+                                // For items sold by unit, we sum the total quantities ordered.
+                                const increment = (it.soldBy === 'measurement') ? 1 : (parseFloat(it.qty) || 0);
+                                itemCounts[name] = (itemCounts[name] || 0) + increment;
                             }
                         });
                     });
