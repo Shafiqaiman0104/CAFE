@@ -2426,6 +2426,14 @@
                         <span class="section-title">Global Modifiers</span>
                         <button class="btn-icon" onclick="showAddGlobalModifierModal()">+</button>
                     </div>
+
+                    <!-- Filters Bar -->
+                    <div style="margin-bottom: 20px;">
+                        <input type="text" id="modifierSearchInputTab" placeholder="Search modifier name..." 
+                               style="width: 100%; padding: 12px; border-radius: 14px; border: 2px solid #e2e8f0; font-size: 0.9rem;"
+                               oninput="renderGlobalModifiersList()">
+                    </div>
+
                     <div id="globalModifiersList"></div>
                 </div>
             </div>
@@ -4894,33 +4902,59 @@
         }
 
         function loadGlobalModifiersPage() {
+            if (unsubscribers['globalModifiers']) unsubscribers['globalModifiers']();
             const ref = collection(db, 'licenses', currentClientId, 'global_modifiers');
-            onSnapshot(ref, async (snapshot) => {
-                const container = document.getElementById('globalModifiersList');
-                allGlobalModifiers = [];
-                let html = '';
-                
-                for (const modDoc of snapshot.docs) {
-                    const mod = modDoc.data();
-                    allGlobalModifiers.push({ id: modDoc.id, ...mod });
-                    
-                    const optionsRef = collection(db, 'licenses', currentClientId, 'global_modifiers', modDoc.id, 'options');
-                    const optionsSnap = await getDocs(optionsRef);
-                    
-                    html += `<div style="background:#f7fafc;padding:10px;border-radius:8px;margin-bottom:10px;">
-                        <b>${mod.name}</b> (Min: ${mod.minSelections}, Max: ${mod.maxSelections})<br>
-                        Options: `;
-                    optionsSnap.forEach(opt => {
-                        html += `${opt.data().name} (RM ${opt.data().price}) `;
-                    });
-                    html += `<div class="action-buttons" style="margin-top:5px;">
-                        <button class="btn-edit" onclick="editGlobalModifier('${modDoc.id}')">Edit</button>
-                        <button class="btn-delete" onclick="deleteGlobalModifier('${modDoc.id}')">Delete</button>
-                    </div></div>`;
-                }
-                container.innerHTML = html || '<div class="loading">No global modifiers</div>';
+            const q = query(ref, orderBy('createdAt', 'desc'));
+            unsubscribers['globalModifiers'] = onSnapshot(q, (snapshot) => {
+                allGlobalModifiers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderGlobalModifiersList();
             });
         }
+
+        window.renderGlobalModifiersList = function() {
+            const searchTerm = document.getElementById('modifierSearchInputTab').value.toLowerCase();
+            const container = document.getElementById('globalModifiersList');
+
+            let filtered = allGlobalModifiers.filter(mod => {
+                return !searchTerm || mod.name.toLowerCase().includes(searchTerm);
+            });
+
+            let html = `
+                <div style="overflow-x: auto; background: white; border-radius: 20px; padding: 15px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                        <thead>
+                            <tr style="border-bottom: 2px solid #f1f5f9; text-align: left; color: #64748b;">
+                                <th style="padding: 12px 10px;">Name</th>
+                                <th style="padding: 12px 10px;">Min</th>
+                                <th style="padding: 12px 10px;">Max</th>
+                                <th style="padding: 12px 10px; text-align: right;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+
+            filtered.forEach(mod => {
+                html += `
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 12px 10px; font-weight: 600; color: #1e293b;">${mod.name}</td>
+                        <td style="padding: 12px 10px; color: #64748b; font-weight: 600;">${mod.minSelections || 0}</td>
+                        <td style="padding: 12px 10px; color: #64748b; font-weight: 600;">${mod.maxSelections || '∞'}</td>
+                        <td style="padding: 12px 10px; text-align: right;">
+                            <div class="action-buttons" style="justify-content: flex-end;">
+                                <button class="btn-edit" style="padding: 6px 12px;" onclick="editGlobalModifier('${mod.id}')"><i class="fas fa-edit"></i></button>
+                                <button class="btn-delete" style="padding: 6px 12px;" onclick="deleteGlobalModifier('${mod.id}')"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            if (filtered.length === 0) {
+                html += '<tr><td colspan="4" style="text-align:center; padding:20px; color:#666;">No modifiers found matching search.</td></tr>';
+            }
+
+            html += `</tbody></table></div>`;
+            container.innerHTML = html;
+        };
 
         window.showAddGlobalModifierModal = function() {
             document.getElementById('globalModifierModalTitle').textContent = 'Add Global Modifier';
@@ -13096,6 +13130,7 @@ window.openSearchModalTakeOrder = function() {
         window.toggleActiveOrdersSort = toggleActiveOrdersSort;
         window.renderMenuItemsList = renderMenuItemsList;
         window.renderGlobalVariantsList = renderGlobalVariantsList;
+        window.renderGlobalModifiersList = renderGlobalModifiersList;
         window.toggleActiveOrdersSearch = toggleActiveOrdersSearch;
         window.handleActiveOrdersSearchInput = handleActiveOrdersSearchInput;
         window.setVoidModeTakeOrder = setVoidModeTakeOrder;
