@@ -5088,8 +5088,8 @@
             
             tempSelectedVariants = [];
             tempSelectedModifiers = [];
-            updateMenuItemVariantsDisplay();
-            updateMenuItemModifiersDisplay();
+            await updateMenuItemVariantsDisplay();
+            await updateMenuItemModifiersDisplay();
             
             const select = document.getElementById('menuItemCategory');
             const snap = await getDocs(collection(db, 'licenses', currentClientId, 'menu_categories'));
@@ -5121,8 +5121,8 @@
             
             tempSelectedVariants = item.variants || [];
             tempSelectedModifiers = item.modifiers || [];
-            updateMenuItemVariantsDisplay();
-            updateMenuItemModifiersDisplay();
+            await updateMenuItemVariantsDisplay();
+            await updateMenuItemModifiersDisplay();
             
             const select = document.getElementById('menuItemCategory');
             const snap = await getDocs(collection(db, 'licenses', currentClientId, 'menu_categories'));
@@ -5168,7 +5168,7 @@
             document.getElementById('variantSelectorModal').style.display = 'flex';
         };
 
-        window.toggleVariantSelection = function(variantId) {
+        window.toggleVariantSelection = async function(variantId) {
             const existing = tempSelectedVariants.find(v => v.id === variantId);
             if (existing) {
                 tempSelectedVariants = tempSelectedVariants.filter(v => v.id !== variantId);
@@ -5176,7 +5176,7 @@
                 const variant = allGlobalVariants.find(v => v.id === variantId);
                 if (variant) tempSelectedVariants.push({ id: variantId, name: variant.name });
             }
-            updateMenuItemVariantsDisplay();
+            await updateMenuItemVariantsDisplay();
             showVariantSelector();
         };
 
@@ -5193,7 +5193,7 @@
             document.getElementById('modifierSelectorModal').style.display = 'flex';
         };
 
-        window.toggleModifierSelection = function(modifierId) {
+        window.toggleModifierSelection = async function(modifierId) {
             const existing = tempSelectedModifiers.find(m => m.id === modifierId);
             if (existing) {
                 tempSelectedModifiers = tempSelectedModifiers.filter(m => m.id !== modifierId);
@@ -5201,40 +5201,100 @@
                 const modifier = allGlobalModifiers.find(m => m.id === modifierId);
                 if (modifier) tempSelectedModifiers.push({ id: modifierId, name: modifier.name });
             }
-            updateMenuItemModifiersDisplay();
+            await updateMenuItemModifiersDisplay();
             showModifierSelector();
         };
 
-        function updateMenuItemVariantsDisplay() {
+        async function updateMenuItemVariantsDisplay() {
             const container = document.getElementById('menuItemVariantsList');
+            if (!tempSelectedVariants.length) {
+                container.innerHTML = '<span style="color:#999; font-size: 0.85rem;">No variants selected</span>';
+                return;
+            }
+            
+            container.innerHTML = '<div style="padding: 10px; font-size: 0.8rem; color: #764ba2; font-weight: 600;"><i class="fas fa-spinner fa-spin mr-2"></i> Loading details...</div>';
+            
             let html = '';
-            tempSelectedVariants.forEach(v => {
-                html += `<span class="selected-variant" style="display:inline-block;margin:3px;">${v.name} 
-                    <button type="button" onclick="removeTempVariant('${v.id}')" style="background:none;border:none;cursor:pointer;">✕</button>
-                </span>`;
-            });
-            container.innerHTML = html || '<span style="color:#999;">No variants selected</span>';
+            for (const v of tempSelectedVariants) {
+                const variantInfo = allGlobalVariants.find(gv => gv.id === v.id) || { required: true, multiSelect: false };
+                const optionsRef = collection(db, 'licenses', currentClientId, 'global_variants', v.id, 'options');
+                const optionsSnap = await getDocs(optionsRef);
+                const options = optionsSnap.docs.map(d => d.data());
+                
+                html += `
+                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 12px; margin-bottom: 10px;">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                            <div>
+                                <div style="font-weight: 700; color: #1e293b; font-size: 0.85rem;">${v.name}</div>
+                                <div style="display: flex; gap: 6px; margin-top: 5px;">
+                                    <span style="font-size: 9px; background: ${variantInfo.required ? '#fee2e2' : '#f1f5f9'}; color: ${variantInfo.required ? '#ef4444' : '#64748b'}; padding: 2px 6px; border-radius: 6px; font-weight: 800; text-transform: uppercase; border: 1px solid ${variantInfo.required ? '#fecaca' : '#e2e8f0'};">
+                                        ${variantInfo.required ? 'Required' : 'Optional'}
+                                    </span>
+                                    <span style="font-size: 9px; background: #e0f2fe; color: #0369a1; padding: 2px 6px; border-radius: 6px; font-weight: 800; text-transform: uppercase; border: 1px solid #bae6fd;">
+                                        ${variantInfo.multiSelect ? 'Multi-Select' : 'Single-Select'}
+                                    </span>
+                                </div>
+                            </div>
+                            <button type="button" onclick="removeTempVariant('${v.id}')" style="background:#fee2e2; border:none; color:#ef4444; width:26px; height:26px; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size: 10px;"><i class="fas fa-trash-alt"></i></button>
+                        </div>
+                        <div style="font-size: 0.7rem; color: #64748b; background: white; padding: 8px; border-radius: 10px; border: 1px dashed #cbd5e0; line-height: 1.4;">
+                            <strong style="color: #475569;">Options:</strong> ${options.map(opt => `${opt.name} (RM ${parseFloat(opt.priceAdjustment || 0).toFixed(2)})`).join(', ') || 'No options defined'}
+                        </div>
+                    </div>
+                `;
+            }
+            container.innerHTML = html;
         }
 
-        function updateMenuItemModifiersDisplay() {
+        async function updateMenuItemModifiersDisplay() {
             const container = document.getElementById('menuItemModifiersList');
+            if (!tempSelectedModifiers.length) {
+                container.innerHTML = '<span style="color:#999; font-size: 0.85rem;">No modifiers selected</span>';
+                return;
+            }
+            
+            container.innerHTML = '<div style="padding: 10px; font-size: 0.8rem; color: #764ba2; font-weight: 600;"><i class="fas fa-spinner fa-spin mr-2"></i> Loading details...</div>';
+            
             let html = '';
-            tempSelectedModifiers.forEach(m => {
-                html += `<span class="selected-modifier" style="display:inline-block;margin:3px;">${m.name}
-                    <button type="button" onclick="removeTempModifier('${m.id}')" style="background:none;border:none;cursor:pointer;">✕</button>
-                </span>`;
-            });
-            container.innerHTML = html || '<span style="color:#999;">No modifiers selected</span>';
+            for (const m of tempSelectedModifiers) {
+                const modInfo = allGlobalModifiers.find(gm => gm.id === m.id) || { minSelections: 0, maxSelections: 3 };
+                const optionsRef = collection(db, 'licenses', currentClientId, 'global_modifiers', m.id, 'options');
+                const optionsSnap = await getDocs(optionsRef);
+                const options = optionsSnap.docs.map(d => d.data());
+
+                html += `
+                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 12px; margin-bottom: 10px;">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                            <div>
+                                <div style="font-weight: 700; color: #1e293b; font-size: 0.85rem;">${m.name}</div>
+                                <div style="display: flex; gap: 6px; margin-top: 5px;">
+                                    <span style="font-size: 9px; background: #f0fdf4; color: #166534; padding: 2px 6px; border-radius: 6px; font-weight: 800; text-transform: uppercase; border: 1px solid #bbf7d0;">
+                                        Min: ${modInfo.minSelections || 0}
+                                    </span>
+                                    <span style="font-size: 9px; background: #fff7ed; color: #9a3412; padding: 2px 6px; border-radius: 6px; font-weight: 800; text-transform: uppercase; border: 1px solid #ffedd5;">
+                                        Max: ${modInfo.maxSelections || '∞'}
+                                    </span>
+                                </div>
+                            </div>
+                            <button type="button" onclick="removeTempModifier('${m.id}')" style="background:#fee2e2; border:none; color:#ef4444; width:26px; height:26px; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size: 10px;"><i class="fas fa-trash-alt"></i></button>
+                        </div>
+                        <div style="font-size: 0.7rem; color: #64748b; background: white; padding: 8px; border-radius: 10px; border: 1px dashed #cbd5e0; line-height: 1.4;">
+                            <strong style="color: #475569;">Options:</strong> ${options.map(opt => `${opt.name} (RM ${parseFloat(opt.price || 0).toFixed(2)})`).join(', ') || 'No options defined'}
+                        </div>
+                    </div>
+                `;
+            }
+            container.innerHTML = html;
         }
 
-        window.removeTempVariant = function(variantId) {
+        window.removeTempVariant = async function(variantId) {
             tempSelectedVariants = tempSelectedVariants.filter(v => v.id !== variantId);
-            updateMenuItemVariantsDisplay();
+            await updateMenuItemVariantsDisplay();
         };
 
-        window.removeTempModifier = function(modifierId) {
+        window.removeTempModifier = async function(modifierId) {
             tempSelectedModifiers = tempSelectedModifiers.filter(m => m.id !== modifierId);
-            updateMenuItemModifiersDisplay();
+            await updateMenuItemModifiersDisplay();
         };
 
         window.filterVariants = function() {
