@@ -2863,10 +2863,6 @@
                 <input type="text" id="menuItemName">
             </div>
             <div class="form-group">
-                <label>Description</label>
-                <textarea id="menuItemDesc"></textarea>
-            </div>
-            <div class="form-group">
                 <label>Image URL</label>
                 <input type="text" id="menuItemImage" placeholder="https://example.com/image.jpg">
             </div>
@@ -5026,7 +5022,6 @@
             document.getElementById('menuItemModalTitle').textContent = 'Add Menu Item';
             document.getElementById('editingMenuItemId').value = '';
             document.getElementById('menuItemName').value = '';
-            document.getElementById('menuItemDesc').value = '';
             document.getElementById('menuItemImage').value = '';
             document.getElementById('menuItemPrice').value = '';
             document.querySelectorAll('input[name="soldBy"]').forEach(r => r.checked = r.value === 'item');
@@ -5060,7 +5055,6 @@
             document.getElementById('menuItemModalTitle').textContent = 'Edit Menu Item';
             document.getElementById('editingMenuItemId').value = id;
             document.getElementById('menuItemName').value = item.name || '';
-            document.getElementById('menuItemDesc').value = item.description || '';
             document.getElementById('menuItemImage').value = item.image || '';
             document.getElementById('menuItemPrice').value = item.price || '';
             document.querySelectorAll('input[name="soldBy"]').forEach(r => r.checked = r.value === (item.soldBy || 'item'));
@@ -5219,7 +5213,6 @@
             const id = document.getElementById('editingMenuItemId').value;
             const data = {
                 name: document.getElementById('menuItemName').value,
-                description: document.getElementById('menuItemDesc').value,
                 image: document.getElementById('menuItemImage').value,
                 soldBy: document.querySelector('input[name="soldBy"]:checked').value,
                 unit: document.getElementById('menuItemUnit').value,
