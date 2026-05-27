@@ -6469,19 +6469,42 @@
         // ========== CATEGORIES ==========
         function loadCategories() {
             const ref = collection(db, 'licenses', currentClientId, 'menu_categories');
-            onSnapshot(ref, (snapshot) => {
+            const q = query(ref, orderBy('createdAt', 'desc'));
+            onSnapshot(q, (snapshot) => {
                 const container = document.getElementById('categoriesList');
-                let html = '';
+                
+                let html = `
+                    <div style="overflow-x: auto; background: white; border-radius: 20px; padding: 15px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                            <thead>
+                                <tr style="border-bottom: 2px solid #f1f5f9; text-align: left; color: #64748b;">
+                                    <th style="padding: 12px 10px;">Name</th>
+                                    <th style="padding: 12px 10px; text-align: right;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>`;
+
                 snapshot.forEach(doc => {
-                    html += `<div style="padding:10px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;">
-                        ${doc.data().name}
-                        <div class="action-buttons">
-                            <button class="btn-edit" onclick="editCategory('${doc.id}')">Edit</button>
-                            <button class="btn-delete" onclick="deleteCategory('${doc.id}')">Delete</button>
-                        </div>
-                    </div>`;
+                    const data = doc.data();
+                    html += `
+                        <tr style="border-bottom: 1px solid #f1f5f9;">
+                            <td style="padding: 12px 10px; font-weight: 600; color: #1e293b;">${data.name}</td>
+                            <td style="padding: 12px 10px; text-align: right;">
+                                <div class="action-buttons" style="justify-content: flex-end;">
+                                    <button class="btn-edit" style="padding: 6px 12px;" onclick="editCategory('${doc.id}')"><i class="fas fa-edit"></i></button>
+                                    <button class="btn-delete" style="padding: 6px 12px;" onclick="deleteCategory('${doc.id}')"><i class="fas fa-trash"></i></button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
                 });
-                container.innerHTML = html || '<div class="loading">No categories</div>';
+                
+                if (snapshot.empty) {
+                    html += '<tr><td colspan="2" style="text-align:center; padding:20px; color:#666;">No categories found.</td></tr>';
+                }
+
+                html += `</tbody></table></div>`;
+                container.innerHTML = html;
             });
         }
 
