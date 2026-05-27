@@ -4708,30 +4708,48 @@
 
         function loadGlobalVariantsPage() {
             const ref = collection(db, 'licenses', currentClientId, 'global_variants');
-            onSnapshot(ref, async (snapshot) => {
+            const q = query(ref, orderBy('createdAt', 'desc'));
+            onSnapshot(q, (snapshot) => {
                 const container = document.getElementById('globalVariantsList');
-                allGlobalVariants = [];
-                let html = '';
+                allGlobalVariants = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+                let html = `
+                    <div style="overflow-x: auto; background: white; border-radius: 20px; padding: 15px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                            <thead>
+                                <tr style="border-bottom: 2px solid #f1f5f9; text-align: left; color: #64748b;">
+                                    <th style="padding: 12px 10px;">Name</th>
+                                    <th style="padding: 12px 10px;">Required</th>
+                                    <th style="padding: 12px 10px; text-align: right;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>`;
+
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const isRequired = data.required === true;
+                    html += `
+                        <tr style="border-bottom: 1px solid #f1f5f9;">
+                            <td style="padding: 12px 10px; font-weight: 600; color: #1e293b;">${data.name}</td>
+                            <td style="padding: 12px 10px;">
+                                <span class="status-badge ${isRequired ? 'status-active' : 'status-completed'}" style="font-size: 10px;">${isRequired ? 'Required' : 'Optional'}</span>
+                            </td>
+                            <td style="padding: 12px 10px; text-align: right;">
+                                <div class="action-buttons" style="justify-content: flex-end;">
+                                    <button class="btn-edit" style="padding: 6px 12px;" onclick="editGlobalVariant('${doc.id}')"><i class="fas fa-edit"></i></button>
+                                    <button class="btn-delete" style="padding: 6px 12px;" onclick="deleteGlobalVariant('${doc.id}')"><i class="fas fa-trash"></i></button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                });
                 
-                for (const variantDoc of snapshot.docs) {
-                    const variant = variantDoc.data();
-                    allGlobalVariants.push({ id: variantDoc.id, ...variant });
-                    
-                    const optionsRef = collection(db, 'licenses', currentClientId, 'global_variants', variantDoc.id, 'options');
-                    const optionsSnap = await getDocs(optionsRef);
-                    
-                    html += `<div style="background:#f7fafc;padding:10px;border-radius:8px;margin-bottom:10px;">
-                        <b>${variant.name}</b> ${variant.required ? '(Required)' : ''} ${variant.multiSelect ? '(Multi)' : ''}<br>
-                        Options: `;
-                    optionsSnap.forEach(opt => {
-                        html += `${opt.data().name} (${opt.data().priceAdjustment || '0.00'}) `;
-                    });
-                    html += `<div class="action-buttons" style="margin-top:5px;">
-                        <button class="btn-edit" onclick="editGlobalVariant('${variantDoc.id}')">Edit</button>
-                        <button class="btn-delete" onclick="deleteGlobalVariant('${variantDoc.id}')">Delete</button>
-                    </div></div>`;
+                if (snapshot.empty) {
+                    html += '<tr><td colspan="3" style="text-align:center; padding:20px; color:#666;">No variants found.</td></tr>';
                 }
-                container.innerHTML = html || '<div class="loading">No global variants</div>';
+
+                html += `</tbody></table></div>`;
+                container.innerHTML = html;
             });
         }
 
