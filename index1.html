@@ -6887,6 +6887,7 @@
                                     <th style="padding: 12px 10px;">Type</th>
                                     <th style="padding: 12px 10px;">Value</th>
                                     <th style="padding: 12px 10px;">Active</th>
+                                    <th style="padding: 12px 10px;">Valid</th>
                                     <th style="padding: 12px 10px; text-align: right;">Action</th>
                                 </tr>
                             </thead>
@@ -6898,23 +6899,36 @@
                     const valueDisplay = d.type === 'percentage' ? `${d.value}%` : `RM ${parseFloat(d.value).toFixed(2)}`;
                     const typeDisplay = d.type.charAt(0).toUpperCase() + d.type.slice(1);
                     
-                    let validityHtml = '';
-                    if (d.startTime || d.endTime) {
-                        const start = d.startTime ? d.startTime.toDate().toLocaleString([], {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'}) : 'Any';
-                        const end = d.endTime ? d.endTime.toDate().toLocaleString([], {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'}) : 'Any';
-                        validityHtml = `<div style="font-size: 10px; color: #94a3b8; margin-top: 2px;">Valid: ${start} - ${end}</div>`;
-                    }
+                    const formatValidDate = (ts) => {
+                        if (!ts) return 'Anytime';
+                        const date = ts.toDate();
+                        const day = String(date.getDate()).padStart(2, '0');
+                        const month = String(date.getMonth() + 1).padStart(2, '0');
+                        let hours = date.getHours();
+                        const minutes = String(date.getMinutes()).padStart(2, '0');
+                        const ampm = hours >= 12 ? 'pm' : 'am';
+                        hours = hours % 12;
+                        hours = hours ? hours : 12; // Handle midnight
+                        const strTime = String(hours).padStart(2, '0') + ':' + minutes + ' ' + ampm;
+                        return `${day}/${month}, ${strTime}`;
+                    };
+
+                    const startDisplay = formatValidDate(d.startTime);
+                    const endDisplay = formatValidDate(d.endTime);
+                    const validityDisplay = (d.startTime || d.endTime) ? `${startDisplay} - ${endDisplay}` : 'Anytime';
 
                     html += `
                         <tr style="border-bottom: 1px solid #f1f5f9;">
                             <td style="padding: 12px 10px; font-weight: 600; color: #1e293b;">
                                 ${d.name}
-                                ${validityHtml}
                             </td>
                             <td style="padding: 12px 10px; color: #64748b;">${typeDisplay}</td>
                             <td style="padding: 12px 10px; font-weight: 700; color: #764ba2;">${valueDisplay}</td>
                             <td style="padding: 12px 10px;">
                                 <span class="status-badge ${isActive ? 'status-completed' : 'status-cancelled'}" style="font-size: 10px;">${isActive ? 'Active' : 'Inactive'}</span>
+                            </td>
+                            <td style="padding: 12px 10px; color: #64748b; font-size: 11px; white-space: nowrap;">
+                                ${validityDisplay}
                             </td>
                             <td style="padding: 12px 10px; text-align: right;">
                                 <div class="action-buttons" style="justify-content: flex-end;">
