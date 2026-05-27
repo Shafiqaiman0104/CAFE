@@ -4815,7 +4815,8 @@
             document.getElementById('globalVariantMultiSelect').checked = variant.multiSelect;
             
             const optionsRef = collection(db, 'licenses', currentClientId, 'global_variants', id, 'options');
-            const optionsSnap = await getDocs(optionsRef);
+            const qOptions = query(optionsRef, orderBy('createdAt', 'asc'));
+            const optionsSnap = await getDocs(qOptions);
             
             let html = '';
             let i = 0;
@@ -4876,7 +4877,8 @@
                 if (optName) {
                     await addDoc(optionsRef, {
                         name: optName,
-                        priceAdjustment: inputs[1]?.value || '0.00'
+                        priceAdjustment: inputs[1]?.value || '0.00',
+                        createdAt: Timestamp.now()
                     });
                 }
             }
@@ -5301,7 +5303,8 @@
             for (const v of tempSelectedVariants) {
                 const variantInfo = allGlobalVariants.find(gv => gv.id === v.id) || { required: true, multiSelect: false };
                 const optionsRef = collection(db, 'licenses', currentClientId, 'global_variants', v.id, 'options');
-                const optionsSnap = await getDocs(optionsRef);
+                const qOptions = query(optionsRef, orderBy('createdAt', 'asc'));
+                const optionsSnap = await getDocs(qOptions);
                 const options = optionsSnap.docs.map(d => d.data());
                 
                 html += `
