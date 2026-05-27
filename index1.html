@@ -2399,6 +2399,22 @@
                         <span class="section-title">Global Variants</span>
                         <button class="btn-icon" onclick="showAddGlobalVariantModal()">+</button>
                     </div>
+
+                    <!-- Filters Bar -->
+                    <div style="margin-bottom: 20px; display: flex; flex-direction: column; gap: 12px;">
+                        <input type="text" id="variantSearchInputTab" placeholder="Search variant name..." 
+                               style="width: 100%; padding: 12px; border-radius: 14px; border: 2px solid #e2e8f0; font-size: 0.9rem;"
+                               oninput="renderGlobalVariantsList()">
+                        
+                        <div style="display: grid; grid-template-columns: 1fr; gap: 10px;">
+                            <select id="variantRequiredFilter" onchange="renderGlobalVariantsList()" style="padding: 10px; border-radius: 12px; border: 2px solid #e2e8f0; font-size: 0.85rem; background: white;">
+                                <option value="All">All Requirements</option>
+                                <option value="required">Required</option>
+                                <option value="optional">Optional</option>
+                            </select>
+                        </div>
+                    </div>
+
                     <div id="globalVariantsList"></div>
                 </div>
             </div>
@@ -4707,51 +4723,66 @@
         }
 
         function loadGlobalVariantsPage() {
+            if (unsubscribers['globalVariants']) unsubscribers['globalVariants']();
             const ref = collection(db, 'licenses', currentClientId, 'global_variants');
             const q = query(ref, orderBy('createdAt', 'desc'));
-            onSnapshot(q, (snapshot) => {
-                const container = document.getElementById('globalVariantsList');
+            unsubscribers['globalVariants'] = onSnapshot(q, (snapshot) => {
                 allGlobalVariants = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-                let html = `
-                    <div style="overflow-x: auto; background: white; border-radius: 20px; padding: 15px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
-                        <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
-                            <thead>
-                                <tr style="border-bottom: 2px solid #f1f5f9; text-align: left; color: #64748b;">
-                                    <th style="padding: 12px 10px;">Name</th>
-                                    <th style="padding: 12px 10px;">Required</th>
-                                    <th style="padding: 12px 10px; text-align: right;">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>`;
-
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    const isRequired = data.required === true;
-                    html += `
-                        <tr style="border-bottom: 1px solid #f1f5f9;">
-                            <td style="padding: 12px 10px; font-weight: 600; color: #1e293b;">${data.name}</td>
-                            <td style="padding: 12px 10px;">
-                                <span class="status-badge ${isRequired ? 'status-active' : 'status-completed'}" style="font-size: 10px;">${isRequired ? 'Required' : 'Optional'}</span>
-                            </td>
-                            <td style="padding: 12px 10px; text-align: right;">
-                                <div class="action-buttons" style="justify-content: flex-end;">
-                                    <button class="btn-edit" style="padding: 6px 12px;" onclick="editGlobalVariant('${doc.id}')"><i class="fas fa-edit"></i></button>
-                                    <button class="btn-delete" style="padding: 6px 12px;" onclick="deleteGlobalVariant('${doc.id}')"><i class="fas fa-trash"></i></button>
-                                </div>
-                            </td>
-                        </tr>
-                    `;
-                });
-                
-                if (snapshot.empty) {
-                    html += '<tr><td colspan="3" style="text-align:center; padding:20px; color:#666;">No variants found.</td></tr>';
-                }
-
-                html += `</tbody></table></div>`;
-                container.innerHTML = html;
+                renderGlobalVariantsList();
             });
         }
+
+        window.renderGlobalVariantsList = function() {
+            const searchTerm = document.getElementById('variantSearchInputTab').value.toLowerCase();
+            const requiredFilter = document.getElementById('variantRequiredFilter').value;
+            const container = document.getElementById('globalVariantsList');
+
+            let filtered = allGlobalVariants.filter(variant => {
+                const matchesSearch = !searchTerm || variant.name.toLowerCase().includes(searchTerm);
+                const isRequired = variant.required === true;
+                const matchesRequired = requiredFilter === 'All' || 
+                                       (requiredFilter === 'required' && isRequired) || 
+                                       (requiredFilter === 'optional' && !isRequired);
+                return matchesSearch && matchesRequired;
+            });
+
+            let html = `
+                <div style="overflow-x: auto; background: white; border-radius: 20px; padding: 15px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                        <thead>
+                            <tr style="border-bottom: 2px solid #f1f5f9; text-align: left; color: #64748b;">
+                                <th style="padding: 12px 10px;">Name</th>
+                                <th style="padding: 12px 10px;">Required</th>
+                                <th style="padding: 12px 10px; text-align: right;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+
+            filtered.forEach(variant => {
+                const isRequired = variant.required === true;
+                html += `
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 12px 10px; font-weight: 600; color: #1e293b;">${variant.name}</td>
+                        <td style="padding: 12px 10px;">
+                            <span class="status-badge ${isRequired ? 'status-active' : 'status-completed'}" style="font-size: 10px;">${isRequired ? 'Required' : 'Optional'}</span>
+                        </td>
+                        <td style="padding: 12px 10px; text-align: right;">
+                            <div class="action-buttons" style="justify-content: flex-end;">
+                                <button class="btn-edit" style="padding: 6px 12px;" onclick="editGlobalVariant('${variant.id}')"><i class="fas fa-edit"></i></button>
+                                <button class="btn-delete" style="padding: 6px 12px;" onclick="deleteGlobalVariant('${variant.id}')"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            if (filtered.length === 0) {
+                html += '<tr><td colspan="3" style="text-align:center; padding:20px; color:#666;">No variants found matching filters.</td></tr>';
+            }
+
+            html += `</tbody></table></div>`;
+            container.innerHTML = html;
+        };
 
         window.showAddGlobalVariantModal = function() {
             document.getElementById('globalVariantModalTitle').textContent = 'Add Global Variant';
@@ -13064,6 +13095,7 @@ window.openSearchModalTakeOrder = function() {
         window.mergeCartItemInSummary = mergeCartItemInSummary;
         window.toggleActiveOrdersSort = toggleActiveOrdersSort;
         window.renderMenuItemsList = renderMenuItemsList;
+        window.renderGlobalVariantsList = renderGlobalVariantsList;
         window.toggleActiveOrdersSearch = toggleActiveOrdersSearch;
         window.handleActiveOrdersSearchInput = handleActiveOrdersSearchInput;
         window.setVoidModeTakeOrder = setVoidModeTakeOrder;
