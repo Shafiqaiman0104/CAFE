@@ -2456,7 +2456,7 @@
                         <span class="section-title">Tables</span>
                         <button class="btn-icon" onclick="showAddTableModal()">+</button>
                     </div>
-                    <div id="tablesList" class="table-grid"></div>
+                    <div id="tablesList"></div>
                 </div>
             </div>
 
@@ -6636,24 +6636,52 @@
         // ========== TABLES ==========
         function loadTables() {
             const ref = collection(db, 'licenses', currentClientId, 'tables');
-            onSnapshot(ref, (snapshot) => {
+            const q = query(ref, orderBy('createdAt', 'desc'));
+            onSnapshot(q, (snapshot) => {
                 const container = document.getElementById('tablesList');
-                let html = '';
+                
+                let html = `
+                    <div style="overflow-x: auto; background: white; border-radius: 20px; padding: 15px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                            <thead>
+                                <tr style="border-bottom: 2px solid #f1f5f9; text-align: left; color: #64748b;">
+                                    <th style="padding: 12px 10px;">Table</th>
+                                    <th style="padding: 12px 10px;">Capacity</th>
+                                    <th style="padding: 12px 10px;">Location</th>
+                                    <th style="padding: 12px 10px;">Status</th>
+                                    <th style="padding: 12px 10px; text-align: right;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>`;
+
                 snapshot.forEach(doc => {
                     const t = doc.data();
+                    const statusClass = t.status === 'available' ? 'status-completed' : (t.status === 'occupied' ? 'status-active' : 'status-preparing');
+                    
                     html += `
-                        <div class="table-card-item ${t.status === 'available' ? 'table-available' : 'table-occupied'}">
-                            <div class="table-number">${doc.id.toUpperCase()}</div>
-                            <div class="table-capacity">👥 ${t.capacity}</div>
-                            <div>${t.status}</div>
-                            <div class="action-buttons" style="margin-top:5px;">
-                                <button class="btn-edit" onclick="editTable('${doc.id}')">Edit</button>
-                                <button class="btn-delete" onclick="deleteTable('${doc.id}')">Delete</button>
-                            </div>
-                        </div>
+                        <tr style="border-bottom: 1px solid #f1f5f9;">
+                            <td style="padding: 12px 10px; font-weight: 600; color: #1e293b;">${doc.id.toUpperCase()}</td>
+                            <td style="padding: 12px 10px; color: #64748b;">${t.capacity} Pax</td>
+                            <td style="padding: 12px 10px; color: #64748b;">${t.location || 'Main Hall'}</td>
+                            <td style="padding: 12px 10px;">
+                                <span class="status-badge ${statusClass}" style="font-size: 10px;">${t.status}</span>
+                            </td>
+                            <td style="padding: 12px 10px; text-align: right;">
+                                <div class="action-buttons" style="justify-content: flex-end;">
+                                    <button class="btn-edit" style="padding: 6px 12px;" onclick="editTable('${doc.id}')"><i class="fas fa-edit"></i></button>
+                                    <button class="btn-delete" style="padding: 6px 12px;" onclick="deleteTable('${doc.id}')"><i class="fas fa-trash"></i></button>
+                                </div>
+                            </td>
+                        </tr>
                     `;
                 });
-                container.innerHTML = html || '<div class="loading">No tables</div>';
+                
+                if (snapshot.empty) {
+                    html += '<tr><td colspan="5" style="text-align:center; padding:20px; color:#666;">No tables found.</td></tr>';
+                }
+
+                html += `</tbody></table></div>`;
+                container.innerHTML = html;
             });
         }
 
