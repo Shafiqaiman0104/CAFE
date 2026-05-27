@@ -2369,7 +2369,7 @@
                         <span class="section-title">Menu Items</span>
                         <button class="btn-icon" onclick="showAddMenuItemModal()">+</button>
                     </div>
-                    <div id="menuItemsList" class="menu-grid"></div>
+                    <div id="menuItemsList"></div>
                 </div>
             </div>
 
@@ -4970,27 +4970,58 @@
 
         async function loadMenuItems() {
             const ref = collection(db, 'licenses', currentClientId, 'menu_items');
-            onSnapshot(ref, async (snapshot) => {
+            const q = query(ref, orderBy('createdAt', 'desc'));
+            onSnapshot(q, async (snapshot) => {
                 const container = document.getElementById('menuItemsList');
                 const categories = await getCategoriesMap();
                 
-                let html = '';
+                let html = `
+                    <div style="overflow-x: auto; background: white; border-radius: 20px; padding: 15px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                            <thead>
+                                <tr style="border-bottom: 2px solid #f1f5f9; text-align: left; color: #64748b;">
+                                    <th style="padding: 12px 10px;">Name</th>
+                                    <th style="padding: 12px 10px;">Category</th>
+                                    <th style="padding: 12px 10px;">Price</th>
+                                    <th style="padding: 12px 10px;">Status</th>
+                                    <th style="padding: 12px 10px; text-align: right;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>`;
+
                 snapshot.forEach(doc => {
                     const item = doc.data();
+                    const categoryName = categories[item.categoryId] || 'N/A';
+                    const isActive = item.active !== false;
+                    const isRecommended = item.recommend === true;
+                    
                     html += `
-                        <div class="menu-card">
-                            <div class="menu-card-name">${item.name}</div>
-                            <div class="menu-card-price">RM ${item.price}</div>
-                            <small>${categories[item.categoryId] || ''}</small>
-                            ${item.recommend ? '<span style="background:#f6ad55;color:white;padding:2px 6px;border-radius:4px;font-size:10px;">★ Recommended</span>' : ''}
-                            <div class="action-buttons" style="margin-top:10px;">
-                                <button class="btn-edit" onclick="editMenuItem('${doc.id}')">Edit</button>
-                                <button class="btn-delete" onclick="deleteMenuItem('${doc.id}')">Delete</button>
-                            </div>
-                        </div>
+                        <tr style="border-bottom: 1px solid #f1f5f9;">
+                            <td style="padding: 12px 10px; font-weight: 600; color: #1e293b;">${item.name}</td>
+                            <td style="padding: 12px 10px; color: #64748b;">${categoryName}</td>
+                            <td style="padding: 12px 10px; font-weight: 700; color: #764ba2;">RM ${parseFloat(item.price).toFixed(2)}</td>
+                            <td style="padding: 12px 10px;">
+                                <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+                                    <span class="status-badge ${isActive ? 'status-completed' : 'status-cancelled'}" style="font-size: 10px;">${isActive ? 'Active' : 'Inactive'}</span>
+                                    ${isRecommended ? '<span class="status-badge" style="background:#fef3c7; color:#92400e; font-size:10px;">★ Recommended</span>' : ''}
+                                </div>
+                            </td>
+                            <td style="padding: 12px 10px; text-align: right;">
+                                <div class="action-buttons" style="justify-content: flex-end;">
+                                    <button class="btn-edit" style="padding: 6px 12px;" onclick="editMenuItem('${doc.id}')"><i class="fas fa-edit"></i></button>
+                                    <button class="btn-delete" style="padding: 6px 12px;" onclick="deleteMenuItem('${doc.id}')"><i class="fas fa-trash"></i></button>
+                                </div>
+                            </td>
+                        </tr>
                     `;
                 });
-                container.innerHTML = html || '<div class="loading">No menu items</div>';
+                
+                if (snapshot.empty) {
+                    html += '<tr><td colspan="5" style="text-align:center; padding:20px; color:#666;">No menu items found.</td></tr>';
+                }
+
+                html += `</tbody></table></div>`;
+                container.innerHTML = html;
             });
         }
 
