@@ -2511,6 +2511,14 @@
                                 <input type="text" id="receiptRestName" placeholder="Enter Restaurant Name" oninput="updateReceiptPreview()">
                             </div>
                             <div class="form-group">
+                                <label>SSM Number</label>
+                                <input type="text" id="receiptSSM" placeholder="Enter SSM Number" oninput="updateReceiptPreview()">
+                            </div>
+                            <div class="form-group">
+                                <label>Restaurant Phone</label>
+                                <input type="text" id="receiptRestPhone" placeholder="Enter Restaurant Phone" oninput="updateReceiptPreview()">
+                            </div>
+                            <div class="form-group">
                                 <label>Restaurant Address</label>
                                 <textarea id="receiptRestAddress" rows="3" placeholder="Enter Restaurant Address" oninput="updateReceiptPreview()"></textarea>
                             </div>
@@ -10460,6 +10468,8 @@ window.openSearchModalTakeOrder = function() {
                 document.getElementById('receiptLogoUrl').value = data.restaurantLogo || '';
                 document.getElementById('receiptLogoScale').value = data.logoScale || 'normal';
                 document.getElementById('receiptRestName').value = data.restaurantName || localStorage.getItem('restaurantName') || '';
+                document.getElementById('receiptSSM').value = data.ssm || '';
+                document.getElementById('receiptRestPhone').value = data.restaurantPhone || '';
                 document.getElementById('receiptRestAddress').value = data.restaurantAddress || '';
                 document.getElementById('receiptFooter').value = data.receiptFooter || 'Thank You\nPlease Come Again';
             } else {
@@ -10473,6 +10483,8 @@ window.openSearchModalTakeOrder = function() {
             const logoUrl = document.getElementById('receiptLogoUrl').value;
             const logoScale = document.getElementById('receiptLogoScale').value;
             const name = document.getElementById('receiptRestName').value || 'RESTAURANT NAME';
+            const ssm = document.getElementById('receiptSSM').value;
+            const phone = document.getElementById('receiptRestPhone').value;
             const address = document.getElementById('receiptRestAddress').value || '123 Address Street, City';
             const footer = document.getElementById('receiptFooter').value || 'Thank You\nPlease Come Again';
             
@@ -10491,6 +10503,8 @@ window.openSearchModalTakeOrder = function() {
                     ${logoUrl ? `<img src="${logoUrl}" style="max-width: ${logoWidth}; display: block; margin: 0 auto 5px auto;">` : '<div style="border: 1px dashed #ccc; padding: 5px; margin-bottom: 5px; font-size: 10px;">[LOGO]</div>'}
                     <div style="font-weight: bold; font-size: 14px; text-transform: uppercase;">${name}</div>
                     <div style="font-size: 10px; white-space: pre-line;">${address}</div>
+                    ${ssm ? `<div style="font-size: 10px;">SSM: ${ssm}</div>` : ''}
+                    ${phone ? `<div style="font-size: 10px;">Tel: ${phone}</div>` : ''}
                 </div>
                 <div style="border-top: 1px dashed #333; margin: 10px 0;"></div>
                 <div style="display: flex; justify-content: space-between; font-size: 10px;">
@@ -10524,6 +10538,8 @@ window.openSearchModalTakeOrder = function() {
                 restaurantLogo: document.getElementById('receiptLogoUrl').value,
                 logoScale: document.getElementById('receiptLogoScale').value,
                 restaurantName: document.getElementById('receiptRestName').value,
+                ssm: document.getElementById('receiptSSM').value,
+                restaurantPhone: document.getElementById('receiptRestPhone').value,
                 restaurantAddress: document.getElementById('receiptRestAddress').value,
                 receiptFooter: document.getElementById('receiptFooter').value,
                 updatedAt: Timestamp.now()
@@ -10535,6 +10551,8 @@ window.openSearchModalTakeOrder = function() {
                 localStorage.setItem('restaurantLogo', data.restaurantLogo);
                 localStorage.setItem('logoScale', data.logoScale);
                 localStorage.setItem('restaurantName', data.restaurantName);
+                localStorage.setItem('ssm', data.ssm);
+                localStorage.setItem('restaurantPhone', data.restaurantPhone);
                 localStorage.setItem('restaurantAddress', data.restaurantAddress);
                 localStorage.setItem('receiptFooter', data.receiptFooter);
                 
@@ -11246,6 +11264,8 @@ window.openSearchModalTakeOrder = function() {
             
             const restaurantName = localStorage.getItem('restaurantName') || 'VENTURERUSH RESTAURANT';
             const restaurantAddress = localStorage.getItem('restaurantAddress') || '123 VentureRush Way, Tech City';
+            const ssm = localStorage.getItem('ssm');
+            const restaurantPhone = localStorage.getItem('restaurantPhone');
             const restaurantLogo = localStorage.getItem('restaurantLogo');
             const receiptFooter = localStorage.getItem('receiptFooter') || 'Thank You\nPlease Come Again';
             const settleTime = new Date().toLocaleString();
@@ -11313,6 +11333,8 @@ window.openSearchModalTakeOrder = function() {
                 (logoBytes.length === 0) ? "\x1B\x45\x01 [COMPANY LOGO] \x1B\x45\x00\n" : "",
                 `\x1B\x21\x10${restaurantName.toUpperCase()}\x1B\x21\x00\n`, // Double height
                 `${restaurantAddress}\n`,
+                ssm ? `SSM: ${ssm}\n` : "",
+                restaurantPhone ? `Tel: ${restaurantPhone}\n` : "",
                 sep,
                 "\x1B\x61\x00", // Left
                 `Date: ${dateStr}   Time: ${timeStr}\n`,
@@ -12449,6 +12471,8 @@ window.openSearchModalTakeOrder = function() {
                     localStorage.setItem('restaurantLogo', data.restaurantLogo || '');
                     localStorage.setItem('logoScale', data.logoScale || 'normal');
                     localStorage.setItem('restaurantName', data.restaurantName || localStorage.getItem('restaurantName'));
+                    localStorage.setItem('ssm', data.ssm || '');
+                    localStorage.setItem('restaurantPhone', data.restaurantPhone || '');
                     localStorage.setItem('restaurantAddress', data.restaurantAddress || '');
                     localStorage.setItem('receiptFooter', data.receiptFooter || 'Thank You\nPlease Come Again');
                     
