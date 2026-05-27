@@ -2504,6 +2504,34 @@
                         <span class="section-title">All Transactions</span>
                         <button class="btn-icon" onclick="refreshAllTransactions()"><i class="fas fa-sync-alt"></i></button>
                     </div>
+
+                    <!-- Filters Bar -->
+                    <div style="margin-bottom: 20px; display: flex; flex-direction: column; gap: 12px;">
+                        <input type="text" id="allTransSearchInput" placeholder="Search Transaction ID, Order Number, Table..." 
+                               style="width: 100%; padding: 12px; border-radius: 14px; border: 2px solid #e2e8f0; font-size: 0.9rem;"
+                               oninput="renderAllTransactionsList()">
+                        
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+                            <select id="allTransStatusFilter" onchange="renderAllTransactionsList()" style="padding: 10px; border-radius: 12px; border: 2px solid #e2e8f0; font-size: 0.85rem; background: white;">
+                                <option value="All">All Status</option>
+                                <option value="completed">Completed</option>
+                                <option value="refunded">Refunded</option>
+                                <option value="failed">Failed</option>
+                            </select>
+                            <select id="allTransMethodFilter" onchange="renderAllTransactionsList()" style="padding: 10px; border-radius: 12px; border: 2px solid #e2e8f0; font-size: 0.85rem; background: white;">
+                                <option value="All">All Methods</option>
+                                <option value="cash">Cash</option>
+                                <option value="card">Card</option>
+                                <option value="ewallet">E-Wallet</option>
+                            </select>
+                            <select id="allTransTypeFilter" onchange="renderAllTransactionsList()" style="padding: 10px; border-radius: 12px; border: 2px solid #e2e8f0; font-size: 0.85rem; background: white;">
+                                <option value="All">All Types</option>
+                                <option value="Full">Full</option>
+                                <option value="Split">Split</option>
+                            </select>
+                        </div>
+                    </div>
+
                     <div id="allTransactionsList"></div>
                 </div>
             </div>
@@ -4194,6 +4222,7 @@
         let selectedCheckoutItems = []; // Array of {orderId, itemId, price}
         let activeOrdersSnapshotTakeOrder = [];
         let allOrdersSnapshotData = [];
+        let allTransactionsSnapshotData = [];
         let isEarlyPaymentMode = false;
         let isVoidModeTakeOrder = false;
         let voidingItemData = null;
@@ -6902,7 +6931,9 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             if (unsubscribers['allTransactions']) unsubscribers['allTransactions']();
 
             const container = document.getElementById('allTransactionsList');
-            container.innerHTML = '<div class="loading">Loading transactions...</div>';
+            if (isInitialLoadTransactions) {
+                container.innerHTML = '<div class="loading">Loading transactions...</div>';
+            }
             
             const transactionsRef = collection(db, 'licenses', currentClientId, 'transactions');
             // Use orderBy and limit(100) to ensure fast server-side sorting and prevent UI lag with huge datasets
@@ -6944,50 +6975,84 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                     await Promise.all(fetchPromises);
                 }
                 
-                // 3. Render the list using the cached data (No sequential awaits inside this loop)
-                snapshot.docs.forEach(transDoc => {
-                    const trans = transDoc.data();
-                    const transDate = trans.createdAt?.toDate() || new Date();
-                    
-                    let orderNumber = 'N/A';
-                    let orderSeqDisplay = 'N/A';
-                    if (trans.orderId) {
-                        const ids = trans.orderId.split(',').map(id => id.trim());
-                        const nums = ids.map(id => transactionsOrderCache[id]?.num || id.slice(0, 8));
-                        const seqs = ids.map(id => transactionsOrderCache[id]?.seq || '#?');
-                        orderNumber = nums.join(', ');
-                        orderSeqDisplay = seqs.join(', ');
-                    }
-                    
-                    const statusClass = trans.status === 'completed' ? 'status-completed' : 
-                                      (trans.status === 'refunded' ? 'status-cancelled' : 'status-active');
-                    
-                    html += `
-                        <div class="transaction-card">
-                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-                                <div>
-                                    <b>Transaction #${transDoc.id.slice(0,8)}</b>
-                                    <span class="status-badge ${statusClass}">${trans.status || 'completed'}</span>
-                                </div>
-                                <div>${transDate.toLocaleString()}</div>
-                            </div>
-                            <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:5px;margin-bottom:10px;">
-                                <div style="grid-column: span 2;">Order No: ${orderSeqDisplay}</div>
-                                <div style="grid-column: span 2;">Order: ${orderNumber}</div>
-                                <div>Amount: <b>RM ${trans.amount}</b></div>
-                                <div>Method: ${trans.paymentMethod || 'cash'}</div>
-                                <div>Type: ${trans.type || 'payment'}</div>
-                            </div>
-                            <div class="action-buttons" style="margin-top:10px;">
-                                <button class="btn-view" onclick="viewTransactionDetails('${transDoc.id}')">View Transaction</button>
-                                <button class="btn-edit" onclick="editTransaction('${transDoc.id}')">Edit</button>
-                                <button class="btn-delete" onclick="deleteTransaction('${transDoc.id}')">Delete</button>
-                            </div>
-                        </div>
-                    `;
-                });
-                container.innerHTML = html || '<div class="loading">No transactions found</div>';
+                // Store raw data for filtering
+                allTransactionsSnapshotData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                isInitialLoadTransactions = false;
+                renderAllTransactionsList();
             });
+        };
+
+        window.renderAllTransactionsList = function() {
+            const searchTerm = document.getElementById('allTransSearchInput').value.toLowerCase();
+            const statusFilter = document.getElementById('allTransStatusFilter').value;
+            const methodFilter = document.getElementById('allTransMethodFilter').value;
+            const typeFilter = document.getElementById('allTransTypeFilter').value;
+            const container = document.getElementById('allTransactionsList');
+
+            let filtered = allTransactionsSnapshotData.filter(trans => {
+                let orderNumber = '';
+                let orderSeq = '';
+                if (trans.orderId) {
+                    const ids = trans.orderId.split(',').map(id => id.trim());
+                    orderNumber = ids.map(id => transactionsOrderCache[id]?.num || '').join(' ').toLowerCase();
+                    orderSeq = ids.map(id => transactionsOrderCache[id]?.seq || '').join(' ').toLowerCase();
+                }
+
+                const matchesSearch = !searchTerm || 
+                    trans.id.toLowerCase().includes(searchTerm) ||
+                    (trans.tableId || '').toLowerCase().includes(searchTerm) ||
+                    orderNumber.includes(searchTerm) ||
+                    orderSeq.includes(searchTerm);
+                
+                const matchesStatus = statusFilter === 'All' || (trans.status || 'completed') === statusFilter;
+                const matchesMethod = methodFilter === 'All' || (trans.paymentMethod || 'cash') === methodFilter;
+                const matchesType = typeFilter === 'All' || (trans.type && trans.type.includes(typeFilter));
+
+                return matchesSearch && matchesStatus && matchesMethod && matchesType;
+            });
+
+            let html = '';
+            filtered.forEach(trans => {
+                const transDate = trans.createdAt?.toDate() || new Date();
+                
+                let orderNumberDisplay = 'N/A';
+                let orderSeqDisplay = 'N/A';
+                if (trans.orderId) {
+                    const ids = trans.orderId.split(',').map(id => id.trim());
+                    const nums = ids.map(id => transactionsOrderCache[id]?.num || id.slice(0, 8));
+                    const seqs = ids.map(id => transactionsOrderCache[id]?.seq || '#?');
+                    orderNumberDisplay = nums.join(', ');
+                    orderSeqDisplay = seqs.join(', ');
+                }
+                
+                const statusClass = trans.status === 'completed' ? 'status-completed' : 
+                                  (trans.status === 'refunded' ? 'status-cancelled' : 'status-active');
+                
+                html += `
+                    <div class="transaction-card">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                            <div>
+                                <b>Transaction #${trans.id.slice(0,8)}</b>
+                                <span class="status-badge ${statusClass}">${trans.status || 'completed'}</span>
+                            </div>
+                            <div>${transDate.toLocaleString()}</div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:5px;margin-bottom:10px;">
+                            <div style="grid-column: span 2;">Order No: ${orderSeqDisplay}</div>
+                            <div style="grid-column: span 2;">Order: ${orderNumberDisplay}</div>
+                            <div>Amount: <b>RM ${trans.amount}</b></div>
+                            <div>Method: ${trans.paymentMethod || 'cash'}</div>
+                            <div>Type: ${trans.type || 'payment'}</div>
+                        </div>
+                        <div class="action-buttons" style="margin-top:10px;">
+                            <button class="btn-view" onclick="viewTransactionDetails('${trans.id}')">View Transaction</button>
+                            <button class="btn-edit" onclick="editTransaction('${trans.id}')">Edit</button>
+                            <button class="btn-delete" onclick="deleteTransaction('${trans.id}')">Delete</button>
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html || '<div class="loading">No transactions found</div>';
         };
 
         window.editTransaction = async function(transId) {
