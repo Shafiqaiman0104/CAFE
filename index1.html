@@ -1334,8 +1334,8 @@
         #checkoutModalTakeOrder .checkout-right-panel div[style*="padding: 15px"] {
             padding: 6px 12px !important;
         }
-        #checkoutTotalDue, #checkoutReceivedDisplay {
-            font-size: 1.4rem !important;
+        #checkoutTotalDue, #checkoutReceivedDisplay, .chk-prefix-rm {
+            font-size: 1.25rem !important;
         }
         #checkoutModalTakeOrder .btn-numpad {
             padding: 10px !important;
@@ -3710,14 +3710,18 @@
                         <button class="secondary-btn" style="padding: 12px 5px; font-size: 0.9rem;" onclick="addQuickAmountCheckout(100)">100</button>
                     </div>
                     <div style="flex: 1; display: flex; flex-direction: column; gap: 15px;">
-                        <div style="background: #333; color: #fff; padding: 15px; border-radius: 12px; text-align: right;">
-                            <div style="font-size: 0.8rem; opacity: 0.7;">TOTAL DUE</div>
-                            <div id="checkoutTotalDue" style="font-size: 1.8rem; font-weight: bold;">RM 0.00</div>
+                        <div style="background: #333; color: #fff; padding: 12px 15px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.75rem; opacity: 0.8; font-weight: 800; text-transform: uppercase;">Total Due</span>
+                            <span id="checkoutTotalDue" style="font-size: 1.5rem; font-weight: bold;">RM 0.00</span>
                         </div>
-                        <div id="checkoutReceivedBox" style="background: #f0f0f0; padding: 15px; border-radius: 12px; text-align: right; border: 2px solid #ddd;">
-                            <div style="font-size: 0.8rem; color: #666;">AMOUNT RECEIVED</div>
-                            <div id="checkoutReceivedDisplay" style="font-size: 1.8rem; font-weight: bold; color: #764ba2;">0.00</div>
-                            <div id="checkoutChangeDisplay" style="font-size: 0.9rem; font-weight: 600; margin-top: 4px; color: #e53e3e;">Change: RM 0.00</div>
+                        <div id="checkoutReceivedBox" style="background: #f0f0f0; padding: 10px 15px; border-radius: 12px; border: 2px solid #ddd;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="font-size: 0.75rem; color: #666; font-weight: 800; text-transform: uppercase;">Amount Received</span>
+                                <div style="display: flex; align-items: center; gap: 4px; font-size: 1.5rem; font-weight: bold; color: #764ba2;">
+                                    <span class="chk-prefix-rm">RM</span><span id="checkoutReceivedDisplay">0.00</span>
+                                </div>
+                            </div>
+                            <div id="checkoutChangeDisplay" style="font-size: 0.85rem; font-weight: 700; text-align: right; color: #e53e3e; margin-top: 2px;">Change: RM 0.00</div>
                         </div>
                         <div class="order-type-switch-takeorder" style="background: #eee;">
                             <div class="type-option-takeorder selected" id="chkPayCash" onclick="setCheckoutPayMethod('cash')"><i class="fas fa-money-bill"></i> Cash</div>
