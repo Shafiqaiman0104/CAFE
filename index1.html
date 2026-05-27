@@ -4228,6 +4228,12 @@
                 localStorage.setItem('ssm', record.SSM || '');
                 localStorage.setItem('restaurantPhone', record.restaurantPhone || '');
 
+                // Initialize Firestore override tracking as empty
+                localStorage.setItem('fs_restaurantName', '');
+                localStorage.setItem('fs_ssm', '');
+                localStorage.setItem('fs_restaurantPhone', '');
+                localStorage.setItem('fs_restaurantAddress', '');
+
                 // Ensure firebaseConfig is stringified before saving to localStorage
                 const configStr = typeof record.firebaseConfig === 'string' ? record.firebaseConfig : JSON.stringify(record.firebaseConfig);
                 localStorage.setItem('firebaseConfig', configStr);
@@ -4364,15 +4370,29 @@
                 } else {
                     expiredOverlay.style.display = 'none';
                 }
-                
+
+                // Respect Firestore overrides if they exist
+                const fs_name = localStorage.getItem('fs_restaurantName');
+                const fs_addr = localStorage.getItem('fs_restaurantAddress');
+                const fs_ssm = localStorage.getItem('fs_ssm');
+                const fs_phone = localStorage.getItem('fs_restaurantPhone');
+
                 if (data.restaurantName) {
-                    document.getElementById('appRestaurantName').textContent = data.restaurantName;
-                    document.getElementById('restaurantNameDisplay').textContent = data.restaurantName;
-                    localStorage.setItem('restaurantName', data.restaurantName);
+                    if (!fs_name) {
+                        document.getElementById('appRestaurantName').textContent = data.restaurantName;
+                        document.getElementById('restaurantNameDisplay').textContent = data.restaurantName;
+                        localStorage.setItem('restaurantName', data.restaurantName);
+                    }
                 }
                 
-                if (data.restaurantAddress) {
+                if (data.restaurantAddress && !fs_addr) {
                     localStorage.setItem('restaurantAddress', data.restaurantAddress);
+                }
+                if (data.SSM && !fs_ssm) {
+                    localStorage.setItem('ssm', data.SSM);
+                }
+                if (data.restaurantPhone && !fs_phone) {
+                    localStorage.setItem('restaurantPhone', data.restaurantPhone);
                 }
             };
 
@@ -10553,6 +10573,12 @@ window.openSearchModalTakeOrder = function() {
             try {
                 await setDoc(doc(db, 'licenses', currentClientId, 'settings', 'receipt'), data, { merge: true });
                 
+                // Update local override tracking
+                localStorage.setItem('fs_restaurantName', data.restaurantName || '');
+                localStorage.setItem('fs_ssm', data.ssm || '');
+                localStorage.setItem('fs_restaurantPhone', data.restaurantPhone || '');
+                localStorage.setItem('fs_restaurantAddress', data.restaurantAddress || '');
+
                 localStorage.setItem('restaurantLogo', data.restaurantLogo);
                 localStorage.setItem('logoScale', data.logoScale);
                 localStorage.setItem('restaurantName', data.restaurantName);
@@ -12473,17 +12499,27 @@ window.openSearchModalTakeOrder = function() {
                 const snap = await getDoc(ref);
                 if (snap.exists()) {
                     const data = snap.data();
-                    localStorage.setItem('restaurantLogo', data.restaurantLogo || '');
-                    localStorage.setItem('logoScale', data.logoScale || 'normal');
+                    // Track which fields are overridden by Firestore
+                    localStorage.setItem('fs_restaurantName', data.restaurantName || '');
+                    localStorage.setItem('fs_ssm', data.ssm || '');
+                    localStorage.setItem('fs_restaurantPhone', data.restaurantPhone || '');
+                    localStorage.setItem('fs_restaurantAddress', data.restaurantAddress || '');
+
+                    if (data.restaurantLogo) localStorage.setItem('restaurantLogo', data.restaurantLogo);
+                    if (data.logoScale) localStorage.setItem('logoScale', data.logoScale);
                     if (data.restaurantName) localStorage.setItem('restaurantName', data.restaurantName);
                     if (data.ssm) localStorage.setItem('ssm', data.ssm);
                     if (data.restaurantPhone) localStorage.setItem('restaurantPhone', data.restaurantPhone);
                     if (data.restaurantAddress) localStorage.setItem('restaurantAddress', data.restaurantAddress);
-                    localStorage.setItem('receiptFooter', data.receiptFooter || 'Thank You\nPlease Come Again');
-                    
-                    document.getElementById('appRestaurantName').textContent = localStorage.getItem('restaurantName');
-                    document.getElementById('restaurantNameDisplay').textContent = localStorage.getItem('restaurantName');
-                                                  if (data.restaurantLogo) document.getElementById('sidebarLogo').src = data.restaurantLogo;
+                    if (data.receiptFooter) localStorage.setItem('receiptFooter', data.receiptFooter);
+                }
+                
+                // Update UI using prioritized values
+                const finalName = localStorage.getItem('restaurantName') || 'Restaurant';
+                document.getElementById('appRestaurantName').textContent = finalName;
+                document.getElementById('restaurantNameDisplay').textContent = finalName;
+                if (localStorage.getItem('restaurantLogo')) {
+                    document.getElementById('sidebarLogo').src = localStorage.getItem('restaurantLogo');
                 }
             } catch (e) { console.warn("Could not load receipt settings", e); }
         }
