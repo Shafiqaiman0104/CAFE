@@ -10289,6 +10289,9 @@ window.openSearchModalTakeOrder = function() {
         window.loadActiveOrders = function() {
             if (unsubActiveOrders) unsubActiveOrders();
 
+            const container = document.getElementById('activeOrdersList');
+            if (container) container.innerHTML = '<div class="loading">Filtering orders...</div>';
+
             const ref = collection(db, 'licenses', currentClientId, 'orders');
             let q;
             if (activeOrdersStatusFilter === 'All') {
