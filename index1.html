@@ -2464,6 +2464,35 @@
                         <span class="section-title">All Orders</span>
                         <button class="btn-icon" onclick="refreshAllOrders()"><i class="fas fa-sync-alt"></i></button>
                     </div>
+                    
+                    <!-- Filters Bar -->
+                    <div style="margin-bottom: 20px; display: flex; flex-direction: column; gap: 12px;">
+                        <input type="text" id="allOrdersSearchInput" placeholder="Search Order ID, Table, Staff, Customer..." 
+                               style="width: 100%; padding: 12px; border-radius: 14px; border: 2px solid #e2e8f0; font-size: 0.9rem;"
+                               oninput="renderAllOrdersList()">
+                        
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+                            <select id="allOrdersTableFilter" onchange="renderAllOrdersList()" style="padding: 10px; border-radius: 12px; border: 2px solid #e2e8f0; font-size: 0.85rem; background: white;">
+                                <option value="All">All Tables</option>
+                            </select>
+                            <select id="allOrdersStatusFilter" onchange="renderAllOrdersList()" style="padding: 10px; border-radius: 12px; border: 2px solid #e2e8f0; font-size: 0.85rem; background: white;">
+                                <option value="All">All Status</option>
+                                <option value="active">Active</option>
+                                <option value="preparing">Preparing</option>
+                                <option value="served">Served</option>
+                                <option value="completed">Completed</option>
+                                <option value="cancelled">Cancelled</option>
+                            </select>
+                            <select id="allOrdersTypeFilter" onchange="renderAllOrdersList()" style="padding: 10px; border-radius: 12px; border: 2px solid #e2e8f0; font-size: 0.85rem; background: white;">
+                                <option value="All">All Types</option>
+                                <option value="dine-in">Dine-in</option>
+                                <option value="takeaway">Takeaway</option>
+                                <option value="delivery">Delivery</option>
+                                <option value="mix">Mix</option>
+                            </select>
+                        </div>
+                    </div>
+
                     <div id="allOrdersList"></div>
                 </div>
             </div>
@@ -4164,6 +4193,7 @@
         let connectedBluetoothDevices = {}; // Map of ID -> BluetoothDevice object
         let selectedCheckoutItems = []; // Array of {orderId, itemId, price}
         let activeOrdersSnapshotTakeOrder = [];
+        let allOrdersSnapshotData = [];
         let isEarlyPaymentMode = false;
         let isVoidModeTakeOrder = false;
         let voidingItemData = null;
@@ -6598,56 +6628,88 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
         };
 
         // ========== ALL ORDERS ==========
-        window.loadAllOrders = function() {
+        window.loadAllOrders = async function() {
+            // Populate table filter
+            const select = document.getElementById('allOrdersTableFilter');
+            if (select) {
+                try {
+                    const tablesSnap = await getDocs(collection(db, 'licenses', currentClientId, 'tables'));
+                    let html = '<option value="All">All Tables</option>';
+                    const tablesArr = tablesSnap.docs.map(d => ({id: d.id, ...d.data()}));
+                    tablesArr.sort((a, b) => a.id.localeCompare(b.id, undefined, {numeric: true}));
+                    tablesArr.forEach(t => {
+                        html += `<option value="${t.id}">${t.id.toUpperCase()}</option>`;
+                    });
+                    select.innerHTML = html;
+                } catch (e) { console.warn("Failed to load tables for filter", e); }
+            }
             refreshAllOrders();
         };
 
-        window.refreshAllOrders = async function() {
-            const container = document.getElementById('allOrdersList');
-            container.innerHTML = '<div class="loading">Loading orders...</div>';
-            
+        window.refreshAllOrders = function() {
+            if (unsubscribers['allOrders']) unsubscribers['allOrders']();
             const ordersRef = collection(db, 'licenses', currentClientId, 'orders');
-            const q = query(ordersRef);
-            
-            onSnapshot(q, async (snapshot) => {
-                let html = '';
-                const sortedDocs = snapshot.docs.sort((a, b) => {
-                    const aTime = a.data().createdAt?.toDate() || new Date(0);
-                    const bTime = b.data().createdAt?.toDate() || new Date(0);
-                    return bTime - aTime;
-                });
-                
-                for (const orderDoc of sortedDocs) {
-                    const order = orderDoc.data();
-                    const orderDate = order.createdAt?.toDate() || new Date();
-                    
-                    html += `
-                        <div class="order-detail-card">
-                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-                                <div>
-                                    <b>#${order.orderSequence || '?'} - ${order.orderNumber || 'ORD-' + orderDoc.id.slice(0,8)}</b>
-                                    <span class="status-badge status-${order.status || 'active'}">${order.status || 'active'}</span>
-                                </div>
-                                <div>${orderDate.toLocaleString()}</div>
-                            </div>
-                            <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:5px;margin-bottom:10px;">
-                                <div>Table: ${order.tableId?.toUpperCase() || 'N/A'}</div>
-                                <div>Type: ${order.orderType || 'dine-in'}</div>
-                                <div>Order by: ${order.staffName || 'Unknown'}</div>
-                                <div>Cashier by: ${order.cashierBy || 'N/A'}</div>
-                                <div style="grid-column: span 2;">Total: <b>RM ${order.total}</b></div>
-                            </div>
-                            ${order.customerName ? `<div style="font-size: 13px; color: #444;">Customer: <strong>${order.customerName}</strong> (${order.customerPhone || 'No phone'})<br>Address: ${order.customerAddress || 'N/A'}</div>` : ''}
-                            <div class="action-buttons" style="margin-top:10px;">
-                                <button class="btn-view" onclick="viewOrderDetails('${orderDoc.id}')">View Items</button>
-                                <button class="btn-edit" onclick="editOrder('${orderDoc.id}')">Edit</button>
-                                <button class="btn-delete" onclick="deleteOrder('${orderDoc.id}')">Delete</button>
-                            </div>
-                        </div>
-                    `;
-                }
-                container.innerHTML = html || '<div class="loading">No orders found</div>';
+
+            unsubscribers['allOrders'] = onSnapshot(ordersRef, (snapshot) => {
+                allOrdersSnapshotData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderAllOrdersList();
             });
+        };
+
+        window.renderAllOrdersList = function() {
+            const searchTerm = document.getElementById('allOrdersSearchInput').value.toLowerCase();
+            const tableFilter = document.getElementById('allOrdersTableFilter').value;
+            const statusFilter = document.getElementById('allOrdersStatusFilter').value;
+            const typeFilter = document.getElementById('allOrdersTypeFilter').value;
+            const container = document.getElementById('allOrdersList');
+
+            let filtered = allOrdersSnapshotData.filter(order => {
+                const matchesSearch = !searchTerm || 
+                    (order.orderNumber || '').toLowerCase().includes(searchTerm) ||
+                    (order.tableId || '').toLowerCase().includes(searchTerm) ||
+                    (order.staffName || '').toLowerCase().includes(searchTerm) ||
+                    (order.customerName || '').toLowerCase().includes(searchTerm);
+                const matchesTable = tableFilter === 'All' || order.tableId === tableFilter;
+                const matchesStatus = statusFilter === 'All' || order.status === statusFilter;
+                const matchesType = typeFilter === 'All' || order.orderType === typeFilter;
+                return matchesSearch && matchesTable && matchesStatus && matchesType;
+            });
+
+            filtered.sort((a, b) => {
+                const aTime = a.createdAt?.toDate() || new Date(0);
+                const bTime = b.createdAt?.toDate() || new Date(0);
+                return bTime - aTime;
+            });
+
+            let html = '';
+            filtered.forEach(order => {
+                const orderDate = order.createdAt?.toDate() || new Date();
+                html += `
+                    <div class="order-detail-card">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                            <div>
+                                <b>#${order.orderSequence || '?'} - ${order.orderNumber || 'ORD-' + order.id.slice(0,8)}</b>
+                                <span class="status-badge status-${order.status || 'active'}">${order.status || 'active'}</span>
+                            </div>
+                            <div>${orderDate.toLocaleString()}</div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:5px;margin-bottom:10px;">
+                            <div>Table: ${order.tableId?.toUpperCase() || 'N/A'}</div>
+                            <div>Type: ${order.orderType || 'dine-in'}</div>
+                            <div>Order by: ${order.staffName || 'Unknown'}</div>
+                            <div>Cashier by: ${order.cashierBy || 'N/A'}</div>
+                            <div style="grid-column: span 2;">Total: <b>RM ${order.total}</b></div>
+                        </div>
+                        ${order.customerName ? `<div style="font-size: 13px; color: #444;">Customer: <strong>${order.customerName}</strong> (${order.customerPhone || 'No phone'})<br>Address: ${order.customerAddress || 'N/A'}</div>` : ''}
+                        <div class="action-buttons" style="margin-top:10px;">
+                            <button class="btn-view" onclick="viewOrderDetails('${order.id}')">View Items</button>
+                            <button class="btn-edit" onclick="editOrder('${order.id}')">Edit</button>
+                            <button class="btn-delete" onclick="deleteOrder('${order.id}')">Delete</button>
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html || '<div class="loading">No orders found.</div>';
         };
 
         window.viewOrderDetails = async function(orderId) {
