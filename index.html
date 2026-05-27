@@ -953,8 +953,8 @@
     .menu-card-takeorder { aspect-ratio: 1 / 0.75; }
     .menu-name-overlay-takeorder { padding: 10px 6px 4px 8px; }
     .menu-name-overlay-takeorder span { font-size: 0.75rem; }
-    .menu-content-takeorder { padding: 4px 8px; }
-    .menu-price-takeorder { font-size: 0.85rem; }
+    .menu-content-takeorder { padding: 4px 6px; }
+    .menu-price-takeorder { font-size: 0.75rem; }
 }
 
 .menu-grid-takeorder.list-view {
@@ -1052,7 +1052,7 @@
 }
 
 .menu-content-takeorder {
-    padding: 10px;
+    padding: 6px 10px;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -1063,7 +1063,7 @@
 .menu-price-takeorder {
     font-weight: 800;
     color: #764ba2;
-    font-size: 1rem;
+    font-size: 0.9rem;
 }
 
 .table-section-takeorder {
@@ -1336,8 +1336,8 @@
         #checkoutModalTakeOrder .checkout-right-panel div[style*="padding: 15px"] {
             padding: 6px 12px !important;
         }
-        #checkoutTotalDue, #checkoutReceivedDisplay {
-            font-size: 1.4rem !important;
+        #checkoutTotalDue, #checkoutReceivedDisplay, .chk-prefix-rm {
+            font-size: 1.25rem !important;
         }
         #checkoutModalTakeOrder .btn-numpad {
             padding: 10px !important;
@@ -2035,6 +2035,10 @@
                     <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Business Address</label>
                     <textarea id="regRestaurantAddress" rows="2" placeholder="Full operating address..." class="w-full px-4 py-3 bg-slate-100 border-transparent rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none" required></textarea>
                 </div>
+                <div>
+                    <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Promo Code (Optional)</label>
+                    <input type="text" id="regPromoCode" placeholder="Enter promo code" class="w-full px-4 py-3 bg-slate-100 border-transparent rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all">
+                </div>
             </div>
             
             <button id="btnSubmitRegistration" onclick="submitRegistration()" class="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold text-lg hover:bg-blue-700 active:scale-[0.98] transition-all shadow-lg shadow-blue-100">
@@ -2339,6 +2343,9 @@
                                     <th style="padding: 10px;">Staff</th>
                                     <th style="padding: 10px;">Total Orders</th>
                                     <th style="padding: 10px;">Total Cancelled</th>
+                                    <th style="padding: 10px;">Total Failed</th>
+                                    <th style="padding: 10px;">Total Refunded</th>
+                                    <th style="padding: 10px;">Total Completed</th>
                                     <th style="padding: 10px;">Total Transaction</th>
                                     <th style="padding: 10px;">Cash</th>
                                     <th style="padding: 10px;">E-Wallet</th>
@@ -2364,7 +2371,26 @@
                         <span class="section-title">Menu Items</span>
                         <button class="btn-icon" onclick="showAddMenuItemModal()">+</button>
                     </div>
-                    <div id="menuItemsList" class="menu-grid"></div>
+                    
+                    <!-- Filters Bar -->
+                    <div style="margin-bottom: 20px; display: flex; flex-direction: column; gap: 12px;">
+                        <input type="text" id="menuItemSearchInput" placeholder="Search menu item name..." 
+                               style="width: 100%; padding: 12px; border-radius: 14px; border: 2px solid #e2e8f0; font-size: 0.9rem;"
+                               oninput="renderMenuItemsList()">
+                        
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
+                            <select id="menuItemCategoryFilter" onchange="renderMenuItemsList()" style="padding: 10px; border-radius: 12px; border: 2px solid #e2e8f0; font-size: 0.85rem; background: white;">
+                                <option value="All">All Categories</option>
+                            </select>
+                            <select id="menuItemStatusFilter" onchange="renderMenuItemsList()" style="padding: 10px; border-radius: 12px; border: 2px solid #e2e8f0; font-size: 0.85rem; background: white;">
+                                <option value="All">All Status</option>
+                                <option value="active">Active</option>
+                                <option value="inactive">Inactive</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="menuItemsList"></div>
                 </div>
             </div>
 
@@ -2375,6 +2401,22 @@
                         <span class="section-title">Global Variants</span>
                         <button class="btn-icon" onclick="showAddGlobalVariantModal()">+</button>
                     </div>
+
+                    <!-- Filters Bar -->
+                    <div style="margin-bottom: 20px; display: flex; flex-direction: column; gap: 12px;">
+                        <input type="text" id="variantSearchInputTab" placeholder="Search variant name..." 
+                               style="width: 100%; padding: 12px; border-radius: 14px; border: 2px solid #e2e8f0; font-size: 0.9rem;"
+                               oninput="renderGlobalVariantsList()">
+                        
+                        <div style="display: grid; grid-template-columns: 1fr; gap: 10px;">
+                            <select id="variantRequiredFilter" onchange="renderGlobalVariantsList()" style="padding: 10px; border-radius: 12px; border: 2px solid #e2e8f0; font-size: 0.85rem; background: white;">
+                                <option value="All">All Requirements</option>
+                                <option value="required">Required</option>
+                                <option value="optional">Optional</option>
+                            </select>
+                        </div>
+                    </div>
+
                     <div id="globalVariantsList"></div>
                 </div>
             </div>
@@ -2386,6 +2428,14 @@
                         <span class="section-title">Global Modifiers</span>
                         <button class="btn-icon" onclick="showAddGlobalModifierModal()">+</button>
                     </div>
+
+                    <!-- Filters Bar -->
+                    <div style="margin-bottom: 20px;">
+                        <input type="text" id="modifierSearchInputTab" placeholder="Search modifier name..." 
+                               style="width: 100%; padding: 12px; border-radius: 14px; border: 2px solid #e2e8f0; font-size: 0.9rem;"
+                               oninput="renderGlobalModifiersList()">
+                    </div>
+
                     <div id="globalModifiersList"></div>
                 </div>
             </div>
@@ -2408,7 +2458,27 @@
                         <span class="section-title">Tables</span>
                         <button class="btn-icon" onclick="showAddTableModal()">+</button>
                     </div>
-                    <div id="tablesList" class="table-grid"></div>
+
+                    <!-- Filters Bar -->
+                    <div style="margin-bottom: 20px; display: flex; flex-direction: column; gap: 12px;">
+                        <input type="text" id="tableSearchInput" placeholder="Search table ID or location..." 
+                               style="width: 100%; padding: 12px; border-radius: 14px; border: 2px solid #e2e8f0; font-size: 0.9rem;"
+                               oninput="renderTablesList()">
+                        
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
+                            <select id="tableLocationFilter" onchange="renderTablesList()" style="padding: 10px; border-radius: 12px; border: 2px solid #e2e8f0; font-size: 0.85rem; background: white;">
+                                <option value="All">All Locations</option>
+                            </select>
+                            <select id="tableStatusFilter" onchange="renderTablesList()" style="padding: 10px; border-radius: 12px; border: 2px solid #e2e8f0; font-size: 0.85rem; background: white;">
+                                <option value="All">All Status</option>
+                                <option value="available">Available</option>
+                                <option value="occupied">Occupied</option>
+                                <option value="reserved">Reserved</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="tablesList"></div>
                 </div>
             </div>
 
@@ -2462,6 +2532,35 @@
                         <span class="section-title">All Orders</span>
                         <button class="btn-icon" onclick="refreshAllOrders()"><i class="fas fa-sync-alt"></i></button>
                     </div>
+                    
+                    <!-- Filters Bar -->
+                    <div style="margin-bottom: 20px; display: flex; flex-direction: column; gap: 12px;">
+                        <input type="text" id="allOrdersSearchInput" placeholder="Search Order ID, Table, Staff, Customer..." 
+                               style="width: 100%; padding: 12px; border-radius: 14px; border: 2px solid #e2e8f0; font-size: 0.9rem;"
+                               oninput="renderAllOrdersList()">
+                        
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+                            <select id="allOrdersTableFilter" onchange="renderAllOrdersList()" style="padding: 10px; border-radius: 12px; border: 2px solid #e2e8f0; font-size: 0.85rem; background: white;">
+                                <option value="All">All Tables</option>
+                            </select>
+                            <select id="allOrdersStatusFilter" onchange="renderAllOrdersList()" style="padding: 10px; border-radius: 12px; border: 2px solid #e2e8f0; font-size: 0.85rem; background: white;">
+                                <option value="All">All Status</option>
+                                <option value="active">Active</option>
+                                <option value="preparing">Preparing</option>
+                                <option value="served">Served</option>
+                                <option value="completed">Completed</option>
+                                <option value="cancelled">Cancelled</option>
+                            </select>
+                            <select id="allOrdersTypeFilter" onchange="renderAllOrdersList()" style="padding: 10px; border-radius: 12px; border: 2px solid #e2e8f0; font-size: 0.85rem; background: white;">
+                                <option value="All">All Types</option>
+                                <option value="dine-in">Dine-in</option>
+                                <option value="takeaway">Takeaway</option>
+                                <option value="delivery">Delivery</option>
+                                <option value="mix">Mix</option>
+                            </select>
+                        </div>
+                    </div>
+
                     <div id="allOrdersList"></div>
                 </div>
             </div>
@@ -2473,6 +2572,34 @@
                         <span class="section-title">All Transactions</span>
                         <button class="btn-icon" onclick="refreshAllTransactions()"><i class="fas fa-sync-alt"></i></button>
                     </div>
+
+                    <!-- Filters Bar -->
+                    <div style="margin-bottom: 20px; display: flex; flex-direction: column; gap: 12px;">
+                        <input type="text" id="allTransSearchInput" placeholder="Search Transaction ID, Order Number, Table..." 
+                               style="width: 100%; padding: 12px; border-radius: 14px; border: 2px solid #e2e8f0; font-size: 0.9rem;"
+                               oninput="renderAllTransactionsList()">
+                        
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+                            <select id="allTransStatusFilter" onchange="renderAllTransactionsList()" style="padding: 10px; border-radius: 12px; border: 2px solid #e2e8f0; font-size: 0.85rem; background: white;">
+                                <option value="All">All Status</option>
+                                <option value="completed">Completed</option>
+                                <option value="refunded">Refunded</option>
+                                <option value="failed">Failed</option>
+                            </select>
+                            <select id="allTransMethodFilter" onchange="renderAllTransactionsList()" style="padding: 10px; border-radius: 12px; border: 2px solid #e2e8f0; font-size: 0.85rem; background: white;">
+                                <option value="All">All Methods</option>
+                                <option value="cash">Cash</option>
+                                <option value="card">Card</option>
+                                <option value="ewallet">E-Wallet</option>
+                            </select>
+                            <select id="allTransTypeFilter" onchange="renderAllTransactionsList()" style="padding: 10px; border-radius: 12px; border: 2px solid #e2e8f0; font-size: 0.85rem; background: white;">
+                                <option value="All">All Types</option>
+                                <option value="Full">Full</option>
+                                <option value="Split">Split</option>
+                            </select>
+                        </div>
+                    </div>
+
                     <div id="allTransactionsList"></div>
                 </div>
             </div>
@@ -2507,6 +2634,14 @@
                             <div class="form-group">
                                 <label>Restaurant Name</label>
                                 <input type="text" id="receiptRestName" placeholder="Enter Restaurant Name" oninput="updateReceiptPreview()">
+                            </div>
+                            <div class="form-group">
+                                <label>SSM Number</label>
+                                <input type="text" id="receiptSSM" placeholder="Enter SSM Number" oninput="updateReceiptPreview()">
+                            </div>
+                            <div class="form-group">
+                                <label>Restaurant Phone</label>
+                                <input type="text" id="receiptRestPhone" placeholder="Enter Restaurant Phone" oninput="updateReceiptPreview()">
                             </div>
                             <div class="form-group">
                                 <label>Restaurant Address</label>
@@ -2793,10 +2928,6 @@
                 <input type="text" id="menuItemName">
             </div>
             <div class="form-group">
-                <label>Description</label>
-                <textarea id="menuItemDesc"></textarea>
-            </div>
-            <div class="form-group">
                 <label>Image URL</label>
                 <input type="text" id="menuItemImage" placeholder="https://example.com/image.jpg">
             </div>
@@ -2827,10 +2958,6 @@
                 <input type="number" id="menuItemPrepTime" value="15">
             </div>
             <div class="form-group">
-                <label>Tags (comma separated)</label>
-                <input type="text" id="menuItemTags" placeholder="spicy,popular">
-            </div>
-            <div class="form-group">
                 <label>Card Color (When images hidden)</label>
                 <input type="color" id="menuItemColor" value="#ffffff" style="height: 45px; width: 100%; border-radius: 12px; border: 2px solid #e0e0e0; cursor: pointer; padding: 4px;">
             </div>
@@ -2843,10 +2970,6 @@
                     <option value="pentagon">Pentagon</option>
                     <option value="nonagon">Nonagon</option>
                 </select>
-            </div>
-            <div class="checkbox-group">
-                <input type="checkbox" id="menuItemRecommended">
-                <label>Recommended</label>
             </div>
             <div class="checkbox-group">
                 <input type="checkbox" id="menuItemActive" checked>
@@ -3379,6 +3502,7 @@
                 <select id="editOrderStatus">
                     <option value="active">Active</option>
                     <option value="preparing">Preparing</option>
+                    <option value="served">Served</option>
                     <option value="completed">Completed</option>
                     <option value="cancelled">Cancelled</option>
                 </select>
@@ -3389,6 +3513,7 @@
                     <option value="dine-in">Dine-in</option>
                     <option value="takeaway">Takeaway</option>
                     <option value="delivery">Delivery</option>
+                    <option value="mix">Mix</option>
                 </select>
             </div>
             <button class="btn" onclick="saveOrderEdit()">Save Changes</button>
@@ -3700,14 +3825,18 @@
                         <button class="secondary-btn" style="padding: 12px 5px; font-size: 0.9rem;" onclick="addQuickAmountCheckout(100)">100</button>
                     </div>
                     <div style="flex: 1; display: flex; flex-direction: column; gap: 15px;">
-                        <div style="background: #333; color: #fff; padding: 15px; border-radius: 12px; text-align: right;">
-                            <div style="font-size: 0.8rem; opacity: 0.7;">TOTAL DUE</div>
-                            <div id="checkoutTotalDue" style="font-size: 1.8rem; font-weight: bold;">RM 0.00</div>
+                        <div style="background: #333; color: #fff; padding: 12px 15px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.75rem; opacity: 0.8; font-weight: 800; text-transform: uppercase;">Total Due</span>
+                            <span id="checkoutTotalDue" style="font-size: 1.5rem; font-weight: bold;">RM 0.00</span>
                         </div>
-                        <div id="checkoutReceivedBox" style="background: #f0f0f0; padding: 15px; border-radius: 12px; text-align: right; border: 2px solid #ddd;">
-                            <div style="font-size: 0.8rem; color: #666;">AMOUNT RECEIVED</div>
-                            <div id="checkoutReceivedDisplay" style="font-size: 1.8rem; font-weight: bold; color: #764ba2;">0.00</div>
-                            <div id="checkoutChangeDisplay" style="font-size: 0.9rem; font-weight: 600; margin-top: 4px; color: #e53e3e;">Change: RM 0.00</div>
+                        <div id="checkoutReceivedBox" style="background: #f0f0f0; padding: 10px 15px; border-radius: 12px; border: 2px solid #ddd;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="font-size: 0.75rem; color: #666; font-weight: 800; text-transform: uppercase;">Amount Received</span>
+                                <div style="display: flex; align-items: center; gap: 4px; font-size: 1.5rem; font-weight: bold; color: #764ba2;">
+                                    <span class="chk-prefix-rm">RM</span><span id="checkoutReceivedDisplay">0.00</span>
+                                </div>
+                            </div>
+                            <div id="checkoutChangeDisplay" style="font-size: 0.85rem; font-weight: 700; text-align: right; color: #e53e3e; margin-top: 2px;">Change: RM 0.00</div>
                         </div>
                         <div class="order-type-switch-takeorder" style="background: #eee;">
                             <div class="type-option-takeorder selected" id="chkPayCash" onclick="setCheckoutPayMethod('cash')"><i class="fas fa-money-bill"></i> Cash</div>
@@ -4056,6 +4185,7 @@
                 "restaurantName": document.getElementById('regRestaurantName').value,
                 "restaurantPhone": parseInt(document.getElementById('regRestaurantPhone').value),
                 "restaurantAddress": document.getElementById('regRestaurantAddress').value,
+                "promoCode": document.getElementById('regPromoCode').value,
                 "status": "pending"
             };
 
@@ -4149,6 +4279,10 @@
         let connectedBluetoothDevices = {}; // Map of ID -> BluetoothDevice object
         let selectedCheckoutItems = []; // Array of {orderId, itemId, price}
         let activeOrdersSnapshotTakeOrder = [];
+        let allMenuItemsSnapshotData = [];
+        let allTablesSnapshotData = [];
+        let allOrdersSnapshotData = [];
+        let allTransactionsSnapshotData = [];
         let isEarlyPaymentMode = false;
         let isVoidModeTakeOrder = false;
         let voidingItemData = null;
@@ -4214,6 +4348,14 @@
                 localStorage.setItem('clientId', currentClientId);
                 localStorage.setItem('restaurantName', record.restaurantName);
                 localStorage.setItem('restaurantAddress', record.restaurantAddress);
+                localStorage.setItem('ssm', record.SSM || '');
+                localStorage.setItem('restaurantPhone', record.restaurantPhone || '');
+
+                // Initialize Firestore override tracking as empty
+                localStorage.setItem('fs_restaurantName', '');
+                localStorage.setItem('fs_ssm', '');
+                localStorage.setItem('fs_restaurantPhone', '');
+                localStorage.setItem('fs_restaurantAddress', '');
 
                 // Ensure firebaseConfig is stringified before saving to localStorage
                 const configStr = typeof record.firebaseConfig === 'string' ? record.firebaseConfig : JSON.stringify(record.firebaseConfig);
@@ -4351,15 +4493,29 @@
                 } else {
                     expiredOverlay.style.display = 'none';
                 }
-                
+
+                // Respect Firestore overrides if they exist
+                const fs_name = localStorage.getItem('fs_restaurantName');
+                const fs_addr = localStorage.getItem('fs_restaurantAddress');
+                const fs_ssm = localStorage.getItem('fs_ssm');
+                const fs_phone = localStorage.getItem('fs_restaurantPhone');
+
                 if (data.restaurantName) {
-                    document.getElementById('appRestaurantName').textContent = data.restaurantName;
-                    document.getElementById('restaurantNameDisplay').textContent = data.restaurantName;
-                    localStorage.setItem('restaurantName', data.restaurantName);
+                    if (!fs_name) {
+                        document.getElementById('appRestaurantName').textContent = data.restaurantName;
+                        document.getElementById('restaurantNameDisplay').textContent = data.restaurantName;
+                        localStorage.setItem('restaurantName', data.restaurantName);
+                    }
                 }
                 
-                if (data.restaurantAddress) {
+                if (data.restaurantAddress && !fs_addr) {
                     localStorage.setItem('restaurantAddress', data.restaurantAddress);
+                }
+                if (data.SSM && !fs_ssm) {
+                    localStorage.setItem('ssm', data.SSM);
+                }
+                if (data.restaurantPhone && !fs_phone) {
+                    localStorage.setItem('restaurantPhone', data.restaurantPhone);
                 }
             };
 
@@ -4598,33 +4754,66 @@
         }
 
         function loadGlobalVariantsPage() {
+            if (unsubscribers['globalVariants']) unsubscribers['globalVariants']();
             const ref = collection(db, 'licenses', currentClientId, 'global_variants');
-            onSnapshot(ref, async (snapshot) => {
-                const container = document.getElementById('globalVariantsList');
-                allGlobalVariants = [];
-                let html = '';
-                
-                for (const variantDoc of snapshot.docs) {
-                    const variant = variantDoc.data();
-                    allGlobalVariants.push({ id: variantDoc.id, ...variant });
-                    
-                    const optionsRef = collection(db, 'licenses', currentClientId, 'global_variants', variantDoc.id, 'options');
-                    const optionsSnap = await getDocs(optionsRef);
-                    
-                    html += `<div style="background:#f7fafc;padding:10px;border-radius:8px;margin-bottom:10px;">
-                        <b>${variant.name}</b> ${variant.required ? '(Required)' : ''} ${variant.multiSelect ? '(Multi)' : ''}<br>
-                        Options: `;
-                    optionsSnap.forEach(opt => {
-                        html += `${opt.data().name} (${opt.data().priceAdjustment || '0.00'}) `;
-                    });
-                    html += `<div class="action-buttons" style="margin-top:5px;">
-                        <button class="btn-edit" onclick="editGlobalVariant('${variantDoc.id}')">Edit</button>
-                        <button class="btn-delete" onclick="deleteGlobalVariant('${variantDoc.id}')">Delete</button>
-                    </div></div>`;
-                }
-                container.innerHTML = html || '<div class="loading">No global variants</div>';
+            const q = query(ref, orderBy('createdAt', 'desc'));
+            unsubscribers['globalVariants'] = onSnapshot(q, (snapshot) => {
+                allGlobalVariants = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderGlobalVariantsList();
             });
         }
+
+        window.renderGlobalVariantsList = function() {
+            const searchTerm = document.getElementById('variantSearchInputTab').value.toLowerCase();
+            const requiredFilter = document.getElementById('variantRequiredFilter').value;
+            const container = document.getElementById('globalVariantsList');
+
+            let filtered = allGlobalVariants.filter(variant => {
+                const matchesSearch = !searchTerm || variant.name.toLowerCase().includes(searchTerm);
+                const isRequired = variant.required === true;
+                const matchesRequired = requiredFilter === 'All' || 
+                                       (requiredFilter === 'required' && isRequired) || 
+                                       (requiredFilter === 'optional' && !isRequired);
+                return matchesSearch && matchesRequired;
+            });
+
+            let html = `
+                <div style="overflow-x: auto; background: white; border-radius: 20px; padding: 15px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                        <thead>
+                            <tr style="border-bottom: 2px solid #f1f5f9; text-align: left; color: #64748b;">
+                                <th style="padding: 12px 10px;">Name</th>
+                                <th style="padding: 12px 10px;">Required</th>
+                                <th style="padding: 12px 10px; text-align: right;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+
+            filtered.forEach(variant => {
+                const isRequired = variant.required === true;
+                html += `
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 12px 10px; font-weight: 600; color: #1e293b;">${variant.name}</td>
+                        <td style="padding: 12px 10px;">
+                            <span class="status-badge ${isRequired ? 'status-active' : 'status-completed'}" style="font-size: 10px;">${isRequired ? 'Required' : 'Optional'}</span>
+                        </td>
+                        <td style="padding: 12px 10px; text-align: right;">
+                            <div class="action-buttons" style="justify-content: flex-end;">
+                                <button class="btn-edit" style="padding: 6px 12px;" onclick="editGlobalVariant('${variant.id}')"><i class="fas fa-edit"></i></button>
+                                <button class="btn-delete" style="padding: 6px 12px;" onclick="deleteGlobalVariant('${variant.id}')"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            if (filtered.length === 0) {
+                html += '<tr><td colspan="3" style="text-align:center; padding:20px; color:#666;">No variants found matching filters.</td></tr>';
+            }
+
+            html += `</tbody></table></div>`;
+            container.innerHTML = html;
+        };
 
         window.showAddGlobalVariantModal = function() {
             document.getElementById('globalVariantModalTitle').textContent = 'Add Global Variant';
@@ -4649,7 +4838,8 @@
             document.getElementById('globalVariantMultiSelect').checked = variant.multiSelect;
             
             const optionsRef = collection(db, 'licenses', currentClientId, 'global_variants', id, 'options');
-            const optionsSnap = await getDocs(optionsRef);
+            const qOptions = query(optionsRef, orderBy('createdAt', 'asc'));
+            const optionsSnap = await getDocs(qOptions);
             
             let html = '';
             let i = 0;
@@ -4710,7 +4900,8 @@
                 if (optName) {
                     await addDoc(optionsRef, {
                         name: optName,
-                        priceAdjustment: inputs[1]?.value || '0.00'
+                        priceAdjustment: inputs[1]?.value || '0.00',
+                        createdAt: Timestamp.now()
                     });
                 }
             }
@@ -4736,33 +4927,59 @@
         }
 
         function loadGlobalModifiersPage() {
+            if (unsubscribers['globalModifiers']) unsubscribers['globalModifiers']();
             const ref = collection(db, 'licenses', currentClientId, 'global_modifiers');
-            onSnapshot(ref, async (snapshot) => {
-                const container = document.getElementById('globalModifiersList');
-                allGlobalModifiers = [];
-                let html = '';
-                
-                for (const modDoc of snapshot.docs) {
-                    const mod = modDoc.data();
-                    allGlobalModifiers.push({ id: modDoc.id, ...mod });
-                    
-                    const optionsRef = collection(db, 'licenses', currentClientId, 'global_modifiers', modDoc.id, 'options');
-                    const optionsSnap = await getDocs(optionsRef);
-                    
-                    html += `<div style="background:#f7fafc;padding:10px;border-radius:8px;margin-bottom:10px;">
-                        <b>${mod.name}</b> (Min: ${mod.minSelections}, Max: ${mod.maxSelections})<br>
-                        Options: `;
-                    optionsSnap.forEach(opt => {
-                        html += `${opt.data().name} (RM ${opt.data().price}) `;
-                    });
-                    html += `<div class="action-buttons" style="margin-top:5px;">
-                        <button class="btn-edit" onclick="editGlobalModifier('${modDoc.id}')">Edit</button>
-                        <button class="btn-delete" onclick="deleteGlobalModifier('${modDoc.id}')">Delete</button>
-                    </div></div>`;
-                }
-                container.innerHTML = html || '<div class="loading">No global modifiers</div>';
+            const q = query(ref, orderBy('createdAt', 'desc'));
+            unsubscribers['globalModifiers'] = onSnapshot(q, (snapshot) => {
+                allGlobalModifiers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderGlobalModifiersList();
             });
         }
+
+        window.renderGlobalModifiersList = function() {
+            const searchTerm = document.getElementById('modifierSearchInputTab').value.toLowerCase();
+            const container = document.getElementById('globalModifiersList');
+
+            let filtered = allGlobalModifiers.filter(mod => {
+                return !searchTerm || mod.name.toLowerCase().includes(searchTerm);
+            });
+
+            let html = `
+                <div style="overflow-x: auto; background: white; border-radius: 20px; padding: 15px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                        <thead>
+                            <tr style="border-bottom: 2px solid #f1f5f9; text-align: left; color: #64748b;">
+                                <th style="padding: 12px 10px;">Name</th>
+                                <th style="padding: 12px 10px;">Min</th>
+                                <th style="padding: 12px 10px;">Max</th>
+                                <th style="padding: 12px 10px; text-align: right;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+
+            filtered.forEach(mod => {
+                html += `
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 12px 10px; font-weight: 600; color: #1e293b;">${mod.name}</td>
+                        <td style="padding: 12px 10px; color: #64748b; font-weight: 600;">${mod.minSelections || 0}</td>
+                        <td style="padding: 12px 10px; color: #64748b; font-weight: 600;">${mod.maxSelections || '∞'}</td>
+                        <td style="padding: 12px 10px; text-align: right;">
+                            <div class="action-buttons" style="justify-content: flex-end;">
+                                <button class="btn-edit" style="padding: 6px 12px;" onclick="editGlobalModifier('${mod.id}')"><i class="fas fa-edit"></i></button>
+                                <button class="btn-delete" style="padding: 6px 12px;" onclick="deleteGlobalModifier('${mod.id}')"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            if (filtered.length === 0) {
+                html += '<tr><td colspan="4" style="text-align:center; padding:20px; color:#666;">No modifiers found matching search.</td></tr>';
+            }
+
+            html += `</tbody></table></div>`;
+            container.innerHTML = html;
+        };
 
         window.showAddGlobalModifierModal = function() {
             document.getElementById('globalModifierModalTitle').textContent = 'Add Global Modifier';
@@ -4787,7 +5004,8 @@
             document.getElementById('globalModifierMax').value = mod.maxSelections;
             
             const optionsRef = collection(db, 'licenses', currentClientId, 'global_modifiers', id, 'options');
-            const optionsSnap = await getDocs(optionsRef);
+            const qOptions = query(optionsRef, orderBy('createdAt', 'asc'));
+            const optionsSnap = await getDocs(qOptions);
             
             let html = '';
             let i = 0;
@@ -4848,7 +5066,8 @@
                 if (optName) {
                     await addDoc(optionsRef, {
                         name: optName,
-                        price: inputs[1]?.value || '0.00'
+                        price: inputs[1]?.value || '0.00',
+                        createdAt: Timestamp.now()
                     });
                 }
             }
@@ -4868,30 +5087,93 @@
         let tempSelectedModifiers = [];
 
         async function loadMenuItems() {
+            // Populate category filter
+            const select = document.getElementById('menuItemCategoryFilter');
+            if (select) {
+                try {
+                    const catsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'menu_categories'));
+                    let html = '<option value="All">All Categories</option>';
+                    const catsArr = catsSnap.docs.map(d => ({id: d.id, ...d.data()}));
+                    catsArr.sort((a, b) => a.name.localeCompare(b.name));
+                    catsArr.forEach(t => {
+                        html += `<option value="${t.id}">${t.name}</option>`;
+                    });
+                    select.innerHTML = html;
+                } catch (e) { console.warn("Failed to load categories for filter", e); }
+            }
+
+            if (unsubscribers['menuItems']) unsubscribers['menuItems']();
             const ref = collection(db, 'licenses', currentClientId, 'menu_items');
-            onSnapshot(ref, async (snapshot) => {
-                const container = document.getElementById('menuItemsList');
-                const categories = await getCategoriesMap();
-                
-                let html = '';
-                snapshot.forEach(doc => {
-                    const item = doc.data();
-                    html += `
-                        <div class="menu-card">
-                            <div class="menu-card-name">${item.name}</div>
-                            <div class="menu-card-price">RM ${item.price}</div>
-                            <small>${categories[item.categoryId] || ''}</small>
-                            ${item.recommend ? '<span style="background:#f6ad55;color:white;padding:2px 6px;border-radius:4px;font-size:10px;">★ Recommended</span>' : ''}
-                            <div class="action-buttons" style="margin-top:10px;">
-                                <button class="btn-edit" onclick="editMenuItem('${doc.id}')">Edit</button>
-                                <button class="btn-delete" onclick="deleteMenuItem('${doc.id}')">Delete</button>
-                            </div>
-                        </div>
-                    `;
-                });
-                container.innerHTML = html || '<div class="loading">No menu items</div>';
+            const q = query(ref, orderBy('createdAt', 'desc'));
+            unsubscribers['menuItems'] = onSnapshot(q, async (snapshot) => {
+                allMenuItemsSnapshotData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderMenuItemsList();
             });
         }
+
+        window.renderMenuItemsList = async function() {
+            const searchTerm = document.getElementById('menuItemSearchInput').value.toLowerCase();
+            const categoryFilter = document.getElementById('menuItemCategoryFilter').value;
+            const statusFilter = document.getElementById('menuItemStatusFilter').value;
+            const container = document.getElementById('menuItemsList');
+            
+            const categories = await getCategoriesMap();
+
+            let filtered = allMenuItemsSnapshotData.filter(item => {
+                const isActive = item.active !== false;
+                const matchesSearch = !searchTerm || item.name.toLowerCase().includes(searchTerm);
+                const matchesCategory = categoryFilter === 'All' || item.categoryId === categoryFilter;
+                const matchesStatus = statusFilter === 'All' || 
+                                     (statusFilter === 'active' && isActive) || 
+                                     (statusFilter === 'inactive' && !isActive);
+                return matchesSearch && matchesCategory && matchesStatus;
+            });
+
+            let html = `
+                <div style="overflow-x: auto; background: white; border-radius: 20px; padding: 15px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                        <thead>
+                            <tr style="border-bottom: 2px solid #f1f5f9; text-align: left; color: #64748b;">
+                                <th style="padding: 12px 10px;">Name</th>
+                                <th style="padding: 12px 10px;">Category</th>
+                                <th style="padding: 12px 10px;">Price</th>
+                                <th style="padding: 12px 10px;">Status</th>
+                                <th style="padding: 12px 10px; text-align: right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+
+            filtered.forEach(item => {
+                const categoryName = categories[item.categoryId] || 'N/A';
+                const isActive = item.active !== false;
+                
+                html += `
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 12px 10px; font-weight: 600; color: #1e293b;">${item.name}</td>
+                        <td style="padding: 12px 10px; color: #64748b;">${categoryName}</td>
+                        <td style="padding: 12px 10px; font-weight: 700; color: #764ba2;">RM ${parseFloat(item.price).toFixed(2)}</td>
+                        <td style="padding: 12px 10px;">
+                            <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+                                <span class="status-badge ${isActive ? 'status-completed' : 'status-cancelled'}" style="font-size: 10px;">${isActive ? 'Active' : 'Inactive'}</span>
+                            </div>
+                        </td>
+                        <td style="padding: 12px 10px; text-align: right;">
+                            <div class="action-buttons" style="justify-content: flex-end;">
+                                <button class="btn-edit" style="padding: 6px 12px;" onclick="editMenuItem('${item.id}')"><i class="fas fa-edit"></i></button>
+                                <button class="btn-delete" style="padding: 6px 12px;" onclick="deleteMenuItem('${item.id}')"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            if (filtered.length === 0) {
+                html += '<tr><td colspan="5" style="text-align:center; padding:20px; color:#666;">No menu items found matching filters.</td></tr>';
+            }
+
+            html += `</tbody></table></div>`;
+            container.innerHTML = html;
+        };
 
         async function getCategoriesMap() {
             const snap = await getDocs(collection(db, 'licenses', currentClientId, 'menu_categories'));
@@ -4904,23 +5186,20 @@
             document.getElementById('menuItemModalTitle').textContent = 'Add Menu Item';
             document.getElementById('editingMenuItemId').value = '';
             document.getElementById('menuItemName').value = '';
-            document.getElementById('menuItemDesc').value = '';
             document.getElementById('menuItemImage').value = '';
             document.getElementById('menuItemPrice').value = '';
             document.querySelectorAll('input[name="soldBy"]').forEach(r => r.checked = r.value === 'item');
             document.getElementById('menuItemUnit').value = '';
             toggleSoldBy('item');
             document.getElementById('menuItemPrepTime').value = '15';
-            document.getElementById('menuItemTags').value = '';
             document.getElementById('menuItemColor').value = '#ffffff';
             document.getElementById('menuItemShape').value = 'square';
-            document.getElementById('menuItemRecommended').checked = false;
             document.getElementById('menuItemActive').checked = true;
             
             tempSelectedVariants = [];
             tempSelectedModifiers = [];
-            updateMenuItemVariantsDisplay();
-            updateMenuItemModifiersDisplay();
+            await updateMenuItemVariantsDisplay();
+            await updateMenuItemModifiersDisplay();
             
             const select = document.getElementById('menuItemCategory');
             const snap = await getDocs(collection(db, 'licenses', currentClientId, 'menu_categories'));
@@ -4940,23 +5219,20 @@
             document.getElementById('menuItemModalTitle').textContent = 'Edit Menu Item';
             document.getElementById('editingMenuItemId').value = id;
             document.getElementById('menuItemName').value = item.name || '';
-            document.getElementById('menuItemDesc').value = item.description || '';
             document.getElementById('menuItemImage').value = item.image || '';
             document.getElementById('menuItemPrice').value = item.price || '';
             document.querySelectorAll('input[name="soldBy"]').forEach(r => r.checked = r.value === (item.soldBy || 'item'));
             document.getElementById('menuItemUnit').value = item.unit || '';
             toggleSoldBy(item.soldBy || 'item', !!item.unit);
             document.getElementById('menuItemPrepTime').value = item.preparationTime || '15';
-            document.getElementById('menuItemTags').value = item.tags || '';
             document.getElementById('menuItemColor').value = item.color || '#ffffff';
             document.getElementById('menuItemShape').value = item.shape || 'square';
-            document.getElementById('menuItemRecommended').checked = item.recommend || false;
             document.getElementById('menuItemActive').checked = item.active !== false;
             
             tempSelectedVariants = item.variants || [];
             tempSelectedModifiers = item.modifiers || [];
-            updateMenuItemVariantsDisplay();
-            updateMenuItemModifiersDisplay();
+            await updateMenuItemVariantsDisplay();
+            await updateMenuItemModifiersDisplay();
             
             const select = document.getElementById('menuItemCategory');
             const snap = await getDocs(collection(db, 'licenses', currentClientId, 'menu_categories'));
@@ -5002,7 +5278,7 @@
             document.getElementById('variantSelectorModal').style.display = 'flex';
         };
 
-        window.toggleVariantSelection = function(variantId) {
+        window.toggleVariantSelection = async function(variantId) {
             const existing = tempSelectedVariants.find(v => v.id === variantId);
             if (existing) {
                 tempSelectedVariants = tempSelectedVariants.filter(v => v.id !== variantId);
@@ -5010,7 +5286,7 @@
                 const variant = allGlobalVariants.find(v => v.id === variantId);
                 if (variant) tempSelectedVariants.push({ id: variantId, name: variant.name });
             }
-            updateMenuItemVariantsDisplay();
+            await updateMenuItemVariantsDisplay();
             showVariantSelector();
         };
 
@@ -5027,7 +5303,7 @@
             document.getElementById('modifierSelectorModal').style.display = 'flex';
         };
 
-        window.toggleModifierSelection = function(modifierId) {
+        window.toggleModifierSelection = async function(modifierId) {
             const existing = tempSelectedModifiers.find(m => m.id === modifierId);
             if (existing) {
                 tempSelectedModifiers = tempSelectedModifiers.filter(m => m.id !== modifierId);
@@ -5035,40 +5311,102 @@
                 const modifier = allGlobalModifiers.find(m => m.id === modifierId);
                 if (modifier) tempSelectedModifiers.push({ id: modifierId, name: modifier.name });
             }
-            updateMenuItemModifiersDisplay();
+            await updateMenuItemModifiersDisplay();
             showModifierSelector();
         };
 
-        function updateMenuItemVariantsDisplay() {
+        async function updateMenuItemVariantsDisplay() {
             const container = document.getElementById('menuItemVariantsList');
+            if (!tempSelectedVariants.length) {
+                container.innerHTML = '<span style="color:#999; font-size: 0.85rem;">No variants selected</span>';
+                return;
+            }
+            
+            container.innerHTML = '<div style="padding: 10px; font-size: 0.8rem; color: #764ba2; font-weight: 600;"><i class="fas fa-spinner fa-spin mr-2"></i> Loading details...</div>';
+            
             let html = '';
-            tempSelectedVariants.forEach(v => {
-                html += `<span class="selected-variant" style="display:inline-block;margin:3px;">${v.name} 
-                    <button type="button" onclick="removeTempVariant('${v.id}')" style="background:none;border:none;cursor:pointer;">✕</button>
-                </span>`;
-            });
-            container.innerHTML = html || '<span style="color:#999;">No variants selected</span>';
+            for (const v of tempSelectedVariants) {
+                const variantInfo = allGlobalVariants.find(gv => gv.id === v.id) || { required: true, multiSelect: false };
+                const optionsRef = collection(db, 'licenses', currentClientId, 'global_variants', v.id, 'options');
+                const qOptions = query(optionsRef, orderBy('createdAt', 'asc'));
+                const optionsSnap = await getDocs(qOptions);
+                const options = optionsSnap.docs.map(d => d.data());
+                
+                html += `
+                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 12px; margin-bottom: 10px;">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                            <div>
+                                <div style="font-weight: 700; color: #1e293b; font-size: 0.85rem;">${v.name}</div>
+                                <div style="display: flex; gap: 6px; margin-top: 5px;">
+                                    <span style="font-size: 9px; background: ${variantInfo.required ? '#fee2e2' : '#f1f5f9'}; color: ${variantInfo.required ? '#ef4444' : '#64748b'}; padding: 2px 6px; border-radius: 6px; font-weight: 800; text-transform: uppercase; border: 1px solid ${variantInfo.required ? '#fecaca' : '#e2e8f0'};">
+                                        ${variantInfo.required ? 'Required' : 'Optional'}
+                                    </span>
+                                    <span style="font-size: 9px; background: #e0f2fe; color: #0369a1; padding: 2px 6px; border-radius: 6px; font-weight: 800; text-transform: uppercase; border: 1px solid #bae6fd;">
+                                        ${variantInfo.multiSelect ? 'Multi-Select' : 'Single-Select'}
+                                    </span>
+                                </div>
+                            </div>
+                            <button type="button" onclick="removeTempVariant('${v.id}')" style="background:#fee2e2; border:none; color:#ef4444; width:26px; height:26px; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size: 10px;"><i class="fas fa-trash-alt"></i></button>
+                        </div>
+                        <div style="font-size: 0.7rem; color: #64748b; background: white; padding: 8px; border-radius: 10px; border: 1px dashed #cbd5e0; line-height: 1.4;">
+                            <strong style="color: #475569;">Options:</strong> ${options.map(opt => `${opt.name} (RM ${parseFloat(opt.priceAdjustment || 0).toFixed(2)})`).join(', ') || 'No options defined'}
+                        </div>
+                    </div>
+                `;
+            }
+            container.innerHTML = html;
         }
 
-        function updateMenuItemModifiersDisplay() {
+        async function updateMenuItemModifiersDisplay() {
             const container = document.getElementById('menuItemModifiersList');
+            if (!tempSelectedModifiers.length) {
+                container.innerHTML = '<span style="color:#999; font-size: 0.85rem;">No modifiers selected</span>';
+                return;
+            }
+            
+            container.innerHTML = '<div style="padding: 10px; font-size: 0.8rem; color: #764ba2; font-weight: 600;"><i class="fas fa-spinner fa-spin mr-2"></i> Loading details...</div>';
+            
             let html = '';
-            tempSelectedModifiers.forEach(m => {
-                html += `<span class="selected-modifier" style="display:inline-block;margin:3px;">${m.name}
-                    <button type="button" onclick="removeTempModifier('${m.id}')" style="background:none;border:none;cursor:pointer;">✕</button>
-                </span>`;
-            });
-            container.innerHTML = html || '<span style="color:#999;">No modifiers selected</span>';
+            for (const m of tempSelectedModifiers) {
+                const modInfo = allGlobalModifiers.find(gm => gm.id === m.id) || { minSelections: 0, maxSelections: 3 };
+                const optionsRef = collection(db, 'licenses', currentClientId, 'global_modifiers', m.id, 'options');
+                const qOptions = query(optionsRef, orderBy('createdAt', 'asc'));
+                const optionsSnap = await getDocs(qOptions);
+                const options = optionsSnap.docs.map(d => d.data());
+
+                html += `
+                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 12px; margin-bottom: 10px;">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                            <div>
+                                <div style="font-weight: 700; color: #1e293b; font-size: 0.85rem;">${m.name}</div>
+                                <div style="display: flex; gap: 6px; margin-top: 5px;">
+                                    <span style="font-size: 9px; background: #f0fdf4; color: #166534; padding: 2px 6px; border-radius: 6px; font-weight: 800; text-transform: uppercase; border: 1px solid #bbf7d0;">
+                                        Min: ${modInfo.minSelections || 0}
+                                    </span>
+                                    <span style="font-size: 9px; background: #fff7ed; color: #9a3412; padding: 2px 6px; border-radius: 6px; font-weight: 800; text-transform: uppercase; border: 1px solid #ffedd5;">
+                                        Max: ${modInfo.maxSelections || '∞'}
+                                    </span>
+                                </div>
+                            </div>
+                            <button type="button" onclick="removeTempModifier('${m.id}')" style="background:#fee2e2; border:none; color:#ef4444; width:26px; height:26px; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size: 10px;"><i class="fas fa-trash-alt"></i></button>
+                        </div>
+                        <div style="font-size: 0.7rem; color: #64748b; background: white; padding: 8px; border-radius: 10px; border: 1px dashed #cbd5e0; line-height: 1.4;">
+                            <strong style="color: #475569;">Options:</strong> ${options.map(opt => `${opt.name} (RM ${parseFloat(opt.price || 0).toFixed(2)})`).join(', ') || 'No options defined'}
+                        </div>
+                    </div>
+                `;
+            }
+            container.innerHTML = html;
         }
 
-        window.removeTempVariant = function(variantId) {
+        window.removeTempVariant = async function(variantId) {
             tempSelectedVariants = tempSelectedVariants.filter(v => v.id !== variantId);
-            updateMenuItemVariantsDisplay();
+            await updateMenuItemVariantsDisplay();
         };
 
-        window.removeTempModifier = function(modifierId) {
+        window.removeTempModifier = async function(modifierId) {
             tempSelectedModifiers = tempSelectedModifiers.filter(m => m.id !== modifierId);
-            updateMenuItemModifiersDisplay();
+            await updateMenuItemModifiersDisplay();
         };
 
         window.filterVariants = function() {
@@ -5101,17 +5439,14 @@
             const id = document.getElementById('editingMenuItemId').value;
             const data = {
                 name: document.getElementById('menuItemName').value,
-                description: document.getElementById('menuItemDesc').value,
                 image: document.getElementById('menuItemImage').value,
                 soldBy: document.querySelector('input[name="soldBy"]:checked').value,
                 unit: document.getElementById('menuItemUnit').value,
                 price: document.getElementById('menuItemPrice').value,
                 categoryId: document.getElementById('menuItemCategory').value,
                 preparationTime: document.getElementById('menuItemPrepTime').value,
-                tags: document.getElementById('menuItemTags').value,
                 color: document.getElementById('menuItemColor').value,
                 shape: document.getElementById('menuItemShape').value,
-                recommend: document.getElementById('menuItemRecommended').checked,
                 active: document.getElementById('menuItemActive').checked,
                 variants: tempSelectedVariants,
                 modifiers: tempSelectedModifiers,
@@ -5734,12 +6069,34 @@
             
             let cashTotal = 0, ewalletTotal = 0, cardTotal = 0;
             let totalTransactions = transSnap.size;
+            let transTotalAmt = 0;
+            let transCompletedCount = 0;
+            let transRefundedCount = 0;
+            let transFailedCount = 0;
+            let transCompletedAmt = 0;
+            let transRefundedAmt = 0;
+            let transFailedAmt = 0;
+
             transSnap.forEach(d => {
                 const t = d.data();
                 const amt = parseFloat(t.amount) || 0;
-                if (t.paymentMethod === 'cash') cashTotal += amt;
-                else if (t.paymentMethod === 'ewallet') ewalletTotal += amt;
-                else if (t.paymentMethod === 'card') cardTotal += amt;
+                transTotalAmt += amt;
+
+                if (t.status === 'completed') {
+                    transCompletedCount++;
+                    transCompletedAmt += amt;
+                    if (t.paymentMethod === 'cash') cashTotal += amt;
+                    else if (t.paymentMethod === 'ewallet') ewalletTotal += amt;
+                    else if (t.paymentMethod === 'card') cardTotal += amt;
+                } else if (t.status === 'refunded') {
+                    transRefundedCount++;
+                    transRefundedAmt += amt;
+                    // Deduct from cash total if it was a cash refund to keep drawer tally accurate
+                    if (t.paymentMethod === 'cash') cashTotal -= amt;
+                } else if (t.status === 'failed') {
+                    transFailedCount++;
+                    transFailedAmt += amt;
+                }
             });
 
             const startFloat = parseFloat(shiftData.startFloat) || 0;
@@ -5775,7 +6132,14 @@
                 totalOrders: totalCompletedCount,
                 totalCancelled: totalCancelledCount,
                 totalTransactions: totalTransactions,
-                profit: cashTotal + ewalletTotal + cardTotal
+                transCompletedCount: transCompletedCount,
+                transRefundedCount: transRefundedCount,
+                transFailedCount: transFailedCount,
+                transTotalAmt: transTotalAmt,
+                transCompletedAmt: transCompletedAmt,
+                transRefundedAmt: transRefundedAmt,
+                transFailedAmt: transFailedAmt,
+                profit: transTotalAmt - transFailedAmt - transRefundedAmt
             };
         };
 
@@ -5849,6 +6213,9 @@
                         <td title="${staffNames}">${staffNames}</td>
                         <td>${s.totalOrders || 0}</td>
                         <td style="color:${(s.totalCancelled || 0) > 0 ? '#e53e3e' : '#64748b'}">${s.totalCancelled || 0}</td>
+                        <td>${s.transFailedCount || 0}</td>
+                        <td>${s.transRefundedCount || 0}</td>
+                        <td>${s.transCompletedCount || 0}</td>
                         <td>${s.totalTransactions || 0}</td>
                         <td>RM ${s.cashTotal.toFixed(2)}</td>
                         <td>RM ${s.ewalletTotal.toFixed(2)}</td>
@@ -5882,6 +6249,7 @@
                     <button class="shift-tab-btn" onclick="showShiftDetailTab('staff', this)" style="padding: 8px 12px; border:none; border-radius:10px; cursor:pointer; font-weight:bold; background:#f1f5f9; color:#475569; font-size: 0.8rem; white-space: nowrap;">Staff</button>
                     <button class="shift-tab-btn" onclick="showShiftDetailTab('order', this)" style="padding: 8px 12px; border:none; border-radius:10px; cursor:pointer; font-weight:bold; background:#f1f5f9; color:#475569; font-size: 0.8rem; white-space: nowrap;">Order</button>
                     <button class="shift-tab-btn" onclick="showShiftDetailTab('transaction', this)" style="padding: 8px 12px; border:none; border-radius:10px; cursor:pointer; font-weight:bold; background:#f1f5f9; color:#475569; font-size: 0.8rem; white-space: nowrap;">Transaction</button>
+                    <button class="shift-tab-btn" onclick="showShiftDetailTab('topMenu', this)" style="padding: 8px 12px; border:none; border-radius:10px; cursor:pointer; font-weight:bold; background:#f1f5f9; color:#475569; font-size: 0.8rem; white-space: nowrap;">Top Menu</button>
                 </div>
                 <div id="shiftTabContent"></div>
             `;
@@ -5904,7 +6272,14 @@
             }
 
             if (tab === 'summary') {
-                const total = parseFloat(s.profit) - parseFloat(s.loss);
+                const totalTransAmt = parseFloat(s.transTotalAmt || 0);
+                const compAmt = parseFloat(s.transCompletedAmt || 0);
+                const refAmt = parseFloat(s.transRefundedAmt || 0);
+                const failAmt = parseFloat(s.transFailedAmt || 0);
+                const netProfit = parseFloat(s.profit || 0);
+                const loss = parseFloat(s.loss || 0);
+                const netTotal = netProfit - loss;
+                
                 const staffNames = Array.isArray(s.staffNames) ? s.staffNames.join(', ') : s.startedBy;
                 container.innerHTML = `
                     <div style="background: #f8fafc; padding: 20px; border-radius: 16px; font-size: 0.9rem; line-height: 1.6;">
@@ -5916,15 +6291,22 @@
                         <p><strong>Staff Involved:</strong> ${staffNames}</p>
                         <p><strong>Total Orders (Completed):</strong> <span style="color:#38a169;">${s.totalOrders || 0}</span></p>
                         <p><strong>Total Cancelled:</strong> <span style="color:#e53e3e;">${s.totalCancelled || 0}</span></p>
+                        <p><strong>Total Failed (Trans):</strong> <span style="color:#ed8936;">${s.transFailedCount || 0}</span></p>
+                        <p><strong>Total Refunded (Trans):</strong> <span style="color:#e53e3e;">${s.transRefundedCount || 0}</span></p>
+                        <p><strong>Total Completed (Trans):</strong> <span style="color:#38a169;">${s.transCompletedCount || 0}</span></p>
                         <p><strong>Total Transaction:</strong> <span style="color:#764ba2;">${s.totalTransactions || 0}</span></p>
                         <hr style="margin: 10px 0; border: none; border-top: 1px dashed #cbd5e0;">
                         <div style="display: flex; justify-content: space-between;"><span>Opening Float:</span> <b>RM ${parseFloat(s.startFloat).toFixed(2)}</b></div>
-                        <div style="display: flex; justify-content: space-between;"><span>Cash Sales:</span> <b>RM ${s.cashTotal.toFixed(2)}</b></div>
+                        <div style="display: flex; justify-content: space-between;"><span>Cash Sales (In Drawer):</span> <b>RM ${parseFloat(s.cashTotal || 0).toFixed(2)}</b></div>
                         <div style="display: flex; justify-content: space-between;"><span>E-Wallet Sales:</span> <b>RM ${s.ewalletTotal.toFixed(2)}</b></div>
                         <div style="display: flex; justify-content: space-between;"><span>Card Sales:</span> <b>RM ${s.cardTotal.toFixed(2)}</b></div>
-                        <div style="display: flex; justify-content: space-between; margin-top: 5px; color: #764ba2; font-weight: bold;"><span>Total Profit:</span> <span>RM ${s.profit.toFixed(2)}</span></div>
-                        <div style="display: flex; justify-content: space-between; color: #e53e3e;"><span>Loss/Shortage:</span> <span>RM ${s.loss}</span></div>
-                        <div style="display: flex; justify-content: space-between; font-size: 1.1rem; font-weight: 800; margin-top: 10px; padding-top: 10px; border-top: 2px solid #eee;"><span>Net Total:</span> <span>RM ${total.toFixed(2)}</span></div>
+                        <hr style="margin: 10px 0; border: none; border-top: 1px dashed #cbd5e0;">
+                        <div style="display: flex; justify-content: space-between; color: #475569;"><span>Total Gross Trans:</span> <b>RM ${totalTransAmt.toFixed(2)}</b></div>
+                        <div style="display: flex; justify-content: space-between; color: #ed8936;"><span>Failed Amount:</span> <b>- RM ${failAmt.toFixed(2)}</b></div>
+                        <div style="display: flex; justify-content: space-between; color: #e53e3e;"><span>Refunded Amount:</span> <b>- RM ${refAmt.toFixed(2)}</b></div>
+                        <div style="display: flex; justify-content: space-between; margin-top: 5px; color: #764ba2; font-weight: bold;"><span>Total Profit:</span> <span>RM ${netProfit.toFixed(2)}</span></div>
+                        <div style="display: flex; justify-content: space-between; color: #e53e3e;"><span>Loss/Shortage:</span> <span>RM ${loss.toFixed(2)}</span></div>
+                        <div style="display: flex; justify-content: space-between; font-size: 1.1rem; font-weight: 800; margin-top: 10px; padding-top: 10px; border-top: 2px solid #eee;"><span>Net Total:</span> <span>RM ${netTotal.toFixed(2)}</span></div>
                     </div>
                 `;
             } else if (tab === 'cashFloat') {
@@ -6020,6 +6402,7 @@
                             <tr style="text-align:left; border-bottom:2px solid #f1f5f9; color: #64748b;">
                                 <th style="padding:10px;">Transaction Id</th>
                                 <th style="padding:10px;">Amount</th>
+                                <th style="padding:10px;">Status</th>
                                 <th style="padding:10px;">Action</th>
                             </tr>
                         </thead>
@@ -6030,10 +6413,15 @@
                 } else {
                     transSnap.forEach(tDoc => {
                         const t = tDoc.data();
+                        let rowColor = "inherit";
+                        if (t.status === 'refunded') rowColor = "#e53e3e"; // Red
+                        else if (t.status === 'failed') rowColor = "#ed8936"; // Orange
+
                         tableHtml += `
-                            <tr style="border-bottom: 1px solid #f1f5f9;">
+                            <tr style="border-bottom: 1px solid #f1f5f9; color: ${rowColor};">
                                 <td style="padding:10px;">#${tDoc.id.slice(0,8)}</td>
                                 <td style="padding:10px;">RM ${parseFloat(t.amount).toFixed(2)}</td>
+                                <td style="padding:10px; font-weight:bold; text-transform:uppercase;">${t.status || 'completed'}</td>
                                 <td style="padding:10px;"><button class="btn-view" style="padding: 5px 10px; font-size: 0.7rem;" onclick="viewTransactionDetails('${tDoc.id}')">View Transaction</button></td>
                             </tr>`;
                     });
@@ -6073,6 +6461,62 @@
                 }
                 tableHtml += '</tbody></table>';
                 container.innerHTML = tableHtml;
+            } else if (tab === 'topMenu') {
+                container.innerHTML = '<div class="loading">Analyzing sales data...</div>';
+                try {
+                    const ordersRef = collection(db, 'licenses', currentClientId, 'orders');
+                    const q = query(ordersRef, where('createdAt', '>=', s.startTime), where('createdAt', '<=', s.endTime));
+                    const ordersSnap = await getDocs(q);
+                    
+                    const itemCounts = {};
+                    const itemsFetchPromises = [];
+                    ordersSnap.forEach(orderDoc => {
+                        if (orderDoc.data().status !== 'cancelled') {
+                            itemsFetchPromises.push(getDocs(collection(db, 'licenses', currentClientId, 'orders', orderDoc.id, 'items')));
+                        }
+                    });
+                    
+                    const itemSnapshots = await Promise.all(itemsFetchPromises);
+                    itemSnapshots.forEach(itemsSnap => {
+                        itemsSnap.forEach(itDoc => {
+                            const it = itDoc.data();
+                            if (it.status !== 'cancelled') {
+                                const name = it.name;
+                                // For items sold by measurement (e.g., weight), we count the number of orders (1 per item entry)
+                                // For items sold by unit, we sum the total quantities ordered.
+                                const increment = (it.soldBy === 'measurement') ? 1 : (parseFloat(it.qty) || 0);
+                                itemCounts[name] = (itemCounts[name] || 0) + increment;
+                            }
+                        });
+                    });
+                    
+                    const sortedItems = Object.entries(itemCounts).sort((a, b) => b[1] - a[1]);
+                    let tableHtml = `
+                        <table style="width:100%; border-collapse: collapse; font-size: 0.85rem;">
+                            <thead>
+                                <tr style="text-align:left; border-bottom:2px solid #f1f5f9; color: #64748b;">
+                                    <th style="padding:10px; width:60px;">Rank</th>
+                                    <th style="padding:10px;">Menu Item</th>
+                                    <th style="padding:10px; text-align:right;">Qty</th>
+                                </tr>
+                            </thead>
+                            <tbody>`;
+                    if (sortedItems.length === 0) {
+                        tableHtml += '<tr><td colspan="3" style="padding:20px; text-align:center; color:#666;">No items found.</td></tr>';
+                    } else {
+                        sortedItems.forEach((item, index) => {
+                            tableHtml += `<tr style="border-bottom: 1px solid #f1f5f9;">
+                                <td style="padding:10px;">${index + 1}</td>
+                                <td style="padding:10px; font-weight:600; color: #1e293b;">${item[0]}</td>
+                                <td style="padding:10px; text-align:right; font-weight: 700; color: #764ba2;">x ${item[1]}</td>
+                            </tr>`;
+                        });
+                    }
+                    tableHtml += '</tbody></table>';
+                    container.innerHTML = tableHtml;
+                } catch (e) {
+                    container.innerHTML = `<div style="color:red; padding:10px;">Error analyzing data: ${e.message}</div>`;
+                }
             }
         };
 
@@ -6107,6 +6551,7 @@
             content.innerHTML = `
                 <div style="background: #f8fafc; padding: 20px; border-radius: 16px; font-size: 0.95rem; line-height: 1.6;">
                     <p><strong>Transaction Id:</strong> ${transId}</p>
+                    <p><strong>Status:</strong> <span style="font-weight:bold; text-transform:uppercase;">${t.status || 'completed'}</span></p>
                     <p><strong>Order No:</strong> ${orderSeqs}</p>
                     <p><strong>Order ID:</strong> ${orderNumbers}</p>
                     <p><strong>Date:</strong> ${t.createdAt?.toDate().toLocaleString() || 'N/A'}</p>
@@ -6136,19 +6581,42 @@
         // ========== CATEGORIES ==========
         function loadCategories() {
             const ref = collection(db, 'licenses', currentClientId, 'menu_categories');
-            onSnapshot(ref, (snapshot) => {
+            const q = query(ref, orderBy('createdAt', 'desc'));
+            onSnapshot(q, (snapshot) => {
                 const container = document.getElementById('categoriesList');
-                let html = '';
+                
+                let html = `
+                    <div style="overflow-x: auto; background: white; border-radius: 20px; padding: 15px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                            <thead>
+                                <tr style="border-bottom: 2px solid #f1f5f9; text-align: left; color: #64748b;">
+                                    <th style="padding: 12px 10px;">Name</th>
+                                    <th style="padding: 12px 10px; text-align: right;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>`;
+
                 snapshot.forEach(doc => {
-                    html += `<div style="padding:10px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;">
-                        ${doc.data().name}
-                        <div class="action-buttons">
-                            <button class="btn-edit" onclick="editCategory('${doc.id}')">Edit</button>
-                            <button class="btn-delete" onclick="deleteCategory('${doc.id}')">Delete</button>
-                        </div>
-                    </div>`;
+                    const data = doc.data();
+                    html += `
+                        <tr style="border-bottom: 1px solid #f1f5f9;">
+                            <td style="padding: 12px 10px; font-weight: 600; color: #1e293b;">${data.name}</td>
+                            <td style="padding: 12px 10px; text-align: right;">
+                                <div class="action-buttons" style="justify-content: flex-end;">
+                                    <button class="btn-edit" style="padding: 6px 12px;" onclick="editCategory('${doc.id}')"><i class="fas fa-edit"></i></button>
+                                    <button class="btn-delete" style="padding: 6px 12px;" onclick="deleteCategory('${doc.id}')"><i class="fas fa-trash"></i></button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
                 });
-                container.innerHTML = html || '<div class="loading">No categories</div>';
+                
+                if (snapshot.empty) {
+                    html += '<tr><td colspan="2" style="text-align:center; padding:20px; color:#666;">No categories found.</td></tr>';
+                }
+
+                html += `</tbody></table></div>`;
+                container.innerHTML = html;
             });
         }
 
@@ -6190,27 +6658,84 @@
 
         // ========== TABLES ==========
         function loadTables() {
+            if (unsubscribers['tables']) unsubscribers['tables']();
             const ref = collection(db, 'licenses', currentClientId, 'tables');
-            onSnapshot(ref, (snapshot) => {
-                const container = document.getElementById('tablesList');
-                let html = '';
-                snapshot.forEach(doc => {
-                    const t = doc.data();
-                    html += `
-                        <div class="table-card-item ${t.status === 'available' ? 'table-available' : 'table-occupied'}">
-                            <div class="table-number">${doc.id.toUpperCase()}</div>
-                            <div class="table-capacity">👥 ${t.capacity}</div>
-                            <div>${t.status}</div>
-                            <div class="action-buttons" style="margin-top:5px;">
-                                <button class="btn-edit" onclick="editTable('${doc.id}')">Edit</button>
-                                <button class="btn-delete" onclick="deleteTable('${doc.id}')">Delete</button>
-                            </div>
-                        </div>
-                    `;
-                });
-                container.innerHTML = html || '<div class="loading">No tables</div>';
+            const q = query(ref, orderBy('createdAt', 'desc'));
+            unsubscribers['tables'] = onSnapshot(q, (snapshot) => {
+                allTablesSnapshotData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+                // Populate location filter dynamically
+                const locationSelect = document.getElementById('tableLocationFilter');
+                if (locationSelect) {
+                    const locations = new Set(['All']);
+                    allTablesSnapshotData.forEach(t => { if (t.location) locations.add(t.location); });
+                    const currentVal = locationSelect.value;
+                    let html = '';
+                    Array.from(locations).sort().forEach(loc => {
+                        html += `<option value="${loc}" ${loc === currentVal ? 'selected' : ''}>${loc === 'All' ? 'All Locations' : loc}</option>`;
+                    });
+                    locationSelect.innerHTML = html;
+                }
+
+                renderTablesList();
             });
         }
+
+        window.renderTablesList = function() {
+            const searchTerm = document.getElementById('tableSearchInput').value.toLowerCase();
+            const locationFilter = document.getElementById('tableLocationFilter').value;
+            const statusFilter = document.getElementById('tableStatusFilter').value;
+            const container = document.getElementById('tablesList');
+            
+            let filtered = allTablesSnapshotData.filter(t => {
+                const matchesSearch = !searchTerm || t.id.toLowerCase().includes(searchTerm) || (t.location && t.location.toLowerCase().includes(searchTerm));
+                const matchesLocation = locationFilter === 'All' || t.location === locationFilter;
+                const matchesStatus = statusFilter === 'All' || t.status === statusFilter;
+                return matchesSearch && matchesLocation && matchesStatus;
+            });
+
+            let html = `
+                <div style="overflow-x: auto; background: white; border-radius: 20px; padding: 15px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                        <thead>
+                            <tr style="border-bottom: 2px solid #f1f5f9; text-align: left; color: #64748b;">
+                                <th style="padding: 12px 10px;">Table</th>
+                                <th style="padding: 12px 10px;">Capacity</th>
+                                <th style="padding: 12px 10px;">Location</th>
+                                <th style="padding: 12px 10px;">Status</th>
+                                <th style="padding: 12px 10px; text-align: right;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+
+            filtered.forEach(t => {
+                const statusClass = t.status === 'available' ? 'status-completed' : (t.status === 'occupied' ? 'status-active' : 'status-preparing');
+                
+                html += `
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 12px 10px; font-weight: 600; color: #1e293b;">${t.id.toUpperCase()}</td>
+                        <td style="padding: 12px 10px; color: #64748b;">${t.capacity} Pax</td>
+                        <td style="padding: 12px 10px; color: #64748b;">${t.location || 'Main Hall'}</td>
+                        <td style="padding: 12px 10px;">
+                            <span class="status-badge ${statusClass}" style="font-size: 10px;">${t.status}</span>
+                        </td>
+                        <td style="padding: 12px 10px; text-align: right;">
+                            <div class="action-buttons" style="justify-content: flex-end;">
+                                <button class="btn-edit" style="padding: 6px 12px;" onclick="editTable('${t.id}')"><i class="fas fa-edit"></i></button>
+                                <button class="btn-delete" style="padding: 6px 12px;" onclick="deleteTable('${t.id}')"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            if (filtered.length === 0) {
+                html += '<tr><td colspan="5" style="text-align:center; padding:20px; color:#666;">No tables found matching filters.</td></tr>';
+            }
+
+            html += `</tbody></table></div>`;
+            container.innerHTML = html;
+        };
 
         window.showAddTableModal = function() {
             document.getElementById('tableModalTitle').textContent = 'Add Table';
@@ -6264,18 +6789,47 @@
             const ref = collection(db, 'licenses', currentClientId, 'staff');
             onSnapshot(ref, (snapshot) => {
                 const container = document.getElementById('staffList');
-                let html = '';
+                let html = `
+                    <div style="overflow-x: auto; background: white; border-radius: 20px; padding: 15px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                            <thead>
+                                <tr style="border-bottom: 2px solid #f1f5f9; text-align: left; color: #64748b;">
+                                    <th style="padding: 12px 10px;">Name</th>
+                                    <th style="padding: 12px 10px;">Role</th>
+                                    <th style="padding: 12px 10px;">Active</th>
+                                    <th style="padding: 12px 10px; text-align: right;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>`;
+
                 snapshot.forEach(doc => {
                     const s = doc.data();
-                    html += `<div style="padding:10px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;">
-                        <div><b>${s.name}</b> - ${s.role}<br><small>${s.phone}</small></div>
-                        <div class="action-buttons">
-                            <button class="btn-edit" onclick="editStaff('${doc.id}')">Edit</button>
-                            <button class="btn-delete" onclick="deleteStaff('${doc.id}')">Delete</button>
-                        </div>
-                    </div>`;
+                    const isActive = s.active !== false;
+                    html += `
+                        <tr style="border-bottom: 1px solid #f1f5f9;">
+                            <td style="padding: 12px 10px;">
+                                <div style="font-weight: 600; color: #1e293b;">${s.name}</div>
+                                <div style="font-size: 0.75rem; color: #64748b;">${s.phone || ''}</div>
+                            </td>
+                            <td style="padding: 12px 10px; text-transform: capitalize; color: #475569;">${s.role}</td>
+                            <td style="padding: 12px 10px;">
+                                <span class="status-badge ${isActive ? 'status-completed' : 'status-cancelled'}" style="font-size: 10px;">${isActive ? 'Active' : 'Inactive'}</span>
+                            </td>
+                            <td style="padding: 12px 10px; text-align: right;">
+                                <div class="action-buttons" style="justify-content: flex-end;">
+                                    <button class="btn-edit" style="padding: 6px 12px;" onclick="editStaff('${doc.id}')"><i class="fas fa-edit"></i></button>
+                                    <button class="btn-delete" style="padding: 6px 12px;" onclick="deleteStaff('${doc.id}')"><i class="fas fa-trash"></i></button>
+                                </div>
+                            </td>
+                        </tr>`;
                 });
-                container.innerHTML = html || '<div class="loading">No staff</div>';
+
+                if (snapshot.empty) {
+                    html += '<tr><td colspan="4" style="text-align:center; padding:20px; color:#666;">No staff members found.</td></tr>';
+                }
+
+                html += `</tbody></table></div>`;
+                container.innerHTML = html;
             });
         }
 
@@ -6348,28 +6902,81 @@
 
         // ========== DISCOUNTS ==========
         function loadDiscounts() {
-             const ref = collection(db, 'licenses', currentClientId, 'discounts');
-            onSnapshot(ref, (snapshot) => {
+            if (unsubscribers['discounts']) unsubscribers['discounts']();
+            const ref = collection(db, 'licenses', currentClientId, 'discounts');
+            const q = query(ref, orderBy('createdAt', 'desc'));
+            unsubscribers['discounts'] = onSnapshot(q, (snapshot) => {
                 allDiscounts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 const container = document.getElementById('discountsList');
-                let html = '';
+                
+                let html = `
+                    <div style="overflow-x: auto; background: white; border-radius: 20px; padding: 15px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                            <thead>
+                                <tr style="border-bottom: 2px solid #f1f5f9; text-align: left; color: #64748b;">
+                                    <th style="padding: 12px 10px;">Name</th>
+                                    <th style="padding: 12px 10px;">Type</th>
+                                    <th style="padding: 12px 10px;">Value</th>
+                                    <th style="padding: 12px 10px;">Active</th>
+                                    <th style="padding: 12px 10px;">Valid</th>
+                                    <th style="padding: 12px 10px; text-align: right;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>`;
+
                 snapshot.forEach(doc => {
                     const d = doc.data();
-                    let validityHtml = '';
-                    if (d.startTime || d.endTime) {
-                        const start = d.startTime ? d.startTime.toDate().toLocaleString() : 'Anytime';
-                        const end = d.endTime ? d.endTime.toDate().toLocaleString() : 'Forever';
-                        validityHtml = `<br><small style="color:#64748b; font-size: 11px;">Valid: ${start} to ${end}</small>`;
-                    }
-                    html += `<div style="padding:10px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;">
-                        <div><b>${d.name}</b> - ${d.type}: ${d.value}${d.type==='percentage'?'%':' RM'} ${d.active ? '✅' : '❌'}${validityHtml}</div>
-                        <div class="action-buttons">
-                            <button class="btn-edit" onclick="editDiscount('${doc.id}')">Edit</button>
-                            <button class="btn-delete" onclick="deleteDiscount('${doc.id}')">Delete</button>
-                        </div>
-                    </div>`;
+                    const isActive = d.active === true;
+                    const valueDisplay = d.type === 'percentage' ? `${d.value}%` : `RM ${parseFloat(d.value).toFixed(2)}`;
+                    const typeDisplay = d.type.charAt(0).toUpperCase() + d.type.slice(1);
+                    
+                    const formatValidDate = (ts) => {
+                        if (!ts) return 'Anytime';
+                        const date = ts.toDate();
+                        const day = String(date.getDate()).padStart(2, '0');
+                        const month = String(date.getMonth() + 1).padStart(2, '0');
+                        let hours = date.getHours();
+                        const minutes = String(date.getMinutes()).padStart(2, '0');
+                        const ampm = hours >= 12 ? 'pm' : 'am';
+                        hours = hours % 12;
+                        hours = hours ? hours : 12; // Handle midnight
+                        const strTime = String(hours).padStart(2, '0') + ':' + minutes + ' ' + ampm;
+                        return `${day}/${month}, ${strTime}`;
+                    };
+
+                    const startDisplay = formatValidDate(d.startTime);
+                    const endDisplay = formatValidDate(d.endTime);
+                    const validityDisplay = (d.startTime || d.endTime) ? `${startDisplay} - ${endDisplay}` : 'Anytime';
+
+                    html += `
+                        <tr style="border-bottom: 1px solid #f1f5f9;">
+                            <td style="padding: 12px 10px; font-weight: 600; color: #1e293b;">
+                                ${d.name}
+                            </td>
+                            <td style="padding: 12px 10px; color: #64748b;">${typeDisplay}</td>
+                            <td style="padding: 12px 10px; font-weight: 700; color: #764ba2;">${valueDisplay}</td>
+                            <td style="padding: 12px 10px;">
+                                <span class="status-badge ${isActive ? 'status-completed' : 'status-cancelled'}" style="font-size: 10px;">${isActive ? 'Active' : 'Inactive'}</span>
+                            </td>
+                            <td style="padding: 12px 10px; color: #64748b; font-size: 11px; white-space: nowrap;">
+                                ${validityDisplay}
+                            </td>
+                            <td style="padding: 12px 10px; text-align: right;">
+                                <div class="action-buttons" style="justify-content: flex-end;">
+                                    <button class="btn-edit" style="padding: 6px 12px;" onclick="editDiscount('${doc.id}')"><i class="fas fa-edit"></i></button>
+                                    <button class="btn-delete" style="padding: 6px 12px;" onclick="deleteDiscount('${doc.id}')"><i class="fas fa-trash"></i></button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
                 });
-                container.innerHTML = html || '<div class="loading">No discounts</div>';
+                
+                if (snapshot.empty) {
+                    html += '<tr><td colspan="5" style="text-align:center; padding:20px; color:#666;">No discounts found.</td></tr>';
+                }
+
+                html += `</tbody></table></div>`;
+                container.innerHTML = html;
             });
         }
 
@@ -6494,17 +7101,36 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             const ref = collection(db, 'licenses', currentClientId, 'roles');
             onSnapshot(ref, (snapshot) => {
                 const container = document.getElementById('rolesList');
-                let html = '';
+                let html = `
+                    <div style="overflow-x: auto; background: white; border-radius: 20px; padding: 15px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                            <thead>
+                                <tr style="border-bottom: 2px solid #f1f5f9; text-align: left; color: #64748b;">
+                                    <th style="padding: 12px 10px;">Role</th>
+                                    <th style="padding: 12px 10px; text-align: right;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>`;
+
                 snapshot.forEach(doc => {
-                    html += `<div style="padding:10px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;">
-                        <b>${doc.id}</b>
-                        <div class="action-buttons">
-                            <button class="btn-edit" onclick="editRole('${doc.id}')">Edit</button>
-                            <button class="btn-delete" onclick="deleteRole('${doc.id}')">Delete</button>
-                        </div>
-                    </div>`;
+                    html += `
+                        <tr style="border-bottom: 1px solid #f1f5f9;">
+                            <td style="padding: 12px 10px; font-weight: 600; color: #1e293b; text-transform: capitalize;">${doc.id}</td>
+                            <td style="padding: 12px 10px; text-align: right;">
+                                <div class="action-buttons" style="justify-content: flex-end;">
+                                    <button class="btn-edit" style="padding: 6px 12px;" onclick="editRole('${doc.id}')"><i class="fas fa-edit"></i></button>
+                                    <button class="btn-delete" style="padding: 6px 12px;" onclick="deleteRole('${doc.id}')"><i class="fas fa-trash"></i></button>
+                                </div>
+                            </td>
+                        </tr>`;
                 });
-                container.innerHTML = html || '<div class="loading">No roles</div>';
+
+                if (snapshot.empty) {
+                    html += '<tr><td colspan="2" style="text-align:center; padding:20px; color:#666;">No roles found.</td></tr>';
+                }
+
+                html += `</tbody></table></div>`;
+                container.innerHTML = html;
             });
         }
 
@@ -6561,56 +7187,88 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
         };
 
         // ========== ALL ORDERS ==========
-        window.loadAllOrders = function() {
+        window.loadAllOrders = async function() {
+            // Populate table filter
+            const select = document.getElementById('allOrdersTableFilter');
+            if (select) {
+                try {
+                    const tablesSnap = await getDocs(collection(db, 'licenses', currentClientId, 'tables'));
+                    let html = '<option value="All">All Tables</option>';
+                    const tablesArr = tablesSnap.docs.map(d => ({id: d.id, ...d.data()}));
+                    tablesArr.sort((a, b) => a.id.localeCompare(b.id, undefined, {numeric: true}));
+                    tablesArr.forEach(t => {
+                        html += `<option value="${t.id}">${t.id.toUpperCase()}</option>`;
+                    });
+                    select.innerHTML = html;
+                } catch (e) { console.warn("Failed to load tables for filter", e); }
+            }
             refreshAllOrders();
         };
 
-        window.refreshAllOrders = async function() {
-            const container = document.getElementById('allOrdersList');
-            container.innerHTML = '<div class="loading">Loading orders...</div>';
-            
+        window.refreshAllOrders = function() {
+            if (unsubscribers['allOrders']) unsubscribers['allOrders']();
             const ordersRef = collection(db, 'licenses', currentClientId, 'orders');
-            const q = query(ordersRef);
-            
-            onSnapshot(q, async (snapshot) => {
-                let html = '';
-                const sortedDocs = snapshot.docs.sort((a, b) => {
-                    const aTime = a.data().createdAt?.toDate() || new Date(0);
-                    const bTime = b.data().createdAt?.toDate() || new Date(0);
-                    return bTime - aTime;
-                });
-                
-                for (const orderDoc of sortedDocs) {
-                    const order = orderDoc.data();
-                    const orderDate = order.createdAt?.toDate() || new Date();
-                    
-                    html += `
-                        <div class="order-detail-card">
-                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-                                <div>
-                                    <b>#${order.orderSequence || '?'} - ${order.orderNumber || 'ORD-' + orderDoc.id.slice(0,8)}</b>
-                                    <span class="status-badge status-${order.status || 'active'}">${order.status || 'active'}</span>
-                                </div>
-                                <div>${orderDate.toLocaleString()}</div>
-                            </div>
-                            <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:5px;margin-bottom:10px;">
-                                <div>Table: ${order.tableId?.toUpperCase() || 'N/A'}</div>
-                                <div>Type: ${order.orderType || 'dine-in'}</div>
-                                <div>Order by: ${order.staffName || 'Unknown'}</div>
-                                <div>Cashier by: ${order.cashierBy || 'N/A'}</div>
-                                <div style="grid-column: span 2;">Total: <b>RM ${order.total}</b></div>
-                            </div>
-                            ${order.customerName ? `<div style="font-size: 13px; color: #444;">Customer: <strong>${order.customerName}</strong> (${order.customerPhone || 'No phone'})<br>Address: ${order.customerAddress || 'N/A'}</div>` : ''}
-                            <div class="action-buttons" style="margin-top:10px;">
-                                <button class="btn-view" onclick="viewOrderDetails('${orderDoc.id}')">View Items</button>
-                                <button class="btn-edit" onclick="editOrder('${orderDoc.id}')">Edit</button>
-                                <button class="btn-delete" onclick="deleteOrder('${orderDoc.id}')">Delete</button>
-                            </div>
-                        </div>
-                    `;
-                }
-                container.innerHTML = html || '<div class="loading">No orders found</div>';
+
+            unsubscribers['allOrders'] = onSnapshot(ordersRef, (snapshot) => {
+                allOrdersSnapshotData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderAllOrdersList();
             });
+        };
+
+        window.renderAllOrdersList = function() {
+            const searchTerm = document.getElementById('allOrdersSearchInput').value.toLowerCase();
+            const tableFilter = document.getElementById('allOrdersTableFilter').value;
+            const statusFilter = document.getElementById('allOrdersStatusFilter').value;
+            const typeFilter = document.getElementById('allOrdersTypeFilter').value;
+            const container = document.getElementById('allOrdersList');
+
+            let filtered = allOrdersSnapshotData.filter(order => {
+                const matchesSearch = !searchTerm || 
+                    (order.orderNumber || '').toLowerCase().includes(searchTerm) ||
+                    (order.tableId || '').toLowerCase().includes(searchTerm) ||
+                    (order.staffName || '').toLowerCase().includes(searchTerm) ||
+                    (order.customerName || '').toLowerCase().includes(searchTerm);
+                const matchesTable = tableFilter === 'All' || order.tableId === tableFilter;
+                const matchesStatus = statusFilter === 'All' || order.status === statusFilter;
+                const matchesType = typeFilter === 'All' || order.orderType === typeFilter;
+                return matchesSearch && matchesTable && matchesStatus && matchesType;
+            });
+
+            filtered.sort((a, b) => {
+                const aTime = a.createdAt?.toDate() || new Date(0);
+                const bTime = b.createdAt?.toDate() || new Date(0);
+                return bTime - aTime;
+            });
+
+            let html = '';
+            filtered.forEach(order => {
+                const orderDate = order.createdAt?.toDate() || new Date();
+                html += `
+                    <div class="order-detail-card">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                            <div>
+                                <b>#${order.orderSequence || '?'} - ${order.orderNumber || 'ORD-' + order.id.slice(0,8)}</b>
+                                <span class="status-badge status-${order.status || 'active'}">${order.status || 'active'}</span>
+                            </div>
+                            <div>${orderDate.toLocaleString()}</div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:5px;margin-bottom:10px;">
+                            <div>Table: ${order.tableId?.toUpperCase() || 'N/A'}</div>
+                            <div>Type: ${order.orderType || 'dine-in'}</div>
+                            <div>Order by: ${order.staffName || 'Unknown'}</div>
+                            <div>Cashier by: ${order.cashierBy || 'N/A'}</div>
+                            <div style="grid-column: span 2;">Total: <b>RM ${order.total}</b></div>
+                        </div>
+                        ${order.customerName ? `<div style="font-size: 13px; color: #444;">Customer: <strong>${order.customerName}</strong> (${order.customerPhone || 'No phone'})<br>Address: ${order.customerAddress || 'N/A'}</div>` : ''}
+                        <div class="action-buttons" style="margin-top:10px;">
+                            <button class="btn-view" onclick="viewOrderDetails('${order.id}')">View Items</button>
+                            <button class="btn-edit" onclick="editOrder('${order.id}')">Edit</button>
+                            <button class="btn-delete" onclick="deleteOrder('${order.id}')">Delete</button>
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html || '<div class="loading">No orders found.</div>';
         };
 
         window.viewOrderDetails = async function(orderId) {
@@ -6759,10 +7417,18 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             
             const orderSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', orderId));
             const tableId = orderSnap.data()?.tableId;
-            if (tableId && (status === 'completed' || status === 'cancelled')) {
-                await updateDoc(doc(db, 'licenses', currentClientId, 'tables', tableId), { status: 'available' });
-            } else if (tableId && status === 'active') {
-                await updateDoc(doc(db, 'licenses', currentClientId, 'tables', tableId), { status: 'occupied' });
+            if (tableId) {
+                if (['active', 'preparing', 'served'].includes(status)) {
+                    await updateDoc(doc(db, 'licenses', currentClientId, 'tables', tableId), { status: 'occupied' });
+                } else if (status === 'completed' || status === 'cancelled') {
+                    const qRemaining = query(collection(db, 'licenses', currentClientId, 'orders'), 
+                                         where('tableId', '==', tableId), 
+                                         where('status', 'in', ['active', 'preparing', 'served']));
+                    const snapRemaining = await getDocs(qRemaining);
+                    if (snapRemaining.empty) {
+                        await updateDoc(doc(db, 'licenses', currentClientId, 'tables', tableId), { status: 'available' });
+                    }
+                }
             }
             
             closeModal('editOrderModal');
@@ -6795,77 +7461,136 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             refreshAllTransactions();
         };
 
-        window.refreshAllTransactions = async function() {
+        // Global cache to store order details and avoid N+1 waterfall requests
+        let transactionsOrderCache = {};
+
+        window.refreshAllTransactions = function() {
+            // Clear existing listener to prevent memory leaks and slow performance
+            if (unsubscribers['allTransactions']) unsubscribers['allTransactions']();
+
             const container = document.getElementById('allTransactionsList');
-            container.innerHTML = '<div class="loading">Loading transactions...</div>';
+            if (isInitialLoadTransactions) {
+                container.innerHTML = '<div class="loading">Loading transactions...</div>';
+            }
             
             const transactionsRef = collection(db, 'licenses', currentClientId, 'transactions');
-            const q = query(transactionsRef);
+            // Use orderBy and limit(100) to ensure fast server-side sorting and prevent UI lag with huge datasets
+            const q = query(transactionsRef, orderBy('createdAt', 'desc'), limit(100));
             
-            onSnapshot(q, async (snapshot) => {
+            unsubscribers['allTransactions'] = onSnapshot(q, async (snapshot) => {
                 let html = '';
-                const sortedDocs = snapshot.docs.sort((a, b) => {
-                    const aTime = a.data().createdAt?.toDate() || new Date(0);
-                    const bTime = b.data().createdAt?.toDate() || new Date(0);
-                    return bTime - aTime;
-                });
-                
-                for (const transDoc of sortedDocs) {
-                    const trans = transDoc.data();
-                    const transDate = trans.createdAt?.toDate() || new Date();
-                    
-                    let orderNumber = 'N/A';
-                    let orderSeqDisplay = 'N/A';
-                    if (trans.orderId) {
-                        try {
-                            const ids = trans.orderId.split(',').map(id => id.trim());
-                            const nums = [];
-                            const seqs = [];
-                            for (const id of ids) {
-                                const oSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', id));
-                                if (oSnap.exists()) {
-                                    const od = oSnap.data();
-                                    nums.push(od.orderNumber || id.slice(0, 8));
-                                    seqs.push('#' + (od.orderSequence || '?'));
-                                } else {
-                                    nums.push(id.slice(0, 8));
-                                    seqs.push('#?');
-                                }
-                            }
-                            orderNumber = nums.join(', ');
-                            orderSeqDisplay = seqs.join(',');
-                        } catch (e) {}
+
+                // 1. Gather all unique order IDs needed for the current transactions that are NOT in cache
+                const allNeededOrderIds = new Set();
+                snapshot.docs.forEach(doc => {
+                    const data = doc.data();
+                    if (data.orderId) {
+                        data.orderId.split(',').forEach(id => {
+                            const cleanId = id.trim();
+                            if (cleanId && !transactionsOrderCache[cleanId]) allNeededOrderIds.add(cleanId);
+                        });
                     }
-                    
-                    const statusClass = trans.status === 'completed' ? 'status-completed' : 
-                                      (trans.status === 'refunded' ? 'status-cancelled' : 'status-active');
-                    
-                    html += `
-                        <div class="transaction-card">
-                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-                                <div>
-                                    <b>Transaction #${transDoc.id.slice(0,8)}</b>
-                                    <span class="status-badge ${statusClass}">${trans.status || 'completed'}</span>
-                                </div>
-                                <div>${transDate.toLocaleString()}</div>
-                            </div>
-                            <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:5px;margin-bottom:10px;">
-                                <div style="grid-column: span 2;">Order No: ${orderSeqDisplay}</div>
-                                <div style="grid-column: span 2;">Order: ${orderNumber}</div>
-                                <div>Amount: <b>RM ${trans.amount}</b></div>
-                                <div>Method: ${trans.paymentMethod || 'cash'}</div>
-                                <div>Type: ${trans.type || 'payment'}</div>
-                            </div>
-                            <div class="action-buttons" style="margin-top:10px;">
-                                <button class="btn-view" onclick="viewTransactionDetails('${transDoc.id}')">View Transaction</button>
-                                <button class="btn-edit" onclick="editTransaction('${transDoc.id}')">Edit</button>
-                                <button class="btn-delete" onclick="deleteTransaction('${transDoc.id}')">Delete</button>
-                            </div>
-                        </div>
-                    `;
+                });
+
+                // 2. Fetch all missing order data in parallel (Batching)
+                if (allNeededOrderIds.size > 0) {
+                    const fetchPromises = Array.from(allNeededOrderIds).map(async (id) => {
+                        try {
+                            const oSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', id));
+                            if (oSnap.exists()) {
+                                const od = oSnap.data();
+                                transactionsOrderCache[id] = {
+                                    num: od.orderNumber || id.slice(0, 8),
+                                    seq: '#' + (od.orderSequence || '?')
+                                };
+                            } else {
+                                transactionsOrderCache[id] = { num: id.slice(0, 8), seq: '#?' };
+                            }
+                        } catch (e) {
+                            transactionsOrderCache[id] = { num: id.slice(0, 8), seq: '#?' };
+                        }
+                    });
+                    await Promise.all(fetchPromises);
                 }
-                container.innerHTML = html || '<div class="loading">No transactions found</div>';
+                
+                // Store raw data for filtering
+                allTransactionsSnapshotData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                isInitialLoadTransactions = false;
+                renderAllTransactionsList();
             });
+        };
+
+        window.renderAllTransactionsList = function() {
+            const searchTerm = document.getElementById('allTransSearchInput').value.toLowerCase();
+            const statusFilter = document.getElementById('allTransStatusFilter').value;
+            const methodFilter = document.getElementById('allTransMethodFilter').value;
+            const typeFilter = document.getElementById('allTransTypeFilter').value;
+            const container = document.getElementById('allTransactionsList');
+
+            let filtered = allTransactionsSnapshotData.filter(trans => {
+                let orderNumber = '';
+                let orderSeq = '';
+                if (trans.orderId) {
+                    const ids = trans.orderId.split(',').map(id => id.trim());
+                    orderNumber = ids.map(id => transactionsOrderCache[id]?.num || '').join(' ').toLowerCase();
+                    orderSeq = ids.map(id => transactionsOrderCache[id]?.seq || '').join(' ').toLowerCase();
+                }
+
+                const matchesSearch = !searchTerm || 
+                    trans.id.toLowerCase().includes(searchTerm) ||
+                    (trans.tableId || '').toLowerCase().includes(searchTerm) ||
+                    orderNumber.includes(searchTerm) ||
+                    orderSeq.includes(searchTerm);
+                
+                const matchesStatus = statusFilter === 'All' || (trans.status || 'completed') === statusFilter;
+                const matchesMethod = methodFilter === 'All' || (trans.paymentMethod || 'cash') === methodFilter;
+                const matchesType = typeFilter === 'All' || (trans.type && trans.type.includes(typeFilter));
+
+                return matchesSearch && matchesStatus && matchesMethod && matchesType;
+            });
+
+            let html = '';
+            filtered.forEach(trans => {
+                const transDate = trans.createdAt?.toDate() || new Date();
+                
+                let orderNumberDisplay = 'N/A';
+                let orderSeqDisplay = 'N/A';
+                if (trans.orderId) {
+                    const ids = trans.orderId.split(',').map(id => id.trim());
+                    const nums = ids.map(id => transactionsOrderCache[id]?.num || id.slice(0, 8));
+                    const seqs = ids.map(id => transactionsOrderCache[id]?.seq || '#?');
+                    orderNumberDisplay = nums.join(', ');
+                    orderSeqDisplay = seqs.join(', ');
+                }
+                
+                const statusClass = trans.status === 'completed' ? 'status-completed' : 
+                                  (trans.status === 'refunded' ? 'status-cancelled' : 'status-active');
+                
+                html += `
+                    <div class="transaction-card">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                            <div>
+                                <b>Transaction #${trans.id.slice(0,8)}</b>
+                                <span class="status-badge ${statusClass}">${trans.status || 'completed'}</span>
+                            </div>
+                            <div>${transDate.toLocaleString()}</div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:5px;margin-bottom:10px;">
+                            <div style="grid-column: span 2;">Order No: ${orderSeqDisplay}</div>
+                            <div style="grid-column: span 2;">Order: ${orderNumberDisplay}</div>
+                            <div>Amount: <b>RM ${trans.amount}</b></div>
+                            <div>Method: ${trans.paymentMethod || 'cash'}</div>
+                            <div>Type: ${trans.type || 'payment'}</div>
+                        </div>
+                        <div class="action-buttons" style="margin-top:10px;">
+                            <button class="btn-view" onclick="viewTransactionDetails('${trans.id}')">View Transaction</button>
+                            <button class="btn-edit" onclick="editTransaction('${trans.id}')">Edit</button>
+                            <button class="btn-delete" onclick="deleteTransaction('${trans.id}')">Delete</button>
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html || '<div class="loading">No transactions found</div>';
         };
 
         window.editTransaction = async function(transId) {
@@ -7083,11 +7808,18 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             }
 
             let filteredTables = activeLocationTakeOrder === 'All' 
-                ? tablesListTakeOrder 
+                ? [...tablesListTakeOrder] 
                 : tablesListTakeOrder.filter(t => t.location === activeLocationTakeOrder);
             
             // Filter out 'counter' from the main grid since it has its own persistent spot
             filteredTables = filteredTables.filter(t => t.id.toLowerCase() !== 'counter');
+
+            // Sort by createdAt (latest at bottom)
+            filteredTables.sort((a, b) => {
+                const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
+                const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
+                return timeA - timeB;
+            });
 
             grid.className = `table-grid-takeorder ${viewModeTakeOrder === 'list' ? 'list-view' : ''}`;
             
@@ -8938,8 +9670,17 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
         };
 
         function getFilteredMenuTakeOrder() {
-            if (activeCategoryTakeOrder === 'All') return menuItemsTakeOrder;
-            return menuItemsTakeOrder.filter(item => item.categoryId === activeCategoryTakeOrder);
+            let filtered = activeCategoryTakeOrder === 'All' 
+                ? [...menuItemsTakeOrder] 
+                : menuItemsTakeOrder.filter(item => item.categoryId === activeCategoryTakeOrder);
+            
+            // Sort by createdAt (latest at bottom)
+            filtered.sort((a, b) => {
+                const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
+                const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
+                return timeA - timeB;
+            });
+            return filtered;
         }
 
         function renderMenuGridTakeOrder() {
@@ -8977,10 +9718,10 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                     const bgColor = item.color || '#ffffff';
                     const clipPath = shapeClipPaths[item.shape] || 'none';
                     return `
-                        <div class="menu-card-takeorder" onclick="openItemModalTakeOrder('${item.id}')" style="aspect-ratio: 1/1; width: 100%; height: auto; justify-content: center; align-items: center; padding: 10px; text-align: center; background-color: ${bgColor}; clip-path: ${clipPath};">
+                        <div class="menu-card-takeorder" onclick="openItemModalTakeOrder('${item.id}')" style="aspect-ratio: 1/1; width: 100%; height: auto; justify-content: center; align-items: center; padding: 6px; text-align: center; background-color: ${bgColor}; clip-path: ${clipPath};">
                             ${badgeHtml}
                             <div class="menu-card-name" style="color: #1e293b; font-size: 0.85rem; margin-bottom: 4px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.2;">${item.name}</div>
-                            <div class="menu-price-takeorder" style="font-size: 0.9rem;">RM ${parseFloat(item.price).toFixed(2)}</div>
+                            <div class="menu-price-takeorder" style="font-size: 0.8rem;">RM ${parseFloat(item.price).toFixed(2)}</div>
                         </div>
                     `;
                 }
@@ -9031,7 +9772,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                 const reqText = variant.required ? ' <span style="color:#e53e3e;">* (Required)</span>' : '';
                 html += `<div class="variant-section" data-variant-id="${v.id}" data-variant-name="${variant.name}"><label><strong>${variant.name}</strong>${reqText}</label>`;
                 const optionsRef = collection(db, 'licenses', currentClientId, 'global_variants', v.id, 'options');
-                const optionsSnap = await getDocs(optionsRef);
+                const optionsSnap = await getDocs(query(optionsRef, orderBy('createdAt', 'asc')));
                 optionsSnap.forEach(opt => {
                     const optData = opt.data();
                     html += `<div class="variant-option-takeorder" data-variant-id="${v.id}" data-option-id="${opt.id}" data-option-name="${optData.name}" data-price="${optData.priceAdjustment || 0}" onclick="selectVariantTakeOrder(event, '${v.id}', '${variant.name}', '${opt.id}', '${optData.name}', ${optData.priceAdjustment || 0})">
@@ -9051,7 +9792,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                 const reqText = (parseInt(modifier.minSelections) > 0) ? ' <span style="color:#e53e3e;">* (Required)</span>' : '';
                 html += `<div class="modifier-section" data-modifier-id="${m.id}" data-modifier-name="${modifier.name}" data-max="${modifier.maxSelections || 0}"><label><strong>${modifier.name}</strong>${selectionInfo}${reqText}</label>`;
                 const optionsRef = collection(db, 'licenses', currentClientId, 'global_modifiers', m.id, 'options');
-                const optionsSnap = await getDocs(optionsRef);
+                const optionsSnap = await getDocs(query(optionsRef, orderBy('createdAt', 'asc')));
                 optionsSnap.forEach(opt => {
                     const optData = opt.data();
                     html += `<div class="addon-option-takeorder" data-modifier-id="${m.id}" data-option-id="${opt.id}" data-option-name="${optData.name}" data-price="${optData.price}" onclick="toggleModifierTakeOrder(event, '${m.id}', '${modifier.name}', '${opt.id}', '${optData.name}', ${optData.price})">
@@ -10092,6 +10833,9 @@ window.openSearchModalTakeOrder = function() {
         window.loadActiveOrders = function() {
             if (unsubActiveOrders) unsubActiveOrders();
 
+            const container = document.getElementById('activeOrdersList');
+            if (container) container.innerHTML = '<div class="loading">Filtering orders...</div>';
+
             const ref = collection(db, 'licenses', currentClientId, 'orders');
             let q;
             if (activeOrdersStatusFilter === 'All') {
@@ -10457,10 +11201,15 @@ window.openSearchModalTakeOrder = function() {
                 document.getElementById('receiptLogoUrl').value = data.restaurantLogo || '';
                 document.getElementById('receiptLogoScale').value = data.logoScale || 'normal';
                 document.getElementById('receiptRestName').value = data.restaurantName || localStorage.getItem('restaurantName') || '';
-                document.getElementById('receiptRestAddress').value = data.restaurantAddress || '';
+                document.getElementById('receiptSSM').value = data.ssm || localStorage.getItem('ssm') || '';
+                document.getElementById('receiptRestPhone').value = data.restaurantPhone || localStorage.getItem('restaurantPhone') || '';
+                document.getElementById('receiptRestAddress').value = data.restaurantAddress || localStorage.getItem('restaurantAddress') || '';
                 document.getElementById('receiptFooter').value = data.receiptFooter || 'Thank You\nPlease Come Again';
             } else {
                 document.getElementById('receiptRestName').value = localStorage.getItem('restaurantName') || '';
+                document.getElementById('receiptSSM').value = localStorage.getItem('ssm') || '';
+                document.getElementById('receiptRestPhone').value = localStorage.getItem('restaurantPhone') || '';
+                document.getElementById('receiptRestAddress').value = localStorage.getItem('restaurantAddress') || '';
                 document.getElementById('receiptFooter').value = 'Thank You\nPlease Come Again';
             }
             updateReceiptPreview();
@@ -10470,6 +11219,8 @@ window.openSearchModalTakeOrder = function() {
             const logoUrl = document.getElementById('receiptLogoUrl').value;
             const logoScale = document.getElementById('receiptLogoScale').value;
             const name = document.getElementById('receiptRestName').value || 'RESTAURANT NAME';
+            const ssm = document.getElementById('receiptSSM').value;
+            const phone = document.getElementById('receiptRestPhone').value;
             const address = document.getElementById('receiptRestAddress').value || '123 Address Street, City';
             const footer = document.getElementById('receiptFooter').value || 'Thank You\nPlease Come Again';
             
@@ -10488,6 +11239,8 @@ window.openSearchModalTakeOrder = function() {
                     ${logoUrl ? `<img src="${logoUrl}" style="max-width: ${logoWidth}; display: block; margin: 0 auto 5px auto;">` : '<div style="border: 1px dashed #ccc; padding: 5px; margin-bottom: 5px; font-size: 10px;">[LOGO]</div>'}
                     <div style="font-weight: bold; font-size: 14px; text-transform: uppercase;">${name}</div>
                     <div style="font-size: 10px; white-space: pre-line;">${address}</div>
+                    ${ssm ? `<div style="font-size: 10px;">SSM: ${ssm}</div>` : ''}
+                    ${phone ? `<div style="font-size: 10px;">Tel: ${phone}</div>` : ''}
                 </div>
                 <div style="border-top: 1px dashed #333; margin: 10px 0;"></div>
                 <div style="display: flex; justify-content: space-between; font-size: 10px;">
@@ -10521,6 +11274,8 @@ window.openSearchModalTakeOrder = function() {
                 restaurantLogo: document.getElementById('receiptLogoUrl').value,
                 logoScale: document.getElementById('receiptLogoScale').value,
                 restaurantName: document.getElementById('receiptRestName').value,
+                ssm: document.getElementById('receiptSSM').value,
+                restaurantPhone: document.getElementById('receiptRestPhone').value,
                 restaurantAddress: document.getElementById('receiptRestAddress').value,
                 receiptFooter: document.getElementById('receiptFooter').value,
                 updatedAt: Timestamp.now()
@@ -10529,9 +11284,17 @@ window.openSearchModalTakeOrder = function() {
             try {
                 await setDoc(doc(db, 'licenses', currentClientId, 'settings', 'receipt'), data, { merge: true });
                 
+                // Update local override tracking
+                localStorage.setItem('fs_restaurantName', data.restaurantName || '');
+                localStorage.setItem('fs_ssm', data.ssm || '');
+                localStorage.setItem('fs_restaurantPhone', data.restaurantPhone || '');
+                localStorage.setItem('fs_restaurantAddress', data.restaurantAddress || '');
+
                 localStorage.setItem('restaurantLogo', data.restaurantLogo);
                 localStorage.setItem('logoScale', data.logoScale);
                 localStorage.setItem('restaurantName', data.restaurantName);
+                localStorage.setItem('ssm', data.ssm);
+                localStorage.setItem('restaurantPhone', data.restaurantPhone);
                 localStorage.setItem('restaurantAddress', data.restaurantAddress);
                 localStorage.setItem('receiptFooter', data.receiptFooter);
                 
@@ -11243,6 +12006,8 @@ window.openSearchModalTakeOrder = function() {
             
             const restaurantName = localStorage.getItem('restaurantName') || 'VENTURERUSH RESTAURANT';
             const restaurantAddress = localStorage.getItem('restaurantAddress') || '123 VentureRush Way, Tech City';
+            const ssm = localStorage.getItem('ssm');
+            const restaurantPhone = localStorage.getItem('restaurantPhone');
             const restaurantLogo = localStorage.getItem('restaurantLogo');
             const receiptFooter = localStorage.getItem('receiptFooter') || 'Thank You\nPlease Come Again';
             const settleTime = new Date().toLocaleString();
@@ -11310,6 +12075,8 @@ window.openSearchModalTakeOrder = function() {
                 (logoBytes.length === 0) ? "\x1B\x45\x01 [COMPANY LOGO] \x1B\x45\x00\n" : "",
                 `\x1B\x21\x10${restaurantName.toUpperCase()}\x1B\x21\x00\n`, // Double height
                 `${restaurantAddress}\n`,
+                ssm ? `SSM: ${ssm}\n` : "",
+                restaurantPhone ? `Tel: ${restaurantPhone}\n` : "",
                 sep,
                 "\x1B\x61\x00", // Left
                 `Date: ${dateStr}   Time: ${timeStr}\n`,
@@ -12443,15 +13210,27 @@ window.openSearchModalTakeOrder = function() {
                 const snap = await getDoc(ref);
                 if (snap.exists()) {
                     const data = snap.data();
-                    localStorage.setItem('restaurantLogo', data.restaurantLogo || '');
-                    localStorage.setItem('logoScale', data.logoScale || 'normal');
-                    localStorage.setItem('restaurantName', data.restaurantName || localStorage.getItem('restaurantName'));
-                    localStorage.setItem('restaurantAddress', data.restaurantAddress || '');
-                    localStorage.setItem('receiptFooter', data.receiptFooter || 'Thank You\nPlease Come Again');
-                    
-                    document.getElementById('appRestaurantName').textContent = localStorage.getItem('restaurantName');
-                    document.getElementById('restaurantNameDisplay').textContent = localStorage.getItem('restaurantName');
-                                                  if (data.restaurantLogo) document.getElementById('sidebarLogo').src = data.restaurantLogo;
+                    // Track which fields are overridden by Firestore
+                    localStorage.setItem('fs_restaurantName', data.restaurantName || '');
+                    localStorage.setItem('fs_ssm', data.ssm || '');
+                    localStorage.setItem('fs_restaurantPhone', data.restaurantPhone || '');
+                    localStorage.setItem('fs_restaurantAddress', data.restaurantAddress || '');
+
+                    if (data.restaurantLogo) localStorage.setItem('restaurantLogo', data.restaurantLogo);
+                    if (data.logoScale) localStorage.setItem('logoScale', data.logoScale);
+                    if (data.restaurantName) localStorage.setItem('restaurantName', data.restaurantName);
+                    if (data.ssm) localStorage.setItem('ssm', data.ssm);
+                    if (data.restaurantPhone) localStorage.setItem('restaurantPhone', data.restaurantPhone);
+                    if (data.restaurantAddress) localStorage.setItem('restaurantAddress', data.restaurantAddress);
+                    if (data.receiptFooter) localStorage.setItem('receiptFooter', data.receiptFooter);
+                }
+                
+                // Update UI using prioritized values
+                const finalName = localStorage.getItem('restaurantName') || 'Restaurant';
+                document.getElementById('appRestaurantName').textContent = finalName;
+                document.getElementById('restaurantNameDisplay').textContent = finalName;
+                if (localStorage.getItem('restaurantLogo')) {
+                    document.getElementById('sidebarLogo').src = localStorage.getItem('restaurantLogo');
                 }
             } catch (e) { console.warn("Could not load receipt settings", e); }
         }
@@ -12552,6 +13331,9 @@ window.openSearchModalTakeOrder = function() {
         window.splitCartItemInSummary = splitCartItemInSummary;
         window.mergeCartItemInSummary = mergeCartItemInSummary;
         window.toggleActiveOrdersSort = toggleActiveOrdersSort;
+        window.renderMenuItemsList = renderMenuItemsList;
+        window.renderGlobalVariantsList = renderGlobalVariantsList;
+        window.renderGlobalModifiersList = renderGlobalModifiersList;
         window.toggleActiveOrdersSearch = toggleActiveOrdersSearch;
         window.handleActiveOrdersSearchInput = handleActiveOrdersSearchInput;
         window.setVoidModeTakeOrder = setVoidModeTakeOrder;
@@ -12565,6 +13347,7 @@ window.openSearchModalTakeOrder = function() {
         window.viewTransactionDetails = viewTransactionDetails;
         window.openViewFloatModal = openViewFloatModal;
         window.openEditFloatModal = openEditFloatModal;
+        window.renderTablesList = renderTablesList;
         window.prepareFloatAdjustment = prepareFloatAdjustment;
         window.confirmFloatAdjustment = confirmFloatAdjustment;
         window.openEditInvolvedStaffModal = openEditInvolvedStaffModal;
