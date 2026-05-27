@@ -2369,6 +2369,25 @@
                         <span class="section-title">Menu Items</span>
                         <button class="btn-icon" onclick="showAddMenuItemModal()">+</button>
                     </div>
+                    
+                    <!-- Filters Bar -->
+                    <div style="margin-bottom: 20px; display: flex; flex-direction: column; gap: 12px;">
+                        <input type="text" id="menuItemSearchInput" placeholder="Search menu item name..." 
+                               style="width: 100%; padding: 12px; border-radius: 14px; border: 2px solid #e2e8f0; font-size: 0.9rem;"
+                               oninput="renderMenuItemsList()">
+                        
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
+                            <select id="menuItemCategoryFilter" onchange="renderMenuItemsList()" style="padding: 10px; border-radius: 12px; border: 2px solid #e2e8f0; font-size: 0.85rem; background: white;">
+                                <option value="All">All Categories</option>
+                            </select>
+                            <select id="menuItemStatusFilter" onchange="renderMenuItemsList()" style="padding: 10px; border-radius: 12px; border: 2px solid #e2e8f0; font-size: 0.85rem; background: white;">
+                                <option value="All">All Status</option>
+                                <option value="active">Active</option>
+                                <option value="inactive">Inactive</option>
+                            </select>
+                        </div>
+                    </div>
+
                     <div id="menuItemsList"></div>
                 </div>
             </div>
@@ -4214,6 +4233,7 @@
         let connectedBluetoothDevices = {}; // Map of ID -> BluetoothDevice object
         let selectedCheckoutItems = []; // Array of {orderId, itemId, price}
         let activeOrdersSnapshotTakeOrder = [];
+        let allMenuItemsSnapshotData = [];
         let allOrdersSnapshotData = [];
         let allTransactionsSnapshotData = [];
         let isEarlyPaymentMode = false;
@@ -4957,59 +4977,93 @@
         let tempSelectedModifiers = [];
 
         async function loadMenuItems() {
+            // Populate category filter
+            const select = document.getElementById('menuItemCategoryFilter');
+            if (select) {
+                try {
+                    const catsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'menu_categories'));
+                    let html = '<option value="All">All Categories</option>';
+                    const catsArr = catsSnap.docs.map(d => ({id: d.id, ...d.data()}));
+                    catsArr.sort((a, b) => a.name.localeCompare(b.name));
+                    catsArr.forEach(t => {
+                        html += `<option value="${t.id}">${t.name}</option>`;
+                    });
+                    select.innerHTML = html;
+                } catch (e) { console.warn("Failed to load categories for filter", e); }
+            }
+
+            if (unsubscribers['menuItems']) unsubscribers['menuItems']();
             const ref = collection(db, 'licenses', currentClientId, 'menu_items');
             const q = query(ref, orderBy('createdAt', 'desc'));
-            onSnapshot(q, async (snapshot) => {
-                const container = document.getElementById('menuItemsList');
-                const categories = await getCategoriesMap();
-                
-                let html = `
-                    <div style="overflow-x: auto; background: white; border-radius: 20px; padding: 15px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
-                        <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
-                            <thead>
-                                <tr style="border-bottom: 2px solid #f1f5f9; text-align: left; color: #64748b;">
-                                    <th style="padding: 12px 10px;">Name</th>
-                                    <th style="padding: 12px 10px;">Category</th>
-                                    <th style="padding: 12px 10px;">Price</th>
-                                    <th style="padding: 12px 10px;">Status</th>
-                                    <th style="padding: 12px 10px; text-align: right;">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>`;
-
-                snapshot.forEach(doc => {
-                    const item = doc.data();
-                    const categoryName = categories[item.categoryId] || 'N/A';
-                    const isActive = item.active !== false;
-                    
-                    html += `
-                        <tr style="border-bottom: 1px solid #f1f5f9;">
-                            <td style="padding: 12px 10px; font-weight: 600; color: #1e293b;">${item.name}</td>
-                            <td style="padding: 12px 10px; color: #64748b;">${categoryName}</td>
-                            <td style="padding: 12px 10px; font-weight: 700; color: #764ba2;">RM ${parseFloat(item.price).toFixed(2)}</td>
-                            <td style="padding: 12px 10px;">
-                                <div style="display: flex; gap: 5px; flex-wrap: wrap;">
-                                    <span class="status-badge ${isActive ? 'status-completed' : 'status-cancelled'}" style="font-size: 10px;">${isActive ? 'Active' : 'Inactive'}</span>
-                                </div>
-                            </td>
-                            <td style="padding: 12px 10px; text-align: right;">
-                                <div class="action-buttons" style="justify-content: flex-end;">
-                                    <button class="btn-edit" style="padding: 6px 12px;" onclick="editMenuItem('${doc.id}')"><i class="fas fa-edit"></i></button>
-                                    <button class="btn-delete" style="padding: 6px 12px;" onclick="deleteMenuItem('${doc.id}')"><i class="fas fa-trash"></i></button>
-                                </div>
-                            </td>
-                        </tr>
-                    `;
-                });
-                
-                if (snapshot.empty) {
-                    html += '<tr><td colspan="5" style="text-align:center; padding:20px; color:#666;">No menu items found.</td></tr>';
-                }
-
-                html += `</tbody></table></div>`;
-                container.innerHTML = html;
+            unsubscribers['menuItems'] = onSnapshot(q, async (snapshot) => {
+                allMenuItemsSnapshotData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderMenuItemsList();
             });
         }
+
+        window.renderMenuItemsList = async function() {
+            const searchTerm = document.getElementById('menuItemSearchInput').value.toLowerCase();
+            const categoryFilter = document.getElementById('menuItemCategoryFilter').value;
+            const statusFilter = document.getElementById('menuItemStatusFilter').value;
+            const container = document.getElementById('menuItemsList');
+            
+            const categories = await getCategoriesMap();
+
+            let filtered = allMenuItemsSnapshotData.filter(item => {
+                const isActive = item.active !== false;
+                const matchesSearch = !searchTerm || item.name.toLowerCase().includes(searchTerm);
+                const matchesCategory = categoryFilter === 'All' || item.categoryId === categoryFilter;
+                const matchesStatus = statusFilter === 'All' || 
+                                     (statusFilter === 'active' && isActive) || 
+                                     (statusFilter === 'inactive' && !isActive);
+                return matchesSearch && matchesCategory && matchesStatus;
+            });
+
+            let html = `
+                <div style="overflow-x: auto; background: white; border-radius: 20px; padding: 15px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                        <thead>
+                            <tr style="border-bottom: 2px solid #f1f5f9; text-align: left; color: #64748b;">
+                                <th style="padding: 12px 10px;">Name</th>
+                                <th style="padding: 12px 10px;">Category</th>
+                                <th style="padding: 12px 10px;">Price</th>
+                                <th style="padding: 12px 10px;">Status</th>
+                                <th style="padding: 12px 10px; text-align: right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+
+            filtered.forEach(item => {
+                const categoryName = categories[item.categoryId] || 'N/A';
+                const isActive = item.active !== false;
+                
+                html += `
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 12px 10px; font-weight: 600; color: #1e293b;">${item.name}</td>
+                        <td style="padding: 12px 10px; color: #64748b;">${categoryName}</td>
+                        <td style="padding: 12px 10px; font-weight: 700; color: #764ba2;">RM ${parseFloat(item.price).toFixed(2)}</td>
+                        <td style="padding: 12px 10px;">
+                            <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+                                <span class="status-badge ${isActive ? 'status-completed' : 'status-cancelled'}" style="font-size: 10px;">${isActive ? 'Active' : 'Inactive'}</span>
+                            </div>
+                        </td>
+                        <td style="padding: 12px 10px; text-align: right;">
+                            <div class="action-buttons" style="justify-content: flex-end;">
+                                <button class="btn-edit" style="padding: 6px 12px;" onclick="editMenuItem('${item.id}')"><i class="fas fa-edit"></i></button>
+                                <button class="btn-delete" style="padding: 6px 12px;" onclick="deleteMenuItem('${item.id}')"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            if (filtered.length === 0) {
+                html += '<tr><td colspan="5" style="text-align:center; padding:20px; color:#666;">No menu items found matching filters.</td></tr>';
+            }
+
+            html += `</tbody></table></div>`;
+            container.innerHTML = html;
+        };
 
         async function getCategoriesMap() {
             const snap = await getDocs(collection(db, 'licenses', currentClientId, 'menu_categories'));
@@ -12908,6 +12962,7 @@ window.openSearchModalTakeOrder = function() {
         window.splitCartItemInSummary = splitCartItemInSummary;
         window.mergeCartItemInSummary = mergeCartItemInSummary;
         window.toggleActiveOrdersSort = toggleActiveOrdersSort;
+        window.renderMenuItemsList = renderMenuItemsList;
         window.toggleActiveOrdersSearch = toggleActiveOrdersSearch;
         window.handleActiveOrdersSearchInput = handleActiveOrdersSearchInput;
         window.setVoidModeTakeOrder = setVoidModeTakeOrder;
