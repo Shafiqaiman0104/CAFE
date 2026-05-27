@@ -2456,6 +2456,26 @@
                         <span class="section-title">Tables</span>
                         <button class="btn-icon" onclick="showAddTableModal()">+</button>
                     </div>
+
+                    <!-- Filters Bar -->
+                    <div style="margin-bottom: 20px; display: flex; flex-direction: column; gap: 12px;">
+                        <input type="text" id="tableSearchInput" placeholder="Search table ID or location..." 
+                               style="width: 100%; padding: 12px; border-radius: 14px; border: 2px solid #e2e8f0; font-size: 0.9rem;"
+                               oninput="renderTablesList()">
+                        
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
+                            <select id="tableLocationFilter" onchange="renderTablesList()" style="padding: 10px; border-radius: 12px; border: 2px solid #e2e8f0; font-size: 0.85rem; background: white;">
+                                <option value="All">All Locations</option>
+                            </select>
+                            <select id="tableStatusFilter" onchange="renderTablesList()" style="padding: 10px; border-radius: 12px; border: 2px solid #e2e8f0; font-size: 0.85rem; background: white;">
+                                <option value="All">All Status</option>
+                                <option value="available">Available</option>
+                                <option value="occupied">Occupied</option>
+                                <option value="reserved">Reserved</option>
+                            </select>
+                        </div>
+                    </div>
+
                     <div id="tablesList"></div>
                 </div>
             </div>
@@ -4258,6 +4278,7 @@
         let selectedCheckoutItems = []; // Array of {orderId, itemId, price}
         let activeOrdersSnapshotTakeOrder = [];
         let allMenuItemsSnapshotData = [];
+        let allTablesSnapshotData = [];
         let allOrdersSnapshotData = [];
         let allTransactionsSnapshotData = [];
         let isEarlyPaymentMode = false;
@@ -6635,55 +6656,84 @@
 
         // ========== TABLES ==========
         function loadTables() {
+            if (unsubscribers['tables']) unsubscribers['tables']();
             const ref = collection(db, 'licenses', currentClientId, 'tables');
             const q = query(ref, orderBy('createdAt', 'desc'));
-            onSnapshot(q, (snapshot) => {
-                const container = document.getElementById('tablesList');
-                
-                let html = `
-                    <div style="overflow-x: auto; background: white; border-radius: 20px; padding: 15px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
-                        <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
-                            <thead>
-                                <tr style="border-bottom: 2px solid #f1f5f9; text-align: left; color: #64748b;">
-                                    <th style="padding: 12px 10px;">Table</th>
-                                    <th style="padding: 12px 10px;">Capacity</th>
-                                    <th style="padding: 12px 10px;">Location</th>
-                                    <th style="padding: 12px 10px;">Status</th>
-                                    <th style="padding: 12px 10px; text-align: right;">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>`;
+            unsubscribers['tables'] = onSnapshot(q, (snapshot) => {
+                allTablesSnapshotData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-                snapshot.forEach(doc => {
-                    const t = doc.data();
-                    const statusClass = t.status === 'available' ? 'status-completed' : (t.status === 'occupied' ? 'status-active' : 'status-preparing');
-                    
-                    html += `
-                        <tr style="border-bottom: 1px solid #f1f5f9;">
-                            <td style="padding: 12px 10px; font-weight: 600; color: #1e293b;">${doc.id.toUpperCase()}</td>
-                            <td style="padding: 12px 10px; color: #64748b;">${t.capacity} Pax</td>
-                            <td style="padding: 12px 10px; color: #64748b;">${t.location || 'Main Hall'}</td>
-                            <td style="padding: 12px 10px;">
-                                <span class="status-badge ${statusClass}" style="font-size: 10px;">${t.status}</span>
-                            </td>
-                            <td style="padding: 12px 10px; text-align: right;">
-                                <div class="action-buttons" style="justify-content: flex-end;">
-                                    <button class="btn-edit" style="padding: 6px 12px;" onclick="editTable('${doc.id}')"><i class="fas fa-edit"></i></button>
-                                    <button class="btn-delete" style="padding: 6px 12px;" onclick="deleteTable('${doc.id}')"><i class="fas fa-trash"></i></button>
-                                </div>
-                            </td>
-                        </tr>
-                    `;
-                });
-                
-                if (snapshot.empty) {
-                    html += '<tr><td colspan="5" style="text-align:center; padding:20px; color:#666;">No tables found.</td></tr>';
+                // Populate location filter dynamically
+                const locationSelect = document.getElementById('tableLocationFilter');
+                if (locationSelect) {
+                    const locations = new Set(['All']);
+                    allTablesSnapshotData.forEach(t => { if (t.location) locations.add(t.location); });
+                    const currentVal = locationSelect.value;
+                    let html = '';
+                    Array.from(locations).sort().forEach(loc => {
+                        html += `<option value="${loc}" ${loc === currentVal ? 'selected' : ''}>${loc === 'All' ? 'All Locations' : loc}</option>`;
+                    });
+                    locationSelect.innerHTML = html;
                 }
 
-                html += `</tbody></table></div>`;
-                container.innerHTML = html;
+                renderTablesList();
             });
         }
+
+        window.renderTablesList = function() {
+            const searchTerm = document.getElementById('tableSearchInput').value.toLowerCase();
+            const locationFilter = document.getElementById('tableLocationFilter').value;
+            const statusFilter = document.getElementById('tableStatusFilter').value;
+            const container = document.getElementById('tablesList');
+            
+            let filtered = allTablesSnapshotData.filter(t => {
+                const matchesSearch = !searchTerm || t.id.toLowerCase().includes(searchTerm) || (t.location && t.location.toLowerCase().includes(searchTerm));
+                const matchesLocation = locationFilter === 'All' || t.location === locationFilter;
+                const matchesStatus = statusFilter === 'All' || t.status === statusFilter;
+                return matchesSearch && matchesLocation && matchesStatus;
+            });
+
+            let html = `
+                <div style="overflow-x: auto; background: white; border-radius: 20px; padding: 15px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                        <thead>
+                            <tr style="border-bottom: 2px solid #f1f5f9; text-align: left; color: #64748b;">
+                                <th style="padding: 12px 10px;">Table</th>
+                                <th style="padding: 12px 10px;">Capacity</th>
+                                <th style="padding: 12px 10px;">Location</th>
+                                <th style="padding: 12px 10px;">Status</th>
+                                <th style="padding: 12px 10px; text-align: right;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+
+            filtered.forEach(t => {
+                const statusClass = t.status === 'available' ? 'status-completed' : (t.status === 'occupied' ? 'status-active' : 'status-preparing');
+                
+                html += `
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 12px 10px; font-weight: 600; color: #1e293b;">${t.id.toUpperCase()}</td>
+                        <td style="padding: 12px 10px; color: #64748b;">${t.capacity} Pax</td>
+                        <td style="padding: 12px 10px; color: #64748b;">${t.location || 'Main Hall'}</td>
+                        <td style="padding: 12px 10px;">
+                            <span class="status-badge ${statusClass}" style="font-size: 10px;">${t.status}</span>
+                        </td>
+                        <td style="padding: 12px 10px; text-align: right;">
+                            <div class="action-buttons" style="justify-content: flex-end;">
+                                <button class="btn-edit" style="padding: 6px 12px;" onclick="editTable('${t.id}')"><i class="fas fa-edit"></i></button>
+                                <button class="btn-delete" style="padding: 6px 12px;" onclick="deleteTable('${t.id}')"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            if (filtered.length === 0) {
+                html += '<tr><td colspan="5" style="text-align:center; padding:20px; color:#666;">No tables found matching filters.</td></tr>';
+            }
+
+            html += `</tbody></table></div>`;
+            container.innerHTML = html;
+        };
 
         window.showAddTableModal = function() {
             document.getElementById('tableModalTitle').textContent = 'Add Table';
@@ -13178,6 +13228,7 @@ window.openSearchModalTakeOrder = function() {
         window.viewTransactionDetails = viewTransactionDetails;
         window.openViewFloatModal = openViewFloatModal;
         window.openEditFloatModal = openEditFloatModal;
+        window.renderTablesList = renderTablesList;
         window.prepareFloatAdjustment = prepareFloatAdjustment;
         window.confirmFloatAdjustment = confirmFloatAdjustment;
         window.openEditInvolvedStaffModal = openEditInvolvedStaffModal;
