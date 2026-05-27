@@ -6787,18 +6787,47 @@
             const ref = collection(db, 'licenses', currentClientId, 'staff');
             onSnapshot(ref, (snapshot) => {
                 const container = document.getElementById('staffList');
-                let html = '';
+                let html = `
+                    <div style="overflow-x: auto; background: white; border-radius: 20px; padding: 15px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                            <thead>
+                                <tr style="border-bottom: 2px solid #f1f5f9; text-align: left; color: #64748b;">
+                                    <th style="padding: 12px 10px;">Name</th>
+                                    <th style="padding: 12px 10px;">Role</th>
+                                    <th style="padding: 12px 10px;">Active</th>
+                                    <th style="padding: 12px 10px; text-align: right;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>`;
+
                 snapshot.forEach(doc => {
                     const s = doc.data();
-                    html += `<div style="padding:10px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;">
-                        <div><b>${s.name}</b> - ${s.role}<br><small>${s.phone}</small></div>
-                        <div class="action-buttons">
-                            <button class="btn-edit" onclick="editStaff('${doc.id}')">Edit</button>
-                            <button class="btn-delete" onclick="deleteStaff('${doc.id}')">Delete</button>
-                        </div>
-                    </div>`;
+                    const isActive = s.active !== false;
+                    html += `
+                        <tr style="border-bottom: 1px solid #f1f5f9;">
+                            <td style="padding: 12px 10px;">
+                                <div style="font-weight: 600; color: #1e293b;">${s.name}</div>
+                                <div style="font-size: 0.75rem; color: #64748b;">${s.phone || ''}</div>
+                            </td>
+                            <td style="padding: 12px 10px; text-transform: capitalize; color: #475569;">${s.role}</td>
+                            <td style="padding: 12px 10px;">
+                                <span class="status-badge ${isActive ? 'status-completed' : 'status-cancelled'}" style="font-size: 10px;">${isActive ? 'Active' : 'Inactive'}</span>
+                            </td>
+                            <td style="padding: 12px 10px; text-align: right;">
+                                <div class="action-buttons" style="justify-content: flex-end;">
+                                    <button class="btn-edit" style="padding: 6px 12px;" onclick="editStaff('${doc.id}')"><i class="fas fa-edit"></i></button>
+                                    <button class="btn-delete" style="padding: 6px 12px;" onclick="deleteStaff('${doc.id}')"><i class="fas fa-trash"></i></button>
+                                </div>
+                            </td>
+                        </tr>`;
                 });
-                container.innerHTML = html || '<div class="loading">No staff</div>';
+
+                if (snapshot.empty) {
+                    html += '<tr><td colspan="4" style="text-align:center; padding:20px; color:#666;">No staff members found.</td></tr>';
+                }
+
+                html += `</tbody></table></div>`;
+                container.innerHTML = html;
             });
         }
 
@@ -7070,17 +7099,36 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             const ref = collection(db, 'licenses', currentClientId, 'roles');
             onSnapshot(ref, (snapshot) => {
                 const container = document.getElementById('rolesList');
-                let html = '';
+                let html = `
+                    <div style="overflow-x: auto; background: white; border-radius: 20px; padding: 15px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                            <thead>
+                                <tr style="border-bottom: 2px solid #f1f5f9; text-align: left; color: #64748b;">
+                                    <th style="padding: 12px 10px;">Role</th>
+                                    <th style="padding: 12px 10px; text-align: right;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>`;
+
                 snapshot.forEach(doc => {
-                    html += `<div style="padding:10px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;">
-                        <b>${doc.id}</b>
-                        <div class="action-buttons">
-                            <button class="btn-edit" onclick="editRole('${doc.id}')">Edit</button>
-                            <button class="btn-delete" onclick="deleteRole('${doc.id}')">Delete</button>
-                        </div>
-                    </div>`;
+                    html += `
+                        <tr style="border-bottom: 1px solid #f1f5f9;">
+                            <td style="padding: 12px 10px; font-weight: 600; color: #1e293b; text-transform: capitalize;">${doc.id}</td>
+                            <td style="padding: 12px 10px; text-align: right;">
+                                <div class="action-buttons" style="justify-content: flex-end;">
+                                    <button class="btn-edit" style="padding: 6px 12px;" onclick="editRole('${doc.id}')"><i class="fas fa-edit"></i></button>
+                                    <button class="btn-delete" style="padding: 6px 12px;" onclick="deleteRole('${doc.id}')"><i class="fas fa-trash"></i></button>
+                                </div>
+                            </td>
+                        </tr>`;
                 });
-                container.innerHTML = html || '<div class="loading">No roles</div>';
+
+                if (snapshot.empty) {
+                    html += '<tr><td colspan="2" style="text-align:center; padding:20px; color:#666;">No roles found.</td></tr>';
+                }
+
+                html += `</tbody></table></div>`;
+                container.innerHTML = html;
             });
         }
 
