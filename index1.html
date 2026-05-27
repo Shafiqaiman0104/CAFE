@@ -2897,10 +2897,6 @@
                 <input type="number" id="menuItemPrepTime" value="15">
             </div>
             <div class="form-group">
-                <label>Tags (comma separated)</label>
-                <input type="text" id="menuItemTags" placeholder="spicy,popular">
-            </div>
-            <div class="form-group">
                 <label>Card Color (When images hidden)</label>
                 <input type="color" id="menuItemColor" value="#ffffff" style="height: 45px; width: 100%; border-radius: 12px; border: 2px solid #e0e0e0; cursor: pointer; padding: 4px;">
             </div>
@@ -2913,10 +2909,6 @@
                     <option value="pentagon">Pentagon</option>
                     <option value="nonagon">Nonagon</option>
                 </select>
-            </div>
-            <div class="checkbox-group">
-                <input type="checkbox" id="menuItemRecommended">
-                <label>Recommended</label>
             </div>
             <div class="checkbox-group">
                 <input type="checkbox" id="menuItemActive" checked>
@@ -4993,7 +4985,6 @@
                     const item = doc.data();
                     const categoryName = categories[item.categoryId] || 'N/A';
                     const isActive = item.active !== false;
-                    const isRecommended = item.recommend === true;
                     
                     html += `
                         <tr style="border-bottom: 1px solid #f1f5f9;">
@@ -5003,7 +4994,6 @@
                             <td style="padding: 12px 10px;">
                                 <div style="display: flex; gap: 5px; flex-wrap: wrap;">
                                     <span class="status-badge ${isActive ? 'status-completed' : 'status-cancelled'}" style="font-size: 10px;">${isActive ? 'Active' : 'Inactive'}</span>
-                                    ${isRecommended ? '<span class="status-badge" style="background:#fef3c7; color:#92400e; font-size:10px;">★ Recommended</span>' : ''}
                                 </div>
                             </td>
                             <td style="padding: 12px 10px; text-align: right;">
@@ -5043,10 +5033,8 @@
             document.getElementById('menuItemUnit').value = '';
             toggleSoldBy('item');
             document.getElementById('menuItemPrepTime').value = '15';
-            document.getElementById('menuItemTags').value = '';
             document.getElementById('menuItemColor').value = '#ffffff';
             document.getElementById('menuItemShape').value = 'square';
-            document.getElementById('menuItemRecommended').checked = false;
             document.getElementById('menuItemActive').checked = true;
             
             tempSelectedVariants = [];
@@ -5079,10 +5067,8 @@
             document.getElementById('menuItemUnit').value = item.unit || '';
             toggleSoldBy(item.soldBy || 'item', !!item.unit);
             document.getElementById('menuItemPrepTime').value = item.preparationTime || '15';
-            document.getElementById('menuItemTags').value = item.tags || '';
             document.getElementById('menuItemColor').value = item.color || '#ffffff';
             document.getElementById('menuItemShape').value = item.shape || 'square';
-            document.getElementById('menuItemRecommended').checked = item.recommend || false;
             document.getElementById('menuItemActive').checked = item.active !== false;
             
             tempSelectedVariants = item.variants || [];
@@ -5240,10 +5226,8 @@
                 price: document.getElementById('menuItemPrice').value,
                 categoryId: document.getElementById('menuItemCategory').value,
                 preparationTime: document.getElementById('menuItemPrepTime').value,
-                tags: document.getElementById('menuItemTags').value,
                 color: document.getElementById('menuItemColor').value,
                 shape: document.getElementById('menuItemShape').value,
-                recommend: document.getElementById('menuItemRecommended').checked,
                 active: document.getElementById('menuItemActive').checked,
                 variants: tempSelectedVariants,
                 modifiers: tempSelectedModifiers,
