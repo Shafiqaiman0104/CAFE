@@ -6894,46 +6894,69 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             refreshAllTransactions();
         };
 
-        window.refreshAllTransactions = async function() {
+        // Global cache to store order details and avoid N+1 waterfall requests
+        let transactionsOrderCache = {};
+
+        window.refreshAllTransactions = function() {
+            // Clear existing listener to prevent memory leaks and slow performance
+            if (unsubscribers['allTransactions']) unsubscribers['allTransactions']();
+
             const container = document.getElementById('allTransactionsList');
             container.innerHTML = '<div class="loading">Loading transactions...</div>';
             
             const transactionsRef = collection(db, 'licenses', currentClientId, 'transactions');
-            const q = query(transactionsRef);
+            // Use orderBy and limit(100) to ensure fast server-side sorting and prevent UI lag with huge datasets
+            const q = query(transactionsRef, orderBy('createdAt', 'desc'), limit(100));
             
-            onSnapshot(q, async (snapshot) => {
+            unsubscribers['allTransactions'] = onSnapshot(q, async (snapshot) => {
                 let html = '';
-                const sortedDocs = snapshot.docs.sort((a, b) => {
-                    const aTime = a.data().createdAt?.toDate() || new Date(0);
-                    const bTime = b.data().createdAt?.toDate() || new Date(0);
-                    return bTime - aTime;
+
+                // 1. Gather all unique order IDs needed for the current transactions that are NOT in cache
+                const allNeededOrderIds = new Set();
+                snapshot.docs.forEach(doc => {
+                    const data = doc.data();
+                    if (data.orderId) {
+                        data.orderId.split(',').forEach(id => {
+                            const cleanId = id.trim();
+                            if (cleanId && !transactionsOrderCache[cleanId]) allNeededOrderIds.add(cleanId);
+                        });
+                    }
                 });
+
+                // 2. Fetch all missing order data in parallel (Batching)
+                if (allNeededOrderIds.size > 0) {
+                    const fetchPromises = Array.from(allNeededOrderIds).map(async (id) => {
+                        try {
+                            const oSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', id));
+                            if (oSnap.exists()) {
+                                const od = oSnap.data();
+                                transactionsOrderCache[id] = {
+                                    num: od.orderNumber || id.slice(0, 8),
+                                    seq: '#' + (od.orderSequence || '?')
+                                };
+                            } else {
+                                transactionsOrderCache[id] = { num: id.slice(0, 8), seq: '#?' };
+                            }
+                        } catch (e) {
+                            transactionsOrderCache[id] = { num: id.slice(0, 8), seq: '#?' };
+                        }
+                    });
+                    await Promise.all(fetchPromises);
+                }
                 
-                for (const transDoc of sortedDocs) {
+                // 3. Render the list using the cached data (No sequential awaits inside this loop)
+                snapshot.docs.forEach(transDoc => {
                     const trans = transDoc.data();
                     const transDate = trans.createdAt?.toDate() || new Date();
                     
                     let orderNumber = 'N/A';
                     let orderSeqDisplay = 'N/A';
                     if (trans.orderId) {
-                        try {
-                            const ids = trans.orderId.split(',').map(id => id.trim());
-                            const nums = [];
-                            const seqs = [];
-                            for (const id of ids) {
-                                const oSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', id));
-                                if (oSnap.exists()) {
-                                    const od = oSnap.data();
-                                    nums.push(od.orderNumber || id.slice(0, 8));
-                                    seqs.push('#' + (od.orderSequence || '?'));
-                                } else {
-                                    nums.push(id.slice(0, 8));
-                                    seqs.push('#?');
-                                }
-                            }
-                            orderNumber = nums.join(', ');
-                            orderSeqDisplay = seqs.join(',');
-                        } catch (e) {}
+                        const ids = trans.orderId.split(',').map(id => id.trim());
+                        const nums = ids.map(id => transactionsOrderCache[id]?.num || id.slice(0, 8));
+                        const seqs = ids.map(id => transactionsOrderCache[id]?.seq || '#?');
+                        orderNumber = nums.join(', ');
+                        orderSeqDisplay = seqs.join(', ');
                     }
                     
                     const statusClass = trans.status === 'completed' ? 'status-completed' : 
@@ -6962,7 +6985,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                             </div>
                         </div>
                     `;
-                }
+                });
                 container.innerHTML = html || '<div class="loading">No transactions found</div>';
             });
         };
