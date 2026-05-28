@@ -2274,6 +2274,12 @@
                 <div class="mini-item" onclick="showPage('tax', true)" title="Tax Settings" data-page="tax"><i class="fas fa-percent"></i></div>
                 <div class="mini-item" onclick="showPage('reports', true)" title="Reports" data-page="reports"><i class="fas fa-chart-bar"></i></div>
             </div>
+
+            <div style="width: 30px; height: 1px; background: #eee; margin: 10px 0;"></div>
+            <div class="mini-sidebar-header" onclick="toggleMiniSection('miniSettingsSection')">SET</div>
+            <div id="miniSettingsSection" class="mini-section-content" style="max-height: 0px; overflow: hidden;">
+                <div class="mini-item" onclick="showPage('screenDisplay', true)" title="Screen Display" data-page="screenDisplay"><i class="fas fa-desktop"></i></div>
+            </div>
         </div>
 
         <!-- Sidebar -->
@@ -2394,6 +2400,19 @@
                         </div>
                         <div class="menu-item" onclick="showPage('reports')">
                             <i class="fas fa-chart-bar"></i> Reports
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SETTINGS Section -->
+                <div class="menu-section" id="settingsMenu">
+                    <div class="menu-section-header" onclick="toggleSubMenu('settingsSubMenu', this, event)">
+                        <div class="menu-section-title">SETTINGS</div>
+                        <i class="fas fa-chevron-down menu-toggle-icon"></i>
+                    </div>
+                    <div class="menu-sub-section" id="settingsSubMenu" style="max-height: 0px;">
+                        <div class="menu-item" onclick="showPage('screenDisplay')">
+                            <i class="fas fa-desktop"></i> Screen Display
                         </div>
                     </div>
                 </div>
@@ -2788,6 +2807,27 @@
                                 <i class="fas fa-print"></i> TEST PRINT RECEIPT
                             </button>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Screen Display Page -->
+            <div id="screenDisplay" class="page">
+                <div class="section-card">
+                    <div class="section-header">
+                        <span class="section-title">Screen Display Settings</span>
+                    </div>
+                    <div style="background: white; padding: 40px 25px; border-radius: 20px; text-align: center; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+                        <p style="color: #64748b; margin-bottom: 30px; font-weight: 500;">Adjust the zoom level to fit your device screen size.</p>
+                        <div style="display: flex; align-items: center; justify-content: center; gap: 30px; margin-bottom: 40px;">
+                            <button onclick="adjustZoom(-0.05)" class="primary-btn" style="flex: none; width: 60px; height: 60px; border-radius: 50%; font-size: 1.5rem; display: flex; align-items: center; justify-content: center;"><i class="fas fa-minus"></i></button>
+                            <div style="text-align: center; min-width: 120px;">
+                                <div id="zoomValueDisplay" style="font-size: 3rem; font-weight: 900; color: #764ba2; line-height: 1;">100%</div>
+                                <div style="font-size: 0.75rem; color: #94a3b8; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-top: 5px;">Zoom Level</div>
+                            </div>
+                            <button onclick="adjustZoom(0.05)" class="primary-btn" style="flex: none; width: 60px; height: 60px; border-radius: 50%; font-size: 1.5rem; display: flex; align-items: center; justify-content: center;"><i class="fas fa-plus"></i></button>
+                        </div>
+                        <button onclick="resetZoom()" class="secondary-btn" style="width: auto; padding: 12px 30px; border-radius: 14px; font-size: 0.9rem;">Reset to Default</button>
                     </div>
                 </div>
             </div>
@@ -4845,6 +4885,12 @@
                         mini.style.maxHeight = isCollapsed ? '500px' : '0px';
                         mini.style.overflow = isCollapsed ? 'visible' : 'hidden';
                     }
+                } else if (subMenuId === 'settingsSubMenu') {
+                    const mini = document.getElementById('miniSettingsSection');
+                    if (mini) {
+                        mini.style.maxHeight = isCollapsed ? '500px' : '0px';
+                        mini.style.overflow = isCollapsed ? 'visible' : 'hidden';
+                    }
                 } else if (subMenuId === 'printerSubMenu') {
                     const flyout = document.getElementById('miniPrinterFlyout');
                     if (flyout) flyout.style.display = isCollapsed ? 'flex' : 'none';
@@ -4860,7 +4906,7 @@
 
             // Sync with main sidebar
             if (!skipSync) {
-                const mainSubMenuId = sectionId === 'miniOpsSection' ? 'operationsSubMenu' : 'managementSubMenu';
+                const mainSubMenuId = sectionId === 'miniOpsSection' ? 'operationsSubMenu' : (sectionId === 'miniMgtSection' ? 'managementSubMenu' : 'settingsSubMenu');
                 const mainSubMenu = document.getElementById(mainSubMenuId);
                 if (mainSubMenu) {
                     const isMainCollapsed = !mainSubMenu.style.maxHeight || mainSubMenu.style.maxHeight === '0px' || mainSubMenu.style.maxHeight === '0';
@@ -4932,6 +4978,7 @@
             else if (pageId === 'tax') loadTaxSettings();
             else if (pageId === 'roles') loadRoles();
             else if (pageId === 'reports') loadReportsPage();
+            else if (pageId === 'screenDisplay') loadScreenDisplay();
             else if (pageId === 'takeOrder') loadTakeOrderPage();
             else if (pageId === 'activeOrders') loadActiveOrders();
             else if (pageId === 'departmentPrinter') loadDeptPrinters();
@@ -4941,6 +4988,36 @@
             else if (pageId === 'receipt') loadReceiptSettingsPage();
             else if (pageId === 'allTransactions') loadAllTransactions();
         };
+
+        // ========== SCREEN DISPLAY (ZOOM) ==========
+        let currentZoom = parseFloat(localStorage.getItem('appZoom')) || 1;
+        document.body.style.zoom = currentZoom;
+
+        window.loadScreenDisplay = function() {
+            updateZoomDisplay();
+        };
+
+        window.adjustZoom = function(delta) {
+            currentZoom = parseFloat((currentZoom + delta).toFixed(2));
+            currentZoom = Math.min(Math.max(0.5, currentZoom), 2.0); // Limit between 50% and 200%
+            applyZoom();
+        };
+
+        window.resetZoom = function() {
+            currentZoom = 1;
+            applyZoom();
+        };
+
+        function applyZoom() {
+            document.body.style.zoom = currentZoom;
+            localStorage.setItem('appZoom', currentZoom);
+            updateZoomDisplay();
+        }
+
+        function updateZoomDisplay() {
+            const display = document.getElementById('zoomValueDisplay');
+            if (display) display.innerText = Math.round(currentZoom * 100) + '%';
+        }
 
         // ========== DASHBOARD ==========
         async function loadDashboard() {
@@ -13587,6 +13664,9 @@ window.openSearchModalTakeOrder = function() {
         window.saveAttendanceTime = saveAttendanceTime;
         window.deleteAttendanceRecord = deleteAttendanceRecord;
         window.resetOrderSequence = resetOrderSequence;
+        window.adjustZoom = adjustZoom;
+        window.resetZoom = resetZoom;
+        window.loadScreenDisplay = loadScreenDisplay;
         
         window.toggleMenuImagesTakeOrder = function() {
             showMenuImagesTakeOrder = !showMenuImagesTakeOrder;
