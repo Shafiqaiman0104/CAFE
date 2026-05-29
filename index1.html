@@ -4508,8 +4508,8 @@
                 } catch (e) {
                     console.error("Print task error:", e);
                 }
-                // Cooldown between tasks to allow hardware to reset
-                await new Promise(res => setTimeout(res, 2000));
+                // Hardware cooldown: ensures the BT stack and printer buffer are ready for the next connection
+                await new Promise(res => setTimeout(res, 500));
             }
             isPrintingTaskActive = false;
         }
@@ -12162,7 +12162,7 @@ window.openSearchModalTakeOrder = function() {
             loadPrinterQueue();
         };
 
-        window.triggerAutoPrinting = async function(orderId, orderNumber, type = 'order', paymentDetails = null, isLocalAction = false) {
+         window.triggerAutoPrinting = async function(orderId, orderNumber, type = 'order', paymentDetails = null) {
             const cashierName = paymentDetails?.cashierName || currentStaff?.name || 'N/A';
             
             // Ensure category map is populated for filtering logic, especially on server devices
@@ -12194,33 +12194,6 @@ window.openSearchModalTakeOrder = function() {
             const orderTime = orderData?.createdAt ? orderData.createdAt.toDate().toLocaleString() : new Date().toLocaleString();
             const staffName = orderData?.staffName || 'N/A';
 
-            // 1. Get all Printers with autoPrint enabled
-            const printersSnap = await getDocs(query(collection(db, 'licenses', currentClientId, 'printers'), where('autoPrint', '==', true)));
-            if (printersSnap.empty) return;
-
-            // Printer Server Logic: Check if another device has taken over the printers
-            let takeoverStaffName = null;
-            let iOwnAPrinter = false;
-            
-            for (const doc of printersSnap.docs) {
-                const p = doc.data();
-                if (p.takenByStaffId === currentStaff.id) {
-                    iOwnAPrinter = true;
-                } else if (p.takenByStaffId) {
-                    takeoverStaffName = p.takenByStaffName;
-                }
-            }
-
-            // If this is a background sync (not local action) and I don't own the printer,
-            // return silently. Someone else (the server) will handle the printing.
-            if (!isLocalAction && !iOwnAPrinter) return;
-
-            // If Device B submits locally and Device A has taken over, show the informational popup
-            if (isLocalAction && !iOwnAPrinter && takeoverStaffName) {
-                showPrinterStatusPopup("Printer Server", `Send printing to ${takeoverStaffName} device...`, 'info', true);
-                return; 
-            }
-
             // Fetch order items with their variants and modifiers
             const fullItemsList = [];
             
@@ -12239,69 +12212,17 @@ window.openSearchModalTakeOrder = function() {
                 }
             }
 
-            // Show "Printing..." popup
-            const printOverlay = document.getElementById('printingProcessOverlay');
-            document.getElementById('printingOrderId').innerText = orderNumber;
-            printOverlay.style.display = 'flex';
-
-            let printActions = [];
-            const devicesToCleanup = new Set();
-
-            for (const printerDoc of printersSnap.docs) {
-                const p = printerDoc.data();
-                
-                // Printer Server Logic: Only print if this device/staff has taken over the printer.
-                // If the printer is owned by someone else, skip it.
-                if (p.takenByStaffId && p.takenByStaffId !== currentStaff.id) {
-                    continue; 
+            // Get all Department definition and add to queue as pending for the Server (Device A) to pick up
+            const deptPrintersSnap = await getDocs(collection(db, 'licenses', currentClientId, 'department_printer'));
+            for (const deptDoc of deptPrintersSnap.docs) {
+                const dept = deptDoc.data();
+                const deptItems = fullItemsList.filter(it => {
+                    const catName = categoryMapTakeOrder[it.categoryId];
+                    return dept.department && dept.department.includes(catName);
+                });
+                if (deptItems.length > 0) {
+                    await addToPrintQueue(orderId, orderNumber, tableNumber, dept.name, deptDoc.id, null, null, staffName, orderType, null, orderSeq, dept.qrEnabled, 'pending', 'order');
                 }
-
-                const device = connectedBluetoothDevices[p.bluetoothDeviceId];
-                if (device) devicesToCleanup.add(device);
-                
-                // Cash Drawer Kick Logic
-                const isCashInvolved = paymentDetails?.hasCashPayment || paymentDetails?.paymentInfo?.hasCashPayment;
-                if (p.kickCashDrawer && isCashInvolved) {
-                    console.log(`%c[Drawer] Sending kick command to ${p.name}...`, "color: #764ba2; font-weight: bold;");
-                    if (device) await sendToBluetoothPrinter(device, new Uint8Array([0x1B, 0x70, 0x00, 0x19, 0xFA]));
-                }
-
-                // Handle Department Order Printing (Only when order is initially placed)
-                if (p.printOrders && p.departmentPrinters?.length && type === 'order') {
-                    for (const deptId of p.departmentPrinters) {
-                        const deptSnap = await getDoc(doc(db, 'licenses', currentClientId, 'department_printer', deptId));
-                        if (deptSnap.exists()) {
-                            const dept = deptSnap.data();
-                            // Filter items belonging to this department's categories
-                            const deptItems = fullItemsList.filter(it => {
-                                const catName = categoryMapTakeOrder[it.categoryId];
-                                return dept.department && dept.department.includes(catName);
-                            });
-                            if (deptItems.length > 0) {
-                                const qId = await addToPrintQueue(orderId, orderNumber, tableNumber, dept.name, deptId, null, null, staffName, orderType, null, orderSeq, dept.qrEnabled);
-                                if (device) {
-                                    const commands = await generateReceiptCommands(orderNumber, tableNumber, deptItems, dept.name, orderTime, "AUTO PRINT", p, staffName, orderType, orderSeq, dept.qrEnabled);
-                                    const success = await sendToBluetoothPrinter(device, commands);
-                                    await updateDoc(doc(db, 'licenses', currentClientId, 'print_queue', qId), { status: success ? 'success' : 'failed' });
-                                    printActions.push({ label: dept.name, success });
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            // Disconnect all physical devices used in this session once finished
-            for (const d of devicesToCleanup) {
-                if (d.gatt.connected) d.gatt.disconnect();
-            }
-
-            printOverlay.style.display = 'none';
-            if (printActions.length > 0) {
-                const allSuccess = printActions.every(a => a.success);
-                const details = printActions.map(a => `${a.label}: ${a.success ? 'OK' : 'FAIL'}`).join('\n');
-                showPrinterStatusPopup(allSuccess ? "Printing Success" : "Print Warning", details, allSuccess);
-            } else {
-                showPrinterStatusPopup("Queued", "No printer connected. Receipts added to queue.", 'warning');
             }
         };
 
@@ -12338,6 +12259,17 @@ window.openSearchModalTakeOrder = function() {
                 qrEnabled: false,
                 createdAt: Timestamp.now()
             });
+            
+            // Check if any printer in the system has auto-print receipts enabled
+            const printersRef = collection(db, 'licenses', currentClientId, 'printers');
+            const qPrinters = query(printersRef, where('printReceipt', '==', true), where('autoPrint', '==', true));
+            const pSnap = await getDocs(qPrinters);
+            
+            // If auto-print exists, set status to pending so Server picks it up
+            if (!pSnap.empty) {
+                await updateDoc(docRef, { status: 'pending' });
+            }
+
             return docRef.id;
         }
 
@@ -12517,20 +12449,57 @@ window.openSearchModalTakeOrder = function() {
             }
 
             // Otherwise, I am the server or no one has ownership, print locally
-            await executeReprint(id, item, printerId);
+            // Pass 'true' for isManual to bypass the status check for stuck jobs
+            await executeReprint(id, item, printerId, true);
         };
 
-        window.executeReprint = async function(id, itemParam = null, forcedPrinterId = null) {
+        window.executeReprint = async function(id, itemParam = null, forcedPrinterId = null, isManual = false) {
             const ref = doc(db, 'licenses', currentClientId, 'print_queue', id);
-            const item = itemParam || (await getDoc(ref)).data();
+            // Refresh item data to ensure we aren't printing something already processed
+            const snap = await getDoc(ref);
+            if (!snap.exists()) return;
+            const item = snap.data();
+            
+            // Skip if already handled by another process while waiting in the local JS queue,
+            // unless this is a manual override reprint request from the UI.
+            if (!isManual && (item.status === 'success' || item.status === 'processing')) return;
+
+            // Server Logic: Verify ownership before doing anything
+            const printersSnap = await getDocs(collection(db, 'licenses', currentClientId, 'printers'));
+            let iShouldPrintThis = false;
+            let targetPrinterId = forcedPrinterId || item.targetPrinterId || null;
+
+            if (targetPrinterId) {
+                const target = printersSnap.docs.find(d => d.id === targetPrinterId);
+                if (target && target.data().takenByStaffId === currentStaff.id) iShouldPrintThis = true;
+            } else {
+                for (const doc of printersSnap.docs) {
+                    const p = doc.data();
+                    if (p.takenByStaffId !== currentStaff.id) continue;
+
+                    // Does this specific owned printer handle this queue item?
+                    if (item.printerDeptName === 'Receipt') {
+                        if (p.printReceipt && p.autoPrint) { iShouldPrintThis = true; targetPrinterId = doc.id; break; }
+                    } else if (p.printOrders && p.departmentPrinters?.includes(item.printerDeptId)) {
+                        iShouldPrintThis = true; targetPrinterId = doc.id; break;
+                    } else if (item.printType === 'move_merge' && p.printMoveMerge && p.autoPrint) {
+                        iShouldPrintThis = true; targetPrinterId = doc.id; break;
+                    } else if ((item.printType === 'cancel_order' || item.printType === 'void_item') && p.printOrders && p.departmentPrinters?.includes(item.printerDeptId)) {
+                        iShouldPrintThis = true; targetPrinterId = doc.id; break;
+                    }
+                }
+            }
+
+            if (!iShouldPrintThis) return;
+
+            try {
+            // Mark as processing immediately to prevent Device B from sending duplicates
+            await updateDoc(ref, { status: 'processing', updatedAt: Timestamp.now() });
 
             // Ensure category map is populated for department filtering logic, especially on server devices
             if (Object.keys(categoryMapTakeOrder).length === 0) {
                 categoryMapTakeOrder = await getCategoriesMap();
             }
-
-            // Determine the correct printer to use based on override ID or queue metadata
-            const finalPrinterId = forcedPrinterId || item.targetPrinterId || null;
 
             const currentAttempts = item.attempts || 1;
             const isAutomaticRemote = item.status === 'reprint_requested' && !forcedPrinterId;
@@ -12558,13 +12527,10 @@ window.openSearchModalTakeOrder = function() {
             const orderSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', orderIds[0]));
             const orderTime = orderSnap.exists() ? orderSnap.data().createdAt?.toDate().toLocaleString() : 'N/A';
 
-            const printOverlay = document.getElementById('printingProcessOverlay');
-            if (printOverlay) {
-                document.getElementById('printingOrderId').innerText = item.orderNumber;
-                printOverlay.style.display = 'flex';
-            }
+            document.getElementById('printingOrderId').innerText = item.orderNumber;
+            document.getElementById('printingProcessOverlay').style.display = 'flex';
 
-            await updateDoc(ref, { status: 'processing', attempts: currentAttempts + 1 });
+            await updateDoc(ref, { attempts: currentAttempts + 1 });
 
             let itemsToPrint = [];
             
@@ -12620,28 +12586,10 @@ window.openSearchModalTakeOrder = function() {
             }
 
             let printerConfig;
-            if (finalPrinterId) {
-                const pSnap = await getDoc(doc(db, 'licenses', currentClientId, 'printers', finalPrinterId));
-                printerConfig = pSnap.exists() ? pSnap.data() : null;
-            } else {
-                const printersSnapFull = await getDocs(collection(db, 'licenses', currentClientId, 'printers'));
-                // PRINTER SERVER FIX: Find a printer that is PHYSICALLY CONNECTED to this device
-                // regardless of who "owns" it in the database.
-                printerConfig = printersSnapFull.docs.find(d => {
-                    const pd = d.data();
-                    if (!pd.bluetoothDeviceId) return false;
-                    
-                   // Only consider printers that are actually paired/connected to Device A right now
-                    if (!connectedBluetoothDevices[pd.bluetoothDeviceId]) return false;
-
-
-                    if (item.printType === 'move_merge') return pd.printMoveMerge;
-                    if (item.printerDeptId) return pd.departmentPrinters?.includes(item.printerDeptId);
-                    return pd.printReceipt;
-                })?.data();
-            }
+            const pSnap = await getDoc(doc(db, 'licenses', currentClientId, 'printers', targetPrinterId));
+            printerConfig = pSnap.exists() ? pSnap.data() : null;
             
-            const device = printerConfig ? connectedBluetoothDevices[printerConfig.bluetoothDeviceId] : null;
+            const device = (printerConfig && printerConfig.bluetoothDeviceId) ? connectedBluetoothDevices[printerConfig.bluetoothDeviceId] : null;
 
             let printSuccess = false;
             let failureReason = "";
@@ -12677,17 +12625,35 @@ window.openSearchModalTakeOrder = function() {
                 } else {
                     commands = await generateReceiptCommands(item.orderNumber, item.tableNumber || 'N/A', itemsToPrint, item.printerDeptName || 'Receipt', orderTime, statusLabel, printerConfig, staffName, orderType, orderSeq, item.qrEnabled || false);
                 }
-                printSuccess = await sendToBluetoothPrinter(device, commands);
-                if (device.gatt.connected) device.gatt.disconnect();
+                // Strict 1-by-1 Connection Retry Logic
+                let retries = 0;
+                while (retries < 3 && !printSuccess) {
+                    if (retries > 0) {
+                        console.log(`%c[Printer] Retry ${retries} for ${item.orderNumber}...`, "color: #764ba2;");
+                        await new Promise(r => setTimeout(r, 1200)); 
+                    }
+                    printSuccess = await sendToBluetoothPrinter(device, commands);
+                    retries++;
+                }
             }
 
-             if (printOverlay) printOverlay.style.display = 'none';
+            document.getElementById('printingProcessOverlay').style.display = 'none';
             if (printSuccess) {
-                await updateDoc(ref, { status: 'success' });
-                showPrinterStatusPopup(`Print ${item.orderNumber} SUCCESS`, `Printer Department: ${item.printerDeptName}\nPrint completed.`, true);
+                await updateDoc(ref, { status: 'success', updatedAt: Timestamp.now() });
+                showPrinterStatusPopup(`Print Success`, `Order ${item.orderNumber} done.`, true, true);
             } else {
-                await updateDoc(ref, { status: 'failed', error: failureReason });
-                showPrinterStatusPopup(`Print ${item.orderNumber} FAILED`, `${failureReason} Ensure printer is connected and owned.`, false);
+                const errDetail = failureReason || "Bluetooth communication failed";
+                await updateDoc(ref, { status: 'failed', error: errDetail, updatedAt: Timestamp.now() });
+                showPrinterStatusPopup(`Print ${item.orderNumber} FAILED`, `${errDetail}. Ensure printer is connected.`, false);
+            }
+            } catch (err) {
+                console.error("Critical printing execution error:", err);
+                document.getElementById('printingProcessOverlay').style.display = 'none';
+                await updateDoc(ref, { 
+                    status: 'failed', 
+                    error: "System Exception: " + err.message, 
+                    updatedAt: Timestamp.now() 
+                });
             }
         };
 
@@ -12702,19 +12668,34 @@ window.openSearchModalTakeOrder = function() {
         // Helper to send data to Bluetooth Printer
         async function sendToBluetoothPrinter(device, data) {
             if (!device) return false;
-            let server = device.gatt;
-            if (!server.connected) {
-                try {
-                    await server.connect();
-                } catch (e) {
-                    console.error("Bluetooth connection failed", e);
-                    return false;
-                }
-            }
             try {
+                let server = device.gatt;
+                
+                // Reconnect only if the browser explicitly knows we are disconnected
+                if (!server.connected) {
+                    console.log("[Printer] Connection dropped. Re-establishing link...");
+                    await server.connect();
+                    // Buffer time for GATT service discovery
+                    await new Promise(r => setTimeout(r, 800));
+                }
+
                 const SERVICE_UUID = '000018f0-0000-1000-8000-00805f9b34fb';
                 const CHARACTERISTIC_UUID = '00002af1-0000-1000-8000-00805f9b34fb';
-                const service = await server.getPrimaryService(SERVICE_UUID);
+                
+                let service;
+                try {
+                    service = await server.getPrimaryService(SERVICE_UUID);
+                } catch (e) {
+                    // NetworkError: GATT Server is disconnected - this happens with "stale" connections.
+                    // Force a hardware disconnect and retry once immediately.
+                    console.warn("[Printer] Service discovery failed (stale GATT). Resetting stack...");
+                    await server.disconnect();
+                    await new Promise(r => setTimeout(r, 500));
+                    await server.connect();
+                    await new Promise(r => setTimeout(r, 1000));
+                    service = await server.getPrimaryService(SERVICE_UUID);
+                }
+                
                 const characteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
                 
                 // Encode if string, otherwise use bytes directly
@@ -12921,19 +12902,6 @@ window.openSearchModalTakeOrder = function() {
             if (cancelledItems.length === 0) return;
 
             const deptPrintersSnap = await getDocs(collection(db, 'licenses', currentClientId, 'department_printer'));
-            const printersSnapFull = await getDocs(collection(db, 'licenses', currentClientId, 'printers'));
-            const printersSnap = printersSnapFull.docs.filter(d => d.data().autoPrint === true);
-
-            // Printer Server Logic
-            let takeoverStaffName = null;
-            let iOwnAPrinter = false;
-            for (const doc of printersSnap) {
-                const p = doc.data();
-                if (p.takenByStaffId === currentStaff.id) iOwnAPrinter = true;
-                else if (p.takenByStaffId) takeoverStaffName = p.takenByStaffName;
-            }
-
-            const devicesToCleanup = new Set();
 
             for (const deptDoc of deptPrintersSnap.docs) {
                 const dept = deptDoc.data();
@@ -12944,28 +12912,8 @@ window.openSearchModalTakeOrder = function() {
                 });
                 if (deptItems.length === 0) continue;
 
-                const qId = await addToPrintQueue(orderId, order.orderNumber, tableNumber, dept.name, deptDoc.id, null, null, currentStaff.name, order.orderType, null, order.orderSequence, false, (!iOwnAPrinter && takeoverStaffName) ? 'reprint_requested' : 'pending', 'cancel_order');
-
-                if (!iOwnAPrinter && takeoverStaffName) {
-                    showPrinterStatusPopup("Printer Server", `Send cancellation to ${takeoverStaffName} device...`, 'info', true);
-                    continue;
-                }
-
-                for (const printerDoc of printersSnap) {
-                    const p = printerDoc.data();
-                    if (p.takenByStaffId && p.takenByStaffId !== currentStaff.id) continue;
-                    if (p.departmentPrinters?.includes(deptDoc.id)) {
-                        const device = connectedBluetoothDevices[p.bluetoothDeviceId];
-                        if (device) {
-                            devicesToCleanup.add(device);
-                            const commands = await generateCancellationOrderReceiptCommands(order.orderNumber, order.orderSequence || '?', tableNumber, deptItems, dept.name, p, currentStaff.name);
-                            const success = await sendToBluetoothPrinter(device, commands);
-                            await updateDoc(doc(db, 'licenses', currentClientId, 'print_queue', qId), { status: success ? 'success' : 'failed' });
-                        }
-                    }
-                }
+                await addToPrintQueue(orderId, order.orderNumber, tableNumber, dept.name, deptDoc.id, null, null, currentStaff.name, order.orderType, null, order.orderSequence, false, 'pending', 'cancel_order');
             }
-            for (const d of devicesToCleanup) { if (d.gatt.connected) d.gatt.disconnect(); }
         };
 
         async function generateCancellationOrderReceiptCommands(orderNumber, orderSeq, tableNumber, items, deptName, p = null, staffName = 'N/A') {
@@ -13027,104 +12975,17 @@ window.openSearchModalTakeOrder = function() {
             
             if (targetDepts.length === 0) return;
 
-            // 3. Get connected physical printers handling those departments
-            const printersSnapFull = await getDocs(collection(db, 'licenses', currentClientId, 'printers'));
-            const printersSnap = printersSnapFull.docs.filter(d => d.data().autoPrint === true);
-
-            // Printer Server Logic
-            let takeoverStaffName = null;
-            let iOwnAPrinter = false;
-            for (const doc of printersSnap) {
-                const p = doc.data();
-                if (p.takenByStaffId === currentStaff.id) iOwnAPrinter = true;
-                else if (p.takenByStaffId) takeoverStaffName = p.takenByStaffName;
-            }
-            
-            const devicesToCleanup = new Set();
-
             for (const deptDoc of targetDepts) {
                 const dept = deptDoc.data();
                 const deptId = deptDoc.id;
 
-                const qId = await addToPrintQueue(orderId, order.orderNumber, (order.tableId || 'N/A').toUpperCase(), dept.name, deptId, null, null, currentStaff.name, order.orderType, null, order.orderSequence, false, (!iOwnAPrinter && takeoverStaffName) ? 'reprint_requested' : 'pending', 'void_item', {itemId, qtyVoided});
-
-                if (!iOwnAPrinter && takeoverStaffName) {
-                    showPrinterStatusPopup("Printer Server", `Send void request to ${takeoverStaffName} device...`, 'info', true);
-                    continue;
-                }
-
-                for (const printerDoc of printersSnap) {
-                    const p = printerDoc.data();
-                    if (p.takenByStaffId && p.takenByStaffId !== currentStaff.id) continue;
-                    
-                    if (p.departmentPrinters?.includes(deptId)) {
-                        const device = connectedBluetoothDevices[p.bluetoothDeviceId];
-                        if (device) {
-                            devicesToCleanup.add(device);
-                            const commands = await generateVoidReceiptCommands(
-                                order.orderNumber, 
-                                order.orderSequence || '?', 
-                                (order.tableId || 'N/A').toUpperCase(),
-                                fullItem,
-                                qtyVoided,
-                                dept.name,
-                                p,
-                                currentStaff.name
-                            );
-                            const success = await sendToBluetoothPrinter(device, commands);
-                            await updateDoc(doc(db, 'licenses', currentClientId, 'print_queue', qId), { status: success ? 'success' : 'failed' });
-                        }
-                    }
-                }
-            }
-            // Disconnect all physical devices used in this session once finished
-            for (const d of devicesToCleanup) {
-                if (d.gatt.connected) d.gatt.disconnect();
+                await addToPrintQueue(orderId, order.orderNumber, (order.tableId || 'N/A').toUpperCase(), dept.name, deptId, null, null, currentStaff.name, order.orderType, null, order.orderSequence, false, 'pending', 'void_item', {itemId, qtyVoided});
             }
         };
 
         window.triggerMoveMergePrinting = async function(fromTable, toTable, orders, isMerge) {
-            const printersSnapFull = await getDocs(collection(db, 'licenses', currentClientId, 'printers'));
-            const printersSnap = printersSnapFull.docs.filter(d => d.data().autoPrint === true && d.data().printMoveMerge === true);
-
-            if (printersSnap.empty) return;
-
-            // Printer Server Logic
-            let takeoverStaffName = null;
-            let iOwnAPrinter = false;
-            for (const doc of printersSnap) {
-                const p = doc.data();
-                if (p.takenByStaffId === currentStaff.id) iOwnAPrinter = true;
-                else if (p.takenByStaffId) takeoverStaffName = p.takenByStaffName;
-            }
-
             const firstOrder = orders[0];
-            const qId = await addToPrintQueue(firstOrder.orderId, firstOrder.orderNumber, toTable, isMerge ? 'Merge' : 'Move', null, null, null, currentStaff.name, 'N/A', null, null, false, (!iOwnAPrinter && takeoverStaffName) ? 'reprint_requested' : 'pending', 'move_merge', {fromTable, toTable, orders, isMerge});
-
-            if (!iOwnAPrinter && takeoverStaffName) {
-                showPrinterStatusPopup("Printer Server", `Send ${isMerge ? 'merge' : 'move'} to ${takeoverStaffName} device...`, 'info', true);
-                return;
-            }
-
-            const devicesToCleanup = new Set();
-            const timestamp = new Date().toLocaleString();
-
-            for (const printerDoc of printersSnap) {
-                const p = printerDoc.data();
-                if (p.takenByStaffId && p.takenByStaffId !== currentStaff.id) continue;
-
-                const device = connectedBluetoothDevices[p.bluetoothDeviceId];
-                if (device) {
-                    devicesToCleanup.add(device);
-                    const commands = generateMoveMergeCommands(fromTable, toTable, orders, isMerge, p, currentStaff.name, timestamp);
-                    const success = await sendToBluetoothPrinter(device, commands);
-                    await updateDoc(doc(db, 'licenses', currentClientId, 'print_queue', qId), { status: success ? 'success' : 'failed' });
-                }
-            }
-
-            for (const d of devicesToCleanup) {
-                if (d.gatt.connected) d.gatt.disconnect();
-            }
+            await addToPrintQueue(firstOrder.orderId, firstOrder.orderNumber, toTable, isMerge ? 'Merge' : 'Move', null, null, null, currentStaff.name, 'N/A', null, null, false, 'pending', 'move_merge', {fromTable, toTable, orders, isMerge});
         };
 
         function generateMoveMergeCommands(fromTable, toTable, orders, isMerge, p, staffName, timestamp) {
@@ -13416,11 +13277,6 @@ window.openSearchModalTakeOrder = function() {
                         const orderData = change.doc.data();
                         if (orderData.staffId !== currentStaff.id) {
                             showRemoteOrderPopup(orderData);
-                            // Add a delay for remote orders to ensure all sub-collection items 
-                            // (items, variants, modifiers) are fully written by Device B before printing.
-                            setTimeout(() => {
-                                enqueuePrintTask(() => triggerAutoPrinting(change.doc.id, orderData.orderNumber, 'order'));
-                            }, 3000);
                         }
                     }
                 });
@@ -13430,33 +13286,14 @@ window.openSearchModalTakeOrder = function() {
         window.setupPrinterQueueListener = function() {
             if (unsubscribers['printerQueueNotifications']) unsubscribers['printerQueueNotifications']();
             
-            const q = query(collection(db, 'licenses', currentClientId, 'print_queue'), where('status', '==', 'reprint_requested'));
+            const q = query(collection(db, 'licenses', currentClientId, 'print_queue'), where('status', 'in', ['pending', 'reprint_requested']));
             
             unsubscribers['printerQueueNotifications'] = onSnapshot(q, (snapshot) => {
-                snapshot.docChanges().forEach(async (change) => {
+                snapshot.docChanges().forEach((change) => {
                     if (change.type === "added" || change.type === "modified") {
-                        const item = change.doc.data();
-                        
-                        // Server Logic: Check if I own the printer required for this reprint request
-                        const printersSnap = await getDocs(collection(db, 'licenses', currentClientId, 'printers'));
-                        let iShouldPrintThis = false;
-                        
-                        if (item.targetPrinterId) {
-                            const target = printersSnap.docs.find(d => d.id === item.targetPrinterId);
-                            if (target && target.data().takenByStaffId === currentStaff.id) iShouldPrintThis = true;
-                        } else {
-                            for (const doc of printersSnap.docs) {
-                                const p = doc.data();
-                                if (p.takenByStaffId === currentStaff.id && p.autoPrint === true) {
-                                    iShouldPrintThis = true;
-                                    break;
-                                }
-                            }
-                        }
-                        
-                        if (iShouldPrintThis) {
-                            enqueuePrintTask(() => executeReprint(change.doc.id, item));
-                        }
+                        // Move all heavy logic (DB fetches/checks) INSIDE the sequential task queue
+                        // to prevent Device A from processing multiple ownership checks at once.
+                        enqueuePrintTask(() => executeReprint(change.doc.id, change.doc.data()));
                     }
                 });
             });
