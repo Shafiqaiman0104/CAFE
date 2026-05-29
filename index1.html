@@ -8,17 +8,32 @@
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdn.jsdelivr.net/npm/pocketbase/dist/pocketbase.umd.js"></script>
     <style>
+        :root {
+            --app-zoom: 1;
+        }
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
         
+        html {
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            height: 100%;
+        }
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-            min-height: 100vh;
+            min-height: calc(100vh / var(--app-zoom));
         }
+
+        /* Tailwind overrides to ensure zoom-adjusted viewport heights */
+        .min-h-screen { min-height: calc(100vh / var(--app-zoom)) !important; }
+        .h-screen { height: calc(100vh / var(--app-zoom)) !important; }
+        .max-h-\[90vh\] { max-height: calc(90vh / var(--app-zoom)) !important; }
+        .max-h-\[60vh\] { max-height: calc(60vh / var(--app-zoom)) !important; }
+        .max-h-\[70vh\] { max-height: calc(70vh / var(--app-zoom)) !important; }
 
         .glass-card { 
             background: rgba(255, 255, 255, 0.95); 
@@ -141,7 +156,7 @@
         
         .app-container {
             display: none;
-            min-height: 100vh;
+            min-height: calc(100vh / var(--app-zoom));
             background: #f5f5f5;
         }
         
@@ -157,7 +172,7 @@
             align-items: center;
             justify-content: space-between;
             padding: 0 15px;
-            z-index: 102;
+            z-index: 103;
         }
         
         .menu-toggle {
@@ -217,7 +232,7 @@
             transform: translateX(-100%);
             transition: transform 0.3s;
             box-shadow: 10px 0 15px -3px rgba(0, 0, 0, 0.02);
-            z-index: 101;
+            z-index: 102;
             overflow-y: auto;
         }
         
@@ -264,6 +279,85 @@
             color: white;
         }
         
+        .mini-sidebar {
+            position: fixed;
+            top: 60px;
+            left: 0;
+            bottom: 0;
+            width: 70px;
+            background: #fff;
+            border-right: 1px solid rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 15px 0;
+            z-index: 100;
+            overflow: visible; /* Prevent clipping flyouts */
+        }
+        .mini-sidebar-header {
+            font-size: 0.65rem;
+            font-weight: 800;
+            color: #94a3b8;
+            margin: 10px 0 5px 0;
+            cursor: pointer;
+            transition: color 0.2s;
+            text-align: center;
+            width: 100%;
+        }
+        .mini-sidebar-header:hover { color: #764ba2; }
+        .mini-item {
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #475569;
+            border-radius: 14px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 1.2rem;
+        }
+        .mini-item:hover { background: #f1f5f9; color: #764ba2; }
+        .mini-item.active { background: #ff9800; color: white !important; }
+        
+        .mini-section-content {
+            overflow: hidden; /* Default hidden for collapse */
+            transition: max-height 0.3s ease-out;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+        }
+
+        /* Mini Flyout Sub-menu */
+        .mini-sub-container { position: relative; }
+        .mini-sub-flyout {
+            position: absolute;
+            left: 100%;
+            top: 0;
+            background: white;
+            box-shadow: 10px 0 20px rgba(0,0,0,0.1);
+            border-radius: 0 16px 16px 0;
+            display: none;
+            flex-direction: column;
+            padding: 10px;
+            z-index: 200;
+            border: 1px solid #f1f5f9;
+            border-left: none;
+            min-width: 60px;
+        }
+        .mini-sub-item {
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+        }
+
+        .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(2px); z-index: 102; }
+
         .menu-item i {
             width: 24px;
             margin-right: 15px;
@@ -272,8 +366,9 @@
         
         .main-content {
             margin-top: 60px;
+            margin-left: 70px; /* Base margin for mini sidebar */
             padding: 15px;
-            min-height: calc(100vh - 60px);
+            min-height: calc(100vh / var(--app-zoom) - 60px);
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
         
@@ -466,7 +561,7 @@
             background: white;
             width: 100%;
             max-width: 500px;
-            max-height: 90vh;
+            max-height: calc(90vh / var(--app-zoom));
             border-radius: 32px 32px 0 0;
             padding: 30px;
             overflow-y: auto;
@@ -530,13 +625,13 @@
         
         @media (min-width: 768px) {
             .sidebar.open ~ .main-content {
-                margin-left: 280px;
+                margin-left: 280px; /* Only shrink content on desktop when full sidebar is open */
             }
             .sidebar.open ~ .main-content .bottom-action-bar-takeorder {
                 left: 280px;
             }
             .main-content {
-                margin-left: 0;
+                margin-left: 70px;
                 transition: margin-left 0.3s ease;
             }
             .sidebar-overlay {
@@ -1091,7 +1186,7 @@
     grid-template-columns: repeat(3, 1fr);
     gap: 12px;
     padding: 8px 4px 80px 4px; /* Added significant bottom padding to clear the view */
-    max-height: calc(100vh - 280px); /* Increased height to use more screen space */
+    max-height: calc(100vh / var(--app-zoom) - 280px); /* Increased height to use more screen space */
     overflow-y: auto;
     scrollbar-width: thin;
 }
@@ -1204,7 +1299,7 @@
     box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
     display: flex;
     flex-direction: column;
-    max-height: calc(100vh - 200px);
+    max-height: calc(100vh / var(--app-zoom) - 200px);
     margin-top: 20px;
 }
 
@@ -1215,9 +1310,9 @@
         bottom: 80px; /* Positions it just above the 70px bottom bar */
         left: 10px;
         right: 10px;
-        z-index: 99;
+        z-index: 101;
         width: auto;
-        max-height: 70vh;
+        max-height: calc(70vh / var(--app-zoom));
     }
     .orders-panel-takeorder.show-mobile {
         display: flex;
@@ -1245,7 +1340,7 @@
     flex: 1;
     overflow-y: auto;
     padding: 14px;
-    max-height: 50vh;
+    max-height: calc(50vh / var(--app-zoom));
 }
 
 .order-item-card-takeorder {
@@ -1580,12 +1675,12 @@
 
 .menu-scroll-content-takeorder {
     /* Height: 100vh - topbar(60) - header contents(~200) - bottom action bar(70) */
-    max-height: calc(100vh - 350px);
+    max-height: calc(100vh / var(--app-zoom) - 350px);
     overflow-y: auto;
     padding-right: 5px; /* space for scrollbar */
 }
 @media (min-width: 768px) {
-    .menu-scroll-content-takeorder { max-height: calc(100vh - 310px); }
+    .menu-scroll-content-takeorder { max-height: calc(100vh / var(--app-zoom) - 310px); }
 }
 
 /* Smooth scrollbar for the menu area */
@@ -1822,7 +1917,7 @@
             display: flex;
             align-items: center;
             gap: 2px;
-            z-index: 103;
+            z-index: 104;
         }
         
         .top-bar-icon-btn {
@@ -2148,6 +2243,58 @@
             </div>
         </div>
 
+        <!-- Sidebar Backdrop (Mobile Overlay) -->
+        <div id="sidebarOverlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+        <!-- Mini Sidebar (Visible when main sidebar closed) -->
+        <div id="miniSidebar" class="mini-sidebar">
+            <div class="mini-sidebar-header" onclick="toggleMiniSection('miniOpsSection')">OPS</div>
+            <!-- Operations Icons -->
+            <div id="miniOpsSection" class="mini-section-content" style="max-height: 500px; overflow: visible;">
+                <div class="mini-item" onclick="showPage('takeOrder', true)" title="Take Order" data-page="takeOrder"><i class="fas fa-pen"></i></div>
+                <div class="mini-item" onclick="showPage('activeOrders', true)" title="Orders" data-page="activeOrders"><i class="fas fa-clock"></i></div>
+                
+                <!-- Printer Sub-menu Flyout -->
+                <div class="mini-sub-container">
+                    <div class="mini-item" onclick="toggleMiniSubMenu('miniPrinterFlyout', event)" title="Printers"><i class="fas fa-print"></i></div>
+                    <div id="miniPrinterFlyout" class="mini-sub-flyout">
+                        <div class="mini-item mini-sub-item" onclick="showPage('receipt', true)" title="Receipt" data-page="receipt"><i class="fas fa-file-invoice"></i></div>
+                        <div class="mini-item mini-sub-item" onclick="showPage('departmentPrinter', true)" title="Dept. Printer" data-page="departmentPrinter"><i class="fas fa-print"></i></div>
+                        <div class="mini-item mini-sub-item" onclick="showPage('printers', true)" title="Printers" data-page="printers"><i class="fas fa-receipt"></i></div>
+                        <div class="mini-item mini-sub-item" onclick="showPage('printerQueue', true)" title="Printer Queue" data-page="printerQueue"><i class="fas fa-list-check"></i></div>
+                    </div>
+                </div>
+
+                <div class="mini-item" onclick="showPage('allOrders', true)" title="All Orders" data-page="allOrders"><i class="fas fa-clipboard-list"></i></div>
+                <div class="mini-item" onclick="showPage('allTransactions', true)" title="Transactions" data-page="allTransactions"><i class="fas fa-money-bill-wave"></i></div>
+                <div class="mini-item" onclick="showPage('shift', true)" title="Shift" data-page="shift"><i class="fas fa-history"></i></div>
+            </div>
+            
+            <div id="miniMgtSeparator" style="width: 30px; height: 1px; background: #eee; margin: 10px 0;"></div>
+            
+            <div id="miniMgtHeader" class="mini-sidebar-header" onclick="toggleMiniSection('miniMgtSection')">MGT</div>
+            <!-- Management Icons -->
+            <div id="miniMgtSection" class="mini-section-content" style="max-height: 500px; overflow: visible;">
+                <div class="mini-item" onclick="showPage('dashboard', true)" title="Dashboard" data-page="dashboard"><i class="fas fa-chart-pie"></i></div>
+                <div class="mini-item" onclick="showPage('menu', true)" title="Menu Items" data-page="menu"><i class="fas fa-utensils"></i></div>
+                <div class="mini-item" onclick="showPage('categories', true)" title="Categories" data-page="categories"><i class="fas fa-list"></i></div>
+                <div class="mini-item" onclick="showPage('variants', true)" title="Variants" data-page="variants"><i class="fas fa-sliders-h"></i></div>
+                <div class="mini-item" onclick="showPage('modifiers', true)" title="Modifiers" data-page="modifiers"><i class="fas fa-plus-circle"></i></div>
+                <div class="mini-item" onclick="showPage('tables', true)" title="Tables" data-page="tables"><i class="fas fa-chair"></i></div>
+                <div class="mini-item" onclick="showPage('discounts', true)" title="Discounts" data-page="discounts"><i class="fas fa-tag"></i></div>
+                <div class="mini-item" onclick="showPage('staff', true)" title="Staff" data-page="staff"><i class="fas fa-users"></i></div>
+                <div class="mini-item" onclick="showPage('roles', true)" title="Roles" data-page="roles"><i class="fas fa-shield-alt"></i></div>
+                <div class="mini-item" onclick="showPage('tax', true)" title="Tax Settings" data-page="tax"><i class="fas fa-percent"></i></div>
+                <div class="mini-item" onclick="showPage('reports', true)" title="Reports" data-page="reports"><i class="fas fa-chart-bar"></i></div>
+            </div>
+
+            <div id="miniSettingsSeparator" style="width: 30px; height: 1px; background: #eee; margin: 10px 0;"></div>
+            <div id="miniSettingsHeader" class="mini-sidebar-header" onclick="toggleMiniSection('miniSettingsSection')">SET</div>
+            <div id="miniSettingsSection" class="mini-section-content" style="max-height: 0px; overflow: hidden;">
+                <div class="mini-item" onclick="showPage('screenDisplay', true)" title="Screen Display" data-page="screenDisplay"><i class="fas fa-desktop"></i></div>
+            </div>
+        </div>
+
         <!-- Sidebar -->
         <div class="sidebar" id="sidebar">
             <div class="sidebar-header" style="padding: 24px; text-align: center; border-bottom: 1px solid rgba(0,0,0,0.05);">
@@ -2187,9 +2334,9 @@
                 <div class="menu-section" id="staffMenu">
                     <div class="menu-section-header" onclick="toggleSubMenu('operationsSubMenu', this, event)">
                         <div class="menu-section-title">OPERATIONS</div>
-                        <i class="fas fa-chevron-down menu-toggle-icon"></i>
+                        <i class="fas fa-chevron-down menu-toggle-icon rotated"></i>
                     </div>
-                    <div class="menu-sub-section" id="operationsSubMenu" style="max-height: 0;">
+                    <div class="menu-sub-section" id="operationsSubMenu" style="max-height: none;">
                         <div class="menu-item" onclick="showPage('takeOrder')">
                             <i class="fas fa-pen"></i> Take Order
                         </div>
@@ -2231,9 +2378,9 @@
                 <div class="menu-section" id="managerMenu">
                     <div class="menu-section-header" onclick="toggleSubMenu('managementSubMenu', this, event)">
                         <div class="menu-section-title">MANAGEMENT</div>
-                        <i class="fas fa-chevron-down menu-toggle-icon"></i>
+                        <i class="fas fa-chevron-down menu-toggle-icon rotated"></i>
                     </div>
-                    <div class="menu-sub-section" id="managementSubMenu" style="max-height: 0;">
+                    <div class="menu-sub-section" id="managementSubMenu" style="max-height: none;">
                         <div class="menu-item" onclick="showPage('dashboard')">
                         <i class="fas fa-chart-pie"></i> Dashboard
                     </div>
@@ -2266,6 +2413,19 @@
                         </div>
                         <div class="menu-item" onclick="showPage('reports')">
                             <i class="fas fa-chart-bar"></i> Reports
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SETTINGS Section -->
+                <div class="menu-section" id="settingsMenu">
+                    <div class="menu-section-header" onclick="toggleSubMenu('settingsSubMenu', this, event)">
+                        <div class="menu-section-title">SETTINGS</div>
+                        <i class="fas fa-chevron-down menu-toggle-icon"></i>
+                    </div>
+                    <div class="menu-sub-section" id="settingsSubMenu" style="max-height: 0px;">
+                        <div class="menu-item" onclick="showPage('screenDisplay')">
+                            <i class="fas fa-desktop"></i> Screen Display
                         </div>
                     </div>
                 </div>
@@ -2664,6 +2824,27 @@
                 </div>
             </div>
 
+            <!-- Screen Display Page -->
+            <div id="screenDisplay" class="page">
+                <div class="section-card">
+                    <div class="section-header">
+                        <span class="section-title">Screen Display Settings</span>
+                    </div>
+                    <div style="background: white; padding: 40px 25px; border-radius: 20px; text-align: center; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+                        <p style="color: #64748b; margin-bottom: 30px; font-weight: 500;">Adjust the zoom level to fit your device screen size.</p>
+                        <div style="display: flex; align-items: center; justify-content: center; gap: 30px; margin-bottom: 40px;">
+                            <button onclick="adjustZoom(-0.05)" class="primary-btn" style="flex: none; width: 60px; height: 60px; border-radius: 50%; font-size: 1.5rem; display: flex; align-items: center; justify-content: center;"><i class="fas fa-minus"></i></button>
+                            <div style="text-align: center; min-width: 120px;">
+                                <div id="zoomValueDisplay" style="font-size: 3rem; font-weight: 900; color: #764ba2; line-height: 1;">100%</div>
+                                <div style="font-size: 0.75rem; color: #94a3b8; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-top: 5px;">Zoom Level</div>
+                            </div>
+                            <button onclick="adjustZoom(0.05)" class="primary-btn" style="flex: none; width: 60px; height: 60px; border-radius: 50%; font-size: 1.5rem; display: flex; align-items: center; justify-content: center;"><i class="fas fa-plus"></i></button>
+                        </div>
+                        <button onclick="resetZoom()" class="secondary-btn" style="width: auto; padding: 12px 30px; border-radius: 14px; font-size: 0.9rem;">Reset to Default</button>
+                    </div>
+                </div>
+            </div>
+
             <!-- Reports Page -->
             <div id="reports" class="page">
                 <div class="section-card">
@@ -2730,7 +2911,7 @@
                     </div>
 
                     <!-- Custom Layout View -->
-                    <div id="tableLayoutContainerTakeOrder" style="display: none; position: relative; width: 100%; height: 70vh; max-height: 800px; background: rgba(0,0,0,0.15); border-radius: 28px; border: 2px dashed rgba(255,255,255,0.2); overflow: auto; margin-top: 15px; box-shadow: inset 0 4px 15px rgba(0,0,0,0.1);">
+                    <div id="tableLayoutContainerTakeOrder" style="display: none; position: relative; width: 100%; height: calc(70vh / var(--app-zoom)); max-height: 800px; background: rgba(0,0,0,0.15); border-radius: 28px; border: 2px dashed rgba(255,255,255,0.2); overflow: auto; margin-top: 15px; box-shadow: inset 0 4px 15px rgba(0,0,0,0.1);">
                         <div id="tableLayoutCanvas" style="position: relative; width: 100%; height: 100%; min-width: 100%; min-height: 100%; padding: 20px;"></div>
                     </div>
                 </div>
@@ -2745,6 +2926,9 @@
                                         <i class="fas fa-arrow-left"></i> Back to Tables
                                     </button>
                                     <div style="display: flex; align-items: center; gap: 10px;">
+                                        <div class="search-icon-takeorder" id="toggleMenuPriceBtn" onclick="toggleMenuPriceTakeOrder()" title="Toggle Price" style="width: 32px; height: 32px; font-size: 0.9rem; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3);">
+                                            <i class="fas fa-tag"></i>
+                                        </div>
                                         <div class="search-icon-takeorder" id="toggleMenuImagesBtn" onclick="toggleMenuImagesTakeOrder()" title="Toggle Images" style="width: 32px; height: 32px; font-size: 0.9rem; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3);">
                                             <i class="fas fa-image"></i>
                                         </div>
@@ -3782,7 +3966,7 @@
 
     <!-- Checkout Modal -->
     <div id="checkoutModalTakeOrder" class="modal" style="align-items: center; justify-content: center;">
-        <div class="modal-content" style="max-width: 950px; width: 95%; height: 90vh; border-radius: 20px; display: flex; flex-direction: column; padding: 0;">
+        <div class="modal-content" style="max-width: 950px; width: 95%; height: calc(90vh / var(--app-zoom)); border-radius: 20px; display: flex; flex-direction: column; padding: 0;">
             <div class="modal-header" style="padding: 20px; border-bottom: 1px solid #eee;">
                 <h3><i class="fas fa-cash-register"></i> Checkout - Table <span id="checkoutTableNum"></span></h3>
                 <button class="modal-close" onclick="closeModal('checkoutModalTakeOrder')">&times;</button>
@@ -4287,6 +4471,7 @@
         let isInitialLoadOrders = true;
         let isInitialLoadTransactions = true;
         let showMenuImagesTakeOrder = true;
+        let showMenuPriceTakeOrder = true;
         let lastSuccessfulPaymentDetails = null;
         
         // ========== PRINT QUEUE SYSTEM (For Printer Server Stability) ==========
@@ -4436,12 +4621,8 @@
                 document.getElementById('staffNameTop').textContent = currentStaff.name;
                 document.getElementById('staffRoleTop').textContent = currentStaff.role;
                 
-                // Apply role-based visibility for main menu sections
-                if (currentStaff.role === 'manager') {
-                    document.getElementById('managerMenu').style.display = 'block'; // Show the entire management section
-                } else {
-                    document.getElementById('managerMenu').style.display = 'none'; // Hide for non-managers
-                }
+                // Apply role-based visibility for sidebar and mini sidebar
+                updateRoleBasedUI();
                 document.getElementById('staffMenu').style.display = 'block'; // Operations is always visible
                 
                 // Re-sync previously paired Bluetooth devices if supported
@@ -4615,16 +4796,67 @@
         window.toggleSidebar = function() {
             const sidebar = document.getElementById('sidebar');
             const toggleBtn = document.getElementById('menuToggleBtn');
+            const miniSidebar = document.getElementById('miniSidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            
             sidebar.classList.toggle('open');
             toggleBtn.classList.toggle('active');
+            
+            // Close any open mini flyouts when opening main sidebar
+            document.querySelectorAll('.mini-sub-flyout').forEach(f => f.style.display = 'none');
+
+            const isOpen = sidebar.classList.contains('open');
+            
+            if (isOpen) {
+                if (miniSidebar) miniSidebar.style.display = 'none';
+                if (window.innerWidth < 768 && overlay) overlay.style.display = 'block';
+            } else {
+                if (miniSidebar) miniSidebar.style.display = 'flex';
+                if (overlay) overlay.style.display = 'none';
+            }
         };
+
+        window.toggleMiniSubMenu = function(flyoutId, event, skipSync = false) {
+            if (event) event.stopPropagation();
+            const flyout = document.getElementById(flyoutId);
+            
+            // Check current display directly
+            const isVisible = flyout.style.display === 'flex';
+            
+            // If opening a new one, hide all others first
+            if (!isVisible) {
+                document.querySelectorAll('.mini-sub-flyout').forEach(f => f.style.display = 'none');
+            }
+            
+            const targetState = isVisible ? 'none' : 'flex';
+            flyout.style.display = targetState;
+
+            // Sync with main sidebar printer dropdown
+            if (!skipSync && flyoutId === 'miniPrinterFlyout') {
+                const mainSubMenu = document.getElementById('printerSubMenu');
+                if (mainSubMenu) {
+                    const isExpanding = targetState === 'flex';
+                    const isMainCollapsed = !mainSubMenu.style.maxHeight || mainSubMenu.style.maxHeight === '0px' || mainSubMenu.style.maxHeight === '0';
+                    if (isExpanding === isMainCollapsed) {
+                        toggleSubMenu('printerSubMenu', mainSubMenu.previousElementSibling, null, true);
+                    }
+                }
+            }
+        };
+
+        // Global listener to close mini sub-menus if user clicks outside
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.mini-sub-container')) {
+                document.querySelectorAll('.mini-sub-flyout').forEach(f => f.style.display = 'none');
+            }
+        });
 
         window.toggleOrdersPanelTakeOrder = function() {
             const panel = document.getElementById('ordersPanelTakeOrder');
             panel.classList.toggle('show-mobile');
         };
 
-        window.toggleSubMenu = function(subMenuId, headerElement, event) {
+        window.toggleSubMenu = function(subMenuId, headerElement, event, skipSync = false) {
             if (event) event.stopPropagation();
 
             const subMenu = document.getElementById(subMenuId);
@@ -4651,12 +4883,61 @@
                 subMenu.style.maxHeight = '0px';
                 if (icon) icon.classList.remove('rotated');
             }
+
+            // Sync with mini sidebar sections and flyouts
+            if (!skipSync) {
+                if (subMenuId === 'operationsSubMenu') {
+                    const mini = document.getElementById('miniOpsSection');
+                    if (mini) {
+                        mini.style.maxHeight = isCollapsed ? '500px' : '0px';
+                        mini.style.overflow = isCollapsed ? 'visible' : 'hidden';
+                    }
+                } else if (subMenuId === 'managementSubMenu') {
+                    const mini = document.getElementById('miniMgtSection');
+                    if (mini) {
+                        mini.style.maxHeight = isCollapsed ? '500px' : '0px';
+                        mini.style.overflow = isCollapsed ? 'visible' : 'hidden';
+                    }
+                } else if (subMenuId === 'settingsSubMenu') {
+                    const mini = document.getElementById('miniSettingsSection');
+                    if (mini) {
+                        mini.style.maxHeight = isCollapsed ? '500px' : '0px';
+                        mini.style.overflow = isCollapsed ? 'visible' : 'hidden';
+                    }
+                } else if (subMenuId === 'printerSubMenu') {
+                    const flyout = document.getElementById('miniPrinterFlyout');
+                    if (flyout) flyout.style.display = isCollapsed ? 'flex' : 'none';
+                }
+            }
+        };
+
+        window.toggleMiniSection = function(sectionId, skipSync = false) {
+            const section = document.getElementById(sectionId);
+            const isExpanding = !section.style.maxHeight || section.style.maxHeight === '0px' || section.style.maxHeight === '0';
+            section.style.maxHeight = isExpanding ? '500px' : '0px';
+            section.style.overflow = isExpanding ? 'visible' : 'hidden';
+
+            // Sync with main sidebar
+            if (!skipSync) {
+                const mainSubMenuId = sectionId === 'miniOpsSection' ? 'operationsSubMenu' : (sectionId === 'miniMgtSection' ? 'managementSubMenu' : 'settingsSubMenu');
+                const mainSubMenu = document.getElementById(mainSubMenuId);
+                if (mainSubMenu) {
+                    const isMainCollapsed = !mainSubMenu.style.maxHeight || mainSubMenu.style.maxHeight === '0px' || mainSubMenu.style.maxHeight === '0';
+                    // Only toggle if the states are out of sync
+                    if (isExpanding === isMainCollapsed) {
+                        toggleSubMenu(mainSubMenuId, mainSubMenu.previousElementSibling, null, true);
+                    }
+                }
+            }
         };
 
         window.showPage = function(pageId, skipSidebar = false) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.getElementById(pageId).classList.add('active');
-            document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
+            document.querySelectorAll('.menu-item, .mini-item').forEach(m => m.classList.remove('active'));
+            
+            // Auto-close flyouts when a page is selected
+            document.querySelectorAll('.mini-sub-flyout').forEach(f => f.style.display = 'none');
             
             // Try to find the menu item either from a click event or by searching the DOM
             let targetItem = null;
@@ -4666,6 +4947,17 @@
             
             if (!targetItem) {
                 targetItem = document.querySelector(`.menu-item[onclick*="'${pageId}'"]`);
+            }
+            
+            // Highlight mini sidebar icon
+            const miniItem = document.querySelector(`.mini-item[data-page="${pageId}"]`);
+            if (miniItem) miniItem.classList.add('active');
+
+            // Sync parent highlight for Printer flyout pages
+            const printerPages = ['receipt', 'departmentPrinter', 'printers', 'printerQueue'];
+            if (printerPages.includes(pageId)) {
+                const trigger = document.querySelector('.mini-sub-container .mini-item');
+                if (trigger) trigger.classList.add('active');
             }
 
             if (targetItem) {
@@ -4680,7 +4972,7 @@
                     parentSubMenu = parentSubMenu.parentElement?.closest('.menu-sub-section');
                 }
             }
-            if (!skipSidebar && window.innerWidth < 768) toggleSidebar();
+            if (!skipSidebar && window.innerWidth < 768 && document.getElementById('sidebar').classList.contains('open')) toggleSidebar();
             // Handle body class for take order page
             if (pageId === 'takeOrder') {
                 document.body.classList.add('take-order-page');
@@ -4699,6 +4991,7 @@
             else if (pageId === 'tax') loadTaxSettings();
             else if (pageId === 'roles') loadRoles();
             else if (pageId === 'reports') loadReportsPage();
+            else if (pageId === 'screenDisplay') loadScreenDisplay();
             else if (pageId === 'takeOrder') loadTakeOrderPage();
             else if (pageId === 'activeOrders') loadActiveOrders();
             else if (pageId === 'departmentPrinter') loadDeptPrinters();
@@ -4708,6 +5001,38 @@
             else if (pageId === 'receipt') loadReceiptSettingsPage();
             else if (pageId === 'allTransactions') loadAllTransactions();
         };
+
+        // ========== SCREEN DISPLAY (ZOOM) ==========
+        let currentZoom = parseFloat(localStorage.getItem('appZoom')) || 1;
+        document.body.style.zoom = currentZoom;
+        document.documentElement.style.setProperty('--app-zoom', currentZoom);
+
+        window.loadScreenDisplay = function() {
+            updateZoomDisplay();
+        };
+
+        window.adjustZoom = function(delta) {
+            currentZoom = parseFloat((currentZoom + delta).toFixed(2));
+            currentZoom = Math.min(Math.max(0.5, currentZoom), 2.0); // Limit between 50% and 200%
+            applyZoom();
+        };
+
+        window.resetZoom = function() {
+            currentZoom = 1;
+            applyZoom();
+        };
+
+        function applyZoom() {
+            document.body.style.zoom = currentZoom;
+            document.documentElement.style.setProperty('--app-zoom', currentZoom);
+            localStorage.setItem('appZoom', currentZoom);
+            updateZoomDisplay();
+        }
+
+        function updateZoomDisplay() {
+            const display = document.getElementById('zoomValueDisplay');
+            if (display) display.innerText = Math.round(currentZoom * 100) + '%';
+        }
 
         // ========== DASHBOARD ==========
         async function loadDashboard() {
@@ -9704,9 +10029,9 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                         <div class="menu-card-takeorder" onclick="openItemModalTakeOrder('${item.id}')" style="${!showMenuImagesTakeOrder ? `aspect-ratio: auto; padding: 15px; background-color: ${bgColor}; clip-path: ${clipPath};` : ''}">
                             ${badgeHtml}
                             ${showMenuImagesTakeOrder ? `<img class="menu-image-takeorder" src="${imageUrl}" onerror="this.src='https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=300&h=300&fit=crop'">` : ''}
-                            <div class="menu-content-takeorder" style="${!showMenuImagesTakeOrder ? 'padding: 0; background: transparent;' : ''}">
+                            <div class="menu-content-takeorder" style="${(!showMenuImagesTakeOrder || !showMenuPriceTakeOrder) ? 'padding: 0; background: transparent; border: none;' : ''}">
                                 <div><div class="menu-card-name" style="color: #1e293b;">${item.name}</div>
-                                <div class="menu-price-takeorder">RM ${parseFloat(item.price).toFixed(2)}</div></div>
+                                <div class="menu-price-takeorder" style="${!showMenuPriceTakeOrder ? 'display:none;' : ''}">RM ${parseFloat(item.price).toFixed(2)}</div></div>
                             </div>
                         </div>
                     `;
@@ -9719,7 +10044,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                         <div class="menu-card-takeorder" onclick="openItemModalTakeOrder('${item.id}')" style="aspect-ratio: 1/1; width: 100%; height: auto; justify-content: center; align-items: center; padding: 6px; text-align: center; background-color: ${bgColor}; clip-path: ${clipPath};">
                             ${badgeHtml}
                             <div class="menu-card-name" style="color: #1e293b; font-size: 0.85rem; margin-bottom: 4px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.2;">${item.name}</div>
-                            <div class="menu-price-takeorder" style="font-size: 0.8rem;">RM ${parseFloat(item.price).toFixed(2)}</div>
+                            ${showMenuPriceTakeOrder ? `<div class="menu-price-takeorder" style="font-size: 0.8rem;">RM ${parseFloat(item.price).toFixed(2)}</div>` : ''}
                         </div>
                     `;
                 }
@@ -9731,7 +10056,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                             <img class="menu-image-takeorder" src="${imageUrl}" onerror="this.src='https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=300&h=300&fit=crop'">
                             <div class="menu-name-overlay-takeorder"><span>${item.name}</span></div>
                         </div>
-                        <div class="menu-content-takeorder">
+                        <div class="menu-content-takeorder" style="${!showMenuPriceTakeOrder ? 'display:none;' : ''}">
                             <div class="menu-price-takeorder">RM ${parseFloat(item.price).toFixed(2)}</div>
                         </div>
                     </div>
@@ -13233,6 +13558,34 @@ window.openSearchModalTakeOrder = function() {
             } catch (e) { console.warn("Could not load receipt settings", e); }
         }
 
+        window.updateRoleBasedUI = function() {
+            if (!currentStaff) return;
+            const isManager = currentStaff.role === 'manager';
+            const displayStyle = isManager ? 'block' : 'none';
+            const miniSectionDisplay = isManager ? 'flex' : 'none';
+
+            // Main Sidebar Sections
+            const mgtMenu = document.getElementById('managerMenu');
+            if (mgtMenu) mgtMenu.style.display = displayStyle;
+            const settingsMenu = document.getElementById('settingsMenu');
+            if (settingsMenu) settingsMenu.style.display = 'block'; // Settings visible to all
+
+            // Mini Sidebar Sections
+            const miniMgtHeader = document.getElementById('miniMgtHeader');
+            const miniMgtSection = document.getElementById('miniMgtSection');
+            const miniMgtSeparator = document.getElementById('miniMgtSeparator');
+            const miniSettingsHeader = document.getElementById('miniSettingsHeader');
+            const miniSettingsSection = document.getElementById('miniSettingsSection');
+            const miniSettingsSeparator = document.getElementById('miniSettingsSeparator');
+
+            if (miniMgtHeader) miniMgtHeader.style.display = displayStyle;
+            if (miniMgtSection) miniMgtSection.style.display = miniSectionDisplay;
+            if (miniMgtSeparator) miniMgtSeparator.style.display = displayStyle;
+            if (miniSettingsHeader) miniSettingsHeader.style.display = 'block'; // Settings header visible to all
+            if (miniSettingsSection) miniSettingsSection.style.display = 'flex'; // Settings container visible to all
+            if (miniSettingsSeparator) miniSettingsSeparator.style.display = 'block'; // Settings separator visible to all
+        };
+
         // Check existing session
         const savedClientId = localStorage.getItem('clientId');
         const savedStaff = localStorage.getItem('currentStaff');
@@ -13266,8 +13619,7 @@ window.openSearchModalTakeOrder = function() {
 
             document.getElementById('staffNameTop').textContent = currentStaff.name;
             document.getElementById('staffRoleTop').textContent = currentStaff.role;
-            if (currentStaff.role === 'manager') document.getElementById('managerMenu').style.display = 'block';
-            else document.getElementById('managerMenu').style.display = 'none';
+            updateRoleBasedUI();
             document.getElementById('staffMenu').style.display = 'block'; // Operations is always visible
             setupStaffSessionMonitor();
             runSyncSequence();
@@ -13354,12 +13706,30 @@ window.openSearchModalTakeOrder = function() {
         window.saveAttendanceTime = saveAttendanceTime;
         window.deleteAttendanceRecord = deleteAttendanceRecord;
         window.resetOrderSequence = resetOrderSequence;
+        window.adjustZoom = adjustZoom;
+        window.resetZoom = resetZoom;
+        window.loadScreenDisplay = loadScreenDisplay;
         
         window.toggleMenuImagesTakeOrder = function() {
             showMenuImagesTakeOrder = !showMenuImagesTakeOrder;
             const btn = document.getElementById('toggleMenuImagesBtn');
             if (btn) {
                 if (showMenuImagesTakeOrder) {
+                    btn.style.background = 'rgba(255,255,255,0.2)';
+                    btn.style.color = 'white';
+                } else {
+                    btn.style.background = 'white';
+                    btn.style.color = '#764ba2';
+                }
+            }
+            renderMenuGridTakeOrder();
+        };
+        
+        window.toggleMenuPriceTakeOrder = function() {
+            showMenuPriceTakeOrder = !showMenuPriceTakeOrder;
+            const btn = document.getElementById('toggleMenuPriceBtn');
+            if (btn) {
+                if (showMenuPriceTakeOrder) {
                     btn.style.background = 'rgba(255,255,255,0.2)';
                     btn.style.color = 'white';
                 } else {
