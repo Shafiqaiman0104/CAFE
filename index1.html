@@ -4512,6 +4512,14 @@
                 }
             });
 
+            if (!isShiftActive) {
+                document.getElementById('tableSectionTakeOrder').style.display = 'block';
+                document.getElementById('menuSectionTakeOrder').style.display = 'none';
+                document.getElementById('bottomActionBarTakeOrder').style.display = 'none';
+                renderTableGridTakeOrder();
+                return;
+            }
+
             document.getElementById('tableSectionTakeOrder').style.display = 'none';
             document.getElementById('menuSectionTakeOrder').style.display = 'block';
             document.getElementById('bottomActionBarTakeOrder').style.display = 'flex';
@@ -8099,7 +8107,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             const backBtn = document.getElementById('backToTablesBtnTakeOrder');
             const tableDisplay = document.getElementById('selectedTableDisplayTakeOrder');
 
-            if (isQuickServiceMode) {
+            if (isQuickServiceMode && isShiftActive) {
                 if (backBtn) backBtn.style.display = 'none';
                 document.getElementById('tableSectionTakeOrder').style.display = 'none';
                 document.getElementById('menuSectionTakeOrder').style.display = 'block';
@@ -8166,9 +8174,17 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
         function renderTableGridTakeOrder() {
             const grid = document.getElementById('tableGridTakeOrder');
             const counterContainer = document.getElementById('counterTableContainerTakeOrder');
+            const header = document.querySelector('#tableSectionTakeOrder .category-header-takeorder');
 
             if (!isShiftActive) {
                 counterContainer.innerHTML = '';
+                if (header) header.style.display = 'none';
+                document.getElementById('tableLayoutContainerTakeOrder').style.display = 'none';
+                document.getElementById('layoutControlsTakeOrder').style.display = 'none';
+                document.getElementById('locationFilterBarTakeOrder').style.display = 'none';
+                const statusInfo = document.querySelector('.table-status-info');
+                if (statusInfo) statusInfo.style.display = 'none';
+
                 grid.className = "table-grid-takeorder";
                 grid.style.display = "block";
                 grid.innerHTML = `
@@ -8180,6 +8196,10 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                 `;
                 return;
             } else {
+                if (header) header.style.display = 'flex';
+                document.getElementById('locationFilterBarTakeOrder').style.display = 'flex';
+                const statusInfo = document.querySelector('.table-status-info');
+                if (statusInfo) statusInfo.style.display = 'flex';
                 grid.style.display = viewModeTakeOrder === 'list' ? 'flex' : 'grid';
             }
 
