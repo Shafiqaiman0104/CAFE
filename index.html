@@ -3023,11 +3023,11 @@
                             </div>
                         </div>
                         <div class="category-bar-takeorder" id="activeOrdersFilterBar" style="margin-bottom: 0; padding-bottom: 5px;">
-                            <button class="category-btn-takeorder active" onclick="setActiveOrdersFilter('All')">All</button>
-                            <button class="category-btn-takeorder" onclick="setActiveOrdersFilter('active')">Active</button>
+                            <button class="category-btn-takeorder active" onclick="setActiveOrdersFilter('active')">Active</button>
                             <button class="category-btn-takeorder" onclick="setActiveOrdersFilter('preparing')">Preparing</button>
                             <button class="category-btn-takeorder" onclick="setActiveOrdersFilter('served')">Served</button>
                             <button class="category-btn-takeorder" onclick="setActiveOrdersFilter('cancelled')">Cancelled</button>
+                            <button class="category-btn-takeorder" onclick="setActiveOrdersFilter('All')">All</button>
                         </div>
                         <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 10px; padding: 0 5px;">
                             <div style="display: flex; gap: 15px; align-items: center;">
@@ -4447,7 +4447,7 @@
         let editingTableStyleId = null;
         let currentEditingDecorId = null;
         let tableLayouts = { phone: {}, tablet: {} };
-        let activeOrdersStatusFilter = 'All';
+        let activeOrdersStatusFilter = 'active';
         let unsubActiveOrders = null;
         let currentSelectedVariantsTakeOrder = [];
         let currentSelectedModifiersTakeOrder = [];
@@ -4513,6 +4513,14 @@
                     m.classList.remove('active');
                 }
             });
+
+            if (!isShiftActive) {
+                document.getElementById('tableSectionTakeOrder').style.display = 'block';
+                document.getElementById('menuSectionTakeOrder').style.display = 'none';
+                document.getElementById('bottomActionBarTakeOrder').style.display = 'none';
+                renderTableGridTakeOrder();
+                return;
+            }
 
             document.getElementById('tableSectionTakeOrder').style.display = 'none';
             document.getElementById('menuSectionTakeOrder').style.display = 'block';
@@ -5054,7 +5062,10 @@
             else if (pageId === 'reports') loadReportsPage();
             else if (pageId === 'screenDisplay') loadScreenDisplay();
             else if (pageId === 'takeOrder') loadTakeOrderPage();
-            else if (pageId === 'activeOrders') loadActiveOrders();
+            else if (pageId === 'activeOrders') {
+                if (window.pendingOrderHighlightId) loadActiveOrders();
+                else setActiveOrdersFilter('active');
+            }
             else if (pageId === 'departmentPrinter') loadDeptPrinters();
             else if (pageId === 'printers') loadPrintersPage();
             else if (pageId === 'printerQueue') loadPrinterQueue();
@@ -8101,7 +8112,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             const backBtn = document.getElementById('backToTablesBtnTakeOrder');
             const tableDisplay = document.getElementById('selectedTableDisplayTakeOrder');
 
-            if (isQuickServiceMode) {
+            if (isQuickServiceMode && isShiftActive) {
                 if (backBtn) backBtn.style.display = 'none';
                 document.getElementById('tableSectionTakeOrder').style.display = 'none';
                 document.getElementById('menuSectionTakeOrder').style.display = 'block';
@@ -8168,9 +8179,17 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
         function renderTableGridTakeOrder() {
             const grid = document.getElementById('tableGridTakeOrder');
             const counterContainer = document.getElementById('counterTableContainerTakeOrder');
+            const header = document.querySelector('#tableSectionTakeOrder .category-header-takeorder');
 
             if (!isShiftActive) {
                 counterContainer.innerHTML = '';
+                if (header) header.style.display = 'none';
+                document.getElementById('tableLayoutContainerTakeOrder').style.display = 'none';
+                document.getElementById('layoutControlsTakeOrder').style.display = 'none';
+                document.getElementById('locationFilterBarTakeOrder').style.display = 'none';
+                const statusInfo = document.querySelector('.table-status-info');
+                if (statusInfo) statusInfo.style.display = 'none';
+
                 grid.className = "table-grid-takeorder";
                 grid.style.display = "block";
                 grid.innerHTML = `
@@ -8182,6 +8201,10 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                 `;
                 return;
             } else {
+                if (header) header.style.display = 'flex';
+                document.getElementById('locationFilterBarTakeOrder').style.display = 'flex';
+                const statusInfo = document.querySelector('.table-status-info');
+                if (statusInfo) statusInfo.style.display = 'flex';
                 grid.style.display = viewModeTakeOrder === 'list' ? 'flex' : 'grid';
             }
 
@@ -8554,6 +8577,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                 }
 
                 isVoidModeTakeOrder = false;
+                if (document.getElementById('voidToggleBtn')) document.getElementById('voidToggleBtn').style.display = 'flex';
                 setVoidModeTakeOrder(false);
 
                 let html = '';
@@ -8670,6 +8694,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             }
             
             isVoidModeTakeOrder = false;
+            if (document.getElementById('voidToggleBtn')) document.getElementById('voidToggleBtn').style.display = 'none';
             setVoidModeTakeOrder(false);
 
             let html = `
@@ -8738,12 +8763,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
         };
 
         window.toggleItemSelectionCheckout = function(orderId, itemId) {
-            if (isQuickServiceMode && mode === 'split') {
-                alert("Split payment is not supported in Quick Service mode.");
-                setCheckoutMode('full');
-                return;
-            }
-
+            if (isQuickServiceMode) return;
             if (document.getElementById('btnCheckoutFull').classList.contains('active')) return;
             const index = selectedCheckoutItems.findIndex(i => i.itemId === itemId);
             const el = document.getElementById(`chk-item-${itemId}`);
@@ -8771,6 +8791,10 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
         };
 
         window.setCheckoutMode = function(mode) {
+            if (isQuickServiceMode && mode === 'split') {
+                alert("Split payment is not supported in Quick Service mode.");
+                return;
+            }
             if (mode === 'split' && appliedCheckoutDiscount) {
                 alert("Only full payment can apply discount, split payment cannot. Please remove the discount to use split payment.");
                 return;
