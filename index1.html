@@ -3021,11 +3021,11 @@
                             </div>
                         </div>
                         <div class="category-bar-takeorder" id="activeOrdersFilterBar" style="margin-bottom: 0; padding-bottom: 5px;">
-                            <button class="category-btn-takeorder active" onclick="setActiveOrdersFilter('All')">All</button>
-                            <button class="category-btn-takeorder" onclick="setActiveOrdersFilter('active')">Active</button>
+                            <button class="category-btn-takeorder active" onclick="setActiveOrdersFilter('active')">Active</button>
                             <button class="category-btn-takeorder" onclick="setActiveOrdersFilter('preparing')">Preparing</button>
                             <button class="category-btn-takeorder" onclick="setActiveOrdersFilter('served')">Served</button>
                             <button class="category-btn-takeorder" onclick="setActiveOrdersFilter('cancelled')">Cancelled</button>
+                            <button class="category-btn-takeorder" onclick="setActiveOrdersFilter('All')">All</button>
                         </div>
                         <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 10px; padding: 0 5px;">
                             <div style="display: flex; gap: 15px; align-items: center;">
@@ -4445,7 +4445,7 @@
         let editingTableStyleId = null;
         let currentEditingDecorId = null;
         let tableLayouts = { phone: {}, tablet: {} };
-        let activeOrdersStatusFilter = 'All';
+        let activeOrdersStatusFilter = 'active';
         let unsubActiveOrders = null;
         let currentSelectedVariantsTakeOrder = [];
         let currentSelectedModifiersTakeOrder = [];
@@ -5060,7 +5060,10 @@
             else if (pageId === 'reports') loadReportsPage();
             else if (pageId === 'screenDisplay') loadScreenDisplay();
             else if (pageId === 'takeOrder') loadTakeOrderPage();
-            else if (pageId === 'activeOrders') loadActiveOrders();
+            else if (pageId === 'activeOrders') {
+                if (window.pendingOrderHighlightId) loadActiveOrders();
+                else setActiveOrdersFilter('active');
+            }
             else if (pageId === 'departmentPrinter') loadDeptPrinters();
             else if (pageId === 'printers') loadPrintersPage();
             else if (pageId === 'printerQueue') loadPrinterQueue();
