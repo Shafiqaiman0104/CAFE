@@ -8572,6 +8572,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                 }
 
                 isVoidModeTakeOrder = false;
+                if (document.getElementById('voidToggleBtn')) document.getElementById('voidToggleBtn').style.display = 'flex';
                 setVoidModeTakeOrder(false);
 
                 let html = '';
@@ -8688,6 +8689,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             }
             
             isVoidModeTakeOrder = false;
+            if (document.getElementById('voidToggleBtn')) document.getElementById('voidToggleBtn').style.display = 'none';
             setVoidModeTakeOrder(false);
 
             let html = `
@@ -8756,12 +8758,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
         };
 
         window.toggleItemSelectionCheckout = function(orderId, itemId) {
-            if (isQuickServiceMode && mode === 'split') {
-                alert("Split payment is not supported in Quick Service mode.");
-                setCheckoutMode('full');
-                return;
-            }
-
+            if (isQuickServiceMode) return;
             if (document.getElementById('btnCheckoutFull').classList.contains('active')) return;
             const index = selectedCheckoutItems.findIndex(i => i.itemId === itemId);
             const el = document.getElementById(`chk-item-${itemId}`);
@@ -8789,6 +8786,10 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
         };
 
         window.setCheckoutMode = function(mode) {
+            if (isQuickServiceMode && mode === 'split') {
+                alert("Split payment is not supported in Quick Service mode.");
+                return;
+            }
             if (mode === 'split' && appliedCheckoutDiscount) {
                 alert("Only full payment can apply discount, split payment cannot. Please remove the discount to use split payment.");
                 return;
