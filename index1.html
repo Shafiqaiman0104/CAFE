@@ -2251,7 +2251,6 @@
             <div class="mini-sidebar-header" onclick="toggleMiniSection('miniOpsSection')">OPS</div>
             <!-- Operations Icons -->
             <div id="miniOpsSection" class="mini-section-content" style="max-height: 500px; overflow: visible;">
-                <div class="mini-item" onclick="showQuickService()" title="Quick Service" data-page="quickService"><i class="fas fa-bolt"></i></div>
                 <div class="mini-item" onclick="showPage('takeOrder', true)" title="Take Order" data-page="takeOrder"><i class="fas fa-pen"></i></div>
                 <div class="mini-item" onclick="showPage('activeOrders', true)" title="Orders" data-page="activeOrders"><i class="fas fa-clock"></i></div>
                 
@@ -2338,9 +2337,6 @@
                         <i class="fas fa-chevron-down menu-toggle-icon rotated"></i>
                     </div>
                     <div class="menu-sub-section" id="operationsSubMenu" style="max-height: none;">
-                        <div class="menu-item" onclick="showQuickService()" data-page="quickService">
-                            <i class="fas fa-bolt"></i> Quick Service
-                        </div>
                         <div class="menu-item" onclick="showPage('takeOrder')">
                             <i class="fas fa-pen"></i> Take Order
                         </div>
@@ -2944,7 +2940,7 @@
                         <div class="menu-wrapper-takeorder">
                             <div class="menu-header-static-takeorder">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0;">
-                                    <button id="backToTablesBtnTakeOrder" class="back-to-tables-btn" onclick="showTableSectionTakeOrder()" style="margin-bottom: 0;">
+                                    <button class="back-to-tables-btn" onclick="showTableSectionTakeOrder()" style="margin-bottom: 0;">
                                         <i class="fas fa-arrow-left"></i> Back to Tables
                                     </button>
                                     <div style="display: flex; align-items: center; gap: 10px;">
@@ -4491,35 +4487,6 @@
         let isVoidModeTakeOrder = false;
         let voidingItemData = null;
         let isInitialLoadOrders = true;
-        let isQuickServiceMode = false;
-
-        window.showQuickService = function() {
-            isQuickServiceMode = true;
-            cartTakeOrder = [];
-            selectedTableIdTakeOrder = 'counter'; 
-            selectedTableNumberTakeOrder = 'Counter';
-            selectedOrderTypeTakeOrder = 'dine-in';
-            
-            showPage('takeOrder', false, true);
-            
-            // Manually handle active highlighting for Quick Service across both sidebars
-            document.querySelectorAll('.menu-item, .mini-item').forEach(m => {
-                const click = m.getAttribute('onclick') || "";
-                if (click.includes('showQuickService') || m.dataset.page === 'quickService') {
-                    m.classList.add('active');
-                } else {
-                    m.classList.remove('active');
-                }
-            });
-
-            document.getElementById('tableSectionTakeOrder').style.display = 'none';
-            document.getElementById('menuSectionTakeOrder').style.display = 'block';
-            document.getElementById('bottomActionBarTakeOrder').style.display = 'flex';
-            document.getElementById('selectedTableDisplayTakeOrder').innerText = `Quick Service`;
-            updateOrdersUITakeOrder();
-            renderMenuGridTakeOrder();
-        };
-
         let isInitialLoadTransactions = true;
         let showMenuImagesTakeOrder = true;
         let showMenuPriceTakeOrder = true;
@@ -4982,15 +4949,7 @@
             }
         };
 
-        window.showPage = function(pageId, skipSidebar = false, isQuickServiceCall = false) {
-            // If we are navigating to anything other than takeOrder, or if we are
-            // navigating to takeOrder specifically via the standard Pen icon, reset mode.
-            if (pageId !== 'takeOrder' || !isQuickServiceCall) {
-                isQuickServiceMode = false;
-            }
-            // Only set to true if explicitly called from showQuickService
-            if (isQuickServiceCall) isQuickServiceMode = true;
-
+        window.showPage = function(pageId, skipSidebar = false) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.getElementById(pageId).classList.add('active');
             document.querySelectorAll('.menu-item, .mini-item').forEach(m => m.classList.remove('active'));
@@ -7780,7 +7739,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                         <span>Subtotal:</span>
                         <span>RM ${runningSubtotal.toFixed(2)}</span>
                     </div>
-                    ${(parseFloat(order.discountAmount) > 0) ? `
+                    ${order.discountAmount ? `
                     <div style="display:flex;justify-content:space-between;color:#e53e3e;">
                         <span>Discount (${order.discountName || 'Applied'}):</span>
                         <span>- RM ${parseFloat(order.discountAmount).toFixed(2)}</span>
@@ -8095,23 +8054,6 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                 // ========== TAKE ORDER - NEW DESIGN ==========
         async function loadTakeOrderPage() {
             document.body.classList.add('take-order-page');
-
-            const backBtn = document.getElementById('backToTablesBtnTakeOrder');
-            const tableDisplay = document.getElementById('selectedTableDisplayTakeOrder');
-
-            if (isQuickServiceMode) {
-                if (backBtn) backBtn.style.display = 'none';
-                document.getElementById('tableSectionTakeOrder').style.display = 'none';
-                document.getElementById('menuSectionTakeOrder').style.display = 'block';
-                document.getElementById('bottomActionBarTakeOrder').style.display = 'flex';
-                if (tableDisplay) tableDisplay.innerText = `Quick Service`;
-            } else {
-                if (backBtn) backBtn.style.display = 'inline-flex';
-                document.getElementById('tableSectionTakeOrder').style.display = 'block';
-                document.getElementById('menuSectionTakeOrder').style.display = 'none';
-                document.getElementById('bottomActionBarTakeOrder').style.display = 'none';
-                if (tableDisplay) tableDisplay.innerText = '';
-            }
             
             // Listen to active orders globally for the table grid logic (determines "Ready" color)
             if (unsubscribers['takeOrderOrders']) unsubscribers['takeOrderOrders']();
@@ -8124,7 +8066,11 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
 
             loadTablesTakeOrder();
             await loadMenuItemsTakeOrder();
-
+            
+            document.getElementById('tableSectionTakeOrder').style.display = 'block';
+            document.getElementById('menuSectionTakeOrder').style.display = 'none';
+            document.getElementById('bottomActionBarTakeOrder').style.display = 'none';
+            
             updateOrdersUITakeOrder();
             updateWaitingListBadgeTakeOrder();
         }
@@ -8537,14 +8483,6 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                 appliedCheckoutDiscount = null;
 
                 isEarlyPaymentMode = false;
-
-                // Restore Split Payment button state for normal ordering
-                const splitBtn = document.getElementById('btnCheckoutSplit');
-                if (splitBtn) {
-                    splitBtn.style.opacity = "1";
-                    splitBtn.style.pointerEvents = "auto";
-                }
-
                 const payBtn = document.querySelector('#checkoutModalTakeOrder .primary-btn[onclick*="submitCheckoutPayment"]');
                 if (payBtn) {
                     payBtn.innerHTML = '<i class="fas fa-print"></i> PAY & COMPLETE';
@@ -8646,102 +8584,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             }
         };
 
-        window.openQuickServiceCheckout = function() {
-            document.getElementById('checkoutTableNum').innerText = selectedTableNumberTakeOrder;
-            const itemsContainer = document.getElementById('checkoutOrderItems');
-            const totalsContainer = document.getElementById('checkoutTotals');
-            
-            appliedCheckoutDiscount = null;
-            selectedCheckoutItems = [];
-            isEarlyPaymentMode = false;
-            
-            const payBtn = document.querySelector('#checkoutModalTakeOrder .primary-btn[onclick*="submitCheckoutPayment"]');
-            if (payBtn) {
-                payBtn.innerHTML = '<i class="fas fa-print"></i> PAY & COMPLETE';
-                payBtn.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
-            }
-
-            const splitBtn = document.getElementById('btnCheckoutSplit');
-            if (splitBtn) {
-                splitBtn.style.opacity = "0.5";
-                splitBtn.style.pointerEvents = "none";
-            }
-            
-            isVoidModeTakeOrder = false;
-            setVoidModeTakeOrder(false);
-
-            let html = `
-                <div style="margin-bottom:15px; background:white; padding:12px; border-radius:18px; border:1px solid #f1f5f9; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
-                    <div style="font-weight:bold; font-size:0.8rem; color:#94a3b8; border-bottom:1px solid #f8fafc; padding-bottom:8px; margin-bottom:8px; display: flex; justify-content: space-between; align-items: center;">
-                        <span>Quick Service Order</span>
-                        <span style="background:#e2e8f0; color:#475569; font-size:10px; padding:2px 6px; border-radius:10px; text-transform:uppercase;">${selectedOrderTypeTakeOrder.replace('-', ' ')}</span>
-                    </div>`;
-
-            cartTakeOrder.forEach((item, idx) => {
-                const itemPrice = item.total;
-                const unitPrice = item.unitPrice;
-                const maxQty = item.qty;
-                const itemId = item.cartId;
-                
-                selectedCheckoutItems.push({ orderId: 'qs-order', itemId: itemId, unitPrice, qtyToPay: maxQty, maxQty });
-
-                const isMeasurement = item.soldBy === 'measurement';
-                const qtyLabel = isMeasurement ? `${item.qty}${item.unit}` : `x ${item.qty}`;
-                
-                let subHtml = '';
-                if (item.variants) item.variants.forEach(v => subHtml += `<div style="font-size:10px; color:#666; margin-left:30px;">• ${v.optionName}</div>`);
-                if (item.modifiers) item.modifiers.forEach(m => subHtml += `<div style="font-size:10px; color:#666; margin-left:30px;">• ${m.optionName}</div>`);
-                if (item.notes) subHtml += `<div style="font-size:10px; color:#764ba2; margin-left:30px; font-style:italic;">Note: ${item.notes}</div>`;
-
-                html += `
-                    <div id="chk-item-${itemId}" class="checkout-item-row checkout-item-selected"
-                         data-order-id="qs-order" data-price="${itemPrice}" data-max-qty="${maxQty}" data-unit-price="${unitPrice}" data-sold-by="${item.soldBy || 'item'}"
-                         onclick="toggleItemSelectionCheckout('qs-order', '${itemId}')">
-                        <div style="display:flex; justify-content:space-between; font-size:0.9rem; align-items:center;">
-                            <div style="display: flex; align-items: center; gap: 8px;">
-                                <i id="icon-item-${itemId}" class="fas fa-check-circle" style="display:none;"></i>
-                                <span style="font-weight:600;">${item.name}</span>
-                                <div class="chk-qty-container" id="qty-ctrl-${itemId}" style="display:none; align-items:center; gap:8px; margin-left:10px; background:#f1f5f9; padding:2px 8px; border-radius:20px; ${isMeasurement ? 'display:none!important;' : ''}">
-                                    <button onclick="event.stopPropagation(); updateCheckoutItemQty('qs-order', '${itemId}', -1)" 
-                                            style="border:none; background:none; cursor:pointer; padding:0 5px; font-weight:bold; color:#764ba2;">-</button>
-                                    <span id="chk-qty-val-${itemId}" style="font-size:0.8rem; font-weight:bold; min-width:15px; text-align:center;">${item.qty}</span>
-                                    <button onclick="event.stopPropagation(); updateCheckoutItemQty('qs-order', '${itemId}', 1)" 
-                                            style="border:none; background:none; cursor:pointer; padding:0 5px; font-weight:bold; color:#764ba2;">+</button>
-                                </div>
-                                <span id="chk-qty-label-${itemId}" style="font-weight:600;"> ${qtyLabel}</span>
-                            </div>
-                            <div style="display: flex; align-items: center; gap: 10px;">
-                                <span id="chk-price-display-${itemId}">RM ${itemPrice.toFixed(2)}</span>
-                                <i class="fas fa-trash-alt checkout-void-icon" 
-                                   style="color: #e53e3e; display: none; cursor: pointer; padding: 5px;"
-                                   onclick="event.stopPropagation(); voidItemFromCheckout('qs-order', '${itemId}', ${itemPrice})"></i>
-                            </div>
-                        </div>
-                        ${subHtml}
-                    </div>
-                `;
-            });
-
-            html += `</div>`;
-            itemsContainer.innerHTML = html;
-            
-            setCheckoutMode('full');
-            recalculateCheckoutTotals();
-            checkoutReceivedInput = "0";
-            updateCheckoutDisplay();
-            setCheckoutPayMethod('cash');
-            
-            closeModal('orderSummaryModalTakeOrder');
-            document.getElementById('checkoutModalTakeOrder').style.display = 'flex';
-        };
-
         window.toggleItemSelectionCheckout = function(orderId, itemId) {
-            if (isQuickServiceMode && mode === 'split') {
-                alert("Split payment is not supported in Quick Service mode.");
-                setCheckoutMode('full');
-                return;
-            }
-
             if (document.getElementById('btnCheckoutFull').classList.contains('active')) return;
             const index = selectedCheckoutItems.findIndex(i => i.itemId === itemId);
             const el = document.getElementById(`chk-item-${itemId}`);
@@ -8798,8 +8641,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                     if (qtyCtrl) qtyCtrl.style.display = 'none';
                     if (qtyLabel) qtyLabel.style.display = 'inline';
                     
-                    const qtyValEl = document.getElementById(`chk-qty-val-${itemId}`);
-                    if (qtyValEl) qtyValEl.innerText = maxQty;
+                    document.getElementById(`chk-qty-val-${itemId}`).innerText = maxQty;
                     document.getElementById(`chk-price-display-${itemId}`).innerText = `RM ${(maxQty * unitPrice).toFixed(2)}`;
                 } else {
                     row.classList.remove('checkout-item-selected');
@@ -9004,21 +8846,6 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             if (!voidingItemData) return;
             const qtyToVoid = parseInt(document.getElementById('voidModalQtyVal').innerText);
             const { orderId, itemId, maxQty, unitPrice, source } = voidingItemData;
-
-            if (isQuickServiceMode && source === 'checkout') {
-                const cartItem = cartTakeOrder.find(it => it.cartId === itemId);
-                if (qtyToVoid >= maxQty) {
-                    cartTakeOrder = cartTakeOrder.filter(it => it.cartId !== itemId);
-                } else {
-                    cartItem.qty -= qtyToVoid;
-                    cartItem.total = cartItem.unitPrice * cartItem.qty;
-                }
-                closeModal('voidQtyModalTakeOrder');
-                if (cartTakeOrder.length === 0) { closeModal('checkoutModalTakeOrder'); showQuickService(); }
-                else openQuickServiceCheckout();
-                return;
-            }
-
             try {
                 if (qtyToVoid >= maxQty) {
                     if (source === 'orders') {
@@ -9240,29 +9067,6 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             // Identify unique orders involved in this payment
             const involvedOrderIds = [...new Set(selectedCheckoutItems.map(i => i.orderId))];
 
-            // Prepare payment info for queue/receipt
-            const paymentInfoForQueue = {
-                totalDue: checkoutTotalTakeOrder,
-                method: checkoutPayMethod === 'mixed' ? 'MIX' : checkoutPayMethod,
-                give: (checkoutPayMethod === 'mixed') ? 
-                    Array.from(document.querySelectorAll('.mixed-payment-row')).reduce((s, row) => s + (parseFloat(row.querySelector('.mixed-amount-input').value) || 0), 0) : 
-                    parseFloat(checkoutReceivedInput),
-                breakdown: (checkoutPayMethod === 'mixed') ? 
-                    Array.from(document.querySelectorAll('.mixed-payment-row')).map(row => ({
-                        type: row.dataset.type,
-                        amount: parseFloat(row.querySelector('.mixed-amount-input').value) || 0
-                    })).filter(b => b.amount > 0) : null,
-                itemsPaid: selectedCheckoutItems,
-                discount: appliedCheckoutDiscount ? { name: appliedCheckoutDiscount.name, value: totalDiscountValue } : null,
-                hasCashPayment: hasCashPayment
-            };
-            paymentInfoForQueue.change = paymentInfoForQueue.give - paymentInfoForQueue.totalDue;
-
-            if (isQuickServiceMode) {
-                await submitQuickServicePayment(paymentInfoForQueue, paymentRecords);
-                return;
-            }
-
             // Validation: Ensure all selected orders are in 'served' status BEFORE updating database
             for (const orderId of involvedOrderIds) {
                 const orderDoc = checkoutOrdersToProcess.find(d => d.id === orderId);
@@ -9318,6 +9122,24 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
 
             // Determine if Split or Full mode was active
             const isSplitMode = document.getElementById('btnCheckoutSplit').classList.contains('active');
+
+            // Prepare payment info for receipt
+            const paymentInfoForQueue = {
+                totalDue: checkoutTotalTakeOrder,
+                method: checkoutPayMethod === 'mixed' ? 'MIX' : checkoutPayMethod,
+                give: (checkoutPayMethod === 'mixed') ? 
+                    Array.from(document.querySelectorAll('.mixed-payment-row')).reduce((s, row) => s + (parseFloat(row.querySelector('.mixed-amount-input').value) || 0), 0) : 
+                    parseFloat(checkoutReceivedInput),
+                breakdown: (checkoutPayMethod === 'mixed') ? 
+                    Array.from(document.querySelectorAll('.mixed-payment-row')).map(row => ({
+                        type: row.dataset.type,
+                        amount: parseFloat(row.querySelector('.mixed-amount-input').value) || 0
+                    })).filter(b => b.amount > 0) : null,
+                itemsPaid: selectedCheckoutItems,
+                discount: appliedCheckoutDiscount ? { name: appliedCheckoutDiscount.name, value: totalDiscountValue } : null,
+                hasCashPayment: hasCashPayment
+            };
+            paymentInfoForQueue.change = paymentInfoForQueue.give - paymentInfoForQueue.totalDue;
 
             // Always update the cashier identity on the order as soon as a payment is made
             for (const orderId of involvedOrderIds) {
@@ -9431,86 +9253,6 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             showPaymentSuccessModal(paymentInfoForQueue);
         };
 
-        window.submitQuickServicePayment = async function(paymentInfoForQueue, paymentRecords) {
-            let sequenceNum = 1;
-            try {
-                const shiftRef = doc(db, 'licenses', currentClientId, 'settings', 'shift');
-                sequenceNum = await runTransaction(db, async (transaction) => {
-                    const shiftSnap = await transaction.get(shiftRef);
-                    let currentSeq = (shiftSnap.exists() && shiftSnap.data().nextOrderSequence) ? shiftSnap.data().nextOrderSequence : 1;
-                    transaction.update(shiftRef, { nextOrderSequence: currentSeq + 1 });
-                    return currentSeq;
-                });
-            } catch (e) { console.error("Sequence error", e); }
-
-            let subtotal = cartTakeOrder.reduce((s, i) => s + i.total, 0);
-            const tax = taxActive ? subtotal * (currentTaxRate / 100) : 0;
-            const total = subtotal + tax;
-            const discountValue = paymentInfoForQueue.discount ? paymentInfoForQueue.discount.value : 0;
-
-            const orderData = {
-                orderNumber: 'QS-' + Date.now().toString().slice(-8),
-                orderSequence: sequenceNum,
-                staffId: currentStaff.id,
-                staffName: currentStaff.name,
-                status: 'completed',
-                tableId: selectedTableIdTakeOrder || null,
-                orderType: selectedOrderTypeTakeOrder,
-                subtotal: subtotal.toFixed(2),
-                tax: tax.toFixed(2),
-                discountAmount: discountValue.toFixed(2),
-                discountName: appliedCheckoutDiscount ? appliedCheckoutDiscount.name : null,
-                total: (total - discountValue).toFixed(2),
-                cashierBy: currentStaff.name,
-                createdAt: Timestamp.now()
-            };
-
-            const orderRef = await addDoc(collection(db, 'licenses', currentClientId, 'orders'), orderData);
-            
-            for (const item of cartTakeOrder) {
-                const itemRef = await addDoc(collection(db, 'licenses', currentClientId, 'orders', orderRef.id, 'items'), {
-                    name: item.name,
-                    categoryId: item.categoryId || '',
-                    soldBy: item.soldBy || 'item',
-                    unit: item.unit || '',
-                    basePrice: item.basePrice.toString(),
-                    qty: item.qty.toString(),
-                    total: item.total.toFixed(2),
-                    notes: item.notes || '',
-                    status: 'completed',
-                    isPaid: true,
-                    orderType: item.itemOrderType || selectedOrderTypeTakeOrder
-                });
-                
-                if (item.variants) {
-                    for (const v of item.variants) {
-                        await addDoc(collection(db, 'licenses', currentClientId, 'orders', orderRef.id, 'items', itemRef.id, 'selectedVariants'), {
-                            variantName: v.optionName, optionName: v.optionName, priceAdjustment: v.priceAdjustment.toString()
-                        });
-                    }
-                }
-                if (item.modifiers) {
-                    for (const m of item.modifiers) {
-                        await addDoc(collection(db, 'licenses', currentClientId, 'orders', orderRef.id, 'items', itemRef.id, 'selectedModifiers'), {
-                            modifierName: m.optionName, optionName: m.optionName, price: m.price.toString()
-                        });
-                    }
-                }
-            }
-
-            for (const record of paymentRecords) {
-                await addDoc(collection(db, 'licenses', currentClientId, 'transactions'), {
-                    tableId: selectedTableIdTakeOrder, amount: record.amount.toFixed(2), paymentMethod: record.method,
-                    status: 'completed', type: "Quick Service Payment", orderId: orderRef.id,
-                    processedByStaffId: currentStaff.id, processedByStaffName: currentStaff.name, createdAt: Timestamp.now()
-                });
-            }
-            const qId = await createReceiptQueueItem([orderRef.id], orderData.orderNumber, paymentInfoForQueue, currentStaff.name);
-            window.lastSuccessfulPaymentDetails = { orderIds: [orderRef.id], orderNumbers: orderData.orderNumber, paymentInfo: paymentInfoForQueue, isEarly: false, cashierName: currentStaff.name, queueId: qId };
-            enqueuePrintTask(() => triggerAutoPrinting(orderRef.id, orderData.orderNumber, 'order'));
-            showPaymentSuccessModal(paymentInfoForQueue);
-        };
-
         window.showPaymentSuccessModal = function(info) {
             const container = document.getElementById('paymentSuccessDetails');
             let methodHtml = '';
@@ -9544,12 +9286,8 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
         window.closePaymentSuccessModal = async function() {
             closeModal('paymentSuccessModal');
             selectedOrderIdsForCheckout = [];
-            if (isQuickServiceMode) {
-                showQuickService();
-            } else {
-                await loadTablesTakeOrder();
-                showTableSectionTakeOrder();
-            }
+            await loadTablesTakeOrder();
+            showTableSectionTakeOrder();
         };
 
         window.printFromSuccessModal = async function() {
@@ -10526,7 +10264,6 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
             const unitPrice = basePrice + variantsTotal + modifierTotal;
             
             cartTakeOrder.push({
-                cartId: 'cart-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5),
                 id: currentMenuObjTakeOrder.id,
                 categoryId: currentMenuObjTakeOrder.categoryId,
                 soldBy: currentMenuObjTakeOrder.soldBy || 'item',
@@ -10789,7 +10526,7 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
                 {id: 'takeaway', label: 'Takeaway', icon: 'bag-shopping'},
                 {id: 'mix', label: 'Mix', icon: 'layer-group'}
             ];
-            if (isCounterSummaryFlow && !isQuickServiceMode) typeOptions.push({id: 'delivery', label: 'Delivery', icon: 'motorcycle'});
+            if (isCounterSummaryFlow) typeOptions.push({id: 'delivery', label: 'Delivery', icon: 'motorcycle'});
 
             let itemsHtml = '';
             cartTakeOrder.forEach((item, idx) => {
@@ -10942,11 +10679,6 @@ window.toggleModifierTakeOrder = function(event, modifierId, modifierGroupName, 
         window.confirmAndSubmitOrderTakeOrder = async function() {
             if (!cartTakeOrder.length) return;
             
-            if (isQuickServiceMode) {
-                openQuickServiceCheckout();
-                return;
-            }
-
             // Disable the button to prevent double clicks
             const submitBtn = document.querySelector('#orderSummaryModalTakeOrder .primary-btn');
             const originalText = submitBtn.innerText;
@@ -11135,12 +10867,11 @@ window.openSearchModalTakeOrder = function() {
             if (!price || price <= 0) { alert('Enter valid price'); return; }
             
             cartTakeOrder.push({
-                cartId: 'cart-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5),
                 id: 'CUSTOM_' + Date.now(),
                 name: name + ' (Custom)',
                 basePrice: price,
                 qty,
-                variants: [],
+                variant: null,
                 modifiers: [],
                 notes: '',
                 unitPrice: price,
