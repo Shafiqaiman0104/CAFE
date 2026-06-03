@@ -1240,6 +1240,15 @@
             color: white;
             box-shadow: 0 10px 15px -3px rgba(0, 79, 166, 0.25);
         }
+        .table-card-takeorder.reserved {
+            background: #ef4444;
+            color: white;
+            box-shadow: 0 10px 15px -3px rgba(239, 68, 68, 0.25);
+        }
+        .table-card-takeorder.disable {
+            background: #cbd5e0;
+            color: #475569;
+        }
 
 .table-card-takeorder .capacity-takeorder {
     font-size: 0.8rem;
@@ -1284,6 +1293,8 @@
 .status-dot.white { background: white; }
 .status-dot.orange { background: #ff9800; }
 .status-dot.ready { background: #004fa6; }
+.status-dot.reserved { background: #ef4444; }
+.status-dot.disable { background: #cbd5e0; border: 1px solid #475569; }
 
 .location-filter-bar {
     display: flex;
@@ -2675,6 +2686,7 @@
                                 <option value="available">Available</option>
                                 <option value="occupied">Occupied</option>
                                 <option value="reserved">Reserved</option>
+                                <option value="disable">Disable</option>
                             </select>
                         </div>
                     </div>
@@ -3878,6 +3890,7 @@
                     <option value="available">Available</option>
                     <option value="occupied">Occupied</option>
                     <option value="reserved">Reserved</option>
+                    <option value="disable">Disable</option>
                 </select>
             </div>
             <button class="btn" onclick="saveTable()">Save</button>
@@ -7487,7 +7500,11 @@
                         <tbody>`;
 
             filtered.forEach(t => {
-                const statusClass = t.status === 'available' ? 'status-completed' : (t.status === 'occupied' ? 'status-active' : 'status-preparing');
+                let statusClass = 'status-completed'; // available
+                if (t.status === 'occupied') statusClass = 'status-active';
+                else if (t.status === 'reserved') statusClass = 'status-cancelled';
+                else if (t.status === 'disable') statusClass = 'status-served';
+                else if (t.status === 'reserved') statusClass = 'status-preparing';
                 
                 html += `
                     <tr style="border-bottom: 1px solid #f1f5f9;">
@@ -8641,10 +8658,13 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                         isServed = true;
                     }
                 }
-                const cardClass = isServed ? 'served' : (isOccupied ? 'occupied' : '');
+                const cardClass = isServed ? 'served' : (isOccupied ? 'occupied' : (table.status === 'reserved' ? 'reserved' : (table.status === 'disable' ? 'disable' : '')));
+
+                const disableIcon = table.status === 'disable' ? '<div style="position:absolute; top:5px; right:5px; color:#ef4444; font-size:1.2rem;"><i class="fas fa-times-circle"></i></div>' : '';
 
                 return `
                     <div class="table-card-takeorder ${cardClass}" onclick="selectTableTakeOrder('${table.id}', '${table.id.toUpperCase()}')">
+                        ${disableIcon}
                         <div class="table-number-takeorder">${table.id.toUpperCase()}</div>
                         <div class="capacity-takeorder"><i class="fas fa-user"></i> ${table.capacity || 4} pax</div>
                         <div style="font-size:0.7rem;margin-top:3px;">${isServed ? 'ready' : (table.status || 'available')}</div>
@@ -8655,6 +8675,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
 
         window.selectTableTakeOrder = function(tableId, tableNumber) {
             const table = tablesListTakeOrder.find(t => t.id === tableId);
+            if (table && table.status === 'disable') return;
             if (table && table.status === 'occupied') {
                 showTableDetailsTakeOrder(tableId, tableNumber);
             } else {
@@ -10352,15 +10373,24 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                     tableEl.style.opacity = '0.4';
                     tableEl.style.cursor = 'default';
                 } else {
-                    tableEl.style.background = isServed ? '#004fa6' : (isOccupied ? '#ff9800' : 'white');
-                    tableEl.style.color = (isOccupied || isServed) ? 'white' : '#1e293b';
+                    if (table.status === 'disable') {
+                        tableEl.style.background = '#cbd5e0';
+                        tableEl.style.color = '#475569';
+                    } else if (table.status === 'reserved') {
+                        tableEl.style.background = '#ef4444';
+                        tableEl.style.color = 'white';
+                    } else {
+                        tableEl.style.background = isServed ? '#004fa6' : (isOccupied ? '#ff9800' : 'white');
+                        tableEl.style.color = (isOccupied || isServed) ? 'white' : '#1e293b';
+                    }
                 }
 
                 if (isEditingLayout) tableEl.style.border = '2px solid #764ba2';
 
                 const label = isCounter ? 'COUNTER' : table.id.toUpperCase();
                 const subLabel = isCounter ? 'WALK-IN' : `${table.capacity} PAX`;
-                tableEl.innerHTML = `<div style="font-weight: 800; font-size: 1.1rem;">${label}</div><div style="font-size: 0.6rem; opacity: 0.8;">${subLabel}</div>${isEditingLayout ? '<div style="position:absolute; top:-5px; right:-5px; width:20px; height:20px; background:#764ba2; color:white; border-radius:50%; font-size:10px; display:flex; align-items:center; justify-content:center;"><i class="fas fa-cog"></i></div>' : ''}`;
+                const disableIconLayout = (table.status === 'disable' && !isEditingLayout) ? '<div style="position:absolute; top:2px; right:2px; color:#ef4444; font-size:14px;"><i class="fas fa-times-circle"></i></div>' : '';
+                tableEl.innerHTML = `${disableIconLayout}<div style="font-weight: 800; font-size: 1.1rem;">${label}</div><div style="font-size: 0.6rem; opacity: 0.8;">${subLabel}</div>${isEditingLayout ? '<div style="position:absolute; top:-5px; right:-5px; width:20px; height:20px; background:#764ba2; color:white; border-radius:50%; font-size:10px; display:flex; align-items:center; justify-content:center;"><i class="fas fa-cog"></i></div>' : ''}`;
 
                 if (!isCounter) {
                     renderChairs(tableEl, parseInt(table.capacity) || 2, isOccupied || isServed, shape, tWidth, tHeight);
