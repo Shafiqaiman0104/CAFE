@@ -9,6 +9,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdn.jsdelivr.net/npm/pocketbase/dist/pocketbase.umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
             --app-zoom: 1;
@@ -2442,29 +2443,67 @@
         <div class="main-content">
             <!-- Dashboard Page -->
             <div id="dashboard" class="page active">
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-value" id="dashTotalOrders">0</div>
-                        <div class="stat-label">Today's Orders</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="dashTotalSales">RM 0</div>
-                        <div class="stat-label">Today's Sales</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="dashActiveTables">0</div>
-                        <div class="stat-label">Active Tables</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="dashTotalStaff">0</div>
-                        <div class="stat-label">Staff Members</div>
-                    </div>
+                <!-- No active shift overlay -->
+                <div id="dashNoShift" style="display: none; text-align: center; padding: 100px 20px; color: white;">
+                    <i class="fas fa-clock" style="font-size: 4rem; opacity: 0.5; margin-bottom: 20px; display: block;"></i>
+                    <h2 style="font-weight: 800; letter-spacing: 1px;">No current active shift</h2>
+                    <p style="opacity: 0.8; margin-top: 10px;">Please start a shift in the Shift Management tab to see real-time data.</p>
                 </div>
-                <div class="section-card">
-                    <div class="section-header">
-                        <span class="section-title">Recent Orders</span>
+
+                <!-- Active shift dashboard content -->
+                <div id="dashActiveShift" style="display: none;">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-value" id="dashShiftOrders">0</div>
+                            <div class="stat-label">Shift Orders</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="dashShiftSales">RM 0.00</div>
+                            <div class="stat-label">Shift Sales</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="dashShiftProfit">RM 0.00</div>
+                            <div class="stat-label">Shift Profit</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="dashShiftActiveTables">0</div>
+                            <div class="stat-label">Active Tables</div>
+                        </div>
                     </div>
-                    <div id="recentOrdersList"></div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                        <!-- Hourly Chart -->
+                        <div id="dashShiftChartCard" class="section-card" style="margin-bottom: 0; background: white;">
+                            <div class="section-header">
+                                <span class="section-title" style="color: #667eea;">Hourly Sales & Profit</span>
+                            </div>
+                            <div style="height: 300px; position: relative;">
+                                <canvas id="shiftChart"></canvas>
+                            </div>
+                        </div>
+                        <!-- Top Menu Items -->
+                        <div class="section-card" style="margin-bottom: 0;">
+                            <div class="section-header">
+                                <span class="section-title">Top Menu Items</span>
+                            </div>
+                            <div id="dashTopMenuItems" class="space-y-3">
+                                <!-- Items injected via JS -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Involved Staff -->
+                    <div class="section-card">
+                        <div class="section-header">
+                            <span class="section-title">Staff in Shift</span>
+                            <div id="dashShiftTimerContainer" style="display: none; background: white; border: 1.5px solid #764ba2; border-radius: 20px; padding: 4px 12px; font-size: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); align-items: center; gap: 6px; font-weight: 800; color: #764ba2;">
+                                <i class="fas fa-clock"></i> <span id="dashShiftTimerVal">0hr 00m 00s</span>
+                            </div>
+                        </div>
+                        <div id="dashShiftStaffList">
+                            <!-- Staff injected via JS -->
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -3134,8 +3173,17 @@
                 <input type="text" id="menuItemName">
             </div>
             <div class="form-group">
-                <label>Image URL</label>
-                <input type="text" id="menuItemImage" placeholder="https://example.com/image.jpg">
+                <label>Item Image</label>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <div id="menuItemImagePreview" style="width: 100px; height: 100px; border: 2px dashed #cbd5e0; border-radius: 16px; display: flex; align-items: center; justify-content: center; overflow: hidden; background: #f8fafc;">
+                        <span style="color: #94a3b8; font-size: 0.7rem; text-align: center; padding: 10px;">No Image</span>
+                    </div>
+                    <input type="file" id="menuItemImageFile" accept="image/*" onchange="previewMenuItemImage(this)" style="display: none;">
+                    <button type="button" class="btn-small" onclick="document.getElementById('menuItemImageFile').click()" style="width: fit-content; background: #764ba2;">
+                        <i class="fas fa-upload mr-2"></i> Choose Image
+                    </button>
+                    <input type="hidden" id="menuItemImage">
+                </div>
             </div>
             <div class="form-group">
                 <label>Sold By</label>
@@ -3630,10 +3678,6 @@
                 <input type="checkbox" id="globalVariantRequired" checked>
                 <label>Required</label>
             </div>
-            <div class="checkbox-group">
-                <input type="checkbox" id="globalVariantMultiSelect">
-                <label>Multi-Select</label>
-            </div>
             <div class="options-container">
                 <div class="option-header">
                     <span>Option Name</span>
@@ -3792,6 +3836,20 @@
             <div class="form-group">
                 <label>Category Name</label>
                 <input type="text" id="categoryName">
+            </div>
+            <div class="form-group flex items-center justify-between bg-slate-50 p-3 rounded-xl border border-slate-100">
+                <label class="mb-0 font-bold text-slate-700">Take Order (Table Order)</label>
+                <label class="switch">
+                    <input type="checkbox" id="categoryShowInTakeOrder" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="form-group flex items-center justify-between bg-slate-50 p-3 rounded-xl border border-slate-100 mt-2">
+                <label class="mb-0 font-bold text-slate-700">Quick Service (Order to Pay)</label>
+                <label class="switch">
+                    <input type="checkbox" id="categoryShowInQuickService" checked>
+                    <span class="slider"></span>
+                </label>
             </div>
             <button class="btn" onclick="saveCategory()">Save</button>
         </div>
@@ -5133,35 +5191,218 @@
         }
 
         // ========== DASHBOARD ==========
+        let dashboardUnsubs = [];
+        let shiftChart = null;
+
         async function loadDashboard() {
+            // Clear existing dashboard-specific listeners to avoid memory leaks
+            dashboardUnsubs.forEach(u => u());
+            dashboardUnsubs = [];
+
+            const noShiftEl = document.getElementById('dashNoShift');
+            const activeShiftEl = document.getElementById('dashActiveShift');
+
+            if (!isShiftActive || !shiftStartTime) {
+                if (noShiftEl) noShiftEl.style.display = 'block';
+                if (activeShiftEl) activeShiftEl.style.display = 'none';
+                return;
+            }
+
+            if (noShiftEl) noShiftEl.style.display = 'none';
+            if (activeShiftEl) activeShiftEl.style.display = 'block';
+
+            const startTS = Timestamp.fromDate(shiftStartTime);
+
+            // 1. Shift Orders & Sales
             const ordersRef = collection(db, 'licenses', currentClientId, 'orders');
-            const today = new Date(); today.setHours(0,0,0,0);
-            const q = query(ordersRef, where('createdAt', '>=', Timestamp.fromDate(today)));
+            const qOrders = query(ordersRef, where('createdAt', '>=', startTS));
             
-            onSnapshot(q, (snapshot) => {
-                let total = 0;
-                snapshot.forEach(d => total += parseFloat(d.data().total) || 0);
-                document.getElementById('dashTotalOrders').textContent = snapshot.size;
-                document.getElementById('dashTotalSales').textContent = `RM ${total.toFixed(2)}`;
-                
-                let recentHtml = '';
-                snapshot.docs.slice(0, 5).forEach(d => {
+            const unsubOrders = onSnapshot(qOrders, async (snapshot) => {
+                let shiftSales = 0;
+                let orderCount = 0;
+                const itemsCountMap = {};
+                const hourlyData = {}; 
+
+                // Build hourly intervals from shift start to now
+                const now = new Date();
+                let cursor = new Date(shiftStartTime);
+                cursor.setMinutes(0, 0, 0);
+                while (cursor <= now) {
+                    const label = cursor.getHours() + ':00';
+                    hourlyData[label] = { sales: 0, profit: 0 };
+                    cursor.setHours(cursor.getHours() + 1);
+                }
+
+                const itemFetchPromises = [];
+                snapshot.forEach(d => {
                     const o = d.data();
-                    recentHtml += `<div style="padding:10px;border-bottom:1px solid #eee;">${o.orderNumber} - RM ${o.total}</div>`;
+                    if (o.status !== 'cancelled') {
+                        orderCount++;
+                        shiftSales += parseFloat(o.total) || 0;
+                        
+                        const h = o.createdAt.toDate().getHours() + ':00';
+                        if (hourlyData[h]) hourlyData[h].sales += parseFloat(o.total) || 0;
+
+                        itemFetchPromises.push(getDocs(collection(db, 'licenses', currentClientId, 'orders', d.id, 'items')));
+                    }
                 });
-                document.getElementById('recentOrdersList').innerHTML = recentHtml || '<div class="loading">No orders today</div>';
+
+                document.getElementById('dashShiftOrders').innerText = orderCount;
+                document.getElementById('dashShiftSales').innerText = `RM ${shiftSales.toFixed(2)}`;
+
+                // Process Top Menu Items
+                const itemSnaps = await Promise.all(itemFetchPromises);
+                itemSnaps.forEach(itemsSnap => {
+                    itemsSnap.forEach(itDoc => {
+                        const it = itDoc.data();
+                        if (it.status !== 'cancelled') {
+                            const qty = (it.soldBy === 'measurement') ? 1 : (parseFloat(it.qty) || 0);
+                            itemsCountMap[it.name] = (itemsCountMap[it.name] || 0) + qty;
+                        }
+                    });
+                });
+                renderDashTopMenu(itemsCountMap);
+
+                // Fetch Transactions for Shift Profit
+                const transRef = collection(db, 'licenses', currentClientId, 'transactions');
+                const qTrans = query(transRef, where('createdAt', '>=', startTS));
+                const transSnap = await getDocs(qTrans);
+                
+                let shiftProfit = 0;
+                transSnap.forEach(td => {
+                    const t = td.data();
+                    if (t.status === 'completed') {
+                        shiftProfit += parseFloat(t.amount) || 0;
+                        const h = t.createdAt.toDate().getHours() + ':00';
+                        if (hourlyData[h]) hourlyData[h].profit += parseFloat(t.amount) || 0;
+                    }
+                });
+
+                document.getElementById('dashShiftProfit').innerText = `RM ${shiftProfit.toFixed(2)}`;
+                updateShiftChart(hourlyData);
             });
-            
+            dashboardUnsubs.push(unsubOrders);
+
+            // 2. Shift Active Tables
             const tablesRef = collection(db, 'licenses', currentClientId, 'tables');
-            onSnapshot(tablesRef, (snapshot) => {
-                const occupied = snapshot.docs.filter(d => d.data().status === 'occupied').length;
-                document.getElementById('dashActiveTables').textContent = occupied;
+            const unsubTables = onSnapshot(tablesRef, (snapshot) => {
+                const count = snapshot.docs.filter(d => ['occupied', 'served'].includes(d.data().status)).length;
+                document.getElementById('dashShiftActiveTables').innerText = count;
             });
+            dashboardUnsubs.push(unsubTables);
+
+            // 3. Involved Staff & Work Hours
+            const attRef = collection(db, 'licenses', currentClientId, 'attendance');
+            const qAtt = query(attRef, where('shiftId', '==', activeShiftId));
+            const unsubAtt = onSnapshot(qAtt, (snapshot) => {
+                const staffList = document.getElementById('dashShiftStaffList');
+                let html = `
+                    <div style="overflow-x: auto; background: white; border-radius: 16px; padding: 10px; border: 1px solid #f1f5f9;">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                            <thead>
+                                <tr style="border-bottom: 2px solid #f1f5f9; text-align: left; color: #64748b;">
+                                    <th style="padding: 10px;">Staff Name</th>
+                                    <th style="padding: 10px;">Clock In</th>
+                                    <th style="padding: 10px;">Working Hours</th>
+                                </tr>
+                            </thead>
+                            <tbody>`;
+
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const cin = data.clockIn.toDate();
+                    const cout = data.clockOut ? data.clockOut.toDate() : new Date();
+                    
+                    const diffMs = cout - cin;
+                    const hrs = Math.floor(diffMs / 3600000);
+                    const mins = Math.floor((diffMs % 3600000) / 60000);
+                    const duration = `${hrs}h ${mins}m`;
+
+                    html += `
+                        <tr style="border-bottom: 1px solid #f8fafc;">
+                            <td style="padding: 10px; font-weight: 700; color: #1e293b;">${data.staffName}</td>
+                            <td style="padding: 10px; color: #64748b;">${cin.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</td>
+                            <td style="padding: 10px;"><span class="status-badge status-preparing" style="font-size: 11px;">${duration}</span></td>
+                        </tr>`;
+                });
+                html += '</tbody></table></div>';
+                staffList.innerHTML = html;
+            });
+            dashboardUnsubs.push(unsubAtt);
+        }
+
+        function renderDashTopMenu(itemsMap) {
+            const container = document.getElementById('dashTopMenuItems');
+            const sorted = Object.entries(itemsMap).sort((a,b) => b[1] - a[1]).slice(0, 5);
             
-            const staffRef = collection(db, 'licenses', currentClientId, 'staff');
-            onSnapshot(staffRef, (snapshot) => {
-                document.getElementById('dashTotalStaff').textContent = snapshot.size;
-            });
+            if (sorted.length === 0) {
+                container.innerHTML = '<div style="text-align:center; padding:20px; color:#94a3b8; font-size: 0.85rem;">No items sold yet.</div>';
+                return;
+            }
+
+            container.innerHTML = sorted.map(([name, qty], idx) => `
+                <div class="flex items-center justify-between bg-slate-50 p-3 rounded-xl border border-slate-100">
+                    <div class="flex items-center gap-3">
+                        <span class="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-black text-[10px]">${idx+1}</span>
+                        <span class="font-bold text-slate-700 text-sm truncate max-w-[150px]">${name}</span>
+                    </div>
+                    <span class="font-black text-blue-600 bg-white px-3 py-1 rounded-lg border border-slate-100 text-xs">x${qty}</span>
+                </div>
+            `).join('');
+        }
+
+        function updateShiftChart(hourlyData) {
+            const ctx = document.getElementById('shiftChart');
+            if (!ctx) return;
+
+            const labels = Object.keys(hourlyData);
+            const salesData = labels.map(l => hourlyData[l].sales);
+            const profitData = labels.map(l => hourlyData[l].profit);
+
+            if (shiftChart) {
+                shiftChart.data.labels = labels;
+                shiftChart.data.datasets[0].data = salesData;
+                shiftChart.data.datasets[1].data = profitData;
+                shiftChart.update();
+            } else {
+                shiftChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'Sales',
+                                data: salesData,
+                                borderColor: '#667eea',
+                                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                                tension: 0.4,
+                                fill: true,
+                                borderWeight: 3
+                            },
+                            {
+                                label: 'Profit',
+                                data: profitData,
+                                borderColor: '#10b981',
+                                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                                tension: 0.4,
+                                fill: true,
+                                borderWeight: 3
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: true, position: 'top', labels: { boxWidth: 10, usePointStyle: true, font: { size: 10, weight: 'bold' } } }
+                        },
+                        scales: {
+                            y: { beginAtZero: true, grid: { display: true, color: '#f1f5f9' }, ticks: { font: { size: 10 } } },
+                            x: { grid: { display: false }, ticks: { font: { size: 10 } } }
+                        }
+                    }
+                });
+            }
         }
 
         // ========== GLOBAL VARIANTS ==========
@@ -5241,7 +5482,6 @@
             document.getElementById('editingGlobalVariantId').value = '';
             document.getElementById('globalVariantName').value = '';
             document.getElementById('globalVariantRequired').checked = true;
-            document.getElementById('globalVariantMultiSelect').checked = false;
             document.getElementById('globalVariantOptionsContainer').innerHTML = '';
             globalVariantOptionsCount = 0;
             document.getElementById('globalVariantModal').style.display = 'flex';
@@ -5256,7 +5496,6 @@
             document.getElementById('editingGlobalVariantId').value = id;
             document.getElementById('globalVariantName').value = variant.name;
             document.getElementById('globalVariantRequired').checked = variant.required;
-            document.getElementById('globalVariantMultiSelect').checked = variant.multiSelect;
             
             const optionsRef = collection(db, 'licenses', currentClientId, 'global_variants', id, 'options');
             const qOptions = query(optionsRef, orderBy('createdAt', 'asc'));
@@ -5293,17 +5532,16 @@
             const id = document.getElementById('editingGlobalVariantId').value;
             const name = document.getElementById('globalVariantName').value;
             const required = document.getElementById('globalVariantRequired').checked;
-            const multiSelect = document.getElementById('globalVariantMultiSelect').checked;
             
             if (!name) { alert('Enter variant name'); return; }
             
             let variantRef;
             if (id) {
                 variantRef = doc(db, 'licenses', currentClientId, 'global_variants', id);
-                await setDoc(variantRef, { name, required, multiSelect, updatedAt: Timestamp.now() }, { merge: true });
+                await setDoc(variantRef, { name, required, updatedAt: Timestamp.now() }, { merge: true });
             } else {
                 variantRef = await addDoc(collection(db, 'licenses', currentClientId, 'global_variants'), {
-                    name, required, multiSelect, createdAt: Timestamp.now()
+                    name, required, createdAt: Timestamp.now()
                 });
             }
             
@@ -5609,6 +5847,8 @@
             document.getElementById('menuItemName').value = '';
             document.getElementById('menuItemImage').value = '';
             document.getElementById('menuItemPrice').value = '';
+            document.getElementById('menuItemImageFile').value = '';
+            document.getElementById('menuItemImagePreview').innerHTML = '<span style="color: #94a3b8; font-size: 0.7rem; text-align: center; padding: 10px;">No Image</span>';
             document.querySelectorAll('input[name="soldBy"]').forEach(r => r.checked = r.value === 'item');
             document.getElementById('menuItemUnit').value = '';
             toggleSoldBy('item');
@@ -5642,6 +5882,12 @@
             document.getElementById('menuItemName').value = item.name || '';
             document.getElementById('menuItemImage').value = item.image || '';
             document.getElementById('menuItemPrice').value = item.price || '';
+            document.getElementById('menuItemImageFile').value = '';
+            if (item.image) {
+                document.getElementById('menuItemImagePreview').innerHTML = `<img src="${item.image}" style="width:100%; height:100%; object-fit:cover;">`;
+            } else {
+                document.getElementById('menuItemImagePreview').innerHTML = '<span style="color: #94a3b8; font-size: 0.7rem; text-align: center; padding: 10px;">No Image</span>';
+            }
             document.querySelectorAll('input[name="soldBy"]').forEach(r => r.checked = r.value === (item.soldBy || 'item'));
             document.getElementById('menuItemUnit').value = item.unit || '';
             toggleSoldBy(item.soldBy || 'item', !!item.unit);
@@ -5747,7 +5993,7 @@
             
             let html = '';
             for (const v of tempSelectedVariants) {
-                const variantInfo = allGlobalVariants.find(gv => gv.id === v.id) || { required: true, multiSelect: false };
+                const variantInfo = allGlobalVariants.find(gv => gv.id === v.id) || { required: true };
                 const optionsRef = collection(db, 'licenses', currentClientId, 'global_variants', v.id, 'options');
                 const qOptions = query(optionsRef, orderBy('createdAt', 'asc'));
                 const optionsSnap = await getDocs(qOptions);
@@ -5761,9 +6007,6 @@
                                 <div style="display: flex; gap: 6px; margin-top: 5px;">
                                     <span style="font-size: 9px; background: ${variantInfo.required ? '#fee2e2' : '#f1f5f9'}; color: ${variantInfo.required ? '#ef4444' : '#64748b'}; padding: 2px 6px; border-radius: 6px; font-weight: 800; text-transform: uppercase; border: 1px solid ${variantInfo.required ? '#fecaca' : '#e2e8f0'};">
                                         ${variantInfo.required ? 'Required' : 'Optional'}
-                                    </span>
-                                    <span style="font-size: 9px; background: #e0f2fe; color: #0369a1; padding: 2px 6px; border-radius: 6px; font-weight: 800; text-transform: uppercase; border: 1px solid #bae6fd;">
-                                        ${variantInfo.multiSelect ? 'Multi-Select' : 'Single-Select'}
                                     </span>
                                 </div>
                             </div>
@@ -5858,30 +6101,72 @@
 
         window.saveMenuItem = async function() {
             const id = document.getElementById('editingMenuItemId').value;
-            const data = {
-                name: document.getElementById('menuItemName').value,
-                image: document.getElementById('menuItemImage').value,
-                soldBy: document.querySelector('input[name="soldBy"]:checked').value,
-                unit: document.getElementById('menuItemUnit').value,
-                price: document.getElementById('menuItemPrice').value,
-                categoryId: document.getElementById('menuItemCategory').value,
-                preparationTime: document.getElementById('menuItemPrepTime').value,
-                color: document.getElementById('menuItemColor').value,
-                shape: document.getElementById('menuItemShape').value,
-                active: document.getElementById('menuItemActive').checked,
-                variants: tempSelectedVariants,
-                modifiers: tempSelectedModifiers,
-                updatedAt: Timestamp.now()
-            };
-            
-            if (!id) data.createdAt = Timestamp.now();
-            
-            if (id) {
-                await updateDoc(doc(db, 'licenses', currentClientId, 'menu_items', id), data);
-            } else {
-                await addDoc(collection(db, 'licenses', currentClientId, 'menu_items'), data);
+            const name = document.getElementById('menuItemName').value;
+            const imageFile = document.getElementById('menuItemImageFile').files[0];
+            let imageUrl = document.getElementById('menuItemImage').value;
+            let menuFileName = '';
+
+            if (!name) { alert('Enter menu item name'); return; }
+
+            try {
+                let itemRef;
+                if (id) {
+                    itemRef = doc(db, 'licenses', currentClientId, 'menu_items', id);
+                } else {
+                    itemRef = doc(collection(db, 'licenses', currentClientId, 'menu_items'));
+                }
+                const firestoreMenuDocId = itemRef.id;
+
+                if (imageFile) {
+                    const compressedBlob = await compressImage(imageFile, 50);
+                    const formData = new FormData();
+                    formData.append('clientId', currentClientId);
+                    formData.append('firestoreMenuDocId', firestoreMenuDocId);
+                    formData.append('menuImage', compressedBlob, imageFile.name);
+                    formData.append('menuFileName', imageFile.name);
+                    formData.append('menuFileSize', (compressedBlob.size / 1024).toFixed(2) + ' KB');
+
+                    let pbRecord;
+                    // Check if a record already exists for this menu item to update instead of create
+                    const existingList = await pb.collection('VRPOS_CLIENT_MENU_IMAGE').getList(1, 1, {
+                        filter: `firestoreMenuDocId = "${firestoreMenuDocId}" && clientId = "${currentClientId}"`
+                    });
+
+                    if (existingList.items.length > 0) {
+                        pbRecord = await pb.collection('VRPOS_CLIENT_MENU_IMAGE').update(existingList.items[0].id, formData);
+                    } else {
+                        pbRecord = await pb.collection('VRPOS_CLIENT_MENU_IMAGE').create(formData);
+                    }
+
+                    imageUrl = `https://pocketbase.venturerushtech.com/api/files/${pbRecord.collectionId}/${pbRecord.id}/${pbRecord.menuImage}`;
+                    menuFileName = imageFile.name;
+
+                    await pb.collection('VRPOS_CLIENT_MENU_IMAGE').update(pbRecord.id, { menuImageUrl: imageUrl });
+                }
+
+                const data = {
+                    name: name,
+                    image: imageUrl,
+                    menuFileName: menuFileName || (id ? ((await getDoc(itemRef)).data().menuFileName || '') : ''),
+                    soldBy: document.querySelector('input[name="soldBy"]:checked').value,
+                    unit: document.getElementById('menuItemUnit').value,
+                    price: document.getElementById('menuItemPrice').value,
+                    categoryId: document.getElementById('menuItemCategory').value,
+                    preparationTime: document.getElementById('menuItemPrepTime').value,
+                    color: document.getElementById('menuItemColor').value,
+                    shape: document.getElementById('menuItemShape').value,
+                    active: document.getElementById('menuItemActive').checked,
+                    variants: tempSelectedVariants,
+                    modifiers: tempSelectedModifiers,
+                    updatedAt: Timestamp.now()
+                };
+                if (!id) data.createdAt = Timestamp.now();
+                await setDoc(itemRef, data, { merge: true });
+                closeModal('addMenuItemModal');
+            } catch (err) {
+                console.error(err);
+                alert("Save failed: " + err.message);
             }
-            closeModal('addMenuItemModal');
         };
 
         window.deleteMenuItem = async function(id) {
@@ -5889,6 +6174,49 @@
                 await deleteDoc(doc(db, 'licenses', currentClientId, 'menu_items', id));
             }
         };
+
+        window.previewMenuItemImage = function(input) {
+            const preview = document.getElementById('menuItemImagePreview');
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.innerHTML = `<img src="${e.target.result}" style="width:100%; height:100%; object-fit:cover;">`;
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        };
+
+        async function compressImage(file, maxSizeKB = 50) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.src = e.target.result;
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        let width = img.width;
+                        let height = img.height;
+                        const maxDim = 800;
+                        if (width > maxDim || height > maxDim) {
+                            if (width > height) { height = (height / width) * maxDim; width = maxDim; }
+                            else { width = (width / height) * maxDim; height = maxDim; }
+                        }
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+                        let quality = 0.8;
+                        let dataUrl = canvas.toDataURL('image/jpeg', quality);
+                        while (dataUrl.length > maxSizeKB * 1024 && quality > 0.1) { quality -= 0.05; dataUrl = canvas.toDataURL('image/jpeg', quality); }
+                        const bin = atob(dataUrl.split(',')[1]);
+                        const array = new Uint8Array(bin.length);
+                        for (let i = 0; i < bin.length; i++) array[i] = bin.charCodeAt(i);
+                        resolve(new Blob([array], { type: 'image/jpeg' }));
+                    };
+                };
+            });
+        }
 
         // ========== SHIFT LOGIC ==========
         function setupShiftListener() {
@@ -5934,6 +6262,10 @@
                 updateShiftUI();
                 if (document.getElementById('takeOrder').classList.contains('active')) {
                     renderTableGridTakeOrder();
+                }
+                // Auto-refresh dashboard if currently viewing it
+                if (document.getElementById('dashboard').classList.contains('active')) {
+                    loadDashboard();
                 }
             });
         }
@@ -6077,6 +6409,23 @@
                 staffShown = true;
             } else {
                 staffRow.style.display = 'none';
+            }
+
+            // Dashboard Shift Timer
+            const dashShiftTimerContainer = document.getElementById('dashShiftTimerContainer');
+            const dashShiftTimerVal = document.getElementById('dashShiftTimerVal');
+            if (dashShiftTimerContainer && dashShiftTimerVal) {
+                if (isShiftActive && shiftStartTime) {
+                    dashShiftTimerContainer.style.display = 'flex';
+                    const diffMs = now - shiftStartTime;
+                    const totalSeconds = Math.floor(diffMs / 1000);
+                    const hrs = Math.floor(totalSeconds / 3600);
+                    const mins = Math.floor((totalSeconds % 3600) / 60);
+                    const secs = totalSeconds % 60;
+                    dashShiftTimerVal.innerText = `${hrs}hr ${mins.toString().padStart(2, '0')}m ${secs.toString().padStart(2, '0')}s`;
+                } else {
+                    dashShiftTimerContainer.style.display = 'none';
+                }
             }
 
             if (container) container.style.display = (shiftShown || staffShown) ? 'flex' : 'none';
@@ -7045,22 +7394,32 @@
             document.getElementById('categoryModalTitle').textContent = 'Add Category';
             document.getElementById('editingCategoryId').value = '';
             document.getElementById('categoryName').value = '';
+            document.getElementById('categoryShowInTakeOrder').checked = true;
+            document.getElementById('categoryShowInQuickService').checked = true;
             document.getElementById('addCategoryModal').style.display = 'flex';
         };
 
         window.editCategory = async function(id) {
             const snap = await getDoc(doc(db, 'licenses', currentClientId, 'menu_categories', id));
             if (snap.exists()) {
+                const data = snap.data();
                 document.getElementById('categoryModalTitle').textContent = 'Edit Category';
                 document.getElementById('editingCategoryId').value = id;
-                document.getElementById('categoryName').value = snap.data().name;
+                document.getElementById('categoryName').value = data.name;
+                document.getElementById('categoryShowInTakeOrder').checked = data.showInTakeOrder !== false;
+                document.getElementById('categoryShowInQuickService').checked = data.showInQuickService !== false;
                 document.getElementById('addCategoryModal').style.display = 'flex';
             }
         };
 
         window.saveCategory = async function() {
             const id = document.getElementById('editingCategoryId').value;
-            const data = { name: document.getElementById('categoryName').value, updatedAt: Timestamp.now() };
+            const data = { 
+                name: document.getElementById('categoryName').value, 
+                showInTakeOrder: document.getElementById('categoryShowInTakeOrder').checked,
+                showInQuickService: document.getElementById('categoryShowInQuickService').checked,
+                updatedAt: Timestamp.now() 
+            };
             if (!id) data.createdAt = Timestamp.now();
             
             if (id) {
@@ -9507,6 +9866,17 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                     isPaid: true,
                     orderType: item.itemOrderType || selectedOrderTypeTakeOrder
                 });
+
+                // CRITICAL FIX: The Receipt printing logic (executeReprint) filters items by matching 
+                // itDoc.id against paymentInfo.itemsPaid.itemId. Since Quick Service items are 
+                // created on-the-fly, we must update the queue's item list with the real Firestore IDs.
+                if (paymentInfoForQueue && paymentInfoForQueue.itemsPaid) {
+                    const match = paymentInfoForQueue.itemsPaid.find(p => p.itemId === item.cartId);
+                    if (match) {
+                        match.itemId = itemRef.id;
+                        match.orderId = orderRef.id;
+                    }
+                }
                 
                 if (item.variants) {
                     for (const v of item.variants) {
@@ -10292,6 +10662,11 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
         async function loadMenuItemsTakeOrder() {
             const menuRef = collection(db, 'licenses', currentClientId, 'menu_items');
             const snapshot = await getDocs(query(menuRef, where('active', '==', true)));
+
+            // Fetch category metadata to filter based on Take Order / Quick Service flags
+            const catsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'menu_categories'));
+            const categoryMeta = {};
+            catsSnap.forEach(d => categoryMeta[d.id] = d.data());
             
             categoryMapTakeOrder = await getCategoriesMap();
             menuItemsTakeOrder = [];
@@ -10299,6 +10674,14 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             
             snapshot.forEach(doc => {
                 const item = { id: doc.id, ...doc.data() };
+                const meta = categoryMeta[item.categoryId];
+
+                // Respect visibility flags set in Management > Categories
+                if (meta) {
+                    if (isQuickServiceMode && meta.showInQuickService === false) return;
+                    if (!isQuickServiceMode && meta.showInTakeOrder === false) return;
+                }
+
                 menuItemsTakeOrder.push(item);
                 if (item.categoryId) cats.add(item.categoryId);
             });
@@ -12507,9 +12890,21 @@ window.openSearchModalTakeOrder = function() {
                 }
             }
 
+            // Check which departments are actually assigned to any physical printer
+            const allPrintersSnap = await getDocs(collection(db, 'licenses', currentClientId, 'printers'));
+            const assignedDeptIds = new Set();
+            allPrintersSnap.forEach(pd => {
+                const p = pd.data();
+                // Only consider printers that have "Print Orders" enabled
+                if (p.printOrders && p.departmentPrinters) {
+                    p.departmentPrinters.forEach(id => assignedDeptIds.add(id));
+                }
+            });
+
             // Get all Department definition and add to queue as pending for the Server (Device A) to pick up
             const deptPrintersSnap = await getDocs(collection(db, 'licenses', currentClientId, 'department_printer'));
             for (const deptDoc of deptPrintersSnap.docs) {
+                if (!assignedDeptIds.has(deptDoc.id)) continue;
                 const dept = deptDoc.data();
                 const deptItems = fullItemsList.filter(it => {
                     const catName = categoryMapTakeOrder[it.categoryId];
@@ -13197,8 +13592,19 @@ window.openSearchModalTakeOrder = function() {
             if (cancelledItems.length === 0) return;
 
             const deptPrintersSnap = await getDocs(collection(db, 'licenses', currentClientId, 'department_printer'));
+            const allPrintersSnap = await getDocs(collection(db, 'licenses', currentClientId, 'printers'));
+            const assignedDeptIds = new Set();
+            allPrintersSnap.forEach(pd => {
+                const p = pd.data();
+                if (p.printOrders && p.departmentPrinters) {
+                    p.departmentPrinters.forEach(id => assignedDeptIds.add(id));
+                }
+            });
 
             for (const deptDoc of deptPrintersSnap.docs) {
+                // Skip if no physical printer handles this department
+                if (!assignedDeptIds.has(deptDoc.id)) continue;
+
                 const dept = deptDoc.data();
                 if (!dept.voidEnabled) continue;
                 const deptItems = cancelledItems.filter(it => {
@@ -13263,9 +13669,18 @@ window.openSearchModalTakeOrder = function() {
             const deptPrintersSnap = await getDocs(collection(db, 'licenses', currentClientId, 'department_printer'));
             const catName = categoryMapTakeOrder[fullItem.categoryId] || (menuItemsTakeOrder.find(m => m.id === fullItem.id || m.name === fullItem.name)?.categoryId ? categoryMapTakeOrder[menuItemsTakeOrder.find(m => m.id === fullItem.id || m.name === fullItem.name).categoryId] : '');
             
+            const allPrintersSnap = await getDocs(collection(db, 'licenses', currentClientId, 'printers'));
+            const assignedDeptIds = new Set();
+            allPrintersSnap.forEach(pd => {
+                const p = pd.data();
+                if (p.printOrders && p.departmentPrinters) {
+                    p.departmentPrinters.forEach(id => assignedDeptIds.add(id));
+                }
+            });
+
             const targetDepts = deptPrintersSnap.docs.filter(d => {
                 const dp = d.data();
-                return dp.voidEnabled === true && dp.department && dp.department.includes(catName);
+                return assignedDeptIds.has(d.id) && dp.voidEnabled === true && dp.department && dp.department.includes(catName);
             });
             
             if (targetDepts.length === 0) return;
