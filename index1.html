@@ -3791,6 +3791,20 @@
                 <label>Category Name</label>
                 <input type="text" id="categoryName">
             </div>
+            <div class="form-group flex items-center justify-between bg-slate-50 p-3 rounded-xl border border-slate-100">
+                <label class="mb-0 font-bold text-slate-700">Take Order (Table Order)</label>
+                <label class="switch">
+                    <input type="checkbox" id="categoryShowInTakeOrder" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="form-group flex items-center justify-between bg-slate-50 p-3 rounded-xl border border-slate-100 mt-2">
+                <label class="mb-0 font-bold text-slate-700">Quick Service (Order to Pay)</label>
+                <label class="switch">
+                    <input type="checkbox" id="categoryShowInQuickService" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
             <button class="btn" onclick="saveCategory()">Save</button>
         </div>
     </div>
@@ -7043,22 +7057,32 @@
             document.getElementById('categoryModalTitle').textContent = 'Add Category';
             document.getElementById('editingCategoryId').value = '';
             document.getElementById('categoryName').value = '';
+            document.getElementById('categoryShowInTakeOrder').checked = true;
+            document.getElementById('categoryShowInQuickService').checked = true;
             document.getElementById('addCategoryModal').style.display = 'flex';
         };
 
         window.editCategory = async function(id) {
             const snap = await getDoc(doc(db, 'licenses', currentClientId, 'menu_categories', id));
             if (snap.exists()) {
+                const data = snap.data();
                 document.getElementById('categoryModalTitle').textContent = 'Edit Category';
                 document.getElementById('editingCategoryId').value = id;
-                document.getElementById('categoryName').value = snap.data().name;
+                document.getElementById('categoryName').value = data.name;
+                document.getElementById('categoryShowInTakeOrder').checked = data.showInTakeOrder !== false;
+                document.getElementById('categoryShowInQuickService').checked = data.showInQuickService !== false;
                 document.getElementById('addCategoryModal').style.display = 'flex';
             }
         };
 
         window.saveCategory = async function() {
             const id = document.getElementById('editingCategoryId').value;
-            const data = { name: document.getElementById('categoryName').value, updatedAt: Timestamp.now() };
+            const data = { 
+                name: document.getElementById('categoryName').value, 
+                showInTakeOrder: document.getElementById('categoryShowInTakeOrder').checked,
+                showInQuickService: document.getElementById('categoryShowInQuickService').checked,
+                updatedAt: Timestamp.now() 
+            };
             if (!id) data.createdAt = Timestamp.now();
             
             if (id) {
@@ -9505,6 +9529,17 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                     isPaid: true,
                     orderType: item.itemOrderType || selectedOrderTypeTakeOrder
                 });
+
+                // CRITICAL FIX: The Receipt printing logic (executeReprint) filters items by matching 
+                // itDoc.id against paymentInfo.itemsPaid.itemId. Since Quick Service items are 
+                // created on-the-fly, we must update the queue's item list with the real Firestore IDs.
+                if (paymentInfoForQueue && paymentInfoForQueue.itemsPaid) {
+                    const match = paymentInfoForQueue.itemsPaid.find(p => p.itemId === item.cartId);
+                    if (match) {
+                        match.itemId = itemRef.id;
+                        match.orderId = orderRef.id;
+                    }
+                }
                 
                 if (item.variants) {
                     for (const v of item.variants) {
@@ -10290,6 +10325,11 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
         async function loadMenuItemsTakeOrder() {
             const menuRef = collection(db, 'licenses', currentClientId, 'menu_items');
             const snapshot = await getDocs(query(menuRef, where('active', '==', true)));
+
+            // Fetch category metadata to filter based on Take Order / Quick Service flags
+            const catsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'menu_categories'));
+            const categoryMeta = {};
+            catsSnap.forEach(d => categoryMeta[d.id] = d.data());
             
             categoryMapTakeOrder = await getCategoriesMap();
             menuItemsTakeOrder = [];
@@ -10297,6 +10337,14 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             
             snapshot.forEach(doc => {
                 const item = { id: doc.id, ...doc.data() };
+                const meta = categoryMeta[item.categoryId];
+
+                // Respect visibility flags set in Management > Categories
+                if (meta) {
+                    if (isQuickServiceMode && meta.showInQuickService === false) return;
+                    if (!isQuickServiceMode && meta.showInTakeOrder === false) return;
+                }
+
                 menuItemsTakeOrder.push(item);
                 if (item.categoryId) cats.add(item.categoryId);
             });
