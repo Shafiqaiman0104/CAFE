@@ -12553,9 +12553,21 @@ window.openSearchModalTakeOrder = function() {
                 }
             }
 
+            // Check which departments are actually assigned to any physical printer
+            const allPrintersSnap = await getDocs(collection(db, 'licenses', currentClientId, 'printers'));
+            const assignedDeptIds = new Set();
+            allPrintersSnap.forEach(pd => {
+                const p = pd.data();
+                // Only consider printers that have "Print Orders" enabled
+                if (p.printOrders && p.departmentPrinters) {
+                    p.departmentPrinters.forEach(id => assignedDeptIds.add(id));
+                }
+            });
+
             // Get all Department definition and add to queue as pending for the Server (Device A) to pick up
             const deptPrintersSnap = await getDocs(collection(db, 'licenses', currentClientId, 'department_printer'));
             for (const deptDoc of deptPrintersSnap.docs) {
+                if (!assignedDeptIds.has(deptDoc.id)) continue;
                 const dept = deptDoc.data();
                 const deptItems = fullItemsList.filter(it => {
                     const catName = categoryMapTakeOrder[it.categoryId];
@@ -13243,8 +13255,19 @@ window.openSearchModalTakeOrder = function() {
             if (cancelledItems.length === 0) return;
 
             const deptPrintersSnap = await getDocs(collection(db, 'licenses', currentClientId, 'department_printer'));
+            const allPrintersSnap = await getDocs(collection(db, 'licenses', currentClientId, 'printers'));
+            const assignedDeptIds = new Set();
+            allPrintersSnap.forEach(pd => {
+                const p = pd.data();
+                if (p.printOrders && p.departmentPrinters) {
+                    p.departmentPrinters.forEach(id => assignedDeptIds.add(id));
+                }
+            });
 
             for (const deptDoc of deptPrintersSnap.docs) {
+                // Skip if no physical printer handles this department
+                if (!assignedDeptIds.has(deptDoc.id)) continue;
+
                 const dept = deptDoc.data();
                 if (!dept.voidEnabled) continue;
                 const deptItems = cancelledItems.filter(it => {
@@ -13309,9 +13332,18 @@ window.openSearchModalTakeOrder = function() {
             const deptPrintersSnap = await getDocs(collection(db, 'licenses', currentClientId, 'department_printer'));
             const catName = categoryMapTakeOrder[fullItem.categoryId] || (menuItemsTakeOrder.find(m => m.id === fullItem.id || m.name === fullItem.name)?.categoryId ? categoryMapTakeOrder[menuItemsTakeOrder.find(m => m.id === fullItem.id || m.name === fullItem.name).categoryId] : '');
             
+            const allPrintersSnap = await getDocs(collection(db, 'licenses', currentClientId, 'printers'));
+            const assignedDeptIds = new Set();
+            allPrintersSnap.forEach(pd => {
+                const p = pd.data();
+                if (p.printOrders && p.departmentPrinters) {
+                    p.departmentPrinters.forEach(id => assignedDeptIds.add(id));
+                }
+            });
+
             const targetDepts = deptPrintersSnap.docs.filter(d => {
                 const dp = d.data();
-                return dp.voidEnabled === true && dp.department && dp.department.includes(catName);
+                return assignedDeptIds.has(d.id) && dp.voidEnabled === true && dp.department && dp.department.includes(catName);
             });
             
             if (targetDepts.length === 0) return;
