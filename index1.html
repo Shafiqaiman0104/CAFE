@@ -2471,9 +2471,9 @@
 
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                         <!-- Hourly Chart -->
-                        <div class="section-card" style="margin-bottom: 0;">
+                        <div id="dashShiftChartCard" class="section-card" style="margin-bottom: 0; background: white;">
                             <div class="section-header">
-                                <span class="section-title">Hourly Sales & Profit</span>
+                                <span class="section-title" style="color: #667eea;">Hourly Sales & Profit</span>
                             </div>
                             <div style="height: 300px; position: relative;">
                                 <canvas id="shiftChart"></canvas>
@@ -2494,6 +2494,9 @@
                     <div class="section-card">
                         <div class="section-header">
                             <span class="section-title">Staff in Shift</span>
+                            <div id="dashShiftTimerContainer" style="display: none; background: white; border: 1.5px solid #764ba2; border-radius: 20px; padding: 4px 12px; font-size: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); align-items: center; gap: 6px; font-weight: 800; color: #764ba2;">
+                                <i class="fas fa-clock"></i> <span id="dashShiftTimerVal">0hr 00m 00s</span>
+                            </div>
                         </div>
                         <div id="dashShiftStaffList">
                             <!-- Staff injected via JS -->
@@ -6414,6 +6417,23 @@
                 staffShown = true;
             } else {
                 staffRow.style.display = 'none';
+            }
+
+            // Dashboard Shift Timer
+            const dashShiftTimerContainer = document.getElementById('dashShiftTimerContainer');
+            const dashShiftTimerVal = document.getElementById('dashShiftTimerVal');
+            if (dashShiftTimerContainer && dashShiftTimerVal) {
+                if (isShiftActive && shiftStartTime) {
+                    dashShiftTimerContainer.style.display = 'flex';
+                    const diffMs = now - shiftStartTime;
+                    const totalSeconds = Math.floor(diffMs / 1000);
+                    const hrs = Math.floor(totalSeconds / 3600);
+                    const mins = Math.floor((totalSeconds % 3600) / 60);
+                    const secs = totalSeconds % 60;
+                    dashShiftTimerVal.innerText = `${hrs}hr ${mins.toString().padStart(2, '0')}m ${secs.toString().padStart(2, '0')}s`;
+                } else {
+                    dashShiftTimerContainer.style.display = 'none';
+                }
             }
 
             if (container) container.style.display = (shiftShown || staffShown) ? 'flex' : 'none';
