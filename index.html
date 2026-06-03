@@ -1242,6 +1242,15 @@
             color: white;
             box-shadow: 0 10px 15px -3px rgba(0, 79, 166, 0.25);
         }
+        .table-card-takeorder.reserved {
+            background: #ef4444;
+            color: white;
+            box-shadow: 0 10px 15px -3px rgba(239, 68, 68, 0.25);
+        }
+        .table-card-takeorder.disable {
+            background: #cbd5e0;
+            color: #475569;
+        }
 
 .table-card-takeorder .capacity-takeorder {
     font-size: 0.8rem;
@@ -1286,6 +1295,8 @@
 .status-dot.white { background: white; }
 .status-dot.orange { background: #ff9800; }
 .status-dot.ready { background: #004fa6; }
+.status-dot.reserved { background: #ef4444; }
+.status-dot.disable { background: #cbd5e0; border: 1px solid #475569; }
 
 .location-filter-bar {
     display: flex;
@@ -2254,9 +2265,9 @@
             <div class="mini-sidebar-header" onclick="toggleMiniSection('miniOpsSection')">OPS</div>
             <!-- Operations Icons -->
             <div id="miniOpsSection" class="mini-section-content" style="max-height: 500px; overflow: visible;">
-                <div class="mini-item" onclick="showQuickService()" title="Quick Service" data-page="quickService"><i class="fas fa-bolt"></i></div>
-                <div class="mini-item" onclick="showPage('takeOrder', true)" title="Take Order" data-page="takeOrder"><i class="fas fa-pen"></i></div>
-                <div class="mini-item" onclick="showPage('activeOrders', true)" title="Orders" data-page="activeOrders"><i class="fas fa-clock"></i></div>
+                <div class="mini-item perm-qs" onclick="showQuickService()" title="Quick Service" data-page="quickService"><i class="fas fa-bolt"></i></div>
+                <div class="mini-item perm-to" onclick="showPage('takeOrder', true)" title="Take Order" data-page="takeOrder"><i class="fas fa-pen"></i></div>
+                <div class="mini-item perm-ao" onclick="showPage('activeOrders', true)" title="Orders" data-page="activeOrders"><i class="fas fa-clock"></i></div>
                 
                 <!-- Printer Sub-menu Flyout -->
                 <div class="mini-sub-container">
@@ -2269,9 +2280,9 @@
                     </div>
                 </div>
 
-                <div class="mini-item" onclick="showPage('allOrders', true)" title="All Orders" data-page="allOrders"><i class="fas fa-clipboard-list"></i></div>
-                <div class="mini-item" onclick="showPage('allTransactions', true)" title="Transactions" data-page="allTransactions"><i class="fas fa-money-bill-wave"></i></div>
-                <div class="mini-item" onclick="showPage('shift', true)" title="Shift" data-page="shift"><i class="fas fa-history"></i></div>
+                <div class="mini-item perm-allo" onclick="showPage('allOrders', true)" title="All Orders" data-page="allOrders"><i class="fas fa-clipboard-list"></i></div>
+                <div class="mini-item perm-allt" onclick="showPage('allTransactions', true)" title="Transactions" data-page="allTransactions"><i class="fas fa-money-bill-wave"></i></div>
+                <div class="mini-item perm-sh" onclick="showPage('shift', true)" title="Shift" data-page="shift"><i class="fas fa-history"></i></div>
             </div>
             
             <div id="miniMgtSeparator" style="width: 30px; height: 1px; background: #eee; margin: 10px 0;"></div>
@@ -2341,21 +2352,21 @@
                         <i class="fas fa-chevron-down menu-toggle-icon rotated"></i>
                     </div>
                     <div class="menu-sub-section" id="operationsSubMenu" style="max-height: none;">
-                        <div class="menu-item" onclick="showQuickService()" data-page="quickService">
+                        <div class="menu-item perm-qs" onclick="showQuickService()" data-page="quickService">
                             <i class="fas fa-bolt"></i> Quick Service
                         </div>
-                        <div class="menu-item" onclick="showPage('takeOrder')">
+                        <div class="menu-item perm-to" onclick="showPage('takeOrder')">
                             <i class="fas fa-pen"></i> Take Order
                         </div>
-                        <div class="menu-item" onclick="showPage('activeOrders')">
+                        <div class="menu-item perm-ao" onclick="showPage('activeOrders')">
                             <i class="fas fa-clock"></i> Orders
                         </div>
                         <!-- Printer & Receipt Dropdown -->
-                        <div class="menu-item" onclick="toggleSubMenu('printerSubMenu', this, event)">
+                        <div class="menu-item perm-pr" onclick="toggleSubMenu('printerSubMenu', this, event)">
                             <i class="fas fa-print"></i> Printer & Receipt
                             <i class="fas fa-chevron-down menu-toggle-icon" style="margin-left: auto; font-size: 0.8rem;"></i>
                         </div>
-                        <div class="menu-sub-section" id="printerSubMenu" style="max-height: 0; background: rgba(0,0,0,0.02); border-radius: 14px; margin: 0 12px;">
+                        <div class="menu-sub-section perm-pr" id="printerSubMenu" style="max-height: 0; background: rgba(0,0,0,0.02); border-radius: 14px; margin: 0 12px;">
                             <div class="menu-item" onclick="showPage('receipt')">
                                 <i class="fas fa-file-invoice"></i> Receipt
                             </div>
@@ -2369,13 +2380,13 @@
                                 <i class="fas fa-list-check"></i> Printer Queue
                             </div>
                         </div>
-                        <div class="menu-item" onclick="showPage('allOrders')">
+                        <div class="menu-item perm-allo" onclick="showPage('allOrders')">
                             <i class="fas fa-clipboard-list"></i> All Orders
                         </div>
-                        <div class="menu-item" onclick="showPage('allTransactions')">
+                        <div class="menu-item perm-allt" onclick="showPage('allTransactions')">
                             <i class="fas fa-money-bill-wave"></i> All Transactions
                         </div>
-                        <div class="menu-item" onclick="showPage('shift')">
+                        <div class="menu-item perm-sh" onclick="showPage('shift')">
                             <i class="fas fa-history"></i> Shift
                         </div>
                     </div>
@@ -2677,6 +2688,7 @@
                                 <option value="available">Available</option>
                                 <option value="occupied">Occupied</option>
                                 <option value="reserved">Reserved</option>
+                                <option value="disable">Disable</option>
                             </select>
                         </div>
                     </div>
@@ -3880,6 +3892,7 @@
                     <option value="available">Available</option>
                     <option value="occupied">Occupied</option>
                     <option value="reserved">Reserved</option>
+                    <option value="disable">Disable</option>
                 </select>
             </div>
             <button class="btn" onclick="saveTable()">Save</button>
@@ -3961,7 +3974,17 @@
                 <span class="modal-title" id="roleModalTitle">Add Role</span>
                 <button class="modal-close" onclick="closeModal('addRoleModal')">&times;</button>
             </div>
-            <input type="hidden" id="editingRoleId">
+            <input type="hidden" id="editingRoleId" value="">
+            <div class="form-group" id="rolePrefixGroup">
+                <label>Prefix Selection (Auto-fill permissions)</label>
+                <select id="rolePrefix" onchange="applyRolePrefix(this.value)" class="w-full p-3 border-2 border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:border-blue-500 outline-none transition-all">
+                    <option value="">Select prefix...</option>
+                    <option value="owner">Owner (All Select)</option>
+                    <option value="manager">Manager (All Select)</option>
+                    <option value="cashier">Cashier</option>
+                    <option value="waiter">Waiter</option>
+                </select>
+            </div>
             <div class="form-group">
                 <label>Role ID (e.g., chef)</label>
                 <input type="text" id="roleId">
@@ -5051,6 +5074,35 @@
         };
 
         window.showPage = function(pageId, skipSidebar = false, isQuickServiceCall = false) {
+            // Permission Guard
+            const permissionMapping = {
+                'activeOrders': 'canAccessOrders',
+                'receipt': 'canAccessReceiptSetting',
+                'departmentPrinter': 'canAccessDeptPrinter',
+                'printers': 'canAccessPrinters',
+                'printerQueue': 'canAccessPrinterQueue',
+                'allOrders': 'canAccessAllOrders',
+                'allTransactions': 'canAccessAllTransactions',
+                'shift': 'canAccessShift',
+                'dashboard': 'canAccessDashboard',
+                'menu': 'canAccessMenuItems',
+                'categories': 'canAccessCategories',
+                'variants': 'canAccessVariants',
+                'modifiers': 'canAccessModifiers',
+                'tables': 'canAccessTables',
+                'discounts': 'canAccessDiscounts',
+                'staff': 'canAccessStaff',
+                'roles': 'canAccessRoles',
+                'tax': 'canAccessTax',
+                'reports': 'canAccessReports'
+            };
+            if (pageId === 'takeOrder') {
+                const requiredPerm = isQuickServiceCall ? 'canAccessQuickService' : 'canAccessTakeOrder';
+                if (!checkPermission(requiredPerm)) { alert(`Your role cannot access ${isQuickServiceCall ? 'Quick Service' : 'Take Order'}.`); return; }
+            } else if (permissionMapping[pageId] && !checkPermission(permissionMapping[pageId])) {
+                alert("Your role cannot access this section."); return;
+            }
+
             // If we are navigating to anything other than takeOrder, or if we are
             // navigating to takeOrder specifically via the standard Pen icon, reset mode.
             if (pageId !== 'takeOrder' || !isQuickServiceCall) {
@@ -6533,6 +6585,10 @@
         }
 
         window.openEditInvolvedStaffModal = async function() {
+            if (!checkPermission('canEditShiftStaff')) {
+                alert('Your role cannot edit staff records');
+                return;
+            }
             if (!activeShiftId) return;
             const body = document.getElementById('involvedStaffList');
             body.innerHTML = '<tr><td colspan="5" class="loading">Loading...</td></tr>';
@@ -6591,6 +6647,10 @@
         };
 
         window.openEditAttendanceTimeModal = async function(attendanceId) {
+            if (!checkPermission('canEditAttendanceTime')) {
+                alert('Your role cannot edit attendance time');
+                return;
+            }
             const snap = await getDoc(doc(db, 'licenses', currentClientId, 'attendance', attendanceId));
             if (!snap.exists()) return;
             
@@ -6632,6 +6692,10 @@
         };
 
         window.kickStaff = async function(attendanceId, staffId, staffName) {
+            if (!checkPermission('canKickStaff')) {
+                alert('Your role cannot kick staff');
+                return;
+            }
             if (!confirm(`Are you sure you want to kick ${staffName} from this shift?`)) return;
             try {
                 await updateDoc(doc(db, 'licenses', currentClientId, 'attendance', attendanceId), {
@@ -6642,6 +6706,10 @@
         };
 
         window.deleteAttendanceRecord = async function(attendanceId) {
+            if (!checkPermission('canDeleteAttendance')) {
+                alert('Your role cannot delete attendance records');
+                return;
+            }
             if (!confirm("Are you sure you want to delete this attendance record?")) return;
             try {
                 await deleteDoc(doc(db, 'licenses', currentClientId, 'attendance', attendanceId));
@@ -6650,6 +6718,10 @@
 
         let currentAdjustmentType = 'add';
         window.openEditFloatModal = async function() {
+            if (!checkPermission('canEditFloat')) {
+                alert('Your role cannot edit float');
+                return;
+            }
             await kickAllCashDrawers();
             if (!activeShiftData) return;
             document.getElementById('currentFloatDisplay').innerText = `RM ${parseFloat(activeShiftData.startFloat || 0).toFixed(2)}`;
@@ -7489,7 +7561,11 @@
                         <tbody>`;
 
             filtered.forEach(t => {
-                const statusClass = t.status === 'available' ? 'status-completed' : (t.status === 'occupied' ? 'status-active' : 'status-preparing');
+                let statusClass = 'status-completed'; // available
+                if (t.status === 'occupied') statusClass = 'status-active';
+                else if (t.status === 'reserved') statusClass = 'status-cancelled';
+                else if (t.status === 'disable') statusClass = 'status-served';
+                else if (t.status === 'reserved') statusClass = 'status-preparing';
                 
                 html += `
                     <tr style="border-bottom: 1px solid #f1f5f9;">
@@ -7653,6 +7729,10 @@
 
         window.saveStaff = async function() {
             const id = document.getElementById('editingStaffId').value;
+            if (!checkPermission('canAddEditStaff')) {
+                alert('Your role cannot add or edit staff');
+                return;
+            }
             const pin = document.getElementById('staffPin').value;
             if (pin.length !== 6) { alert('PIN must be 6 digits'); return; }
             
@@ -7675,6 +7755,10 @@
         };
 
         window.deleteStaff = async function(id) {
+            if (!checkPermission('canDeleteStaff')) {
+                alert('Your role cannot delete staff');
+                return;
+            }
             if (confirm('Delete staff?')) {
                  await deleteDoc(doc(db, 'licenses', currentClientId, 'staff', id));
             }
@@ -7877,90 +7961,222 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
         };
 
         // ========== ROLES ==========
+        const permissionSchema = [
+            { group: "Operations", perms: [
+                { key: "canAccessQuickService", label: "Access Quick Service Tab" },
+                { key: "canAccessTakeOrder", label: "Access Take Order Tab" },
+                { key: "canVoidTakeOrder", label: "= Can void / cancel order" },
+                { key: "canCashierTakeOrder", label: "= Can do cashier" },
+                { key: "canEditTableLayout", label: "= Can edit table layout" },
+                { key: "canApplyDiscountTakeOrder", label: "= Can apply discount" },
+                { key: "canAccessOrders", label: "Access Orders Tab" },
+                { key: "canVoidOrders", label: "= Can void / cancel order" },
+                { key: "canAccessPrinterReceipt", label: "Access Printer & Receipt Tab" },
+                { key: "canAccessReceiptSetting", label: "= Access Receipt Tab" },
+                { key: "canAccessDeptPrinter", label: "= Access Department Printers Tab" },
+                { key: "canAccessPrinters", label: "= Access Printers Tab" },
+                { key: "canAccessPrinterQueue", label: "= Access Printer Receipt Queue Tab" },
+                { key: "canAccessAllOrders", label: "Access All Orders Tab" },
+                { key: "canEditAllOrders", label: "= Can edit" },
+                { key: "canDeleteAllOrders", label: "= Can delete" },
+                { key: "canAccessAllTransactions", label: "Access All Transactions Tab" },
+                { key: "canEditAllTransactions", label: "= Can edit" },
+                { key: "canDeleteAllTransactions", label: "= Can delete" },
+                { key: "canAccessShift", label: "Access Shift Tab" },
+                { key: "canEditFloat", label: "= Can edit float" },
+                { key: "canEditShiftStaff", label: "= Can edit staff" },
+                { key: "canEditAttendanceTime", label: "== Can edit time" },
+                { key: "canKickStaff", label: "== Can kick staff" },
+                { key: "canDeleteAttendance", label: "== Can delete staff clockin/out data" }
+            ]},
+            { group: "Management", perms: [
+                { key: "canAccessDashboard", label: "Access Dashboard Tab" },
+                { key: "canAccessMenuItems", label: "Access Menu Items Tab" },
+                { key: "canAccessCategories", label: "Access Categories Tab" },
+                { key: "canAccessVariants", label: "Access Variant Tab" },
+                { key: "canAccessModifiers", label: "Access Modifiers Tab" },
+                { key: "canAccessTables", label: "Access Table Tab" },
+                { key: "canAccessDiscounts", label: "Access Discount Tab" },
+                { key: "canAccessStaff", label: "Access Staff Tab" },
+                { key: "canAddEditStaff", label: "= Can add / edit staff" },
+                { key: "canDeleteStaff", label: "= Can delete staff" },
+                { key: "canAccessRoles", label: "Access Role Tab" },
+                { key: "canAddEditRoles", label: "= Can add / edit role" },
+                { key: "canDeleteRoles", label: "= Can delete role" },
+                { key: "canAccessTax", label: "Access Tax Setting Tab" },
+                { key: "canAccessReports", label: "Access Reports Tab" }
+            ]}
+        ];
+
+        window.checkPermission = function(key) {
+            if (!currentStaff) return false;
+            if (currentStaff.role === 'manager') return true; // Manager override
+            return currentStaff.permissions && currentStaff.permissions[key] === true;
+        };
+
         function loadRoles() {
             const ref = collection(db, 'licenses', currentClientId, 'roles');
             onSnapshot(ref, (snapshot) => {
                 const container = document.getElementById('rolesList');
-                let html = `
-                    <div style="overflow-x: auto; background: white; border-radius: 20px; padding: 15px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
-                        <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
-                            <thead>
-                                <tr style="border-bottom: 2px solid #f1f5f9; text-align: left; color: #64748b;">
-                                    <th style="padding: 12px 10px;">Role</th>
-                                    <th style="padding: 12px 10px; text-align: right;">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>`;
-
+                let html = '<div class="grid grid-cols-1 md:grid-cols-2 gap-4">';
                 snapshot.forEach(doc => {
-                    html += `
-                        <tr style="border-bottom: 1px solid #f1f5f9;">
-                            <td style="padding: 12px 10px; font-weight: 600; color: #1e293b; text-transform: capitalize;">${doc.id}</td>
-                            <td style="padding: 12px 10px; text-align: right;">
-                                <div class="action-buttons" style="justify-content: flex-end;">
-                                    <button class="btn-edit" style="padding: 6px 12px;" onclick="editRole('${doc.id}')"><i class="fas fa-edit"></i></button>
-                                    <button class="btn-delete" style="padding: 6px 12px;" onclick="deleteRole('${doc.id}')"><i class="fas fa-trash"></i></button>
-                                </div>
-                            </td>
-                        </tr>`;
+                    html += `<div class="glass-card p-4 rounded-2xl flex justify-between items-center shadow-sm">
+                        <span class="font-bold text-slate-800 uppercase tracking-tight">${doc.id}</span>
+                        <div class="flex gap-2">
+                            <button onclick="editRole('${doc.id}')" class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"><i class="fas fa-edit"></i></button>
+                            <button onclick="deleteRole('${doc.id}')" class="p-2 text-red-600 hover:bg-red-50 rounded-lg"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </div>`;
                 });
-
-                if (snapshot.empty) {
-                    html += '<tr><td colspan="2" style="text-align:center; padding:20px; color:#666;">No roles found.</td></tr>';
-                }
-
-                html += `</tbody></table></div>`;
-                container.innerHTML = html;
+                container.innerHTML = html + '</div>';
             });
         }
 
         window.showAddRoleModal = function() {
+            if (!checkPermission('canAddEditRoles')) { alert('Your role cannot add roles'); return; }
             document.getElementById('roleModalTitle').textContent = 'Add Role';
             document.getElementById('editingRoleId').value = '';
             document.getElementById('roleId').value = '';
             document.getElementById('roleId').disabled = false;
             
-            const perms = ['canAddStaff', 'canApplyDiscount', 'canEditMenu', 'canProcessRefund', 'canViewReports', 'canVoidOrder'];
-            let html = '';
-            perms.forEach(p => {
-                html += `<div class="checkbox-group"><input type="checkbox" id="perm_${p}"><label>${p}</label></div>`;
-            });
-            document.getElementById('rolePermissions').innerHTML = html;
+            // Reset and show prefix select
+            const prefixSelect = document.getElementById('rolePrefix');
+            if (prefixSelect) prefixSelect.value = '';
+            document.getElementById('rolePrefixGroup').style.display = 'block';
+
+            renderPermissionCheckboxes({});
             document.getElementById('addRoleModal').style.display = 'flex';
         };
 
         window.editRole = async function(roleId) {
+            if (!checkPermission('canAddEditRoles')) { alert('Your role cannot edit roles'); return; }
             const snap = await getDoc(doc(db, 'licenses', currentClientId, 'roles', roleId));
             if (snap.exists()) {
-                const perms = snap.data();
                 document.getElementById('roleModalTitle').textContent = 'Edit Role';
                 document.getElementById('editingRoleId').value = roleId;
                 document.getElementById('roleId').value = roleId;
                 document.getElementById('roleId').disabled = true;
                 
-                const permList = ['canAddStaff', 'canApplyDiscount', 'canEditMenu', 'canProcessRefund', 'canViewReports', 'canVoidOrder'];
-                let html = '';
-                permList.forEach(p => {
-                    html += `<div class="checkbox-group"><input type="checkbox" id="perm_${p}" ${perms[p] ? 'checked' : ''}><label>${p}</label></div>`;
-                });
-                document.getElementById('rolePermissions').innerHTML = html;
+                // Hide prefix group during edit
+                document.getElementById('rolePrefixGroup').style.display = 'none';
+                renderPermissionCheckboxes(snap.data());
                 document.getElementById('addRoleModal').style.display = 'flex';
             }
         };
 
+        window.togglePermGroup = function(parentKey) {
+            const parentCheckbox = document.getElementById(`perm_${parentKey}`);
+            const isChecked = parentCheckbox.checked;
+
+            // Find all labels that define this key as their parent
+            const children = document.querySelectorAll(`label[data-parent="${parentKey}"]`);
+            children.forEach(childLabel => {
+                const childInput = childLabel.querySelector('input');
+                const childKey = childInput.id.replace('perm_', '');
+
+                if (isChecked) {
+                    childLabel.style.display = 'flex';
+                } else {
+                    childLabel.style.display = 'none';
+                    if (childInput.checked) {
+                        childInput.checked = false;
+                        // Recursively uncheck/hide grandchildren
+                        togglePermGroup(childKey);
+                    }
+                }
+            });
+        };
+
+        window.applyRolePrefix = function(prefix) {
+            if (!prefix) return;
+            
+            const perms = {};
+            const allKeys = [];
+            permissionSchema.forEach(g => g.perms.forEach(p => allKeys.push(p.key)));
+
+            if (prefix === 'owner' || prefix === 'manager') {
+                allKeys.forEach(k => perms[k] = true);
+            } else if (prefix === 'cashier') {
+                [
+                    'canAccessQuickService', 'canAccessTakeOrder', 'canVoidTakeOrder', 
+                    'canCashierTakeOrder', 'canEditTableLayout', 'canApplyDiscountTakeOrder', 
+                    'canAccessOrders', 'canVoidOrders', 'canAccessPrinterReceipt', 
+                    'canAccessReceiptSetting', 'canAccessDeptPrinter', 'canAccessPrinters', 
+                    'canAccessPrinterQueue', 'canAccessAllOrders', 'canEditAllOrders', 
+                    'canAccessAllTransactions', 'canEditAllTransactions', 'canAccessShift', 
+                    'canEditFloat', 'canEditShiftStaff'
+                ].forEach(k => perms[k] = true);
+            } else if (prefix === 'waiter') {
+                [
+                    'canAccessTakeOrder', 'canAccessOrders', 'canAccessPrinterReceipt', 
+                    'canAccessPrinters', 'canAccessPrinterQueue'
+                ].forEach(k => perms[k] = true);
+            }
+
+            renderPermissionCheckboxes(perms);
+        };
+
+        function renderPermissionCheckboxes(savedPerms) {
+            let html = '';
+            permissionSchema.forEach(group => {
+                html += `<div class="mb-6">
+                    <h4 class="font-black text-slate-400 uppercase text-[10px] tracking-widest mb-3 border-b border-slate-100 pb-1">${group.group}</h4>
+                    <div class="space-y-2">`;
+                
+                let currentParentKey = null;
+                let currentSubParentKey = null;
+
+                group.perms.forEach(p => {
+                    const checked = savedPerms[p.key] === true ? 'checked' : '';
+                    const isLevel1 = p.label.startsWith('=') && !p.label.startsWith('==');
+                    const isLevel2 = p.label.startsWith('==');
+                    const isParent = !p.label.startsWith('=');
+
+                    let margin = 'ml-0';
+                    let parentData = '';
+                    let hiddenStyle = '';
+
+                    if (isParent) {
+                        currentParentKey = p.key;
+                        currentSubParentKey = null;
+                    } else if (isLevel1) {
+                        margin = 'ml-4';
+                        parentData = `data-parent="${currentParentKey}"`;
+                        if (savedPerms[currentParentKey] !== true) hiddenStyle = 'display: none;';
+                        currentSubParentKey = p.key;
+                    } else if (isLevel2) {
+                        margin = 'ml-8';
+                        parentData = `data-parent="${currentSubParentKey}"`;
+                        if (savedPerms[currentSubParentKey] !== true) hiddenStyle = 'display: none;';
+                    }
+
+                    html += `<label id="label_${p.key}" class="flex items-center gap-3 p-2 hover:bg-slate-50 rounded-xl transition-colors cursor-pointer ${margin}" style="${hiddenStyle}" ${parentData}>
+                        <input type="checkbox" id="perm_${p.key}" ${checked} onchange="togglePermGroup('${p.key}')" class="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+                        <span class="text-sm font-medium ${!isParent ? 'text-slate-500' : 'text-slate-700'}">${p.label.replace(/=/g, '').trim()}</span>
+                    </label>`;
+                });
+                html += `</div></div>`;
+            });
+            document.getElementById('rolePermissions').innerHTML = html;
+        }
+
         window.saveRole = async function() {
             const editingId = document.getElementById('editingRoleId').value;
             const roleId = editingId || document.getElementById('roleId').value.toLowerCase();
+            if (!roleId) return;
+
             const perms = {};
-            ['canAddStaff', 'canApplyDiscount', 'canEditMenu', 'canProcessRefund', 'canViewReports', 'canVoidOrder'].forEach(p => {
-                perms[p] = document.getElementById(`perm_${p}`)?.checked || false;
-            });
+            permissionSchema.forEach(g => g.perms.forEach(p => {
+                perms[p.key] = document.getElementById(`perm_${p.key}`)?.checked || false;
+            }));
             
             await setDoc(doc(db, 'licenses', currentClientId, 'roles', roleId), perms);
             closeModal('addRoleModal');
         };
 
         window.deleteRole = async function(roleId) {
+            if (!checkPermission('canDeleteRoles')) { alert('Your role cannot delete roles'); return; }
+            if (roleId === 'manager') { alert('Manager role cannot be deleted'); return; }
             if (confirm('Delete role?')) {
                 await deleteDoc(doc(db, 'licenses', currentClientId, 'roles', roleId));
             }
@@ -8185,6 +8401,10 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
         };
 
         window.saveOrderEdit = async function() {
+            if (!checkPermission('canEditAllOrders')) {
+                alert('Your role cannot edit order details');
+                return;
+            }
             const orderId = document.getElementById('editOrderId').value;
             const status = document.getElementById('editOrderStatus').value;
             const orderType = document.getElementById('editOrderType').value;
@@ -8216,6 +8436,10 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
         };
 
         window.deleteOrder = async function(orderId) {
+            if (!checkPermission('canDeleteAllOrders')) {
+                alert('Your role cannot delete orders');
+                return;
+            }
             if (!confirm('Are you sure you want to delete this order? This action cannot be undone.')) return;
             
             const orderSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', orderId));
@@ -8387,6 +8611,10 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
         };
 
         window.saveTransactionEdit = async function() {
+            if (!checkPermission('canEditAllTransactions')) {
+                alert('Your role cannot edit transactions');
+                return;
+            }
             const transId = document.getElementById('editTransactionId').value;
             const paymentMethod = document.getElementById('editTransactionMethod').value;
             const status = document.getElementById('editTransactionStatus').value;
@@ -8402,6 +8630,10 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
         };
 
         window.deleteTransaction = async function(transId) {
+            if (!checkPermission('canDeleteAllTransactions')) {
+                alert('Your role cannot delete transactions');
+                return;
+            }
             if (!confirm('Are you sure you want to delete this transaction?')) return;
             
             await deleteDoc(doc(db, 'licenses', currentClientId, 'transactions', transId));
@@ -8643,10 +8875,13 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                         isServed = true;
                     }
                 }
-                const cardClass = isServed ? 'served' : (isOccupied ? 'occupied' : '');
+                const cardClass = isServed ? 'served' : (isOccupied ? 'occupied' : (table.status === 'reserved' ? 'reserved' : (table.status === 'disable' ? 'disable' : '')));
+
+                const disableIcon = table.status === 'disable' ? '<div style="position:absolute; top:5px; right:5px; color:#ef4444; font-size:1.2rem;"><i class="fas fa-times-circle"></i></div>' : '';
 
                 return `
                     <div class="table-card-takeorder ${cardClass}" onclick="selectTableTakeOrder('${table.id}', '${table.id.toUpperCase()}')">
+                        ${disableIcon}
                         <div class="table-number-takeorder">${table.id.toUpperCase()}</div>
                         <div class="capacity-takeorder"><i class="fas fa-user"></i> ${table.capacity || 4} pax</div>
                         <div style="font-size:0.7rem;margin-top:3px;">${isServed ? 'ready' : (table.status || 'available')}</div>
@@ -8657,6 +8892,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
 
         window.selectTableTakeOrder = function(tableId, tableNumber) {
             const table = tablesListTakeOrder.find(t => t.id === tableId);
+            if (table && table.status === 'disable') return;
             if (table && table.status === 'occupied') {
                 showTableDetailsTakeOrder(tableId, tableNumber);
             } else {
@@ -8854,6 +9090,11 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
         }
 
         window.navigateToOrderEdit = function() {
+            if (!checkPermission('canAccessOrders')) {
+                alert('Your role cannot access the Orders tab');
+                return;
+            }
+            
             if (selectedOrderIdsForCheckout.length !== 1) return;
             const orderId = selectedOrderIdsForCheckout[0];
             
@@ -8877,6 +9118,10 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
         };
 
         window.completeOrderFromTableDetails = async function(orderId) {
+            if (!checkPermission('canCashierTakeOrder')) {
+                alert('Your role cannot perform checkout actions');
+                return;
+            }
             if (!confirm('Finalize this order and mark as completed?')) return;
             
             const tableId = selectedTableIdTakeOrder;
@@ -8899,6 +9144,10 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
         };
 
         window.openCheckoutFromTable = async function() {
+            if (!checkPermission('canCashierTakeOrder')) {
+                alert('Your role cannot access the cashier');
+                return;
+            }
             const tableId = selectedTableIdTakeOrder;
             document.getElementById('checkoutTableNum').innerText = selectedTableNumberTakeOrder;
             const itemsContainer = document.getElementById('checkoutOrderItems');
@@ -9032,6 +9281,10 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
         };
 
         window.openQuickServiceCheckout = function() {
+            if (!checkPermission('canCashierTakeOrder')) {
+                alert('Your role cannot perform checkout actions');
+                return;
+            }
             document.getElementById('checkoutTableNum').innerText = selectedTableNumberTakeOrder;
             const itemsContainer = document.getElementById('checkoutOrderItems');
             const totalsContainer = document.getElementById('checkoutTotals');
@@ -9290,11 +9543,13 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
         }
 
         window.toggleVoidMode = function() {
+            if (!checkPermission('canVoidTakeOrder')) { alert('Your role cannot void items'); return; }
             setVoidModeTakeOrder(!isVoidModeTakeOrder);
         };
 
         window.setVoidModeTakeOrder = function(on) {
             isVoidModeTakeOrder = on;
+            if (on && !checkPermission('canVoidTakeOrder')) { isVoidModeTakeOrder = false; return; }
             const btn = document.getElementById('voidToggleBtn');
             if (btn) {
                 const icon = btn.querySelector('i');
@@ -9393,6 +9648,8 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             if (isQuickServiceMode && source === 'checkout') {
                 const cartItem = cartTakeOrder.find(it => it.cartId === itemId);
                 if (qtyToVoid >= maxQty) {
+                    // Note: Checking canVoidTakeOrder is implicitly done because this modal
+                    // is triggered by voidItemFromCheckout which is guarded.
                     cartTakeOrder = cartTakeOrder.filter(it => it.cartId !== itemId);
                 } else {
                     cartItem.qty -= qtyToVoid;
@@ -9407,6 +9664,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             try {
                 if (qtyToVoid >= maxQty) {
                     if (source === 'orders') {
+                        if (!checkPermission('canVoidOrders')) { alert('Your role cannot void orders'); return; }
                         await updateItemStatusOrdersTab(orderId, itemId, 'cancelled');
                     } else {
                         await performFullVoidLogic(orderId, itemId);
@@ -9450,6 +9708,10 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
         };
 
         window.voidItemFromCheckout = async function(orderId, itemId, price) {
+            if (!checkPermission('canVoidTakeOrder')) {
+                alert('Your role cannot void items');
+                return;
+            }
             const row = document.getElementById(`chk-item-${itemId}`);
             const maxQty = parseFloat(row.getAttribute('data-max-qty'));
             const isMeasurement = row.getAttribute('data-sold-by') === 'measurement';
@@ -10084,6 +10346,10 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
         };
 
         window.openCheckoutDiscountModal = function() {
+            if (!checkPermission('canApplyDiscountTakeOrder')) {
+                alert('Your role cannot apply discounts');
+                return;
+            }
             const container = document.getElementById('checkoutDiscountList');
             const activeDiscounts = allDiscounts.filter(d => d.active === true);
             
@@ -10137,6 +10403,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
         };
 
         window.confirmChangeTableTakeOrder = async function(newTableId, newTableNum) {
+            if (!checkPermission('canEditAllOrders')) { alert('Your role cannot move tables'); return; }
             const oldTableId = selectedTableIdTakeOrder;
             const destTable = tablesListTakeOrder.find(t => t.id === newTableId);
             const isMerging = destTable && destTable.status === 'occupied';
@@ -10195,6 +10462,10 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
         };
 
         window.addItemsToOccupiedTable = function() {
+            if (!checkPermission('canAccessTakeOrder')) {
+                alert('Your role cannot add items to orders');
+                return;
+            }
             closeModal('tableDetailsModalTakeOrder');
             selectedOrderTypeTakeOrder = 'dine-in';
             document.getElementById('tableSectionTakeOrder').style.display = 'none';
@@ -10268,6 +10539,10 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
         };
 
         window.toggleEditLayout = function() {
+            if (!checkPermission('canEditTableLayout')) {
+                alert('Your role cannot edit the table layout');
+                return;
+            }
             isEditingLayout = !isEditingLayout;
             updateLayoutEditButtons();
             renderTableLayout();
@@ -10291,6 +10566,10 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
         };
 
         window.saveTableLayout = async function() {
+            if (!checkPermission('canEditTableLayout')) {
+                alert('Your role cannot save the table layout');
+                return;
+            }
             try {
                 const ref = doc(db, 'licenses', currentClientId, 'settings', 'table_layout');
                 await setDoc(ref, tableLayouts, { merge: true });
@@ -10354,15 +10633,24 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                     tableEl.style.opacity = '0.4';
                     tableEl.style.cursor = 'default';
                 } else {
-                    tableEl.style.background = isServed ? '#004fa6' : (isOccupied ? '#ff9800' : 'white');
-                    tableEl.style.color = (isOccupied || isServed) ? 'white' : '#1e293b';
+                    if (table.status === 'disable') {
+                        tableEl.style.background = '#cbd5e0';
+                        tableEl.style.color = '#475569';
+                    } else if (table.status === 'reserved') {
+                        tableEl.style.background = '#ef4444';
+                        tableEl.style.color = 'white';
+                    } else {
+                        tableEl.style.background = isServed ? '#004fa6' : (isOccupied ? '#ff9800' : 'white');
+                        tableEl.style.color = (isOccupied || isServed) ? 'white' : '#1e293b';
+                    }
                 }
 
                 if (isEditingLayout) tableEl.style.border = '2px solid #764ba2';
 
                 const label = isCounter ? 'COUNTER' : table.id.toUpperCase();
                 const subLabel = isCounter ? 'WALK-IN' : `${table.capacity} PAX`;
-                tableEl.innerHTML = `<div style="font-weight: 800; font-size: 1.1rem;">${label}</div><div style="font-size: 0.6rem; opacity: 0.8;">${subLabel}</div>${isEditingLayout ? '<div style="position:absolute; top:-5px; right:-5px; width:20px; height:20px; background:#764ba2; color:white; border-radius:50%; font-size:10px; display:flex; align-items:center; justify-content:center;"><i class="fas fa-cog"></i></div>' : ''}`;
+                const disableIconLayout = (table.status === 'disable' && !isEditingLayout) ? '<div style="position:absolute; top:2px; right:2px; color:#ef4444; font-size:14px;"><i class="fas fa-times-circle"></i></div>' : '';
+                tableEl.innerHTML = `${disableIconLayout}<div style="font-weight: 800; font-size: 1.1rem;">${label}</div><div style="font-size: 0.6rem; opacity: 0.8;">${subLabel}</div>${isEditingLayout ? '<div style="position:absolute; top:-5px; right:-5px; width:20px; height:20px; background:#764ba2; color:white; border-radius:50%; font-size:10px; display:flex; align-items:center; justify-content:center;"><i class="fas fa-cog"></i></div>' : ''}`;
 
                 if (!isCounter) {
                     renderChairs(tableEl, parseInt(table.capacity) || 2, isOccupied || isServed, shape, tWidth, tHeight);
@@ -10487,6 +10775,11 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             const tableId = editingTableStyleId;
             if (!tableId) return;
             
+            if (!checkPermission('canEditTableLayout')) {
+                alert('Your role cannot change table styles');
+                return;
+            }
+            
             const shape = document.getElementById('tableStyleShape').value;
             const size = document.getElementById('tableStyleSize').value;
             const rotation = parseInt(document.getElementById('tableStyleRotation').value);
@@ -10503,6 +10796,10 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
         };
 
         window.openAddDecorModal = function() {
+            if (!checkPermission('canEditTableLayout')) {
+                alert('Your role cannot add layout items');
+                return;
+            }
             document.getElementById('addDecorModal').style.display = 'flex';
         };
 
@@ -10562,12 +10859,20 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
         };
 
         window.saveDecorStyle = function() {
+            if (!checkPermission('canEditTableLayout')) {
+                alert('Your role cannot edit layout items');
+                return;
+            }
             applyDecorStylePreview();
             closeModal('decorStyleModal');
             currentEditingDecorId = null;
         };
 
         window.deleteDecoration = function() {
+            if (!checkPermission('canEditTableLayout')) {
+                alert('Your role cannot delete layout items');
+                return;
+            }
             if (currentEditingDecorId && confirm('Delete this layout item?')) {
                 tableLayouts[currentLayoutDevice].decorations = tableLayouts[currentLayoutDevice].decorations.filter(d => d.id !== currentEditingDecorId);
                 closeModal('decorStyleModal');
@@ -12069,6 +12374,10 @@ window.openSearchModalTakeOrder = function() {
         }
 
         window.updateOrderStatus = async function(orderId, status) {
+            if (status === 'cancelled' && !checkPermission('canVoidOrders')) {
+                alert('Your role cannot cancel orders');
+                return;
+            }
             const orderRef = doc(db, 'licenses', currentClientId, 'orders', orderId);
             const itemsSnap = await getDocs(collection(db, 'licenses', currentClientId, 'orders', orderId, 'items'));
             const itemsDocs = itemsSnap.docs;
@@ -12140,6 +12449,7 @@ window.openSearchModalTakeOrder = function() {
         };
 
         window.toggleVoidModeOrdersTab = function() {
+            if (!checkPermission('canVoidOrders')) { alert('Your role cannot void orders'); return; }
             isVoidModeOrdersTab = !isVoidModeOrdersTab;
             const btn = document.getElementById('voidToggleBtnOrdersTab');
             if (btn) {
@@ -12148,6 +12458,7 @@ window.openSearchModalTakeOrder = function() {
             }
             loadActiveOrders();
         };
+
 
         window.voidItemFromOrdersTab = async function(orderId, itemId, itemTotal, itemQty, itemName, soldBy) {
             const maxQty = parseFloat(itemQty);
@@ -12171,6 +12482,10 @@ window.openSearchModalTakeOrder = function() {
 
         window.updateItemStatusOrdersTab = async function(orderId, itemId, newStatus) {
             if (newStatus === 'cancelled' && !confirm('Are you sure you want to cancel this item?')) return;
+            if (newStatus === 'cancelled' && !checkPermission('canVoidOrders')) {
+                alert('Your role cannot cancel items from existing orders');
+                return;
+            }
 
             const itemRef = doc(db, 'licenses', currentClientId, 'orders', orderId, 'items', itemId);
             const itemSnap = await getDoc(itemRef);
@@ -13204,6 +13519,10 @@ window.openSearchModalTakeOrder = function() {
             const itemsPaid = paymentInfo?.itemsPaid || null;
             const orderSeq = item.orderSequence;
 
+             // Check access permission for reprint
+            if (item.printerDeptName === 'Receipt' && !checkPermission('canAccessReceiptSetting')) return;
+            if (item.printerDeptName !== 'Receipt' && !checkPermission('canAccessDeptPrinter')) return;
+
             const orderIds = item.orderId ? item.orderId.split(',') : [];
             
             // Collect unique order types for reprint
@@ -14151,30 +14470,84 @@ window.openSearchModalTakeOrder = function() {
 
         window.updateRoleBasedUI = function() {
             if (!currentStaff) return;
+            
+            const p = currentStaff.permissions || {};
             const isManager = currentStaff.role === 'manager';
-            const displayStyle = isManager ? 'block' : 'none';
-            const miniSectionDisplay = isManager ? 'flex' : 'none';
 
-            // Main Sidebar Sections
-            const mgtMenu = document.getElementById('managerMenu');
-            if (mgtMenu) mgtMenu.style.display = displayStyle;
-            const settingsMenu = document.getElementById('settingsMenu');
-            if (settingsMenu) settingsMenu.style.display = 'block'; // Settings visible to all
+            // Helper to toggle visibility based on permission key or manager status
+            const toggle = (selector, key) => {
+                const elements = document.querySelectorAll(selector);
+                const hasAccess = isManager || p[key] === true;
+                elements.forEach(el => el.style.display = hasAccess ? '' : 'none');
+                return hasAccess;
+            };
 
-            // Mini Sidebar Sections
+            // Operations Tabs
+            toggle('.perm-qs', 'canAccessQuickService');
+            toggle('.perm-to', 'canAccessTakeOrder');
+            toggle('.perm-ao', 'canAccessOrders');
+            
+            const hasPrAccess = toggle('.perm-pr', 'canAccessPrinterReceipt');
+            // Sub-printer tabs - they reside inside the printerSubMenu and miniPrinterFlyout
+            if (hasPrAccess) {
+                const prSub = document.getElementById('printerSubMenu');
+                const miniPrSub = document.getElementById('miniPrinterFlyout');
+                const prItems = checkPermission('canAccessReceiptSetting');
+                const dpItems = checkPermission('canAccessDeptPrinter');
+                const pItems = checkPermission('canAccessPrinters');
+                const pqItems = checkPermission('canAccessPrinterQueue');
+
+                if (prSub) {
+                    const items = prSub.querySelectorAll('.menu-item');
+                    if (items[0]) items[0].style.display = prItems ? '' : 'none';
+                    if (items[1]) items[1].style.display = dpItems ? '' : 'none';
+                    if (items[2]) items[2].style.display = pItems ? '' : 'none';
+                    if (items[3]) items[3].style.display = pqItems ? '' : 'none';
+                }
+                if (miniPrSub) {
+                    const items = miniPrSub.querySelectorAll('.mini-item');
+                    if (items[0]) items[0].style.display = prItems ? '' : 'none';
+                    if (items[1]) items[1].style.display = dpItems ? '' : 'none';
+                    if (items[2]) items[2].style.display = pItems ? '' : 'none';
+                    if (items[3]) items[3].style.display = pqItems ? '' : 'none';
+                }
+            }
+
+            toggle('.perm-allo', 'canAccessAllOrders');
+            toggle('.perm-allt', 'canAccessAllTransactions');
+            toggle('.perm-sh', 'canAccessShift');
+
+            // Management Section
+            const mgtGroup = document.getElementById('managerMenu');
+            const miniMgtGroup = document.getElementById('miniMgtSection');
             const miniMgtHeader = document.getElementById('miniMgtHeader');
-            const miniMgtSection = document.getElementById('miniMgtSection');
-            const miniMgtSeparator = document.getElementById('miniMgtSeparator');
-            const miniSettingsHeader = document.getElementById('miniSettingsHeader');
-            const miniSettingsSection = document.getElementById('miniSettingsSection');
-            const miniSettingsSeparator = document.getElementById('miniSettingsSeparator');
 
-            if (miniMgtHeader) miniMgtHeader.style.display = displayStyle;
-            if (miniMgtSection) miniMgtSection.style.display = miniSectionDisplay;
-            if (miniMgtSeparator) miniMgtSeparator.style.display = displayStyle;
-            if (miniSettingsHeader) miniSettingsHeader.style.display = 'block'; // Settings header visible to all
-            if (miniSettingsSection) miniSettingsSection.style.display = 'flex'; // Settings container visible to all
-            if (miniSettingsSeparator) miniSettingsSeparator.style.display = 'block'; // Settings separator visible to all
+            const mgtPerms = [
+                { sel: '[onclick*="dashboard"]', key: 'canAccessDashboard' },
+                { sel: '[onclick*="menu"]', key: 'canAccessMenuItems' },
+                { sel: '[onclick*="categories"]', key: 'canAccessCategories' },
+                { sel: '[onclick*="variants"]', key: 'canAccessVariants' },
+                { sel: '[onclick*="modifiers"]', key: 'canAccessModifiers' },
+                { sel: '[onclick*="tables"]', key: 'canAccessTables' },
+                { sel: '[onclick*="discounts"]', key: 'canAccessDiscounts' },
+                { sel: '[onclick*="staff"]', key: 'canAccessStaff' },
+                { sel: '[onclick*="roles"]', key: 'canAccessRoles' },
+                { sel: '[onclick*="tax"]', key: 'canAccessTax' },
+                { sel: '[onclick*="reports"]', key: 'canAccessReports' }
+            ];
+
+            let anyMgt = isManager;
+            mgtPerms.forEach(item => {
+                const access = toggle(item.sel, item.key);
+                if (access) anyMgt = true;
+            });
+
+            if (mgtGroup) mgtGroup.style.display = anyMgt ? '' : 'none';
+            if (miniMgtGroup) miniMgtGroup.style.display = anyMgt ? '' : 'none';
+            if (miniMgtHeader) miniMgtHeader.style.display = anyMgt ? '' : 'none';
+            
+            // Always show settings
+            document.getElementById('settingsMenu').style.display = '';
         };
 
         // Check existing session
