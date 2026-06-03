@@ -3132,8 +3132,17 @@
                 <input type="text" id="menuItemName">
             </div>
             <div class="form-group">
-                <label>Image URL</label>
-                <input type="text" id="menuItemImage" placeholder="https://example.com/image.jpg">
+                <label>Item Image</label>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <div id="menuItemImagePreview" style="width: 100px; height: 100px; border: 2px dashed #cbd5e0; border-radius: 16px; display: flex; align-items: center; justify-content: center; overflow: hidden; background: #f8fafc;">
+                        <span style="color: #94a3b8; font-size: 0.7rem; text-align: center; padding: 10px;">No Image</span>
+                    </div>
+                    <input type="file" id="menuItemImageFile" accept="image/*" onchange="previewMenuItemImage(this)" style="display: none;">
+                    <button type="button" class="btn-small" onclick="document.getElementById('menuItemImageFile').click()" style="width: fit-content; background: #764ba2;">
+                        <i class="fas fa-upload mr-2"></i> Choose Image
+                    </button>
+                    <input type="hidden" id="menuItemImage">
+                </div>
             </div>
             <div class="form-group">
                 <label>Sold By</label>
@@ -5621,6 +5630,8 @@
             document.getElementById('menuItemName').value = '';
             document.getElementById('menuItemImage').value = '';
             document.getElementById('menuItemPrice').value = '';
+            document.getElementById('menuItemImageFile').value = '';
+            document.getElementById('menuItemImagePreview').innerHTML = '<span style="color: #94a3b8; font-size: 0.7rem; text-align: center; padding: 10px;">No Image</span>';
             document.querySelectorAll('input[name="soldBy"]').forEach(r => r.checked = r.value === 'item');
             document.getElementById('menuItemUnit').value = '';
             toggleSoldBy('item');
@@ -5654,6 +5665,12 @@
             document.getElementById('menuItemName').value = item.name || '';
             document.getElementById('menuItemImage').value = item.image || '';
             document.getElementById('menuItemPrice').value = item.price || '';
+            document.getElementById('menuItemImageFile').value = '';
+            if (item.image) {
+                document.getElementById('menuItemImagePreview').innerHTML = `<img src="${item.image}" style="width:100%; height:100%; object-fit:cover;">`;
+            } else {
+                document.getElementById('menuItemImagePreview').innerHTML = '<span style="color: #94a3b8; font-size: 0.7rem; text-align: center; padding: 10px;">No Image</span>';
+            }
             document.querySelectorAll('input[name="soldBy"]').forEach(r => r.checked = r.value === (item.soldBy || 'item'));
             document.getElementById('menuItemUnit').value = item.unit || '';
             toggleSoldBy(item.soldBy || 'item', !!item.unit);
@@ -5870,30 +5887,72 @@
 
         window.saveMenuItem = async function() {
             const id = document.getElementById('editingMenuItemId').value;
-            const data = {
-                name: document.getElementById('menuItemName').value,
-                image: document.getElementById('menuItemImage').value,
-                soldBy: document.querySelector('input[name="soldBy"]:checked').value,
-                unit: document.getElementById('menuItemUnit').value,
-                price: document.getElementById('menuItemPrice').value,
-                categoryId: document.getElementById('menuItemCategory').value,
-                preparationTime: document.getElementById('menuItemPrepTime').value,
-                color: document.getElementById('menuItemColor').value,
-                shape: document.getElementById('menuItemShape').value,
-                active: document.getElementById('menuItemActive').checked,
-                variants: tempSelectedVariants,
-                modifiers: tempSelectedModifiers,
-                updatedAt: Timestamp.now()
-            };
-            
-            if (!id) data.createdAt = Timestamp.now();
-            
-            if (id) {
-                await updateDoc(doc(db, 'licenses', currentClientId, 'menu_items', id), data);
-            } else {
-                await addDoc(collection(db, 'licenses', currentClientId, 'menu_items'), data);
+            const name = document.getElementById('menuItemName').value;
+            const imageFile = document.getElementById('menuItemImageFile').files[0];
+            let imageUrl = document.getElementById('menuItemImage').value;
+            let menuFileName = '';
+
+            if (!name) { alert('Enter menu item name'); return; }
+
+            try {
+                let itemRef;
+                if (id) {
+                    itemRef = doc(db, 'licenses', currentClientId, 'menu_items', id);
+                } else {
+                    itemRef = doc(collection(db, 'licenses', currentClientId, 'menu_items'));
+                }
+                const firestoreMenuDocId = itemRef.id;
+
+                if (imageFile) {
+                    const compressedBlob = await compressImage(imageFile, 50);
+                    const formData = new FormData();
+                    formData.append('clientId', currentClientId);
+                    formData.append('firestoreMenuDocId', firestoreMenuDocId);
+                    formData.append('menuImage', compressedBlob, imageFile.name);
+                    formData.append('menuFileName', imageFile.name);
+                    formData.append('menuFileSize', (compressedBlob.size / 1024).toFixed(2) + ' KB');
+
+                    let pbRecord;
+                    // Check if a record already exists for this menu item to update instead of create
+                    const existingList = await pb.collection('VRPOS_CLIENT_MENU_IMAGE').getList(1, 1, {
+                        filter: `firestoreMenuDocId = "${firestoreMenuDocId}" && clientId = "${currentClientId}"`
+                    });
+
+                    if (existingList.items.length > 0) {
+                        pbRecord = await pb.collection('VRPOS_CLIENT_MENU_IMAGE').update(existingList.items[0].id, formData);
+                    } else {
+                        pbRecord = await pb.collection('VRPOS_CLIENT_MENU_IMAGE').create(formData);
+                    }
+
+                    imageUrl = `https://pocketbase.venturerushtech.com/api/files/${pbRecord.collectionId}/${pbRecord.id}/${pbRecord.menuImage}`;
+                    menuFileName = imageFile.name;
+
+                    await pb.collection('VRPOS_CLIENT_MENU_IMAGE').update(pbRecord.id, { menuImageUrl: imageUrl });
+                }
+
+                const data = {
+                    name: name,
+                    image: imageUrl,
+                    menuFileName: menuFileName || (id ? ((await getDoc(itemRef)).data().menuFileName || '') : ''),
+                    soldBy: document.querySelector('input[name="soldBy"]:checked').value,
+                    unit: document.getElementById('menuItemUnit').value,
+                    price: document.getElementById('menuItemPrice').value,
+                    categoryId: document.getElementById('menuItemCategory').value,
+                    preparationTime: document.getElementById('menuItemPrepTime').value,
+                    color: document.getElementById('menuItemColor').value,
+                    shape: document.getElementById('menuItemShape').value,
+                    active: document.getElementById('menuItemActive').checked,
+                    variants: tempSelectedVariants,
+                    modifiers: tempSelectedModifiers,
+                    updatedAt: Timestamp.now()
+                };
+                if (!id) data.createdAt = Timestamp.now();
+                await setDoc(itemRef, data, { merge: true });
+                closeModal('addMenuItemModal');
+            } catch (err) {
+                console.error(err);
+                alert("Save failed: " + err.message);
             }
-            closeModal('addMenuItemModal');
         };
 
         window.deleteMenuItem = async function(id) {
@@ -5901,6 +5960,49 @@
                 await deleteDoc(doc(db, 'licenses', currentClientId, 'menu_items', id));
             }
         };
+
+        window.previewMenuItemImage = function(input) {
+            const preview = document.getElementById('menuItemImagePreview');
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.innerHTML = `<img src="${e.target.result}" style="width:100%; height:100%; object-fit:cover;">`;
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        };
+
+        async function compressImage(file, maxSizeKB = 50) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.src = e.target.result;
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        let width = img.width;
+                        let height = img.height;
+                        const maxDim = 800;
+                        if (width > maxDim || height > maxDim) {
+                            if (width > height) { height = (height / width) * maxDim; width = maxDim; }
+                            else { width = (width / height) * maxDim; height = maxDim; }
+                        }
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+                        let quality = 0.8;
+                        let dataUrl = canvas.toDataURL('image/jpeg', quality);
+                        while (dataUrl.length > maxSizeKB * 1024 && quality > 0.1) { quality -= 0.05; dataUrl = canvas.toDataURL('image/jpeg', quality); }
+                        const bin = atob(dataUrl.split(',')[1]);
+                        const array = new Uint8Array(bin.length);
+                        for (let i = 0; i < bin.length; i++) array[i] = bin.charCodeAt(i);
+                        resolve(new Blob([array], { type: 'image/jpeg' }));
+                    };
+                };
+            });
+        }
 
         // ========== SHIFT LOGIC ==========
         function setupShiftListener() {
