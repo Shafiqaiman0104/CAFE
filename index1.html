@@ -3676,10 +3676,6 @@
                 <input type="checkbox" id="globalVariantRequired" checked>
                 <label>Required</label>
             </div>
-            <div class="checkbox-group">
-                <input type="checkbox" id="globalVariantMultiSelect">
-                <label>Multi-Select</label>
-            </div>
             <div class="options-container">
                 <div class="option-header">
                     <span>Option Name</span>
@@ -5484,7 +5480,6 @@
             document.getElementById('editingGlobalVariantId').value = '';
             document.getElementById('globalVariantName').value = '';
             document.getElementById('globalVariantRequired').checked = true;
-            document.getElementById('globalVariantMultiSelect').checked = false;
             document.getElementById('globalVariantOptionsContainer').innerHTML = '';
             globalVariantOptionsCount = 0;
             document.getElementById('globalVariantModal').style.display = 'flex';
@@ -5499,7 +5494,6 @@
             document.getElementById('editingGlobalVariantId').value = id;
             document.getElementById('globalVariantName').value = variant.name;
             document.getElementById('globalVariantRequired').checked = variant.required;
-            document.getElementById('globalVariantMultiSelect').checked = variant.multiSelect;
             
             const optionsRef = collection(db, 'licenses', currentClientId, 'global_variants', id, 'options');
             const qOptions = query(optionsRef, orderBy('createdAt', 'asc'));
@@ -5536,17 +5530,16 @@
             const id = document.getElementById('editingGlobalVariantId').value;
             const name = document.getElementById('globalVariantName').value;
             const required = document.getElementById('globalVariantRequired').checked;
-            const multiSelect = document.getElementById('globalVariantMultiSelect').checked;
             
             if (!name) { alert('Enter variant name'); return; }
             
             let variantRef;
             if (id) {
                 variantRef = doc(db, 'licenses', currentClientId, 'global_variants', id);
-                await setDoc(variantRef, { name, required, multiSelect, updatedAt: Timestamp.now() }, { merge: true });
+                await setDoc(variantRef, { name, required, updatedAt: Timestamp.now() }, { merge: true });
             } else {
                 variantRef = await addDoc(collection(db, 'licenses', currentClientId, 'global_variants'), {
-                    name, required, multiSelect, createdAt: Timestamp.now()
+                    name, required, createdAt: Timestamp.now()
                 });
             }
             
@@ -5998,7 +5991,7 @@
             
             let html = '';
             for (const v of tempSelectedVariants) {
-                const variantInfo = allGlobalVariants.find(gv => gv.id === v.id) || { required: true, multiSelect: false };
+                const variantInfo = allGlobalVariants.find(gv => gv.id === v.id) || { required: true };
                 const optionsRef = collection(db, 'licenses', currentClientId, 'global_variants', v.id, 'options');
                 const qOptions = query(optionsRef, orderBy('createdAt', 'asc'));
                 const optionsSnap = await getDocs(qOptions);
@@ -6012,9 +6005,6 @@
                                 <div style="display: flex; gap: 6px; margin-top: 5px;">
                                     <span style="font-size: 9px; background: ${variantInfo.required ? '#fee2e2' : '#f1f5f9'}; color: ${variantInfo.required ? '#ef4444' : '#64748b'}; padding: 2px 6px; border-radius: 6px; font-weight: 800; text-transform: uppercase; border: 1px solid ${variantInfo.required ? '#fecaca' : '#e2e8f0'};">
                                         ${variantInfo.required ? 'Required' : 'Optional'}
-                                    </span>
-                                    <span style="font-size: 9px; background: #e0f2fe; color: #0369a1; padding: 2px 6px; border-radius: 6px; font-weight: 800; text-transform: uppercase; border: 1px solid #bae6fd;">
-                                        ${variantInfo.multiSelect ? 'Multi-Select' : 'Single-Select'}
                                     </span>
                                 </div>
                             </div>
