@@ -7,6 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdn.jsdelivr.net/npm/pocketbase/dist/pocketbase.umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
             --app-zoom: 1;
@@ -2440,29 +2441,64 @@
         <div class="main-content">
             <!-- Dashboard Page -->
             <div id="dashboard" class="page active">
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-value" id="dashTotalOrders">0</div>
-                        <div class="stat-label">Today's Orders</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="dashTotalSales">RM 0</div>
-                        <div class="stat-label">Today's Sales</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="dashActiveTables">0</div>
-                        <div class="stat-label">Active Tables</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="dashTotalStaff">0</div>
-                        <div class="stat-label">Staff Members</div>
-                    </div>
+                <!-- No active shift overlay -->
+                <div id="dashNoShift" style="display: none; text-align: center; padding: 100px 20px; color: white;">
+                    <i class="fas fa-clock" style="font-size: 4rem; opacity: 0.5; margin-bottom: 20px; display: block;"></i>
+                    <h2 style="font-weight: 800; letter-spacing: 1px;">No current active shift</h2>
+                    <p style="opacity: 0.8; margin-top: 10px;">Please start a shift in the Shift Management tab to see real-time data.</p>
                 </div>
-                <div class="section-card">
-                    <div class="section-header">
-                        <span class="section-title">Recent Orders</span>
+
+                <!-- Active shift dashboard content -->
+                <div id="dashActiveShift" style="display: none;">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-value" id="dashShiftOrders">0</div>
+                            <div class="stat-label">Shift Orders</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="dashShiftSales">RM 0.00</div>
+                            <div class="stat-label">Shift Sales</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="dashShiftProfit">RM 0.00</div>
+                            <div class="stat-label">Shift Profit</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="dashShiftActiveTables">0</div>
+                            <div class="stat-label">Active Tables</div>
+                        </div>
                     </div>
-                    <div id="recentOrdersList"></div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                        <!-- Hourly Chart -->
+                        <div class="section-card" style="margin-bottom: 0;">
+                            <div class="section-header">
+                                <span class="section-title">Hourly Sales & Profit</span>
+                            </div>
+                            <div style="height: 300px; position: relative;">
+                                <canvas id="shiftChart"></canvas>
+                            </div>
+                        </div>
+                        <!-- Top Menu Items -->
+                        <div class="section-card" style="margin-bottom: 0;">
+                            <div class="section-header">
+                                <span class="section-title">Top Menu Items</span>
+                            </div>
+                            <div id="dashTopMenuItems" class="space-y-3">
+                                <!-- Items injected via JS -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Involved Staff -->
+                    <div class="section-card">
+                        <div class="section-header">
+                            <span class="section-title">Staff in Shift</span>
+                        </div>
+                        <div id="dashShiftStaffList">
+                            <!-- Staff injected via JS -->
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -5154,35 +5190,218 @@
         }
 
         // ========== DASHBOARD ==========
+        let dashboardUnsubs = [];
+        let shiftChart = null;
+
         async function loadDashboard() {
+            // Clear existing dashboard-specific listeners to avoid memory leaks
+            dashboardUnsubs.forEach(u => u());
+            dashboardUnsubs = [];
+
+            const noShiftEl = document.getElementById('dashNoShift');
+            const activeShiftEl = document.getElementById('dashActiveShift');
+
+            if (!isShiftActive || !shiftStartTime) {
+                if (noShiftEl) noShiftEl.style.display = 'block';
+                if (activeShiftEl) activeShiftEl.style.display = 'none';
+                return;
+            }
+
+            if (noShiftEl) noShiftEl.style.display = 'none';
+            if (activeShiftEl) activeShiftEl.style.display = 'block';
+
+            const startTS = Timestamp.fromDate(shiftStartTime);
+
+            // 1. Shift Orders & Sales
             const ordersRef = collection(db, 'licenses', currentClientId, 'orders');
-            const today = new Date(); today.setHours(0,0,0,0);
-            const q = query(ordersRef, where('createdAt', '>=', Timestamp.fromDate(today)));
+            const qOrders = query(ordersRef, where('createdAt', '>=', startTS));
             
-            onSnapshot(q, (snapshot) => {
-                let total = 0;
-                snapshot.forEach(d => total += parseFloat(d.data().total) || 0);
-                document.getElementById('dashTotalOrders').textContent = snapshot.size;
-                document.getElementById('dashTotalSales').textContent = `RM ${total.toFixed(2)}`;
-                
-                let recentHtml = '';
-                snapshot.docs.slice(0, 5).forEach(d => {
+            const unsubOrders = onSnapshot(qOrders, async (snapshot) => {
+                let shiftSales = 0;
+                let orderCount = 0;
+                const itemsCountMap = {};
+                const hourlyData = {}; 
+
+                // Build hourly intervals from shift start to now
+                const now = new Date();
+                let cursor = new Date(shiftStartTime);
+                cursor.setMinutes(0, 0, 0);
+                while (cursor <= now) {
+                    const label = cursor.getHours() + ':00';
+                    hourlyData[label] = { sales: 0, profit: 0 };
+                    cursor.setHours(cursor.getHours() + 1);
+                }
+
+                const itemFetchPromises = [];
+                snapshot.forEach(d => {
                     const o = d.data();
-                    recentHtml += `<div style="padding:10px;border-bottom:1px solid #eee;">${o.orderNumber} - RM ${o.total}</div>`;
+                    if (o.status !== 'cancelled') {
+                        orderCount++;
+                        shiftSales += parseFloat(o.total) || 0;
+                        
+                        const h = o.createdAt.toDate().getHours() + ':00';
+                        if (hourlyData[h]) hourlyData[h].sales += parseFloat(o.total) || 0;
+
+                        itemFetchPromises.push(getDocs(collection(db, 'licenses', currentClientId, 'orders', d.id, 'items')));
+                    }
                 });
-                document.getElementById('recentOrdersList').innerHTML = recentHtml || '<div class="loading">No orders today</div>';
+
+                document.getElementById('dashShiftOrders').innerText = orderCount;
+                document.getElementById('dashShiftSales').innerText = `RM ${shiftSales.toFixed(2)}`;
+
+                // Process Top Menu Items
+                const itemSnaps = await Promise.all(itemFetchPromises);
+                itemSnaps.forEach(itemsSnap => {
+                    itemsSnap.forEach(itDoc => {
+                        const it = itDoc.data();
+                        if (it.status !== 'cancelled') {
+                            const qty = (it.soldBy === 'measurement') ? 1 : (parseFloat(it.qty) || 0);
+                            itemsCountMap[it.name] = (itemsCountMap[it.name] || 0) + qty;
+                        }
+                    });
+                });
+                renderDashTopMenu(itemsCountMap);
+
+                // Fetch Transactions for Shift Profit
+                const transRef = collection(db, 'licenses', currentClientId, 'transactions');
+                const qTrans = query(transRef, where('createdAt', '>=', startTS));
+                const transSnap = await getDocs(qTrans);
+                
+                let shiftProfit = 0;
+                transSnap.forEach(td => {
+                    const t = td.data();
+                    if (t.status === 'completed') {
+                        shiftProfit += parseFloat(t.amount) || 0;
+                        const h = t.createdAt.toDate().getHours() + ':00';
+                        if (hourlyData[h]) hourlyData[h].profit += parseFloat(t.amount) || 0;
+                    }
+                });
+
+                document.getElementById('dashShiftProfit').innerText = `RM ${shiftProfit.toFixed(2)}`;
+                updateShiftChart(hourlyData);
             });
-            
+            dashboardUnsubs.push(unsubOrders);
+
+            // 2. Shift Active Tables
             const tablesRef = collection(db, 'licenses', currentClientId, 'tables');
-            onSnapshot(tablesRef, (snapshot) => {
-                const occupied = snapshot.docs.filter(d => d.data().status === 'occupied').length;
-                document.getElementById('dashActiveTables').textContent = occupied;
+            const unsubTables = onSnapshot(tablesRef, (snapshot) => {
+                const count = snapshot.docs.filter(d => ['occupied', 'served'].includes(d.data().status)).length;
+                document.getElementById('dashShiftActiveTables').innerText = count;
             });
+            dashboardUnsubs.push(unsubTables);
+
+            // 3. Involved Staff & Work Hours
+            const attRef = collection(db, 'licenses', currentClientId, 'attendance');
+            const qAtt = query(attRef, where('shiftId', '==', activeShiftId));
+            const unsubAtt = onSnapshot(qAtt, (snapshot) => {
+                const staffList = document.getElementById('dashShiftStaffList');
+                let html = `
+                    <div style="overflow-x: auto; background: white; border-radius: 16px; padding: 10px; border: 1px solid #f1f5f9;">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                            <thead>
+                                <tr style="border-bottom: 2px solid #f1f5f9; text-align: left; color: #64748b;">
+                                    <th style="padding: 10px;">Staff Name</th>
+                                    <th style="padding: 10px;">Clock In</th>
+                                    <th style="padding: 10px;">Working Hours</th>
+                                </tr>
+                            </thead>
+                            <tbody>`;
+
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const cin = data.clockIn.toDate();
+                    const cout = data.clockOut ? data.clockOut.toDate() : new Date();
+                    
+                    const diffMs = cout - cin;
+                    const hrs = Math.floor(diffMs / 3600000);
+                    const mins = Math.floor((diffMs % 3600000) / 60000);
+                    const duration = `${hrs}h ${mins}m`;
+
+                    html += `
+                        <tr style="border-bottom: 1px solid #f8fafc;">
+                            <td style="padding: 10px; font-weight: 700; color: #1e293b;">${data.staffName}</td>
+                            <td style="padding: 10px; color: #64748b;">${cin.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</td>
+                            <td style="padding: 10px;"><span class="status-badge status-preparing" style="font-size: 11px;">${duration}</span></td>
+                        </tr>`;
+                });
+                html += '</tbody></table></div>';
+                staffList.innerHTML = html;
+            });
+            dashboardUnsubs.push(unsubAtt);
+        }
+
+        function renderDashTopMenu(itemsMap) {
+            const container = document.getElementById('dashTopMenuItems');
+            const sorted = Object.entries(itemsMap).sort((a,b) => b[1] - a[1]).slice(0, 5);
             
-            const staffRef = collection(db, 'licenses', currentClientId, 'staff');
-            onSnapshot(staffRef, (snapshot) => {
-                document.getElementById('dashTotalStaff').textContent = snapshot.size;
-            });
+            if (sorted.length === 0) {
+                container.innerHTML = '<div style="text-align:center; padding:20px; color:#94a3b8; font-size: 0.85rem;">No items sold yet.</div>';
+                return;
+            }
+
+            container.innerHTML = sorted.map(([name, qty], idx) => `
+                <div class="flex items-center justify-between bg-slate-50 p-3 rounded-xl border border-slate-100">
+                    <div class="flex items-center gap-3">
+                        <span class="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-black text-[10px]">${idx+1}</span>
+                        <span class="font-bold text-slate-700 text-sm truncate max-w-[150px]">${name}</span>
+                    </div>
+                    <span class="font-black text-blue-600 bg-white px-3 py-1 rounded-lg border border-slate-100 text-xs">x${qty}</span>
+                </div>
+            `).join('');
+        }
+
+        function updateShiftChart(hourlyData) {
+            const ctx = document.getElementById('shiftChart');
+            if (!ctx) return;
+
+            const labels = Object.keys(hourlyData);
+            const salesData = labels.map(l => hourlyData[l].sales);
+            const profitData = labels.map(l => hourlyData[l].profit);
+
+            if (shiftChart) {
+                shiftChart.data.labels = labels;
+                shiftChart.data.datasets[0].data = salesData;
+                shiftChart.data.datasets[1].data = profitData;
+                shiftChart.update();
+            } else {
+                shiftChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'Sales',
+                                data: salesData,
+                                borderColor: '#667eea',
+                                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                                tension: 0.4,
+                                fill: true,
+                                borderWeight: 3
+                            },
+                            {
+                                label: 'Profit',
+                                data: profitData,
+                                borderColor: '#10b981',
+                                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                                tension: 0.4,
+                                fill: true,
+                                borderWeight: 3
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: true, position: 'top', labels: { boxWidth: 10, usePointStyle: true, font: { size: 10, weight: 'bold' } } }
+                        },
+                        scales: {
+                            y: { beginAtZero: true, grid: { display: true, color: '#f1f5f9' }, ticks: { font: { size: 10 } } },
+                            x: { grid: { display: false }, ticks: { font: { size: 10 } } }
+                        }
+                    }
+                });
+            }
         }
 
         // ========== GLOBAL VARIANTS ==========
@@ -6048,6 +6267,10 @@
                 updateShiftUI();
                 if (document.getElementById('takeOrder').classList.contains('active')) {
                     renderTableGridTakeOrder();
+                }
+                // Auto-refresh dashboard if currently viewing it
+                if (document.getElementById('dashboard').classList.contains('active')) {
+                    loadDashboard();
                 }
             });
         }
