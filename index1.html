@@ -9874,6 +9874,20 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                         paymentRecords.push({ amount: amount, method: row.dataset.type });
                     }
                 });
+
+                // Fix for non-tallying mixed transactions: 
+                // If total received is more than total due, the "Change" amount must be subtracted 
+                // from the Cash transaction record so that the recorded total matches the sales.
+                let changeAmount = totalReceived - checkoutTotalTakeOrder;
+                if (changeAmount > 0) {
+                    let cashRecord = paymentRecords.find(r => r.method === 'cash');
+                    if (cashRecord) {
+                        cashRecord.amount = parseFloat((cashRecord.amount - changeAmount).toFixed(2));
+                    } else if (paymentRecords.length > 0) {
+                        let lastRecord = paymentRecords[paymentRecords.length - 1];
+                        lastRecord.amount = parseFloat((lastRecord.amount - changeAmount).toFixed(2));
+                    }
+                }
             } else {
                 totalReceived = parseFloat(checkoutReceivedInput);
                 paymentRecords.push({ amount: checkoutTotalTakeOrder, method: checkoutPayMethod });
