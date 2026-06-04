@@ -2298,6 +2298,7 @@
                 <div class="mini-item" onclick="showPage('staff', true)" title="Staff" data-page="staff"><i class="fas fa-users"></i></div>
                 <div class="mini-item" onclick="showPage('roles', true)" title="Roles" data-page="roles"><i class="fas fa-shield-alt"></i></div>
                 <div class="mini-item" onclick="showPage('tax', true)" title="Tax Settings" data-page="tax"><i class="fas fa-percent"></i></div>
+                <div class="mini-item perm-rounding" onclick="showPage('rounding', true)" title="Cash Rounding" data-page="rounding"><i class="fas fa-coins"></i></div>
                 <div class="mini-item" onclick="showPage('reports', true)" title="Reports" data-page="reports"><i class="fas fa-chart-bar"></i></div>
             </div>
 
@@ -2426,6 +2427,9 @@
                         </div>
                         <div class="menu-item" onclick="showPage('tax')">
                             <i class="fas fa-percent"></i> Tax Settings
+                        </div>
+                        <div class="menu-item perm-rounding" onclick="showPage('rounding')">
+                            <i class="fas fa-coins"></i> Cash Rounding
                         </div>
                         <div class="menu-item" onclick="showPage('reports')">
                             <i class="fas fa-chart-bar"></i> Reports
@@ -2875,6 +2879,71 @@
                                 <i class="fas fa-print"></i> TEST PRINT RECEIPT
                             </button>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cash Rounding Page -->
+            <div id="rounding" class="page">
+                <div class="section-card">
+                    <div class="section-header">
+                        <span class="section-title">Cash Rounding Settings</span>
+                    </div>
+                    
+                    <div style="background: white; padding: 25px; border-radius: 20px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+                        <div style="display: flex; align-items: center; gap: 15px;">
+                            <div style="width: 50px; height: 50px; background: #f0e6ff; border-radius: 14px; display: flex; align-items: center; justify-content: center; color: #764ba2; font-size: 1.5rem;">
+                                <i class="fas fa-coins"></i>
+                            </div>
+                            <div>
+                                <div style="font-weight: 700; color: #1e293b;">Enable Rounding</div>
+                                <div id="roundingStatusText" style="font-size: 0.85rem; color: #64748b;">Round cash payments</div>
+                            </div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="roundingToggle" onchange="toggleRoundingFields(this.checked)">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <div id="roundingSettingsFields" style="display: none;">
+                        <div class="form-group">
+                            <label>Rounding Mode</label>
+                            <div class="order-type-switch-takeorder" style="background:#f1f5f9; padding: 5px; border-radius: 50px;">
+                                <div class="type-option-takeorder selected" id="modeBNM" onclick="setRoundingMode('bnm')">BNM AUTO</div>
+                                <div class="type-option-takeorder" id="modeCustom" onclick="setRoundingMode('custom')">CUSTOM</div>
+                            </div>
+                        </div>
+
+                        <div id="customRoundingFields" style="display: none; background: #f8fafc; padding: 20px; border-radius: 16px; border: 1px solid #e2e8f0; margin-bottom: 20px;">
+                            <div class="form-group">
+                                <label>Interval</label>
+                                <select id="roundingInterval" onchange="updateLiveRoundingPreview()">
+                                    <option value="0.05">0.05</option>
+                                    <option value="0.10">0.10</option>
+                                    <option value="0.50">0.50</option>
+                                    <option value="1.00">1.00</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Direction</label>
+                                <select id="roundingDirection" onchange="updateLiveRoundingPreview()">
+                                    <option value="up">Round Up</option>
+                                    <option value="down">Round Down</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div style="background: #f1f5f9; padding: 25px; border-radius: 20px; margin-bottom: 20px;">
+                            <label style="font-weight: 800; color: #475569; font-size: 0.75rem; text-transform: uppercase; margin-bottom: 15px; display: block;">Live Preview</label>
+                            <div class="form-group">
+                                <label>Total Amount (RM)</label>
+                                <input type="number" id="roundingPreviewInput" step="0.01" placeholder="0.00" oninput="updateLiveRoundingPreview()">
+                            </div>
+                            <div id="roundingPreviewResults" style="margin-top: 15px; font-weight: 700; color: #1e293b; font-size: 0.95rem;"></div>
+                        </div>
+
+                        <button class="btn" onclick="saveRoundingSettings()">Save Rounding Settings</button>
                     </div>
                 </div>
             </div>
@@ -4570,6 +4639,7 @@
         let allTransactionsSnapshotData = [];
         let isEarlyPaymentMode = false;
         let isVoidModeTakeOrder = false;
+        let roundingConfig = { active: false, mode: 'bnm', interval: '0.05', direction: 'up' };
         let voidingItemData = null;
         let isInitialLoadOrders = true;
         let isQuickServiceMode = false;
@@ -5167,6 +5237,7 @@
             else if (pageId === 'discounts') loadDiscounts();
             else if (pageId === 'tax') loadTaxSettings();
             else if (pageId === 'roles') loadRoles();
+            else if (pageId === 'rounding') loadRoundingSettings();
             else if (pageId === 'reports') loadReportsPage();
             else if (pageId === 'screenDisplay') loadScreenDisplay();
             else if (pageId === 'takeOrder') loadTakeOrderPage();
@@ -5264,6 +5335,15 @@
             const startTS = Timestamp.fromDate(shiftStartTime);
 
             // 1. Shift Orders & Sales
+            // Fetch Rounding Settings
+            try {
+                const roundRef = doc(db, 'licenses', currentClientId, 'settings', 'rounding');
+                const roundSnap = await getDoc(roundRef);
+                if (roundSnap.exists()) {
+                    roundingConfig = roundSnap.data();
+                }
+            } catch (e) { console.warn("Rounding settings fail", e); }
+
             const ordersRef = collection(db, 'licenses', currentClientId, 'orders');
             const qOrders = query(ordersRef, where('createdAt', '>=', startTS));
             
@@ -5288,10 +5368,13 @@
                     const o = d.data();
                     if (o.status !== 'cancelled') {
                         orderCount++;
-                        shiftSales += parseFloat(o.total) || 0;
+                        const roundedOrderTotal = (parseFloat(o.total) || 0) + (parseFloat(o.roundingAdjustment) || 0);
+                        shiftSales += roundedOrderTotal;
                         
                         const h = o.createdAt.toDate().getHours() + ':00';
-                        if (hourlyData[h]) hourlyData[h].sales += parseFloat(o.total) || 0;
+                        if (hourlyData[h]) {
+                            hourlyData[h].sales += roundedOrderTotal;
+                        }
 
                         itemFetchPromises.push(getDocs(collection(db, 'licenses', currentClientId, 'orders', d.id, 'items')));
                     }
@@ -6908,6 +6991,7 @@
             const transSnap = await getDocs(q);
             
             let cashTotal = 0, ewalletTotal = 0, cardTotal = 0;
+            let shiftRounding = 0;
             let totalTransactions = transSnap.size;
             let transTotalAmt = 0;
             let transCompletedCount = 0;
@@ -6925,6 +7009,7 @@
                 if (t.status === 'completed') {
                     transCompletedCount++;
                     transCompletedAmt += amt;
+                    shiftRounding += parseFloat(t.roundingAdjustment || 0);
                     if (t.paymentMethod === 'cash') cashTotal += amt;
                     else if (t.paymentMethod === 'ewallet') ewalletTotal += amt;
                     else if (t.paymentMethod === 'card') cardTotal += amt;
@@ -6979,7 +7064,8 @@
                 transCompletedAmt: transCompletedAmt,
                 transRefundedAmt: transRefundedAmt,
                 transFailedAmt: transFailedAmt,
-                profit: transTotalAmt - transFailedAmt - transRefundedAmt
+                profit: transTotalAmt - transFailedAmt - transRefundedAmt,
+                totalRounding: shiftRounding
             };
         };
 
@@ -7118,6 +7204,8 @@
                 const failAmt = parseFloat(s.transFailedAmt || 0);
                 const netProfit = parseFloat(s.profit || 0);
                 const loss = parseFloat(s.loss || 0);
+                const totalRounding = parseFloat(s.totalRounding || 0);
+                const grossProfit = netProfit - totalRounding;
                 const netTotal = netProfit - loss;
                 
                 const staffNames = Array.isArray(s.staffNames) ? s.staffNames.join(', ') : s.startedBy;
@@ -7144,7 +7232,11 @@
                         <div style="display: flex; justify-content: space-between; color: #475569;"><span>Total Gross Trans:</span> <b>RM ${totalTransAmt.toFixed(2)}</b></div>
                         <div style="display: flex; justify-content: space-between; color: #ed8936;"><span>Failed Amount:</span> <b>- RM ${failAmt.toFixed(2)}</b></div>
                         <div style="display: flex; justify-content: space-between; color: #e53e3e;"><span>Refunded Amount:</span> <b>- RM ${refAmt.toFixed(2)}</b></div>
-                        <div style="display: flex; justify-content: space-between; margin-top: 5px; color: #764ba2; font-weight: bold;"><span>Total Profit:</span> <span>RM ${netProfit.toFixed(2)}</span></div>
+                        <div style="display: flex; justify-content: space-between; margin-top: 5px; color: #475569;"><span>Profit (Before Rounding):</span> <b>RM ${grossProfit.toFixed(2)}</b></div>
+                        <div style="display: flex; justify-content: space-between; color: #64748b; font-size: 0.85rem;">
+                            <span>Total Rounding Adjustment:</span> <b>${totalRounding >= 0 ? '+' : ''}RM ${totalRounding.toFixed(2)}</b>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; color: #764ba2; font-weight: 800; font-size: 1rem; border-top: 1px solid #eee; margin-top: 5px; padding-top: 5px;"><span>Actual Total Profit:</span> <span>RM ${netProfit.toFixed(2)}</span></div>
                         <div style="display: flex; justify-content: space-between; color: #e53e3e;"><span>Loss/Shortage:</span> <span>RM ${loss.toFixed(2)}</span></div>
                         <div style="display: flex; justify-content: space-between; font-size: 1.1rem; font-weight: 800; margin-top: 10px; padding-top: 10px; border-top: 2px solid #eee;"><span>Net Total:</span> <span>RM ${netTotal.toFixed(2)}</span></div>
                     </div>
@@ -7291,7 +7383,7 @@
                         tableHtml += `
                             <tr style="border-bottom: 1px solid #f1f5f9;">
                                 <td style="padding:10px; color:${isCancelled ? '#e53e3e' : 'inherit'};">${o.orderNumber}${isCancelled ? ' (Cancelled)' : ''}</td>
-                                <td style="padding:10px;">RM ${o.total}</td>
+                                <td style="padding:10px;">RM ${(parseFloat(o.total) + (parseFloat(o.roundingAdjustment) || 0)).toFixed(2)}</td>
                                 <td style="padding:10px;"><button class="btn-view" style="padding: 5px 10px; font-size: 0.7rem;" onclick="viewOrderDetails('${doc.id}')">View Order</button></td>
                             </tr>
                         `;
@@ -7397,6 +7489,9 @@
                     <p><strong>Date:</strong> ${t.createdAt?.toDate().toLocaleString() || 'N/A'}</p>
                     <p><strong>Type:</strong> ${t.type || 'payment'}</p>
                     <p><strong>Method:</strong> ${t.paymentMethod || 'N/A'}</p>
+                    ${(parseFloat(t.roundingAdjustment) && Math.abs(parseFloat(t.roundingAdjustment)) > 0) ? `
+                    <p><strong>Rounding Adj:</strong> ${parseFloat(t.roundingAdjustment) >= 0 ? '+' : ''}RM ${parseFloat(t.roundingAdjustment).toFixed(2)}</p>
+                    ` : ''}
                     <p><strong>Amount:</strong> <b>RM ${parseFloat(t.amount).toFixed(2)}</b></p>
                 </div>
             `;
@@ -7958,6 +8053,121 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             alert('Tax settings saved!');
         };
 
+        // ========== CASH ROUNDING SETTINGS ==========
+        let roundingMode = 'bnm'; // Local UI state for settings page
+        window.loadRoundingSettings = async function() {
+            const ref = doc(db, 'licenses', currentClientId, 'settings', 'rounding');
+            const snap = await getDoc(ref);
+            const data = snap.exists() ? snap.data() : { active: false, mode: 'bnm', interval: '0.05', direction: 'up' };
+            
+            document.getElementById('roundingToggle').checked = data.active || false;
+            toggleRoundingFields(data.active || false);
+            setRoundingMode(data.mode || 'bnm', true);
+            document.getElementById('roundingInterval').value = data.interval || '0.05';
+            document.getElementById('roundingDirection').value = data.direction || 'up';
+            
+            updateLiveRoundingPreview();
+        };
+
+        window.toggleRoundingFields = function(checked) {
+            document.getElementById('roundingSettingsFields').style.display = checked ? 'block' : 'none';
+        };
+
+        window.setRoundingMode = function(mode, skipAlert = false) {
+            roundingMode = mode;
+            document.getElementById('modeBNM').classList.toggle('selected', mode === 'bnm');
+            document.getElementById('modeCustom').classList.toggle('selected', mode === 'custom');
+            document.getElementById('customRoundingFields').style.display = mode === 'custom' ? 'block' : 'none';
+            
+            if (mode === 'custom' && !skipAlert) {
+                alert("⚠️ Using custom intervals for cash transactions may violate local consumer protection laws in Malaysia.");
+            }
+            updateLiveRoundingPreview();
+        };
+
+        function calculateRoundedAmount(amount) {
+            if (!amount || isNaN(amount)) return amount;
+            if (!roundingConfig.active) return amount;
+            
+            // Work with cents (integers) to avoid floating point precision issues
+            const amountCents = Math.round(amount * 100);
+
+            if (roundingConfig.mode === 'bnm') {
+                // BNM Rounding Logic
+                // 1, 2, 6, 7 sen ---> ROUND DOWN
+                // 3, 4, 8, 9 sen ---> ROUND UP
+                // 0, 5 sen ---> No change
+                const lastDigit = amountCents % 10;
+                const baseCents = amountCents - lastDigit;
+
+                if (lastDigit === 1 || lastDigit === 2) return baseCents / 100;
+                if (lastDigit === 3 || lastDigit === 4) return (baseCents + 5) / 100;
+                if (lastDigit === 6 || lastDigit === 7) return (baseCents + 5) / 100;
+                if (lastDigit === 8 || lastDigit === 9) return (baseCents + 10) / 100;
+                return amountCents / 100;
+            } else {
+                const interval = parseFloat(roundingConfig.interval);
+                const intervalCents = Math.round(interval * 100);
+                if (roundingConfig.direction === 'up') {
+                    return (Math.ceil(amountCents / intervalCents) * intervalCents) / 100;
+                } else {
+                    return (Math.floor(amountCents / intervalCents) * intervalCents) / 100;
+                }
+            }
+        }
+
+        window.updateLiveRoundingPreview = function() {
+            const amount = parseFloat(document.getElementById('roundingPreviewInput').value);
+            const container = document.getElementById('roundingPreviewResults');
+            
+            if (isNaN(amount)) {
+                container.innerHTML = '';
+                return;
+            }
+
+            // Temporarily override config for preview only if settings page is open
+            const originalConfig = { ...roundingConfig };
+            roundingConfig = {
+                active: true,
+                mode: roundingMode,
+                interval: document.getElementById('roundingInterval').value,
+                direction: document.getElementById('roundingDirection').value
+            };
+
+            const rounded = calculateRoundedAmount(amount);
+            const diff = rounded - amount;
+            roundingConfig = originalConfig;
+            
+            container.innerHTML = `
+                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                    <span>Rounded Amount:</span>
+                    <span style="color: #764ba2;">RM ${rounded.toFixed(2)}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.8rem;">
+                    <span>Rounding Adjustment:</span>
+                    <span style="color: ${diff >= 0 ? '#38a169' : '#e53e3e'};">${diff >= 0 ? '+' : ''}RM ${diff.toFixed(2)}</span>
+                </div>
+            `;
+        };
+
+        window.saveRoundingSettings = async function() {
+            const data = {
+                active: document.getElementById('roundingToggle').checked,
+                mode: roundingMode,
+                interval: document.getElementById('roundingInterval').value,
+                direction: document.getElementById('roundingDirection').value,
+                updatedAt: Timestamp.now()
+            };
+            
+            try {
+                await setDoc(doc(db, 'licenses', currentClientId, 'settings', 'rounding'), data, { merge: true });
+                roundingConfig = { ...data };
+                alert('Rounding settings saved successfully!');
+            } catch (e) {
+                alert('Error saving rounding settings: ' + e.message);
+            }
+        };
+
         // ========== ROLES ==========
         const permissionSchema = [
             { group: "Operations", perms: [
@@ -7998,6 +8208,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                 { key: "canAccessStaff", label: "Access Staff Tab" },
                 { key: "canAddEditStaff", label: "= Can add / edit staff" },
                 { key: "canDeleteStaff", label: "= Can delete staff" },
+                { key: "canAccessRounding", label: "Access Cash Rounding Tab" },
                 { key: "canAccessRoles", label: "Access Role Tab" },
                 { key: "canAddEditRoles", label: "= Can add / edit role" },
                 { key: "canDeleteRoles", label: "= Can delete role" },
@@ -8251,7 +8462,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                             <div>Type: ${order.orderType || 'dine-in'}</div>
                             <div>Order by: ${order.staffName || 'Unknown'}</div>
                             <div>Cashier by: ${order.cashierBy || 'N/A'}</div>
-                            <div style="grid-column: span 2;">Total: <b>RM ${order.total}</b></div>
+                            <div style="grid-column: span 2;">Total: <b>RM ${(parseFloat(order.total) + (parseFloat(order.roundingAdjustment) || 0)).toFixed(2)}</b></div>
                         </div>
                         ${order.customerName ? `<div style="font-size: 13px; color: #444;">Customer: <strong>${order.customerName}</strong> (${order.customerPhone || 'No phone'})<br>Address: ${order.customerAddress || 'N/A'}</div>` : ''}
                         <div class="action-buttons" style="margin-top:10px;">
@@ -8375,9 +8586,14 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                         <span>Tax:</span>
                         <span>RM ${calculatedTax.toFixed(2)}</span>
                     </div>
+                    ${(parseFloat(order.roundingAdjustment) && Math.abs(parseFloat(order.roundingAdjustment)) > 0) ? `
+                    <div style="display:flex;justify-content:space-between;color:#64748b;">
+                        <span>Rounding Adjustment:</span>
+                        <span>${parseFloat(order.roundingAdjustment) >= 0 ? '+' : ''}RM ${parseFloat(order.roundingAdjustment).toFixed(2)}</span>
+                    </div>` : ''}
                     <div style="display:flex;justify-content:space-between;font-weight:bold;margin-top:5px;">
                         <span>Total:</span>
-                        <span>RM ${(calculatedTotal - (parseFloat(order.discountAmount) || 0)).toFixed(2)}</span>
+                        <span>RM ${(calculatedTotal - (parseFloat(order.discountAmount) || 0) + (parseFloat(order.roundingAdjustment) || 0)).toFixed(2)}</span>
                     </div>
                 </div>
             `;
@@ -9495,7 +9711,9 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                 }
             }
             
-            checkoutTotalTakeOrder = Math.max(0, totalAmount - discountValue);
+            const totalToRound = Math.max(0, totalAmount - discountValue);
+            checkoutTotalTakeOrder = calculateRoundedAmount(totalToRound);
+            const roundingAdjustment = checkoutTotalTakeOrder - totalToRound;
             
             const discContainer = document.getElementById('checkoutDiscountIconContainer');
             const discIcon = document.getElementById('checkoutDiscountIcon');
@@ -9520,6 +9738,13 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                 </div>`;
             }
 
+            let roundingHtml = '';
+            if (roundingConfig.active && Math.abs(roundingAdjustment) > 0.001) {
+                roundingHtml = `<div style="display:flex; justify-content:space-between; font-size:0.85rem; color:#64748b; margin-bottom:4px;">
+                    <span>Rounding Adjustment:</span><span>${roundingAdjustment >= 0 ? '+' : ''}RM ${roundingAdjustment.toFixed(2)}</span>
+                </div>`;
+            }
+
             totalsContainer.innerHTML = `
                 <div style="display:flex; justify-content:space-between; font-size:0.85rem; color:#64748b; margin-bottom:4px;">
                     <span>Selected Subtotal:</span><span>RM ${subtotal.toFixed(2)}</span>
@@ -9528,6 +9753,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                 <div style="display:flex; justify-content:space-between; font-size:0.85rem; color:#64748b; margin-bottom:10px; display: ${taxActive ? 'flex' : 'none'};">
                     <span>Tax (${currentTaxRate}%):</span><span>RM ${tax.toFixed(2)}</span>
                 </div>
+                ${roundingHtml}
                 <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:1.3rem; border-top:2px solid #f1f5f9; padding-top:10px; color:#1e293b;">
                     <span>Grand Total:</span><span>RM ${checkoutTotalTakeOrder.toFixed(2)}</span>
                 </div>`;
@@ -9900,6 +10126,11 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             if (totalReceived < (checkoutTotalTakeOrder - 0.01)) { alert('Insufficient amount received'); return; }
             if (selectedCheckoutItems.length === 0) { alert('Please select at least one item to pay'); return; }
 
+            // Recalculate rounding adjustment for final record
+            let subtotalForRounding = selectedCheckoutItems.reduce((acc, curr) => acc + (curr.unitPrice * curr.qtyToPay), 0);
+            if (taxActive) subtotalForRounding *= (1 + currentTaxRate / 100);
+            const roundingAdjustment = checkoutTotalTakeOrder - (subtotalForRounding - totalDiscountValue);
+
             // Identify unique orders involved in this payment
             const involvedOrderIds = [...new Set(selectedCheckoutItems.map(i => i.orderId))];
 
@@ -9917,7 +10148,8 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                     })).filter(b => b.amount > 0) : null,
                 itemsPaid: selectedCheckoutItems,
                 discount: appliedCheckoutDiscount ? { name: appliedCheckoutDiscount.name, value: totalDiscountValue } : null,
-                hasCashPayment: hasCashPayment
+                hasCashPayment: hasCashPayment,
+                roundingAdjustment: roundingAdjustment.toFixed(2)
             };
             paymentInfoForQueue.change = paymentInfoForQueue.give - paymentInfoForQueue.totalDue;
 
@@ -10002,6 +10234,10 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                     }
                 }
                 
+                if (roundingConfig.active && involvedOrderIds.length === 1) {
+                    orderUpdateData.roundingAdjustment = roundingAdjustment.toFixed(2);
+                }
+
                 await updateDoc(doc(db, 'licenses', currentClientId, 'orders', orderId), orderUpdateData);
             }
 
@@ -10019,6 +10255,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                     itemsPaidJson: JSON.stringify(selectedCheckoutItems.filter(i => involvedOrderIds.includes(i.orderId))),
                     isEarlyPayment: isEarlyPaymentMode,
                     paymentInfoJson: JSON.stringify(paymentInfoForQueue),
+                    roundingAdjustment: roundingAdjustment.toFixed(2),
                     createdAt: Timestamp.now()
                 });
             }
@@ -10110,6 +10347,8 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             const tax = taxActive ? subtotal * (currentTaxRate / 100) : 0;
             const total = subtotal + tax;
             const discountValue = paymentInfoForQueue.discount ? paymentInfoForQueue.discount.value : 0;
+            const preRounded = total - discountValue;
+            const roundingAdjustment = checkoutTotalTakeOrder - preRounded;
 
             const orderData = {
                 orderNumber: 'QS-' + Date.now().toString().slice(-8),
@@ -10123,6 +10362,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                 tax: tax.toFixed(2),
                 discountAmount: discountValue.toFixed(2),
                 discountName: appliedCheckoutDiscount ? appliedCheckoutDiscount.name : null,
+                roundingAdjustment: roundingAdjustment.toFixed(2),
                 total: (total - discountValue).toFixed(2),
                 cashierBy: currentStaff.name,
                 createdAt: Timestamp.now()
@@ -10176,7 +10416,8 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                 await addDoc(collection(db, 'licenses', currentClientId, 'transactions'), {
                     tableId: selectedTableIdTakeOrder, amount: record.amount.toFixed(2), paymentMethod: record.method,
                     status: 'completed', type: "Quick Service Payment", orderId: orderRef.id,
-                    processedByStaffId: currentStaff.id, processedByStaffName: currentStaff.name, createdAt: Timestamp.now()
+                    processedByStaffId: currentStaff.id, processedByStaffName: currentStaff.name, createdAt: Timestamp.now(),
+                    roundingAdjustment: roundingAdjustment.toFixed(2)
                 });
             }
             const qId = await createReceiptQueueItem([orderRef.id], orderData.orderNumber, paymentInfoForQueue, currentStaff.name);
@@ -13358,6 +13599,15 @@ window.openSearchModalTakeOrder = function() {
                 discountText = `${label}${amt}\n`;
             }
             
+            let roundingText = "";
+            if (paymentInfo && paymentInfo.roundingAdjustment && Math.abs(parseFloat(paymentInfo.roundingAdjustment)) > 0.001) {
+                const adj = parseFloat(paymentInfo.roundingAdjustment);
+                const label = "Rounding:".padEnd(width - 13);
+                const amt = `${adj >= 0 ? '+' : ''}RM ${adj.toFixed(2).padStart(8)}`;
+                roundingText = `${label}${amt}\n`;
+                total += adj;
+            }
+
             const now = new Date();
             const dateStr = now.toLocaleDateString();
             const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -13412,6 +13662,7 @@ window.openSearchModalTakeOrder = function() {
                 "Subtotal:".padEnd(width - 13) + `RM ${subtotal.toFixed(2).padStart(8)}\n`,
                 discountText,
                 taxActive ? `Tax (${currentTaxRate}%):`.padEnd(width - 13) + `RM ${tax.toFixed(2).padStart(8)}\n` : "",
+                roundingText,
                 `\x1B\x45\x01TOTAL AMOUNT:`.padEnd(width - 10) + `RM ${total.toFixed(2).padStart(8)}\x1B\x45\x00\n`,
                 sep,
                 `Payment by : ${(paymentInfo ? paymentInfo.method : payMethod).toUpperCase()}\n`,
@@ -14457,6 +14708,15 @@ window.openSearchModalTakeOrder = function() {
         async function loadAllSettings() {
             await loadTaxRate();
             
+            // Load Rounding Config
+            try {
+                const roundRef = doc(db, 'licenses', currentClientId, 'settings', 'rounding');
+                const roundSnap = await getDoc(roundRef);
+                if (roundSnap.exists()) {
+                    roundingConfig = roundSnap.data();
+                }
+            } catch (e) { console.warn("Could not load rounding settings", e); }
+
             // Load Receipt Settings into localStorage
             try {
                 const ref = doc(db, 'licenses', currentClientId, 'settings', 'receipt');
@@ -14552,6 +14812,7 @@ window.openSearchModalTakeOrder = function() {
                 { sel: '[onclick*="discounts"]', key: 'canAccessDiscounts' },
                 { sel: '[onclick*="staff"]', key: 'canAccessStaff' },
                 { sel: '[onclick*="roles"]', key: 'canAccessRoles' },
+                { sel: '[onclick*="rounding"]', key: 'canAccessRounding' },
                 { sel: '[onclick*="tax"]', key: 'canAccessTax' },
                 { sel: '[onclick*="reports"]', key: 'canAccessReports' }
             ];
