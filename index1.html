@@ -9717,7 +9717,8 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             }
             
             const totalToRound = Math.max(0, totalAmount - discountValue);
-            checkoutTotalTakeOrder = calculateRoundedAmount(totalToRound);
+            // BNM: Rounding mechanism is applicable only for Cash payments
+            checkoutTotalTakeOrder = (roundingConfig.active && checkoutPayMethod === 'cash') ? calculateRoundedAmount(totalToRound) : totalToRound;
             const roundingAdjustment = checkoutTotalTakeOrder - totalToRound;
             
             const discContainer = document.getElementById('checkoutDiscountIconContainer');
@@ -10009,6 +10010,9 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             document.querySelectorAll('#checkoutModalTakeOrder .type-option-takeorder').forEach(btn => btn.classList.remove('selected'));
             const mapping = { 'cash': 'chkPayCash', 'card': 'chkPayCard', 'ewallet': 'chkPayWallet', 'mixed': 'chkPayMixed' };
             document.getElementById(mapping[method]).classList.add('selected');
+
+            // Apply or remove rounding based on the selected payment method
+            recalculateCheckoutTotals();
 
             const mixedContainer = document.getElementById('checkoutMixedInputs');
             const singleView = document.getElementById('checkoutSingleInputView');
