@@ -8591,7 +8591,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                         <span>Tax:</span>
                         <span>RM ${calculatedTax.toFixed(2)}</span>
                     </div>
-                    ${(parseFloat(order.roundingAdjustment) && Math.abs(parseFloat(order.roundingAdjustment)) > 0) ? `
+                    ${(parseFloat(order.roundingAdjustment) && Math.abs(Math.round(parseFloat(order.roundingAdjustment) * 100)) >= 1) ? `
                     <div style="display:flex;justify-content:space-between;color:#64748b;">
                         <span>Rounding Adjustment:</span>
                         <span>${parseFloat(order.roundingAdjustment) >= 0 ? '+' : ''}RM ${parseFloat(order.roundingAdjustment).toFixed(2)}</span>
@@ -10240,7 +10240,9 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                 }
                 
                 if (roundingConfig.active && involvedOrderIds.length === 1) {
-                    orderUpdateData.roundingAdjustment = roundingAdjustment.toFixed(2);
+                    const oSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', orderId));
+                    const prevRounding = parseFloat(oSnap.data()?.roundingAdjustment) || 0;
+                    orderUpdateData.roundingAdjustment = (prevRounding + roundingAdjustment).toFixed(2);
                 }
 
                 await updateDoc(doc(db, 'licenses', currentClientId, 'orders', orderId), orderUpdateData);
