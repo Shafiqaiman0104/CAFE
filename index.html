@@ -8139,16 +8139,21 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             const rounded = calculateRoundedAmount(amount);
             const diff = rounded - amount;
             roundingConfig = originalConfig;
+
+            let adjustmentHtml = '';
+            if (Math.abs(Math.round(diff * 100)) >= 1) {
+                adjustmentHtml = `<div style="display: flex; justify-content: space-between; font-size: 0.8rem;">
+                    <span>Rounding Adjustment:</span>
+                    <span style="color: ${diff >= 0 ? '#38a169' : '#e53e3e'};">${diff >= 0 ? '+' : ''}RM ${diff.toFixed(2)}</span>
+                </div>`;
+            }
             
             container.innerHTML = `
                 <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
                     <span>Rounded Amount:</span>
                     <span style="color: #764ba2;">RM ${rounded.toFixed(2)}</span>
                 </div>
-                <div style="display: flex; justify-content: space-between; font-size: 0.8rem;">
-                    <span>Rounding Adjustment:</span>
-                    <span style="color: ${diff >= 0 ? '#38a169' : '#e53e3e'};">${diff >= 0 ? '+' : ''}RM ${diff.toFixed(2)}</span>
-                </div>
+                ${adjustmentHtml}
             `;
         };
 
@@ -8588,7 +8593,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                         <span>Tax:</span>
                         <span>RM ${calculatedTax.toFixed(2)}</span>
                     </div>
-                    ${(parseFloat(order.roundingAdjustment) && Math.abs(parseFloat(order.roundingAdjustment)) > 0) ? `
+                    ${(parseFloat(order.roundingAdjustment) && Math.abs(Math.round(parseFloat(order.roundingAdjustment) * 100)) >= 1) ? `
                     <div style="display:flex;justify-content:space-between;color:#64748b;">
                         <span>Rounding Adjustment:</span>
                         <span>${parseFloat(order.roundingAdjustment) >= 0 ? '+' : ''}RM ${parseFloat(order.roundingAdjustment).toFixed(2)}</span>
@@ -9714,7 +9719,8 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             }
             
             const totalToRound = Math.max(0, totalAmount - discountValue);
-            checkoutTotalTakeOrder = calculateRoundedAmount(totalToRound);
+            // BNM: Rounding mechanism is applicable only for Cash payments
+            checkoutTotalTakeOrder = (roundingConfig.active && checkoutPayMethod === 'cash') ? calculateRoundedAmount(totalToRound) : totalToRound;
             const roundingAdjustment = checkoutTotalTakeOrder - totalToRound;
             
             const discContainer = document.getElementById('checkoutDiscountIconContainer');
@@ -9741,7 +9747,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             }
 
             let roundingHtml = '';
-            if (roundingConfig.active && Math.abs(roundingAdjustment) > 0.001) {
+            if (roundingConfig.active && Math.abs(Math.round(roundingAdjustment * 100)) >= 1) {
                 roundingHtml = `<div style="display:flex; justify-content:space-between; font-size:0.85rem; color:#64748b; margin-bottom:4px;">
                     <span>Rounding Adjustment:</span><span>${roundingAdjustment >= 0 ? '+' : ''}RM ${roundingAdjustment.toFixed(2)}</span>
                 </div>`;
@@ -10007,6 +10013,9 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             const mapping = { 'cash': 'chkPayCash', 'card': 'chkPayCard', 'ewallet': 'chkPayWallet', 'mixed': 'chkPayMixed' };
             document.getElementById(mapping[method]).classList.add('selected');
 
+            // Apply or remove rounding based on the selected payment method
+            recalculateCheckoutTotals();
+
             const mixedContainer = document.getElementById('checkoutMixedInputs');
             const singleView = document.getElementById('checkoutSingleInputView');
             const receivedBox = document.getElementById('checkoutReceivedBox');
@@ -10237,7 +10246,9 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
                 }
                 
                 if (roundingConfig.active && involvedOrderIds.length === 1) {
-                    orderUpdateData.roundingAdjustment = roundingAdjustment.toFixed(2);
+                    const oSnap = await getDoc(doc(db, 'licenses', currentClientId, 'orders', orderId));
+                    const prevRounding = parseFloat(oSnap.data()?.roundingAdjustment) || 0;
+                    orderUpdateData.roundingAdjustment = (prevRounding + roundingAdjustment).toFixed(2);
                 }
 
                 await updateDoc(doc(db, 'licenses', currentClientId, 'orders', orderId), orderUpdateData);
@@ -13602,7 +13613,7 @@ window.openSearchModalTakeOrder = function() {
             }
             
             let roundingText = "";
-            if (paymentInfo && paymentInfo.roundingAdjustment && Math.abs(parseFloat(paymentInfo.roundingAdjustment)) > 0.001) {
+            if (paymentInfo && paymentInfo.roundingAdjustment && Math.abs(Math.round(parseFloat(paymentInfo.roundingAdjustment) * 100)) >= 1) {
                 const adj = parseFloat(paymentInfo.roundingAdjustment);
                 const label = "Rounding:".padEnd(width - 13);
                 const amt = `${adj >= 0 ? '+' : ''}RM ${adj.toFixed(2).padStart(8)}`;
