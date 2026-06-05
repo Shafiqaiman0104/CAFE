@@ -8137,16 +8137,21 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             const rounded = calculateRoundedAmount(amount);
             const diff = rounded - amount;
             roundingConfig = originalConfig;
+
+            let adjustmentHtml = '';
+            if (Math.abs(Math.round(diff * 100)) >= 1) {
+                adjustmentHtml = `<div style="display: flex; justify-content: space-between; font-size: 0.8rem;">
+                    <span>Rounding Adjustment:</span>
+                    <span style="color: ${diff >= 0 ? '#38a169' : '#e53e3e'};">${diff >= 0 ? '+' : ''}RM ${diff.toFixed(2)}</span>
+                </div>`;
+            }
             
             container.innerHTML = `
                 <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
                     <span>Rounded Amount:</span>
                     <span style="color: #764ba2;">RM ${rounded.toFixed(2)}</span>
                 </div>
-                <div style="display: flex; justify-content: space-between; font-size: 0.8rem;">
-                    <span>Rounding Adjustment:</span>
-                    <span style="color: ${diff >= 0 ? '#38a169' : '#e53e3e'};">${diff >= 0 ? '+' : ''}RM ${diff.toFixed(2)}</span>
-                </div>
+                ${adjustmentHtml}
             `;
         };
 
@@ -9739,7 +9744,7 @@ const taxRateDisplayTakeOrder = document.getElementById('taxRateDisplayTakeOrder
             }
 
             let roundingHtml = '';
-            if (roundingConfig.active && Math.abs(roundingAdjustment) > 0.001) {
+            if (roundingConfig.active && Math.abs(Math.round(roundingAdjustment * 100)) >= 1) {
                 roundingHtml = `<div style="display:flex; justify-content:space-between; font-size:0.85rem; color:#64748b; margin-bottom:4px;">
                     <span>Rounding Adjustment:</span><span>${roundingAdjustment >= 0 ? '+' : ''}RM ${roundingAdjustment.toFixed(2)}</span>
                 </div>`;
@@ -13600,7 +13605,7 @@ window.openSearchModalTakeOrder = function() {
             }
             
             let roundingText = "";
-            if (paymentInfo && paymentInfo.roundingAdjustment && Math.abs(parseFloat(paymentInfo.roundingAdjustment)) > 0.001) {
+            if (paymentInfo && paymentInfo.roundingAdjustment && Math.abs(Math.round(parseFloat(paymentInfo.roundingAdjustment) * 100)) >= 1) {
                 const adj = parseFloat(paymentInfo.roundingAdjustment);
                 const label = "Rounding:".padEnd(width - 13);
                 const amt = `${adj >= 0 ? '+' : ''}RM ${adj.toFixed(2).padStart(8)}`;
